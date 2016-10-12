@@ -16,7 +16,6 @@ import (
 
 	"github.com/beevik/etree"
 	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 	"github.com/urfave/negroni"
 )
 
@@ -49,10 +48,6 @@ type Manifest struct {
 func main() {
 
 	n := negroni.Classic()
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-	})
-	n.Use(c)
 	n.Use(negroni.NewStatic(http.Dir("public")))
 	n.UseHandler(loanHandler(false))
 
@@ -175,7 +170,8 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 
 					manifestStruct.Metadata = metaStruct
 					j, _ := json.Marshal(manifestStruct)
-					fmt.Println(string(j))
+					w.Header().Set("Content-Type", "application/json")
+					w.Header().Set("Access-Control-Allow-Origin", "*")
 					w.Write(j)
 					return
 				}
@@ -242,6 +238,7 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 			if extension == ".js" {
 				w.Header().Set("Content-Type", "text/javascript")
 			}
+			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Write(buff)
 			return
 		}
