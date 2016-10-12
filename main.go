@@ -2,19 +2,22 @@ package main
 
 import (
 	"archive/zip"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"rsc.io/letsencrypt"
+
 	"github.com/beevik/etree"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/urfave/negroni"
-	graceful "gopkg.in/tylerb/graceful.v1"
 )
 
 // Metadata metadata struct
@@ -53,8 +56,23 @@ func main() {
 	n.Use(negroni.NewStatic(http.Dir("public")))
 	n.UseHandler(loanHandler(false))
 
-	graceful.Run(":8096", time.Duration(10)*time.Second, n)
+	var m letsencrypt.Manager
+	if err := m.CacheFile("letsencrypt.cache"); err != nil {
+		log.Fatal(err)
+	}
 
+	s := &http.Server{
+		Handler:        n,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+		Addr:           ":https",
+		TLSConfig: &tls.Config{
+			GetCertificate: m.GetCertificate,
+		},
+	}
+
+	log.Fatal(s.ListenAndServeTLS("", ""))
 }
 
 func loanHandler(test bool) http.Handler {
