@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/beevik/etree"
@@ -88,6 +89,7 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 	zipReader, err := zip.OpenReader(filename)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
 	for _, f := range zipReader.File {
@@ -165,6 +167,8 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 }
 
 func getAsset(w http.ResponseWriter, req *http.Request) {
+	var opfFileName string
+
 	vars := mux.Vars(req)
 	filename := vars["filename"]
 	assetname := vars["asset"]
@@ -175,8 +179,34 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, f := range zipReader.File {
+		if f.Name == "META-INF/container.xml" {
+			rc, errOpen := f.Open()
+			if errOpen != nil {
+				fmt.Println("error openging " + f.Name)
+			}
+			doc := etree.NewDocument()
+			_, err = doc.ReadFrom(rc)
+			if err == nil {
+				root := doc.SelectElement("container")
+				rootFiles := root.SelectElements("rootfiles")
+				for _, rootFileTag := range rootFiles {
+					rootFile := rootFileTag.SelectElement("rootfile")
+					if rootFile != nil {
+						opfFileName = rootFile.SelectAttrValue("full-path", "")
+					}
+				}
+			} else {
+				fmt.Println(err)
+			}
+			rc.Close()
+		}
+	}
+
+	resourcePath := strings.Split(opfFileName, "/")[0]
+
+	for _, f := range zipReader.File {
 		fmt.Println(f.Name)
-		if f.Name == "OPS/"+assetname {
+		if f.Name == resourcePath+"/"+assetname {
 			rc, errOpen := f.Open()
 			if errOpen != nil {
 				fmt.Println("error openging " + f.Name)
