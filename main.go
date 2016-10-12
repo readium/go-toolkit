@@ -50,6 +50,7 @@ func main() {
 		AllowedOrigins: []string{"*"},
 	})
 	n.Use(c)
+	n.Use(negroni.NewStatic(http.Dir("public")))
 	n.UseHandler(loanHandler(false))
 
 	graceful.Run(":8096", time.Duration(10)*time.Second, n)
