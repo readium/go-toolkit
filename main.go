@@ -5,9 +5,11 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -45,6 +47,22 @@ type Manifest struct {
 	Resources []Link   `json:"resources"`
 }
 
+// Icon icon struct for AppInstall
+type Icon struct {
+	Src       string `json:"src"`
+	Size      string `json:"size"`
+	MediaType string `json:"type"`
+}
+
+// AppInstall struct for app install banner
+type AppInstall struct {
+	ShortName string `json:"short_name"`
+	Name      string `json:"name"`
+	StartURL  string `json:"start_url"`
+	Display   string `json:"display"`
+	Icons     Icon   `json:"icons"`
+}
+
 func main() {
 
 	n := negroni.Classic()
@@ -56,32 +74,46 @@ func main() {
 		log.Fatal(err)
 	}
 
-	s := &http.Server{
-		Handler:        n,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-		Addr:           ":https",
-		TLSConfig: &tls.Config{
-			GetCertificate: m.GetCertificate,
-		},
-	}
+	if os.Args[1] == "dev" {
+		s := &http.Server{
+			Handler:        n,
+			ReadTimeout:    10 * time.Second,
+			WriteTimeout:   10 * time.Second,
+			MaxHeaderBytes: 1 << 20,
+			Addr:           ":8080",
+		}
 
-	log.Fatal(s.ListenAndServeTLS("", ""))
+		log.Fatal(s.ListenAndServe())
+	} else {
+
+		s := &http.Server{
+			Handler:        n,
+			ReadTimeout:    10 * time.Second,
+			WriteTimeout:   10 * time.Second,
+			MaxHeaderBytes: 1 << 20,
+			Addr:           ":https",
+			TLSConfig: &tls.Config{
+				GetCertificate: m.GetCertificate,
+			},
+		}
+
+		log.Fatal(s.ListenAndServeTLS("", ""))
+	}
 }
 
 func loanHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
-	serv.HandleFunc("/manifest/{filename}/manifest.json", getManifest)
-	serv.HandleFunc("/assets/{filename}/{asset:.*}", getAsset)
-
+	serv.HandleFunc("/{filename}/manifest.json", getManifest)
+	serv.HandleFunc("/{filename}/webapp.json", getWebAppManifest)
+	serv.HandleFunc("/{filename}/index.html", bookIndex)
+	serv.HandleFunc("/{filename}/{asset:.*}", getAsset)
 	return serv
-
 }
 
 func getManifest(w http.ResponseWriter, req *http.Request) {
 	var opfFileName string
+	var scheme string
 	var manifestStruct Manifest
 	var metaStruct Metadata
 
@@ -160,7 +192,12 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 					for _, item := range itemsManifest {
 						linkItem := Link{}
 						linkItem.TypeLink = item.SelectAttrValue("media-type", "")
-						linkItem.Href = "https://proto.myopds.com/assets/" + filename + "/" + item.SelectAttrValue("href", "")
+						if os.Args[1] == "dev" {
+							scheme = "http://"
+						} else {
+							scheme = "https://"
+						}
+						linkItem.Href = scheme + req.Host + "/" + filename + "/" + item.SelectAttrValue("href", "")
 						if linkItem.TypeLink == "application/xhtml+xml" {
 							manifestStruct.Spine = append(manifestStruct.Spine, linkItem)
 						} else {
@@ -244,4 +281,91 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+}
+
+func getWebAppManifest(w http.ResponseWriter, req *http.Request) {
+	var opfFileName string
+	var webapp AppInstall
+
+	vars := mux.Vars(req)
+	filename := vars["filename"]
+
+	webapp.Display = "standalone"
+	webapp.StartURL = "index.html"
+	webapp.Icons = Icon{
+		Size:      "144x144",
+		Src:       "logo.png",
+		MediaType: "image/png",
+	}
+
+	zipReader, err := zip.OpenReader(filename)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	for _, f := range zipReader.File {
+		if f.Name == "META-INF/container.xml" {
+			rc, errOpen := f.Open()
+			if errOpen != nil {
+				fmt.Println("error openging " + f.Name)
+			}
+			doc := etree.NewDocument()
+			_, err = doc.ReadFrom(rc)
+			if err == nil {
+				root := doc.SelectElement("container")
+				rootFiles := root.SelectElements("rootfiles")
+				for _, rootFileTag := range rootFiles {
+					rootFile := rootFileTag.SelectElement("rootfile")
+					if rootFile != nil {
+						opfFileName = rootFile.SelectAttrValue("full-path", "")
+					}
+				}
+			} else {
+				fmt.Println(err)
+			}
+			rc.Close()
+		}
+	}
+
+	if opfFileName != "" {
+		for _, f := range zipReader.File {
+			if f.Name == opfFileName {
+				rc, errOpen := f.Open()
+				if errOpen != nil {
+					fmt.Println("error openging " + f.Name)
+				}
+				doc := etree.NewDocument()
+				_, err = doc.ReadFrom(rc)
+				if err == nil {
+					root := doc.SelectElement("package")
+					meta := root.SelectElement("metadata")
+
+					titleTag := meta.SelectElement("title")
+					webapp.Name = titleTag.Text()
+					webapp.ShortName = titleTag.Text()
+
+					j, _ := json.Marshal(webapp)
+					w.Header().Set("Content-Type", "application/json")
+					w.Header().Set("Access-Control-Allow-Origin", "*")
+					w.Write(j)
+					return
+				}
+			}
+		}
+	}
+
+}
+
+func bookIndex(w http.ResponseWriter, req *http.Request) {
+	var err error
+
+	vars := mux.Vars(req)
+	filename := vars["filename"]
+
+	t, err := template.ParseFiles("index.html") // Parse template file.
+	if err != nil {
+		fmt.Println(err)
+	}
+	t.Execute(w, filename) // merge.
 }

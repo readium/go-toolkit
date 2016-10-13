@@ -5,13 +5,13 @@
   if (navigator.serviceWorker) {
     //HINT: Make sure that the path to your Service Worker is correct
     navigator.serviceWorker.register('sw.js');
-  
+
     navigator.serviceWorker.ready.then(function() {
       console.log('SW ready');
-    }); 
+    });
   };
-  
-  var DEFAULT_MANIFEST = "https://hadriengardeur.github.io/webpub-manifest/examples/MobyDick/manifest.json";
+
+  var DEFAULT_MANIFEST = "manifest.json";
   var current_url_params = new URLSearchParams(location.href);
 
   if (current_url_params.has("href")) {
@@ -30,7 +30,7 @@
 
   verifyAndCacheManifest(manifest_url).catch(function() {});
   initializeNavigation(manifest_url).catch(function() {});
-  
+
   var iframe = document.querySelector("iframe");
   var next = document.querySelector("a[rel=next]");
   var previous = document.querySelector("a[rel=prev]");
@@ -78,7 +78,7 @@
       })
     });
   };
-  
+
   function cacheURL(data, manifest_url) {
     return caches.open(manifest_url).then(function(cache) {
       return cache.addAll(data.map(function(url) {
@@ -106,26 +106,26 @@
   };
 
   function initializeNavigation(url) {
-    return getManifest(url).then(function(json) { 
+    return getManifest(url).then(function(json) {
       var title = json.metadata.title;
       console.log("Title of the publication: "+title);
       document.querySelector("title").textContent = title;
       return json.spine;
     }).then(function(spine) {
-      
+
       //Find iframe and set start document
       var iframe = document.querySelector("iframe");
       var start_url = new URL(spine[0].href, url).href;
       console.log("Set iframe to: "+start_url)
       iframe.src = start_url;
-      
+
       var start = document.querySelector("a[rel=start]");
       var next = document.querySelector("a[rel=next]");
       var previous = document.querySelector("a[rel=prev]");
       var navigation = document.querySelector("div[class=controls]");
 
       //Set start action
-      start.href = start_url; 
+      start.href = start_url;
       start.addEventListener("click", function(event) {
         iframe.src = start.href;
         iframe.style.height = document.body.scrollHeight - navigation.scrollHeight - 5 + 'px';
@@ -148,12 +148,12 @@
       var iframe = document.querySelector("iframe");
       var start = document.querySelector("a[rel=start]");
       var next = document.querySelector("a[rel=next]");
-      
+
       var current_index = spine.findIndex(function(element) {
         var element_url = new URL(element.href, url);
         return element_url.href == iframe.src
       })
-      
+
       if (current_index >= 0) {
 
         if (current_index > 0) {
@@ -162,7 +162,7 @@
         } else {
           previous.removeAttribute("href");
         };
-        
+
         if (current_index < (spine.length-1)) {
           console.log("Next document is: "+spine[current_index + 1].href);
           next.href = new URL(spine[current_index + 1].href, url).href;
