@@ -23,28 +23,42 @@
 
   if (current_url_params.has("document")) {
     console.log("Found reference to a document in params")
-    var document_url = current_url_params.get("href");
+    var document_url = current_url_params.get("document");
   } else {
     var document_url = undefined;
   };
-
-  verifyAndCacheManifest(manifest_url).catch(function() {});
-  initializeNavigation(manifest_url).catch(function() {});
   
   var iframe = document.querySelector("iframe");
   var next = document.querySelector("a[rel=next]");
   var previous = document.querySelector("a[rel=prev]");
   var navigation = document.querySelector("div[class=controls]");
+  var start = document.querySelector("a[rel=start]");
 
-  iframe.style.height = document.body.scrollHeight - navigation.scrollHeight - 5 + 'px';
+  if (navigator.serviceWorker) verifyAndCacheManifest(manifest_url).catch(function() {});
+  initializeNavigation(manifest_url, document_url).catch(function() {});
+
+  iframe.style.height = window.innerHeight - navigation.scrollHeight - 5 + 'px';
   iframe.style.marginTop = navigation.scrollHeight + 'px';
+
+  iframe.addEventListener("load", function(event) {
+    updateNavigation(manifest_url).catch(function() {});
+    try {
+      try {
+        history.pushState(null, null, "./?manifest=true&href="+manifest_url+"&document="+iframe.contentDocument.location.href);
+      }
+      catch(err) {
+        history.pushState(null, null, "./?manifest=true&href="+manifest_url+"&document="+iframe.src);
+      }
+    }
+    catch(err) {
+      console.log("Could not update history");
+    }
+  });
 
   next.addEventListener("click", function(event) {
     if (next.hasAttribute("href")) {
       iframe.src = next.href;
-      iframe.style.height = document.body.scrollHeight - navigation.scrollHeight - 5 + 'px';
-      history.pushState(null, null, "./?manifest=true&href="+manifest_url+"&document="+next.href);
-      updateNavigation(manifest_url).catch(function() {});
+      iframe.style.height = window.innerHeight - navigation.scrollHeight - 5 + 'px';
     };
     event.preventDefault();
   });
@@ -52,15 +66,15 @@
   previous.addEventListener("click", function(event) {
     if ( previous.hasAttribute("href")) {
       iframe.src = previous.href;
-      iframe.style.height = document.body.scrollHeight - navigation.scrollHeight - 5 + 'px';
-      history.pushState(null, null, "./?manifest=true&href="+manifest_url+"&document="+previous.href);
-      updateNavigation(manifest_url).catch(function() {});
+      iframe.style.height = window.innerHeight - navigation.scrollHeight - 5 + 'px';
     };
     event.preventDefault();
   });
 
   function getManifest(url) {
-    return fetch(url).then(function(response) {
+    return fetch(url).catch(function() {
+      return caches.match(url);
+    }).then(function(response) {
       return response.json();
     })
   };
@@ -105,53 +119,76 @@
       return manifest.resources.map(function(el) { return el.href});}).then(function(data) {return cacheURL(data, url);})
   };
 
-  function initializeNavigation(url) {
+  function initializeNavigation(url, document_url) {
     return getManifest(url).then(function(json) { 
       var title = json.metadata.title;
       console.log("Title of the publication: "+title);
       document.querySelector("title").textContent = title;
+
+      //Search for TOC and add it
+      
+      if (json.resources) { var all_resources = json.spine.concat(json.resources); }
+      else { var all_resources = json.spine; }
+      all_resources.forEach(function(link) {
+        if (link.rel) {
+          if (link.rel=="contents") {
+            console.log("Found TOC: "+link.href);
+            var toc = document.createElement("a");
+            var links = document.getElementById("links");
+            toc.href = new URL(link.href, url).href;
+            toc.rel = "contents";
+            toc.textContent = "Contents";
+            links.appendChild( document.createTextNode( '\u00A0' ) );
+            links.appendChild(toc);
+            toc.addEventListener("click", function(event) {
+              iframe.src = toc.href;
+              iframe.style.height = window.innerHeight - navigation.scrollHeight - 5 + 'px';
+              event.preventDefault();
+            });
+          }
+        }
+      }, this);
+      
       return json.spine;
     }).then(function(spine) {
       
-      //Find iframe and set start document
-      var iframe = document.querySelector("iframe");
+      //Set start document
       var start_url = new URL(spine[0].href, url).href;
-      console.log("Set iframe to: "+start_url)
-      iframe.src = start_url;
-      
-      var start = document.querySelector("a[rel=start]");
-      var next = document.querySelector("a[rel=next]");
-      var previous = document.querySelector("a[rel=prev]");
-      var navigation = document.querySelector("div[class=controls]");
+      if (document_url) {
+        console.log("Set iframe to: "+document_url)
+        iframe.src = document_url;
+      } else {
+        console.log("Set iframe to: "+start_url)
+        iframe.src = start_url;
+      }
 
       //Set start action
       start.href = start_url; 
       start.addEventListener("click", function(event) {
         iframe.src = start.href;
-        iframe.style.height = document.body.scrollHeight - navigation.scrollHeight - 5 + 'px';
-        next.href = new URL(spine[1].href, url).href;
-        previous.removeAttribute("href");
-        history.pushState(null, null, "./?manifest=true&href="+url+"&document="+start.href);
+        iframe.style.height = window.innerHeight - navigation.scrollHeight - 5 + 'px';
         event.preventDefault();
       });
-
-      //Set next button
-      console.log("Next document is: "+spine[1].href);
-      next.href = new URL(spine[1].href, url).href;
 
     });
   };
 
   function updateNavigation(url) {
     console.log("Getting "+url)
-    return getManifest(url).then(function(json) { return json.spine} ).then(function(spine) {
-      var iframe = document.querySelector("iframe");
-      var start = document.querySelector("a[rel=start]");
-      var next = document.querySelector("a[rel=next]");
+    return getManifest(url).then(function(json) { return json.spine } ).then(function(spine) {
       
+      var current_location = iframe.src;
+
+      try {
+        current_location = iframe.contentDocument.location.href;
+      }
+      catch(err) {
+        console.log("Could not get iframe location, fallback to src");
+      }
+
       var current_index = spine.findIndex(function(element) {
         var element_url = new URL(element.href, url);
-        return element_url.href == iframe.src
+        return element_url.href == current_location
       })
       
       if (current_index >= 0) {
@@ -169,6 +206,9 @@
         } else {
           next.removeAttribute("href");
         };
+      } else {
+        previous.removeAttribute("href");
+        next.removeAttribute("href");
       }
     });
   };

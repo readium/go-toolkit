@@ -8,10 +8,10 @@
 <body style="margin: 0;">
   <nav class="publication">
     <div class="controls" style="display: flex; position: fixed; top: 0px; right: 0px; width: 100%; background-color: rgb(221, 221, 221); height: 2em;">
-      <p style="flex: 1 1 0%; text-align: center; margin: 0px; padding: 0px; border: 2px solid rgb(221, 221, 221);">
+      <p id="links" style="flex: 1 1 0%; text-align: center; margin: 0px; padding: 2px">
         <a rel="start">Start</a>
       </p>
-      <p style="flex: 1 1 0%; text-align: center; margin: 0px; padding: 0px; border: 2px solid rgb(221, 221, 221);">
+      <p style="flex: 1 1 0%; text-align: center; margin: 0px; padding: 2px">
         <a rel="prev">&lt; Previous</a>&nbsp;&nbsp;<a rel="next">Next &gt;</a>
       </p>
     </div>
@@ -19,6 +19,8 @@
   <main>
     <iframe style="border:0; width:100%; overflow: hidden;"></iframe> 
   </main>
+  <script src="polyfill/fetch.js"></script>
+  <script src="polyfill/urlsearchparams.js"></script>
   <script src="viewer.js" async></script>
 </body>
 </html>
