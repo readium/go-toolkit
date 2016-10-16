@@ -105,7 +105,7 @@ func loanHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
 	serv.HandleFunc("/{filename}/manifest.json", getManifest)
-	serv.HandleFunc("/{filename}/webapp.json", getWebAppManifest)
+	serv.HandleFunc("/{filename}/webapp.webmanifest", getWebAppManifest)
 	serv.HandleFunc("/{filename}/index.html", bookIndex)
 	serv.HandleFunc("/{filename}/{asset:.*}", getAsset)
 	return serv
