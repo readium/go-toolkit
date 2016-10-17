@@ -74,7 +74,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if os.Args[1] == "dev" {
+	if len(os.Args) > 1 && os.Args[1] == "dev" {
 		s := &http.Server{
 			Handler:        n,
 			ReadTimeout:    10 * time.Second,
@@ -109,6 +109,7 @@ func loanHandler(test bool) http.Handler {
 	serv.HandleFunc("/", getBooks)
 	serv.HandleFunc("/viewer.js", viewer)
 	serv.HandleFunc("/sw.js", sw)
+	serv.HandleFunc("/{filename}/", bookIndex)
 	serv.HandleFunc("/{filename}/manifest.json", getManifest)
 	serv.HandleFunc("/{filename}/webapp.webmanifest", getWebAppManifest)
 	serv.HandleFunc("/{filename}/index.html", bookIndex)
@@ -118,7 +119,6 @@ func loanHandler(test bool) http.Handler {
 
 func getManifest(w http.ResponseWriter, req *http.Request) {
 	var opfFileName string
-	var scheme string
 	var manifestStruct Manifest
 	var metaStruct Metadata
 
@@ -198,12 +198,7 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 					for _, item := range itemsManifest {
 						linkItem := Link{}
 						linkItem.TypeLink = item.SelectAttrValue("media-type", "")
-						if os.Args[1] == "dev" {
-							scheme = "http://"
-						} else {
-							scheme = "https://"
-						}
-						linkItem.Href = scheme + req.Host + "/" + filename + "/" + item.SelectAttrValue("href", "")
+						linkItem.Href = item.SelectAttrValue("href", "")
 						if linkItem.TypeLink == "application/xhtml+xml" {
 							manifestStruct.Spine = append(manifestStruct.Spine, linkItem)
 						} else {
@@ -300,7 +295,7 @@ func getWebAppManifest(w http.ResponseWriter, req *http.Request) {
 	webapp.StartURL = "index.html"
 	webapp.Icons = Icon{
 		Size:      "144x144",
-		Src:       "logo.png",
+		Src:       "/logo.png",
 		MediaType: "image/png",
 	}
 

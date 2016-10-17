@@ -11,7 +11,7 @@
     });
   };
 
-  var DEFAULT_MANIFEST = "manifest.json";
+  var DEFAULT_MANIFEST = new URL("manifest.json", location.href).href;
   var current_url_params = new URLSearchParams(location.href);
 
   if (current_url_params.has("href")) {
