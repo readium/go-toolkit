@@ -83,6 +83,7 @@ func main() {
 			Addr:           ":8080",
 		}
 
+		//		log.Fatal(s.ListenAndServeTLS("test.cert", "test.key"))
 		log.Fatal(s.ListenAndServe())
 	} else {
 
@@ -104,6 +105,10 @@ func main() {
 func loanHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
+	serv.HandleFunc("/index.html", getBooks)
+	serv.HandleFunc("/", getBooks)
+	serv.HandleFunc("/viewer.js", viewer)
+	serv.HandleFunc("/sw.js", sw)
 	serv.HandleFunc("/{filename}/manifest.json", getManifest)
 	serv.HandleFunc("/{filename}/webapp.webmanifest", getWebAppManifest)
 	serv.HandleFunc("/{filename}/index.html", bookIndex)
@@ -121,18 +126,19 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 
 	vars := mux.Vars(req)
 	filename := vars["filename"]
+	filename_path := "books/" + filename
 
 	self := Link{
 		Rel:      "self",
-		Href:     "http://" + req.Host + "/manifest/" + filename + "/manifest.json",
-		TypeLink: "application/epub+zip",
+		Href:     "http://" + req.Host + "/" + filename + "/manifest.json",
+		TypeLink: "application/json",
 	}
 	manifestStruct.Links = make([]Link, 1)
 	manifestStruct.Resources = make([]Link, 0)
 	manifestStruct.Resources = make([]Link, 0)
 	manifestStruct.Links[0] = self
 
-	zipReader, err := zip.OpenReader(filename)
+	zipReader, err := zip.OpenReader(filename_path)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -222,7 +228,7 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 	var opfFileName string
 
 	vars := mux.Vars(req)
-	filename := vars["filename"]
+	filename := "books/" + vars["filename"]
 	assetname := vars["asset"]
 
 	zipReader, err := zip.OpenReader(filename)
@@ -288,7 +294,7 @@ func getWebAppManifest(w http.ResponseWriter, req *http.Request) {
 	var webapp AppInstall
 
 	vars := mux.Vars(req)
-	filename := vars["filename"]
+	filename := "books/" + vars["filename"]
 
 	webapp.Display = "standalone"
 	webapp.StartURL = "index.html"
@@ -361,11 +367,45 @@ func bookIndex(w http.ResponseWriter, req *http.Request) {
 	var err error
 
 	vars := mux.Vars(req)
-	filename := vars["filename"]
+	filename := "books/" + vars["filename"]
 
 	t, err := template.ParseFiles("index.html") // Parse template file.
 	if err != nil {
 		fmt.Println(err)
 	}
 	t.Execute(w, filename) // merge.
+}
+
+func getBooks(w http.ResponseWriter, req *http.Request) {
+	var books []string
+
+	files, _ := ioutil.ReadDir("books")
+	for _, f := range files {
+		fmt.Println(f.Name())
+		books = append(books, f.Name())
+	}
+
+	t, err := template.ParseFiles("book_index.html") // Parse template file.
+	if err != nil {
+		fmt.Println(err)
+	}
+	t.Execute(w, books)
+}
+
+func viewer(w http.ResponseWriter, req *http.Request) {
+
+	f, _ := os.OpenFile("public/viewer.js", os.O_RDONLY, 666)
+	buff, _ := ioutil.ReadAll(f)
+
+	w.Header().Set("Content-Type", "text/javascript")
+	w.Write(buff)
+}
+
+func sw(w http.ResponseWriter, req *http.Request) {
+
+	f, _ := os.OpenFile("public/sw.js", os.O_RDONLY, 666)
+	buff, _ := ioutil.ReadAll(f)
+
+	w.Header().Set("Content-Type", "text/javascript")
+	w.Write(buff)
 }

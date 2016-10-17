@@ -4,14 +4,14 @@
 
   if (navigator.serviceWorker) {
     //HINT: Make sure that the path to your Service Worker is correct
-    navigator.serviceWorker.register('sw.js');
-  
+    navigator.serviceWorker.register('/sw.js');
+
     navigator.serviceWorker.ready.then(function() {
       console.log('SW ready');
-    }); 
+    });
   };
-  
-  var DEFAULT_MANIFEST = "https://hadriengardeur.github.io/webpub-manifest/examples/MobyDick/manifest.json";
+
+  var DEFAULT_MANIFEST = "manifest.json";
   var current_url_params = new URLSearchParams(location.href);
 
   if (current_url_params.has("href")) {
@@ -27,7 +27,7 @@
   } else {
     var document_url = undefined;
   };
-  
+
   var iframe = document.querySelector("iframe");
   var next = document.querySelector("a[rel=next]");
   var previous = document.querySelector("a[rel=prev]");
@@ -92,7 +92,7 @@
       })
     });
   };
-  
+
   function cacheURL(data, manifest_url) {
     return caches.open(manifest_url).then(function(cache) {
       return cache.addAll(data.map(function(url) {
@@ -120,13 +120,13 @@
   };
 
   function initializeNavigation(url, document_url) {
-    return getManifest(url).then(function(json) { 
+    return getManifest(url).then(function(json) {
       var title = json.metadata.title;
       console.log("Title of the publication: "+title);
       document.querySelector("title").textContent = title;
 
       //Search for TOC and add it
-      
+
       if (json.resources) { var all_resources = json.spine.concat(json.resources); }
       else { var all_resources = json.spine; }
       all_resources.forEach(function(link) {
@@ -148,10 +148,10 @@
           }
         }
       }, this);
-      
+
       return json.spine;
     }).then(function(spine) {
-      
+
       //Set start document
       var start_url = new URL(spine[0].href, url).href;
       if (document_url) {
@@ -163,7 +163,7 @@
       }
 
       //Set start action
-      start.href = start_url; 
+      start.href = start_url;
       start.addEventListener("click", function(event) {
         iframe.src = start.href;
         iframe.style.height = window.innerHeight - navigation.scrollHeight - 5 + 'px';
@@ -176,7 +176,7 @@
   function updateNavigation(url) {
     console.log("Getting "+url)
     return getManifest(url).then(function(json) { return json.spine } ).then(function(spine) {
-      
+
       var current_location = iframe.src;
 
       try {
@@ -190,7 +190,7 @@
         var element_url = new URL(element.href, url);
         return element_url.href == current_location
       })
-      
+
       if (current_index >= 0) {
 
         if (current_index > 0) {
@@ -199,7 +199,7 @@
         } else {
           previous.removeAttribute("href");
         };
-        
+
         if (current_index < (spine.length-1)) {
           console.log("Next document is: "+spine[current_index + 1].href);
           next.href = new URL(spine[current_index + 1].href, url).href;
