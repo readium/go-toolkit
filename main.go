@@ -282,27 +282,32 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 			}
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 
-			scanner := bufio.NewScanner(rc)
-			for scanner.Scan() {
-				if strings.Contains(scanner.Text(), "</head>") {
-					headBuff := ""
-					if jsInject != "" {
-						headBuff += strings.Replace(scanner.Text(), "</head>", "<script src='/"+jsInject+"'></script></head>", 1)
-					}
-					if cssInject != "" {
-						if headBuff == "" {
-							headBuff += strings.Replace(scanner.Text(), "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></script></head>", 1)
-						} else {
-							headBuff = strings.Replace(headBuff, "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></head>", 1)
+			if cssInject != "" || jsInject != "" {
+				scanner := bufio.NewScanner(rc)
+				for scanner.Scan() {
+					if strings.Contains(scanner.Text(), "</head>") {
+						headBuff := ""
+						if jsInject != "" {
+							headBuff += strings.Replace(scanner.Text(), "</head>", "<script src='/"+jsInject+"'></script></head>", 1)
 						}
+						if cssInject != "" {
+							if headBuff == "" {
+								headBuff += strings.Replace(scanner.Text(), "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></script></head>", 1)
+							} else {
+								headBuff = strings.Replace(headBuff, "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></head>", 1)
+							}
+						}
+						if headBuff == "" {
+							headBuff = scanner.Text()
+						}
+						buff += headBuff + "\n"
+					} else {
+						buff += scanner.Text() + "\n"
 					}
-					if headBuff == "" {
-						headBuff = scanner.Text()
-					}
-					buff += headBuff + "\n"
-				} else {
-					buff += scanner.Text() + "\n"
 				}
+			} else {
+				buffByte, _ := ioutil.ReadAll(rc)
+				buff = string(buffByte)
 			}
 
 			buffReader := strings.NewReader(string(buff))
