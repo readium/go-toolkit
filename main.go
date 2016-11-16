@@ -296,6 +296,9 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 							headBuff = strings.Replace(headBuff, "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></head>", 1)
 						}
 					}
+					if headBuff == "" {
+						headBuff = scanner.Text()
+					}
 					buff += headBuff + "\n"
 				} else {
 					buff += scanner.Text() + "\n"
