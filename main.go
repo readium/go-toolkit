@@ -285,7 +285,7 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 				scanner := bufio.NewScanner(rc)
 				for scanner.Scan() {
 					if strings.Contains(scanner.Text(), "</head>") {
-						buff += strings.Replace(scanner.Text(), "</head>", "<script src='/"+jsInject+"'></script>'</head>", 1) + "\n"
+						buff += strings.Replace(scanner.Text(), "</head>", "<script src='/"+jsInject+"'></script></head>", 1) + "\n"
 					} else {
 						buff += scanner.Text() + "\n"
 					}
