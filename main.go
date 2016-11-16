@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"bufio"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -92,7 +93,7 @@ func main() {
 			ReadTimeout:    10 * time.Second,
 			WriteTimeout:   10 * time.Second,
 			MaxHeaderBytes: 1 << 20,
-			Addr:           ":https",
+			Addr:           ":443",
 			TLSConfig: &tls.Config{
 				GetCertificate: m.GetCertificate,
 			},
@@ -221,10 +222,12 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 
 func getAsset(w http.ResponseWriter, req *http.Request) {
 	var opfFileName string
+	var buff string
 
 	vars := mux.Vars(req)
 	filename := "books/" + vars["filename"]
 	assetname := vars["asset"]
+	jsInject := req.URL.Query().Get("js")
 
 	zipReader, err := zip.OpenReader(filename)
 	if err != nil {
@@ -258,14 +261,14 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 	resourcePath := strings.Split(opfFileName, "/")[0]
 
 	for _, f := range zipReader.File {
-		fmt.Println(f.Name)
+		//fmt.Println(f.Name)
 		if f.Name == resourcePath+"/"+assetname {
 			rc, errOpen := f.Open()
 			if errOpen != nil {
 				fmt.Println("error openging " + f.Name)
 			}
-			buff, _ := ioutil.ReadAll(rc)
 			defer rc.Close()
+
 			extension := filepath.Ext(f.Name)
 			if extension == ".css" {
 				w.Header().Set("Content-Type", "text/css")
@@ -277,7 +280,23 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 				w.Header().Set("Content-Type", "text/javascript")
 			}
 			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Write(buff)
+
+			if jsInject != "" {
+				scanner := bufio.NewScanner(rc)
+				for scanner.Scan() {
+					if strings.Contains(scanner.Text(), "</head>") {
+						buff += strings.Replace(scanner.Text(), "</head>", "<script src=/'"+jsInject+"'></script>'</head>", 1) + "\n"
+					} else {
+						buff += scanner.Text() + "\n"
+					}
+				}
+			} else {
+				buffByte, _ := ioutil.ReadAll(rc)
+				buff = string(buffByte)
+			}
+
+			buffReader := strings.NewReader(string(buff))
+			http.ServeContent(w, req, assetname, f.ModTime(), buffReader)
 			return
 		}
 	}
