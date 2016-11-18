@@ -282,8 +282,13 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 			}
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 
+			buffByte, _ := ioutil.ReadAll(rc)
+			buff = string(buffByte)
+			buffReader := strings.NewReader(buff)
+
+			finalBuff := ""
 			if cssInject != "" || jsInject != "" {
-				scanner := bufio.NewScanner(rc)
+				scanner := bufio.NewScanner(buffReader)
 				for scanner.Scan() {
 					if strings.Contains(scanner.Text(), "</head>") {
 						headBuff := ""
@@ -300,18 +305,17 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 						if headBuff == "" {
 							headBuff = scanner.Text()
 						}
-						buff += headBuff + "\n"
+						finalBuff += headBuff + "\n"
 					} else {
-						buff += scanner.Text() + "\n"
+						finalBuff += scanner.Text() + "\n"
 					}
 				}
 			} else {
-				buffByte, _ := ioutil.ReadAll(rc)
-				buff = string(buffByte)
+				finalBuff = buff
 			}
 
-			buffReader := strings.NewReader(string(buff))
-			http.ServeContent(w, req, assetname, f.ModTime(), buffReader)
+			finalBuffReader := strings.NewReader(finalBuff)
+			http.ServeContent(w, req, assetname, f.ModTime(), finalBuffReader)
 			return
 		}
 	}
