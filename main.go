@@ -19,6 +19,7 @@ import (
 
 	"github.com/beevik/etree"
 	"github.com/gorilla/mux"
+	"github.com/kapmahc/epub"
 	"github.com/urfave/negroni"
 )
 
@@ -63,6 +64,8 @@ type AppInstall struct {
 	Display   string `json:"display"`
 	Icons     Icon   `json:"icons"`
 }
+
+var currentBook epub.Book
 
 func main() {
 
@@ -119,109 +122,57 @@ func loanHandler(test bool) http.Handler {
 }
 
 func getManifest(w http.ResponseWriter, req *http.Request) {
-	var opfFileName string
 	var manifestStruct Manifest
 	var metaStruct Metadata
 
-	metaStruct.Modified = time.Now()
-
 	vars := mux.Vars(req)
 	filename := vars["filename"]
-	filename_path := "books/" + filename
+	filenamePath := "books/" + filename
 
 	self := Link{
 		Rel:      "self",
 		Href:     "http://" + req.Host + "/" + filename + "/manifest.json",
 		TypeLink: "application/json",
 	}
+	metaStruct.Modified = time.Now()
 	manifestStruct.Links = make([]Link, 1)
 	manifestStruct.Resources = make([]Link, 0)
 	manifestStruct.Resources = make([]Link, 0)
 	manifestStruct.Links[0] = self
 
-	zipReader, err := zip.OpenReader(filename_path)
-	if err != nil {
-		fmt.Println(err)
-		return
+	book, _ := epub.Open(filenamePath)
+
+	metaStruct.Title = book.Opf.Metadata.Title[0]
+
+	metaStruct.Language = book.Opf.Metadata.Language[0]
+	metaStruct.Identifier = book.Opf.Metadata.Identifier[0].Data
+	if len(book.Opf.Metadata.Contributor) > 0 {
+		metaStruct.Author = book.Opf.Metadata.Contributor[0].Data
+	}
+	if metaStruct.Author == "" && len(book.Opf.Metadata.Creator) > 0 {
+		metaStruct.Author = book.Opf.Metadata.Creator[0].Data
 	}
 
-	for _, f := range zipReader.File {
-		if f.Name == "META-INF/container.xml" {
-			rc, errOpen := f.Open()
-			if errOpen != nil {
-				fmt.Println("error openging " + f.Name)
-			}
-			doc := etree.NewDocument()
-			_, err = doc.ReadFrom(rc)
-			if err == nil {
-				root := doc.SelectElement("container")
-				rootFiles := root.SelectElements("rootfiles")
-				for _, rootFileTag := range rootFiles {
-					rootFile := rootFileTag.SelectElement("rootfile")
-					if rootFile != nil {
-						opfFileName = rootFile.SelectAttrValue("full-path", "")
-					}
-				}
-			} else {
-				fmt.Println(err)
-			}
-			rc.Close()
+	for _, item := range book.Opf.Manifest {
+		linkItem := Link{}
+		linkItem.TypeLink = item.MediaType
+		linkItem.Href = item.Href
+		if linkItem.TypeLink == "application/xhtml+xml" {
+			manifestStruct.Spine = append(manifestStruct.Spine, linkItem)
+		} else {
+			manifestStruct.Resources = append(manifestStruct.Resources, linkItem)
 		}
 	}
 
-	if opfFileName != "" {
-		for _, f := range zipReader.File {
-			if f.Name == opfFileName {
-				rc, errOpen := f.Open()
-				if errOpen != nil {
-					fmt.Println("error openging " + f.Name)
-				}
-				doc := etree.NewDocument()
-				_, err = doc.ReadFrom(rc)
-				if err == nil {
-					root := doc.SelectElement("package")
-					meta := root.SelectElement("metadata")
-
-					titleTag := meta.SelectElement("title")
-					metaStruct.Title = titleTag.Text()
-
-					langTag := meta.SelectElement("language")
-					metaStruct.Language = langTag.Text()
-
-					identifierTag := meta.SelectElement("identifier")
-					metaStruct.Identifier = identifierTag.Text()
-
-					creatorTag := meta.SelectElement("creator")
-					metaStruct.Author = creatorTag.Text()
-
-					bookManifest := root.SelectElement("manifest")
-					itemsManifest := bookManifest.SelectElements("item")
-					for _, item := range itemsManifest {
-						linkItem := Link{}
-						linkItem.TypeLink = item.SelectAttrValue("media-type", "")
-						linkItem.Href = item.SelectAttrValue("href", "")
-						if linkItem.TypeLink == "application/xhtml+xml" {
-							manifestStruct.Spine = append(manifestStruct.Spine, linkItem)
-						} else {
-							manifestStruct.Resources = append(manifestStruct.Resources, linkItem)
-						}
-					}
-
-					manifestStruct.Metadata = metaStruct
-					j, _ := json.Marshal(manifestStruct)
-					w.Header().Set("Content-Type", "application/json")
-					w.Header().Set("Access-Control-Allow-Origin", "*")
-					w.Write(j)
-					return
-				}
-			}
-		}
-	}
-
+	manifestStruct.Metadata = metaStruct
+	j, _ := json.Marshal(manifestStruct)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Write(j)
+	return
 }
 
 func getAsset(w http.ResponseWriter, req *http.Request) {
-	var opfFileName string
 	var buff string
 
 	vars := mux.Vars(req)
@@ -230,95 +181,56 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 	jsInject := req.URL.Query().Get("js")
 	cssInject := req.URL.Query().Get("css")
 
-	zipReader, err := zip.OpenReader(filename)
-	if err != nil {
-		fmt.Println(err)
-	}
+	book, _ := epub.Open(filename)
 
-	for _, f := range zipReader.File {
-		if f.Name == "META-INF/container.xml" {
-			rc, errOpen := f.Open()
-			if errOpen != nil {
-				fmt.Println("error openging " + f.Name)
-			}
-			doc := etree.NewDocument()
-			_, err = doc.ReadFrom(rc)
-			if err == nil {
-				root := doc.SelectElement("container")
-				rootFiles := root.SelectElements("rootfiles")
-				for _, rootFileTag := range rootFiles {
-					rootFile := rootFileTag.SelectElement("rootfile")
-					if rootFile != nil {
-						opfFileName = rootFile.SelectAttrValue("full-path", "")
-					}
+	extension := filepath.Ext(filename)
+	if extension == ".css" {
+		w.Header().Set("Content-Type", "text/css")
+	}
+	if extension == ".xml" {
+		w.Header().Set("Content-Type", "application/xhtml+xml")
+	}
+	if extension == ".js" {
+		w.Header().Set("Content-Type", "text/javascript")
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	assetFd, _ := book.Open(filename)
+	buffByte, _ := ioutil.ReadAll(assetFd)
+	buff = string(buffByte)
+	buffReader := strings.NewReader(buff)
+
+	finalBuff := ""
+	if cssInject != "" || jsInject != "" {
+		scanner := bufio.NewScanner(buffReader)
+		for scanner.Scan() {
+			if strings.Contains(scanner.Text(), "</head>") {
+				headBuff := ""
+				if jsInject != "" {
+					headBuff += strings.Replace(scanner.Text(), "</head>", "<script src='/"+jsInject+"'></script></head>", 1)
 				}
-			} else {
-				fmt.Println(err)
-			}
-			rc.Close()
-		}
-	}
-
-	resourcePath := strings.Split(opfFileName, "/")[0]
-
-	for _, f := range zipReader.File {
-		//fmt.Println(f.Name)
-		if f.Name == resourcePath+"/"+assetname {
-			rc, errOpen := f.Open()
-			if errOpen != nil {
-				fmt.Println("error openging " + f.Name)
-			}
-			defer rc.Close()
-
-			extension := filepath.Ext(f.Name)
-			if extension == ".css" {
-				w.Header().Set("Content-Type", "text/css")
-			}
-			if extension == ".xml" {
-				w.Header().Set("Content-Type", "application/xhtml+xml")
-			}
-			if extension == ".js" {
-				w.Header().Set("Content-Type", "text/javascript")
-			}
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-
-			buffByte, _ := ioutil.ReadAll(rc)
-			buff = string(buffByte)
-			buffReader := strings.NewReader(buff)
-
-			finalBuff := ""
-			if cssInject != "" || jsInject != "" {
-				scanner := bufio.NewScanner(buffReader)
-				for scanner.Scan() {
-					if strings.Contains(scanner.Text(), "</head>") {
-						headBuff := ""
-						if jsInject != "" {
-							headBuff += strings.Replace(scanner.Text(), "</head>", "<script src='/"+jsInject+"'></script></head>", 1)
-						}
-						if cssInject != "" {
-							if headBuff == "" {
-								headBuff += strings.Replace(scanner.Text(), "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></script></head>", 1)
-							} else {
-								headBuff = strings.Replace(headBuff, "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></head>", 1)
-							}
-						}
-						if headBuff == "" {
-							headBuff = scanner.Text()
-						}
-						finalBuff += headBuff + "\n"
+				if cssInject != "" {
+					if headBuff == "" {
+						headBuff += strings.Replace(scanner.Text(), "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></script></head>", 1)
 					} else {
-						finalBuff += scanner.Text() + "\n"
+						headBuff = strings.Replace(headBuff, "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></head>", 1)
 					}
 				}
+				if headBuff == "" {
+					headBuff = scanner.Text()
+				}
+				finalBuff += headBuff + "\n"
 			} else {
-				finalBuff = buff
+				finalBuff += scanner.Text() + "\n"
 			}
-
-			finalBuffReader := strings.NewReader(finalBuff)
-			http.ServeContent(w, req, assetname, f.ModTime(), finalBuffReader)
-			return
 		}
+	} else {
+		finalBuff = buff
 	}
+
+	finalBuffReader := strings.NewReader(finalBuff)
+	http.ServeContent(w, req, assetname, time.Now(), finalBuffReader)
+	return
 
 }
 
