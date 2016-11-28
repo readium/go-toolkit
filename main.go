@@ -195,7 +195,8 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 	}
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	assetFd, _ := book.Open(filename)
+	fmt.Println(assetname)
+	assetFd, _ := book.Open(assetname)
 	buffByte, _ := ioutil.ReadAll(assetFd)
 	buff = string(buffByte)
 	buffReader := strings.NewReader(buff)
