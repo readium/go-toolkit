@@ -11,7 +11,9 @@ In addition to streaming an EPUB as a Web Publication, this project also embeds 
 
 ##Usage
 
-By default the server will use EPUB files included in the root directory.
+By default the server will use EPUB files included in the books directory.
+
+For local usage or dev use the parameters dev to bind the server in http mode on port 8080
 
 ##Live Demo
 
