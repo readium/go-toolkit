@@ -23,73 +23,17 @@ import (
 	"github.com/urfave/negroni"
 )
 
-// Metadata metadata struct
-type Metadata struct {
-	Title      string    `json:"title"`
-	Author     string    `json:"author"`
-	Identifier string    `json:"identifier"`
-	Language   string    `json:"language"`
-	Modified   time.Time `json:"modified"`
-}
-
-// Link link struct
-type Link struct {
-	Rel      string `json:"rel,omitempty"`
-	Href     string `json:"href"`
-	TypeLink string `json:"type"`
-	Height   int    `json:"height,omitempty"`
-	Width    int    `json:"width,omitempty"`
-}
-
-// Manifest manifest struct
-type Manifest struct {
-	Metadata  Metadata `json:"metadata"`
-	Links     []Link   `json:"links"`
-	Spine     []Link   `json:"spine,omitempty"`
-	Resources []Link   `json:"resources"`
-}
-
-// Icon icon struct for AppInstall
-type Icon struct {
-	Src       string `json:"src"`
-	Size      string `json:"size"`
-	MediaType string `json:"type"`
-}
-
-// AppInstall struct for app install banner
-type AppInstall struct {
-	ShortName string `json:"short_name"`
-	Name      string `json:"name"`
-	StartURL  string `json:"start_url"`
-	Display   string `json:"display"`
-	Icons     Icon   `json:"icons"`
-}
-
-var currentBook epub.Book
-
 func main() {
 
 	n := negroni.Classic()
 	n.Use(negroni.NewStatic(http.Dir("public")))
 	n.UseHandler(loanHandler(false))
 
-	var m letsencrypt.Manager
-	if err := m.CacheFile("letsencrypt.cache"); err != nil {
-		log.Fatal(err)
-	}
-
-	if len(os.Args) > 1 && os.Args[1] == "dev" {
-		s := &http.Server{
-			Handler:        n,
-			ReadTimeout:    10 * time.Second,
-			WriteTimeout:   10 * time.Second,
-			MaxHeaderBytes: 1 << 20,
-			Addr:           ":8080",
+	if len(os.Args) > 1 && os.Args[1] == "https" {
+		var m letsencrypt.Manager
+		if err := m.CacheFile("letsencrypt.cache"); err != nil {
+			log.Fatal(err)
 		}
-
-		//		log.Fatal(s.ListenAndServeTLS("test.cert", "test.key"))
-		log.Fatal(s.ListenAndServe())
-	} else {
 
 		s := &http.Server{
 			Handler:        n,
@@ -103,6 +47,18 @@ func main() {
 		}
 
 		log.Fatal(s.ListenAndServeTLS("", ""))
+
+	} else {
+		s := &http.Server{
+			Handler:        n,
+			ReadTimeout:    10 * time.Second,
+			WriteTimeout:   10 * time.Second,
+			MaxHeaderBytes: 1 << 20,
+			Addr:           ":8080",
+		}
+
+		//		log.Fatal(s.ListenAndServeTLS("test.cert", "test.key"))
+		log.Fatal(s.ListenAndServe())
 	}
 }
 
