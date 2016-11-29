@@ -9,6 +9,14 @@ type Publication struct {
 	Links     []Link   `json:"links"`
 	Spine     []Link   `json:"spine"`
 	Resources []Link   `json:"resources,omitempty"`
+
+	TOC       []Link `json:"toc,omitempty"`
+	PageList  []Link `json:"page-list,omitempty"`
+	Landmarks []Link `json:"landmarks,omitempty"`
+	LOI       []Link `json:"loi,omitempty"`
+	LOA       []Link `json:"loa,omitempty"`
+	LOV       []Link `json:"lov,omitempty"`
+	LOT       []Link `json:"lot,omitempty"`
 }
 
 // Metadata metadata struct
