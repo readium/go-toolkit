@@ -2,27 +2,27 @@ package models
 
 import "time"
 
-// Publication publication struct
+// Publication Main structure for a publication
 type Publication struct {
 	Context   []string `json:"@context,omitempty"`
 	Metadata  Metadata `json:"metadata"`
 	Links     []Link   `json:"links"`
 	Spine     []Link   `json:"spine"`
-	Resources []Link   `json:"resources,omitempty"`
-
-	TOC       []Link `json:"toc,omitempty"`
-	PageList  []Link `json:"page-list,omitempty"`
-	Landmarks []Link `json:"landmarks,omitempty"`
-	LOI       []Link `json:"loi,omitempty"`
-	LOA       []Link `json:"loa,omitempty"`
-	LOV       []Link `json:"lov,omitempty"`
-	LOT       []Link `json:"lot,omitempty"`
+	Resources []Link   `json:"resources,omitempty"` //Replaces the manifest but less redundant
+	TOC       []Link   `json:"toc,omitempty"`
+	PageList  []Link   `json:"page-list,omitempty"`
+	Landmarks []Link   `json:"landmarks,omitempty"`
+	LOI       []Link   `json:"loi,omitempty"` //List of illustrations
+	LOA       []Link   `json:"loa,omitempty"` //List of audio files
+	LOV       []Link   `json:"lov,omitempty"` //List of videos
+	LOT       []Link   `json:"lot,omitempty"` //List of tables
 }
 
-// Metadata metadata struct
+// Metadata for the default context
 type Metadata struct {
-	RDFType         string        `json:"@type,omitempty"`
+	RDFType         string        `json:"@type,omitempty"` //Defaults to schema.org for EBook
 	Title           string        `json:"title"`
+	Identifier      string        `json:"identifier"`
 	Author          []Contributor `json:"author,omitempty"`
 	Translator      []Contributor `json:"translator,omitempty"`
 	Editor          []Contributor `json:"editor,omitempty"`
@@ -36,7 +36,6 @@ type Metadata struct {
 	Contributor     []Contributor `json:"contributor,omitempty"`
 	Publisher       []Contributor `json:"publisher,omitempty"`
 	Imprint         []Contributor `json:"imprint,omitempty"`
-	Identifier      string        `json:"identifier"`
 	Language        []string      `json:"language,omitempty"`
 	Modified        *time.Time    `json:"modified,omitempty"`
 	PublicationDate *time.Time    `json:"published,omitempty"`
@@ -49,7 +48,7 @@ type Metadata struct {
 	Subject         []Subject     `json:"subject,omitempty"`
 }
 
-// Link link struct
+// Link object used in collections and links
 type Link struct {
 	Href       string         `json:"href"`
 	TypeLink   string         `json:"type"`
@@ -62,7 +61,7 @@ type Link struct {
 	Templated  bool           `json:"templated,omitempty"`
 }
 
-// Contributor shared Contributor struct
+// Shared contributor construct
 type Contributor struct {
 	Name       string `json:"name"`
 	SortAs     string `json:"sort_as,omitempty"`
@@ -70,7 +69,7 @@ type Contributor struct {
 	Role       string `json:"role,omitempty"`
 }
 
-// Rendition rendition
+// Rendition object for reflow/FXL
 type Rendition struct {
 	Flow        string `json:"flow,omitempty"`
 	Layout      string `json:"layout,omitempty"`
@@ -78,7 +77,7 @@ type Rendition struct {
 	Spread      string `json:"spread,omitempty"`
 }
 
-// Subject subject
+// Subject as based on EPUB 3.1 and Webpub
 type Subject struct {
 	Name   string `json:"name"`
 	SortAs string `json:"sort_as,omitempty"`
@@ -86,13 +85,13 @@ type Subject struct {
 	Code   string `json:"code,omitempty"`
 }
 
-// BelongsTo belongs to
+// List of collections that a publication belongs to
 type BelongsTo struct {
 	Series     []Collection `json:"series,omitempty"`
 	Collection []Collection `json:"collection,omitempty"`
 }
 
-// Collection shared Collection struct
+// Shared collection construct
 type Collection struct {
 	Name       string  `json:"name"`
 	SortAs     string  `json:"sort_as,omitempty"`
@@ -105,5 +104,5 @@ func (publication *Publication) linkCover() {
 }
 
 func (publication *Publication) linkNavDoc() {
-
+	// returns the link object for the navigation doc (EPUB 3.x)
 }
