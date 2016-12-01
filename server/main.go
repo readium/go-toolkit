@@ -1,4 +1,4 @@
-package server
+package main 
 
 import (
 	"archive/zip"
@@ -25,7 +25,7 @@ import (
 )
 
 // Serv TODO add doc
-func Serv() {
+func main() {
 
 	n := negroni.Classic()
 	n.Use(negroni.NewStatic(http.Dir("public")))
