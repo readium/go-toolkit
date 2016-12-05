@@ -22,6 +22,14 @@ import (
 	"rsc.io/letsencrypt"
 )
 
+type currentBook struct {
+	filename    string
+	publication models.Publication
+	timestamp   time.Time
+}
+
+var currentBookList []currentBook
+
 // Serv TODO add doc
 func main() {
 
@@ -78,12 +86,33 @@ func bookHandler(test bool) http.Handler {
 }
 
 func getManifest(w http.ResponseWriter, req *http.Request) {
+	var current currentBook
+	var publication models.Publication
+
 	vars := mux.Vars(req)
 	filename := vars["filename"]
 	filenamePath := "books/" + filename
 
-	manifestURL := "http://" + req.Host + "/" + filename + "/manifest.json"
-	publication := parser.Parse(filenamePath, manifestURL)
+	for _, book := range currentBookList {
+		if vars["filename"] == book.filename {
+			current = book
+		}
+	}
+
+	if current.filename == "" {
+		manifestURL := "http://" + req.Host + "/" + filename + "/manifest.json"
+		publication = parser.Parse(filenamePath, manifestURL)
+		for _, book := range currentBookList {
+			if filename == book.filename {
+				current = book
+			}
+		}
+
+		currentBookList = append(currentBookList, currentBook{filename: filename, publication: publication, timestamp: time.Now()})
+	} else {
+		publication = current.publication
+	}
+
 	j, _ := json.Marshal(publication)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -92,14 +121,24 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 }
 
 func getAsset(w http.ResponseWriter, req *http.Request) {
+	var current currentBook
 
 	vars := mux.Vars(req)
 	assetname := vars["asset"]
 
-	fmt.Println(assetname)
-	publication := parser.Parse("books/"+vars["filename"], "")
+	for _, book := range currentBookList {
+		if vars["filename"] == book.filename {
+			current = book
+		}
+	}
 
-	buff, mediaType := fetcher.Fetch(publication, assetname)
+	if current.filename == "" {
+		manifestURL := "http://" + req.Host + "/" + vars["filename"] + "/manifest.json"
+		publication := parser.Parse("books/"+vars["filename"], manifestURL)
+		currentBookList = append(currentBookList, currentBook{filename: vars["filename"], publication: publication, timestamp: time.Now()})
+	}
+
+	buff, mediaType := fetcher.Fetch(current.publication, assetname)
 	finalBuffReader := strings.NewReader(buff)
 
 	w.Header().Set("Content-Type", mediaType)
