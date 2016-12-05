@@ -1,8 +1,7 @@
-package main 
+package main
 
 import (
 	"archive/zip"
-	"bufio"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -11,15 +10,14 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/beevik/etree"
+	"github.com/feedbooks/webpub-streamer/fetcher"
 	"github.com/feedbooks/webpub-streamer/models"
 	"github.com/feedbooks/webpub-streamer/parser"
 	"github.com/gorilla/mux"
-	"github.com/kapmahc/epub"
 	"github.com/urfave/negroni"
 	"rsc.io/letsencrypt"
 )
@@ -29,7 +27,7 @@ func main() {
 
 	n := negroni.Classic()
 	n.Use(negroni.NewStatic(http.Dir("public")))
-	n.UseHandler(loanHandler(false))
+	n.UseHandler(bookHandler(false))
 
 	if len(os.Args) > 1 && os.Args[1] == "https" {
 		var m letsencrypt.Manager
@@ -64,7 +62,7 @@ func main() {
 	}
 }
 
-func loanHandler(test bool) http.Handler {
+func bookHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
 	serv.HandleFunc("/index.html", getBooks)
@@ -84,7 +82,8 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 	filename := vars["filename"]
 	filenamePath := "books/" + filename
 
-	publication := parser.Parse(filename, filenamePath, req.Host)
+	manifestURL := "http://" + req.Host + "/" + filename + "/manifest.json"
+	publication := parser.Parse(filenamePath, manifestURL)
 	j, _ := json.Marshal(publication)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -93,63 +92,18 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 }
 
 func getAsset(w http.ResponseWriter, req *http.Request) {
-	var buff string
 
 	vars := mux.Vars(req)
-	filename := "books/" + vars["filename"]
 	assetname := vars["asset"]
-	jsInject := req.URL.Query().Get("js")
-	cssInject := req.URL.Query().Get("css")
-
-	book, _ := epub.Open(filename)
-
-	extension := filepath.Ext(filename)
-	if extension == ".css" {
-		w.Header().Set("Content-Type", "text/css")
-	}
-	if extension == ".xml" {
-		w.Header().Set("Content-Type", "application/xhtml+xml")
-	}
-	if extension == ".js" {
-		w.Header().Set("Content-Type", "text/javascript")
-	}
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	fmt.Println(assetname)
-	assetFd, _ := book.Open(assetname)
-	buffByte, _ := ioutil.ReadAll(assetFd)
-	buff = string(buffByte)
-	buffReader := strings.NewReader(buff)
+	publication := parser.Parse("books/"+vars["filename"], "")
 
-	finalBuff := ""
-	if cssInject != "" || jsInject != "" {
-		scanner := bufio.NewScanner(buffReader)
-		for scanner.Scan() {
-			if strings.Contains(scanner.Text(), "</head>") {
-				headBuff := ""
-				if jsInject != "" {
-					headBuff += strings.Replace(scanner.Text(), "</head>", "<script src='/"+jsInject+"'></script></head>", 1)
-				}
-				if cssInject != "" {
-					if headBuff == "" {
-						headBuff += strings.Replace(scanner.Text(), "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></script></head>", 1)
-					} else {
-						headBuff = strings.Replace(headBuff, "</head>", "<link rel='stylesheet' type='text/css' href='/"+cssInject+"'></head>", 1)
-					}
-				}
-				if headBuff == "" {
-					headBuff = scanner.Text()
-				}
-				finalBuff += headBuff + "\n"
-			} else {
-				finalBuff += scanner.Text() + "\n"
-			}
-		}
-	} else {
-		finalBuff = buff
-	}
+	buff, mediaType := fetcher.Fetch(publication, assetname)
+	finalBuffReader := strings.NewReader(buff)
 
-	finalBuffReader := strings.NewReader(finalBuff)
+	w.Header().Set("Content-Type", mediaType)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	http.ServeContent(w, req, assetname, time.Now(), finalBuffReader)
 	return
 

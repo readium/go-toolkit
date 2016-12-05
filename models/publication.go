@@ -16,6 +16,16 @@ type Publication struct {
 	LOA       []Link   `json:"loa,omitempty"` //List of audio files
 	LOV       []Link   `json:"lov,omitempty"` //List of videos
 	LOT       []Link   `json:"lot,omitempty"` //List of tables
+
+	OtherLinks       []Link                  `json:"-"` //Extension point for links that shouldn't show up in the manifest
+	OtherCollections []PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
+	Internal         []Internal              `json:"-"`
+}
+
+// Internal TODO
+type Internal struct {
+	Name  string
+	Value interface{}
 }
 
 // Metadata for the default context
@@ -46,6 +56,15 @@ type Metadata struct {
 	EpubType        []string      `json:"epub-type,omitempty"`
 	Right           string        `json:"right,omitempty"`
 	Subject         []Subject     `json:"subject,omitempty"`
+
+	OtherMetadata []Meta //Extension point for other metadata
+}
+
+// Meta is a generic structure for other metadata
+type Meta struct {
+	property string
+	value    string
+	children []Meta
 }
 
 // Link object used in collections and links
@@ -61,7 +80,7 @@ type Link struct {
 	Templated  bool           `json:"templated,omitempty"`
 }
 
-// Shared contributor construct
+// Contributor construct used internally for all contributors
 type Contributor struct {
 	Name       string `json:"name"`
 	SortAs     string `json:"sort_as,omitempty"`
@@ -85,18 +104,26 @@ type Subject struct {
 	Code   string `json:"code,omitempty"`
 }
 
-// List of collections that a publication belongs to
+// BelongsTo is a list of collections that a publication belongs to
 type BelongsTo struct {
 	Series     []Collection `json:"series,omitempty"`
 	Collection []Collection `json:"collection,omitempty"`
 }
 
-// Shared collection construct
+// Collection construct used for collection/serie metadata
 type Collection struct {
 	Name       string  `json:"name"`
 	SortAs     string  `json:"sort_as,omitempty"`
 	Identifier string  `json:"identifier,omitempty"`
 	Position   float32 `json:"position,omitempty"`
+}
+
+// PublicationCollection is used as an extension points for other collections in a Publication
+type PublicationCollection struct {
+	Role     string
+	Metadata []Meta
+	Links    []Link
+	Children []PublicationCollection
 }
 
 func (publication *Publication) linkCover() {
