@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/feedbooks/epub"
 	"github.com/feedbooks/webpub-streamer/models"
-	"github.com/kapmahc/epub"
 )
 
 func init() {
@@ -36,7 +36,8 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 		fmt.Println(err)
 		return models.Publication{}
 	}
-	manifestStruct.Internal = append(manifestStruct.Internal, models.Internal{Name: "epub", Value: book})
+	manifestStruct.Internal = append(manifestStruct.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
+	manifestStruct.Internal = append(manifestStruct.Internal, models.Internal{Name: "rootfile", Value: book.Container.Rootfile.Path})
 
 	metaStruct.Title = book.Opf.Metadata.Title[0]
 
