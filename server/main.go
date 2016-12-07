@@ -8,7 +8,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/feedbooks/webpub-streamer/fetcher"
@@ -25,6 +27,7 @@ type currentBook struct {
 }
 
 var currentBookList []currentBook
+var zipMutex sync.Mutex
 
 // Serv TODO add doc
 func main() {
@@ -87,7 +90,10 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 	assetname := vars["asset"]
 
 	publication := getPublication(vars["filename"], req)
+	zipMutex.Lock()
 	epubReader, mediaType := fetcher.Fetch(publication, assetname)
+	zipMutex.Unlock()
+	runtime.Gosched()
 
 	w.Header().Set("Content-Type", mediaType)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -111,13 +117,8 @@ func getPublication(filename string, req *http.Request) models.Publication {
 		filenamePath, _ := base64.StdEncoding.DecodeString(filename)
 
 		publication = parser.Parse(string(filenamePath), manifestURL)
-		for _, book := range currentBookList {
-			if filename == book.filename {
-				current = book
-			}
-		}
 
-		currentBookList = append(currentBookList, currentBook{filename: base64.StdEncoding.EncodeToString([]byte(filename)), publication: publication, timestamp: time.Now()})
+		currentBookList = append(currentBookList, currentBook{filename: filename, publication: publication, timestamp: time.Now()})
 	} else {
 		publication = current.publication
 	}
