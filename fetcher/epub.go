@@ -29,11 +29,11 @@ func FetchEpub(publication models.Publication, publicationResource string) (io.R
 	for _, f := range reader.File {
 		if f.Name == resourcePath {
 			assetFd, _ = f.Open()
-			defer assetFd.Close()
 		}
 	}
 
 	buff, _ := ioutil.ReadAll(assetFd)
+	assetFd.Close()
 	readerSeeker := bytes.NewReader(buff)
 
 	return readerSeeker, mediaType
