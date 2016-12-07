@@ -44,14 +44,14 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 	metaStruct.Language = book.Opf.Metadata.Language
 	metaStruct.Identifier = book.Opf.Metadata.Identifier[0].Data
 	if len(book.Opf.Metadata.Contributor) > 0 {
-		aut := models.Contributor{}
-		aut.Name = book.Opf.Metadata.Contributor[0].Data
-		metaStruct.Author = append(metaStruct.Author, aut)
+		for _, cont := range book.Opf.Metadata.Contributor {
+			addContributor(&metaStruct, cont)
+		}
 	}
 	if len(book.Opf.Metadata.Creator) > 0 {
-		aut := models.Contributor{}
-		aut.Name = book.Opf.Metadata.Creator[0].Data
-		metaStruct.Author = append(metaStruct.Author, aut)
+		for _, cont := range book.Opf.Metadata.Creator {
+			addContributor(&metaStruct, cont)
+		}
 	}
 
 	for _, item := range book.Opf.Manifest {
@@ -67,4 +67,12 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 
 	manifestStruct.Metadata = metaStruct
 	return manifestStruct
+}
+
+func addContributor(metadata *models.Metadata, cont epub.Author) {
+	var aut models.Contributor
+
+	aut.Name = cont.Data
+	aut.Role = cont.Role
+	metadata.Author = append(metadata.Author, aut)
 }
