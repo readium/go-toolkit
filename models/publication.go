@@ -51,13 +51,13 @@ type Metadata struct {
 	PublicationDate *time.Time    `json:"published,omitempty"`
 	Description     string        `json:"description,omitempty"`
 	Direction       string        `json:"direction,omitempty"`
-	Rendition       Rendition     `json:"rendition,omitempty"`
+	Rendition       *Rendition    `json:"rendition,omitempty"`
 	Source          string        `json:"source,omitempty"`
 	EpubType        []string      `json:"epub-type,omitempty"`
 	Right           string        `json:"right,omitempty"`
 	Subject         []Subject     `json:"subject,omitempty"`
 
-	OtherMetadata []Meta //Extension point for other metadata
+	OtherMetadata []Meta `json:"-"` //Extension point for other metadata
 }
 
 // Meta is a generic structure for other metadata
