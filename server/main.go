@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html/template"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -66,11 +64,7 @@ func main() {
 func bookHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
-	serv.HandleFunc("/viewer.js", viewer)
-	serv.HandleFunc("/sw.js", sw)
-	serv.HandleFunc("/{filename}/", bookIndex)
 	serv.HandleFunc("/{filename}/manifest.json", getManifest)
-	serv.HandleFunc("/{filename}/index.html", bookIndex)
 	serv.HandleFunc("/{filename}/{asset:.*}", getAsset)
 	return serv
 }
@@ -100,37 +94,6 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 	http.ServeContent(w, req, assetname, time.Now(), epubReader)
 	return
 
-}
-
-func bookIndex(w http.ResponseWriter, req *http.Request) {
-	var err error
-
-	vars := mux.Vars(req)
-	filename := "books/" + vars["filename"]
-
-	t, err := template.ParseFiles("index.html") // Parse template file.
-	if err != nil {
-		fmt.Println(err)
-	}
-	t.Execute(w, filename) // merge.
-}
-
-func viewer(w http.ResponseWriter, req *http.Request) {
-
-	f, _ := os.OpenFile("public/viewer.js", os.O_RDONLY, 666)
-	buff, _ := ioutil.ReadAll(f)
-
-	w.Header().Set("Content-Type", "text/javascript")
-	w.Write(buff)
-}
-
-func sw(w http.ResponseWriter, req *http.Request) {
-
-	f, _ := os.OpenFile("public/sw.js", os.O_RDONLY, 666)
-	buff, _ := ioutil.ReadAll(f)
-
-	w.Header().Set("Content-Type", "text/javascript")
-	w.Write(buff)
 }
 
 func getPublication(filename string, req *http.Request) models.Publication {
