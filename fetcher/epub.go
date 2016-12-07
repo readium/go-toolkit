@@ -17,7 +17,7 @@ func init() {
 func FetchEpub(publication models.Publication, publicationResource string) (io.ReadSeeker, string) {
 	var mediaType string
 	var reader *zip.ReadCloser
-	var assetFd io.Reader
+	var assetFd io.ReadCloser
 
 	for _, data := range publication.Internal {
 		if data.Name == "epub" {
@@ -29,6 +29,7 @@ func FetchEpub(publication models.Publication, publicationResource string) (io.R
 	for _, f := range reader.File {
 		if f.Name == resourcePath {
 			assetFd, _ = f.Open()
+			defer assetFd.Close()
 		}
 	}
 
