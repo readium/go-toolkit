@@ -3,16 +3,23 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
+
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/feedbooks/webpub-streamer/parser"
 )
 
+var (
+	filename = kingpin.Flag("file", "file to parse").Required().Short('f').String()
+	url      = kingpin.Flag("url", "URL for the manifest").Short('u').String()
+)
+
 func main() {
 
-	_, file := filepath.Split(os.Args[1])
-	publication := parser.Parse(file, os.Args[1], "localhost")
+	kingpin.Version("0.0.1")
+	kingpin.Parse()
+
+	publication := parser.Parse(*filename, *url)
 	j, _ := json.Marshal(publication)
 	fmt.Println(string(j))
 }
