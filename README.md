@@ -1,19 +1,27 @@
-# Web Publication Streamer
+# Readium-2 Streamer in Go
 
-This project is a proof of concept that takes an EPUB as an input and provides the following resources in HTTP for it:
+This project is based on the [Readium-2 Streamer architecture](https://github.com/readium/readium-2/blob/master/doc/streamer/README.md) that basically takes an EPUB as an input and exposes in HTTP:
 
 - a [Web Publication Manifest](https://github.com/HadrienGardeur/webpub-manifest) based on the OPF of the original EPUB
-- resources from the EPUB (HTML, CSS, images etc.)
+- resources from the container (HTML, CSS, images etc.)
 
-It is entirely written in Go using [Negroni](https://github.com/urfave/negroni). The server is automatically binded to HTTPS using an automatic Let's Encrypt certificate.
+It is entirely written in Go using [Negroni](https://github.com/urfave/negroni). 
 
-In addition to streaming an EPUB as a Web Publication, this project also embeds the [Web Publication Viewer](https://github.com/HadrienGardeur/webpub-viewer) in order to read such publications.
+This project is broken down in multiple Go packages that can be used independently from the project:
+
+- `models` is an in-memory model of a publication and its components
+- `parser` is responsible for parsing an EPUB and converting that info to the in-memory model
+- `fetcher` is meant to access resources contained in an EPUB and pre-process them (decryption, deobfuscation, content injection)
 
 ##Usage
 
-By default the server will use EPUB files included in the books directory.
+The `server` binary can be called using a single argument: the location to an EPUB file.
 
-For local usage or dev use the parameters dev to bind the server in http mode on port 8080
+The server will bind itself to an available port on `localhost` and return a URI pointing to the Web Publication Manifest.
+
+##Need a Binary Version? 
+
+Releases for stable versions are available at: https://github.com/Feedbooks/webpub-streamer/releases
 
 ##Live Demo
 
