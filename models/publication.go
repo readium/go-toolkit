@@ -126,8 +126,10 @@ type PublicationCollection struct {
 	Children []PublicationCollection
 }
 
-func (publication *Publication) linkCover() {
+// LinkCover return the link for the cover
+func (publication *Publication) LinkCover() string {
 	// returns the link object for the cover
+	return ""
 }
 
 func (publication *Publication) linkNavDoc() {
