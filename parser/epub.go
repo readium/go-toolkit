@@ -44,7 +44,7 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 
 	addTitle(&publication, &book.Opf, epubVersion)
 	publication.Metadata.Language = book.Opf.Metadata.Language
-	publication.Metadata.Identifier = book.Opf.Metadata.Identifier[0].Data
+	addIdentifier(&publication, book, epubVersion)
 	if len(book.Opf.Metadata.Contributor) > 0 {
 		for _, cont := range book.Opf.Metadata.Contributor {
 			addContributor(&publication, cont)
@@ -156,6 +156,19 @@ func addTitle(publication *models.Publication, opf *epub.Opf, epubVersion string
 		publication.Metadata.Title = opf.Metadata.Title[0].Data
 	}
 
+}
+
+func addIdentifier(publication *models.Publication, book *epub.Book, epubVersion string) {
+	if len(book.Opf.Metadata.Identifier) > 1 {
+		uniqueID := book.Opf.UniqueIdentifier
+		for _, iden := range book.Opf.Metadata.Identifier {
+			if iden.ID == uniqueID {
+				publication.Metadata.Identifier = iden.Data
+			}
+		}
+	} else {
+		publication.Metadata.Identifier = book.Opf.Metadata.Identifier[0].Data
+	}
 }
 
 func addRelToLink(link *models.Link, linkEpub *epub.Manifest) {
