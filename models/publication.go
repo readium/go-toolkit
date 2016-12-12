@@ -126,12 +126,21 @@ type PublicationCollection struct {
 	Children []PublicationCollection
 }
 
-// LinkCover return the link for the cover
-func (publication *Publication) LinkCover() string {
-	// returns the link object for the cover
-	return ""
+// GetCover return the link for the cover
+func (publication *Publication) GetCover() Link {
+	for _, resource := range publication.Resources {
+		for _, rel := range resource.Rel {
+			if rel == "cover" {
+				return resource
+			}
+		}
+	}
+
+	return Link{}
 }
 
-func (publication *Publication) linkNavDoc() {
+// GetNavDoc return the link for the navigation document
+func (publication *Publication) GetNavDoc() Link {
 	// returns the link object for the navigation doc (EPUB 3.x)
+	return Link{}
 }

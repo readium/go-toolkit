@@ -20,8 +20,8 @@ func main() {
 	kingpin.Parse()
 
 	publication := parser.Parse(*filename, *url)
-	cover := publication.LinkCover()
-	fmt.Println(cover)
+	cover := publication.GetCover()
+	fmt.Println(cover.Href)
 	j, _ := json.Marshal(publication)
 	fmt.Println(string(j))
 }
