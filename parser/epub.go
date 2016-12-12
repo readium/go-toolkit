@@ -16,6 +16,7 @@ func init() {
 func EpubParser(filePath string, selfURL string) models.Publication {
 	var manifestStruct models.Publication
 	var metaStruct models.Metadata
+	var epubVersion string
 
 	timeNow := time.Now()
 	metaStruct.Modified = &timeNow
@@ -36,11 +37,11 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 		fmt.Println(err)
 		return models.Publication{}
 	}
+	epubVersion = book.Container.Rootfile.Version
 	manifestStruct.Internal = append(manifestStruct.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
 	manifestStruct.Internal = append(manifestStruct.Internal, models.Internal{Name: "rootfile", Value: book.Container.Rootfile.Path})
 
-	metaStruct.Title = book.Opf.Metadata.Title[0]
-
+	addTitle(&metaStruct, &book.Opf, epubVersion)
 	metaStruct.Language = book.Opf.Metadata.Language
 	metaStruct.Identifier = book.Opf.Metadata.Identifier[0].Data
 	if len(book.Opf.Metadata.Contributor) > 0 {
@@ -54,13 +55,20 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 		}
 	}
 
-	for _, item := range book.Opf.Manifest {
-		linkItem := models.Link{}
-		linkItem.TypeLink = item.MediaType
-		linkItem.Href = item.Href
-		if linkItem.TypeLink == "application/xhtml+xml" {
+	for _, item := range book.Opf.Spine.Items {
+		linkItem := findInManifestByID(book, item.IDref)
+		if linkItem.Href != "" {
 			manifestStruct.Spine = append(manifestStruct.Spine, linkItem)
-		} else {
+		}
+	}
+
+	for _, item := range book.Opf.Manifest {
+
+		linkSpine := findInSpineByHref(&manifestStruct, item.Href)
+		if linkSpine.Href == "" {
+			linkItem := models.Link{}
+			linkItem.TypeLink = item.MediaType
+			linkItem.Href = item.Href
 			manifestStruct.Resources = append(manifestStruct.Resources, linkItem)
 		}
 	}
@@ -69,10 +77,65 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 	return manifestStruct
 }
 
-func addContributor(metadata *models.Metadata, cont epub.Author) {
-	var aut models.Contributor
+func findInSpineByHref(publication *models.Publication, href string) models.Link {
+	for _, l := range publication.Spine {
+		if l.Href == href {
+			return l
+		}
+	}
 
-	aut.Name = cont.Data
-	aut.Role = cont.Role
-	metadata.Author = append(metadata.Author, aut)
+	return models.Link{}
+}
+
+func findInManifestByID(book *epub.Book, ID string) models.Link {
+	for _, item := range book.Opf.Manifest {
+		if item.ID == ID {
+			linkItem := models.Link{}
+			linkItem.TypeLink = item.MediaType
+			linkItem.Href = item.Href
+			return linkItem
+		}
+	}
+	return models.Link{}
+}
+
+func addContributor(metadata *models.Metadata, cont epub.Author) {
+	var contributor models.Contributor
+
+	contributor.Name = cont.Data
+	contributor.Role = cont.Role
+	switch contributor.Role {
+	case "aut":
+		metadata.Author = append(metadata.Author, contributor)
+	case "trl":
+		metadata.Translator = append(metadata.Author, contributor)
+	case "art":
+		metadata.Artist = append(metadata.Artist, contributor)
+	case "edt":
+		metadata.Editor = append(metadata.Editor, contributor)
+	case "ill":
+		metadata.Illustrator = append(metadata.Illustrator, contributor)
+	case "nrt":
+		metadata.Narrator = append(metadata.Narrator, contributor)
+	default:
+		metadata.Contributor = append(metadata.Contributor, contributor)
+	}
+}
+
+func addTitle(metadata *models.Metadata, opf *epub.Opf, epubVersion string) {
+
+	if len(opf.Metadata.Title) > 1 && epubVersion == "3.0" {
+		for _, titleTag := range opf.Metadata.Title {
+			for _, metaTag := range opf.Metadata.Meta {
+				if metaTag.Refine == "#"+titleTag.ID {
+					if metaTag.Data == "main" {
+						metadata.Title = titleTag.Data
+					}
+				}
+			}
+		}
+	} else {
+		metadata.Title = opf.Metadata.Title[0].Data
+	}
+
 }
