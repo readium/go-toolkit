@@ -17,11 +17,20 @@ var fetcherList []List
 
 // Fetch TODO add doc
 func Fetch(publication models.Publication, publicationRessource string) (io.ReadSeeker, string) {
+	var typePublication string
 
-	for _, fetcherFunc := range fetcherList {
-		// if fileExt == parserFunc.fileExt {
-		return fetcherFunc.fetcher(publication, publicationRessource)
-		// }
+	for _, key := range publication.Internal {
+		if key.Name == "type" {
+			typePublication = key.Value.(string)
+		}
+	}
+
+	if typePublication != "" {
+		for _, fetcherFunc := range fetcherList {
+			if typePublication == fetcherFunc.publicationType {
+				return fetcherFunc.fetcher(publication, publicationRessource)
+			}
+		}
 	}
 
 	return nil, ""

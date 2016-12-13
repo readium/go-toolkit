@@ -39,6 +39,7 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 		return models.Publication{}
 	}
 	epubVersion = book.Container.Rootfile.Version
+	publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "epub"})
 	publication.Internal = append(publication.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
 	publication.Internal = append(publication.Internal, models.Internal{Name: "rootfile", Value: book.Container.Rootfile.Path})
 
