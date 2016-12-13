@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/feedbooks/webpub-streamer/models"
 )
@@ -16,7 +17,8 @@ func init() {
 func CbzParser(filePath string, selfURL string) models.Publication {
 	var publication models.Publication
 
-	publication.Metadata.Title = filePath
+	publication.Metadata.Title = filePathToTitle(filePath)
+	publication.Metadata.Identifier = filePath
 	zipReader, err := zip.OpenReader(filePath)
 	if err != nil {
 		fmt.Println("failed to open zip " + filePath)
@@ -31,18 +33,33 @@ func CbzParser(filePath string, selfURL string) models.Publication {
 		linkItem := models.Link{}
 		linkItem.TypeLink = getMediaTypeByName(f.Name)
 		linkItem.Href = f.Name
-		publication.Spine = append(publication.Spine, linkItem)
+		if linkItem.TypeLink != "" {
+			publication.Spine = append(publication.Spine, linkItem)
+		}
 	}
 
 	return publication
 }
 
+func filePathToTitle(filePath string) string {
+	_, filename := filepath.Split(filePath)
+	filename = strings.Split(filename, ".")[0]
+	title := strings.Replace(filename, "_", " ", -1)
+
+	return title
+}
+
 func getMediaTypeByName(filePath string) string {
 	ext := filepath.Ext(filePath)
 
-	if ext == ".jpg" {
+	switch strings.ToLower(ext) {
+	case ".jpg":
 		return "image/jpeg"
+	case ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	default:
+		return ""
 	}
-
-	return ""
 }

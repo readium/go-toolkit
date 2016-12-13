@@ -128,27 +128,30 @@ type PublicationCollection struct {
 
 // GetCover return the link for the cover
 func (publication *Publication) GetCover() Link {
+	return publication.searchLinkByRel("cover")
+}
+
+// GetNavDoc return the link for the navigation document
+func (publication *Publication) GetNavDoc() Link {
+	return publication.searchLinkByRel("nav")
+}
+
+func (publication *Publication) searchLinkByRel(rel string) Link {
 	for _, resource := range publication.Resources {
-		for _, rel := range resource.Rel {
-			if rel == "cover" {
+		for _, resRel := range resource.Rel {
+			if resRel == rel {
 				return resource
 			}
 		}
 	}
 
 	for _, item := range publication.Spine {
-		for _, rel := range item.Rel {
-			if rel == "cover" {
+		for _, spineRel := range item.Rel {
+			if spineRel == rel {
 				return item
 			}
 		}
 	}
 
-	return Link{}
-}
-
-// GetNavDoc return the link for the navigation document
-func (publication *Publication) GetNavDoc() Link {
-	// returns the link object for the navigation doc (EPUB 3.x)
 	return Link{}
 }

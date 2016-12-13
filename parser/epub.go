@@ -67,6 +67,7 @@ func fillSpineAndResource(publication *models.Publication, book *epub.Book) {
 
 	for _, item := range book.Opf.Spine.Items {
 		linkItem := findInManifestByID(book, item.IDref)
+
 		if linkItem.Href != "" {
 			publication.Spine = append(publication.Spine, linkItem)
 		}
@@ -173,10 +174,14 @@ func addIdentifier(publication *models.Publication, book *epub.Book, epubVersion
 }
 
 func addRelToLink(link *models.Link, linkEpub *epub.Manifest) {
-	//fmt.Println(linkEpub.Properties)
-	//if linkEpub.Properties == "cover" {
-	//	link.Rel = append(link.Rel, "cover")
-	//}
+
+	if linkEpub.Properties == "cover-image" {
+		link.Rel = append(link.Rel, "cover")
+	}
+
+	if linkEpub.Properties == "nav" {
+		link.Rel = append(link.Rel, "nav")
+	}
 
 }
 
@@ -198,7 +203,8 @@ func addCoverRel(publication *models.Publication, book *epub.Book) {
 				}
 			}
 		}
-
 	}
+
+	// Second method use item manifest properties is done in addRelToLink
 
 }

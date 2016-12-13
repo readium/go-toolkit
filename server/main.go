@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -79,9 +80,12 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 	publication := getPublication(filename, req)
 
 	j, _ := json.Marshal(publication)
+
+	var identJSON bytes.Buffer
+	json.Indent(&identJSON, j, "", " ")
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Write(j)
+	identJSON.WriteTo(w)
 	return
 }
 

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -22,6 +24,11 @@ func main() {
 	publication := parser.Parse(*filename, *url)
 	cover := publication.GetCover()
 	fmt.Println(cover.Href)
+	nav := publication.GetNavDoc()
+	fmt.Println(nav.Href)
+
 	j, _ := json.Marshal(publication)
-	fmt.Println(string(j))
+	var identJSON bytes.Buffer
+	json.Indent(&identJSON, j, "", " ")
+	identJSON.WriteTo(os.Stdout)
 }
