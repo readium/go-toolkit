@@ -136,6 +136,14 @@ func (publication *Publication) GetCover() Link {
 		}
 	}
 
+	for _, item := range publication.Spine {
+		for _, rel := range item.Rel {
+			if rel == "cover" {
+				return item
+			}
+		}
+	}
+
 	return Link{}
 }
 
