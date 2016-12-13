@@ -46,6 +46,12 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 	addTitle(&publication, &book.Opf, epubVersion)
 	publication.Metadata.Language = book.Opf.Metadata.Language
 	addIdentifier(&publication, book, epubVersion)
+	if book.Opf.Dir != "" {
+		publication.Metadata.Direction = book.Opf.Dir
+	} else if book.Opf.Spine.PageProgression != "" {
+		publication.Metadata.Direction = book.Opf.Spine.PageProgression
+	}
+
 	if len(book.Opf.Metadata.Contributor) > 0 {
 		for _, cont := range book.Opf.Metadata.Contributor {
 			addContributor(&publication, cont)

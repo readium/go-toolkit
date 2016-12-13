@@ -153,5 +153,13 @@ func (publication *Publication) searchLinkByRel(rel string) Link {
 		}
 	}
 
+	for _, link := range publication.Links {
+		for _, linkRel := range link.Rel {
+			if linkRel == rel {
+				return link
+			}
+		}
+	}
+
 	return Link{}
 }
