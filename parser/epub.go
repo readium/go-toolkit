@@ -38,7 +38,13 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 		fmt.Println(err)
 		return models.Publication{}
 	}
-	epubVersion = book.Container.Rootfile.Version
+
+	if book.Container.Rootfile.Version != "" {
+		epubVersion = book.Container.Rootfile.Version
+	} else if book.Opf.Version != "" {
+		epubVersion = book.Opf.Version
+	}
+
 	publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "epub"})
 	publication.Internal = append(publication.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
 	publication.Internal = append(publication.Internal, models.Internal{Name: "rootfile", Value: book.Container.Rootfile.Path})
@@ -46,20 +52,20 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 	addTitle(&publication, &book.Opf, epubVersion)
 	publication.Metadata.Language = book.Opf.Metadata.Language
 	addIdentifier(&publication, book, epubVersion)
-	if book.Opf.Dir != "" {
-		publication.Metadata.Direction = book.Opf.Dir
-	} else if book.Opf.Spine.PageProgression != "" {
+	if book.Opf.Spine.PageProgression != "" {
 		publication.Metadata.Direction = book.Opf.Spine.PageProgression
+	} else {
+		publication.Metadata.Direction = "default"
 	}
 
 	if len(book.Opf.Metadata.Contributor) > 0 {
 		for _, cont := range book.Opf.Metadata.Contributor {
-			addContributor(&publication, cont)
+			addContributor(&publication, book, epubVersion, cont)
 		}
 	}
 	if len(book.Opf.Metadata.Creator) > 0 {
 		for _, cont := range book.Opf.Metadata.Creator {
-			addContributor(&publication, cont)
+			addContributor(&publication, book, epubVersion, cont)
 		}
 	}
 
@@ -115,11 +121,20 @@ func findInManifestByID(book *epub.Book, ID string) models.Link {
 	return models.Link{}
 }
 
-func addContributor(publication *models.Publication, cont epub.Author) {
+func addContributor(publication *models.Publication, book *epub.Book, epubVersion string, cont epub.Author) {
 	var contributor models.Contributor
 
 	contributor.Name = cont.Data
-	contributor.Role = cont.Role
+	if epubVersion == "3.0" {
+		meta := findMetaByRefineAndProperty(book, cont.ID, "role")
+		fmt.Println("found " + meta.Data)
+		if meta.Property == "role" {
+			contributor.Role = meta.Data
+		}
+	} else {
+		contributor.Role = cont.Role
+	}
+
 	switch contributor.Role {
 	case "aut":
 		publication.Metadata.Author = append(publication.Metadata.Author, contributor)
@@ -213,4 +228,15 @@ func addCoverRel(publication *models.Publication, book *epub.Book) {
 
 	// Second method use item manifest properties is done in addRelToLink
 
+}
+
+func findMetaByRefineAndProperty(book *epub.Book, ID string, property string) epub.Metafield {
+	fmt.Println("search #" + ID + " " + property)
+	for _, metaTag := range book.Opf.Metadata.Meta {
+		fmt.Println("meta: " + metaTag.Refine + "/" + metaTag.Property)
+		if metaTag.Refine == "#"+ID && metaTag.Property == property {
+			return metaTag
+		}
+	}
+	return epub.Metafield{}
 }
