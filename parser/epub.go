@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/feedbooks/epub"
@@ -52,6 +53,14 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 	addTitle(&publication, &book.Opf, epubVersion)
 	publication.Metadata.Language = book.Opf.Metadata.Language
 	addIdentifier(&publication, book, epubVersion)
+	publication.Metadata.Right = strings.Join(book.Opf.Metadata.Rights, " ")
+
+	if len(book.Opf.Metadata.Publisher) > 0 {
+		for _, pub := range book.Opf.Metadata.Publisher {
+			publication.Metadata.Publisher = append(publication.Metadata.Publisher, models.Contributor{Name: pub})
+		}
+	}
+
 	if book.Opf.Spine.PageProgression != "" {
 		publication.Metadata.Direction = book.Opf.Spine.PageProgression
 	} else {
@@ -127,7 +136,6 @@ func addContributor(publication *models.Publication, book *epub.Book, epubVersio
 	contributor.Name = cont.Data
 	if epubVersion == "3.0" {
 		meta := findMetaByRefineAndProperty(book, cont.ID, "role")
-		fmt.Println("found " + meta.Data)
 		if meta.Property == "role" {
 			contributor.Role = meta.Data
 		}
@@ -231,9 +239,7 @@ func addCoverRel(publication *models.Publication, book *epub.Book) {
 }
 
 func findMetaByRefineAndProperty(book *epub.Book, ID string, property string) epub.Metafield {
-	fmt.Println("search #" + ID + " " + property)
 	for _, metaTag := range book.Opf.Metadata.Meta {
-		fmt.Println("meta: " + metaTag.Refine + "/" + metaTag.Property)
 		if metaTag.Refine == "#"+ID && metaTag.Property == property {
 			return metaTag
 		}
