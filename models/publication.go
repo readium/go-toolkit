@@ -69,15 +69,15 @@ type Meta struct {
 
 // Link object used in collections and links
 type Link struct {
-	Href       string         `json:"href"`
-	TypeLink   string         `json:"type"`
-	Rel        []string       `json:"rel,omitempty"`
-	Height     int            `json:"height,omitempty"`
-	Width      int            `json:"width,omitempty"`
-	Title      string         `json:"title,omitempty"`
-	Properties []string       `json:"properties,omitempty"`
-	Duration   *time.Duration `json:"duration,omitempty"`
-	Templated  bool           `json:"templated,omitempty"`
+	Href       string   `json:"href"`
+	TypeLink   string   `json:"type"`
+	Rel        []string `json:"rel,omitempty"`
+	Height     int      `json:"height,omitempty"`
+	Width      int      `json:"width,omitempty"`
+	Title      string   `json:"title,omitempty"`
+	Properties []string `json:"properties,omitempty"`
+	Duration   string   `json:"duration,omitempty"`
+	Templated  bool     `json:"templated,omitempty"`
 }
 
 // Contributor construct used internally for all contributors

@@ -80,6 +80,7 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 
 	fillSpineAndResource(&publication, book)
 	addCoverRel(&publication, book)
+	fillTOCFromNCX(&publication, book)
 
 	return publication
 }
@@ -101,6 +102,7 @@ func fillSpineAndResource(publication *models.Publication, book *epub.Book) {
 			linkItem.TypeLink = item.MediaType
 			linkItem.Href = item.Href
 			addRelToLink(&linkItem, &item)
+			addMediaOverlay(&linkItem, &item, book)
 			publication.Resources = append(publication.Resources, linkItem)
 		}
 	}
@@ -124,6 +126,7 @@ func findInManifestByID(book *epub.Book, ID string) models.Link {
 			linkItem.TypeLink = item.MediaType
 			linkItem.Href = item.Href
 			addRelToLink(&linkItem, &item)
+			addMediaOverlay(&linkItem, &item, book)
 			return linkItem
 		}
 	}
@@ -245,4 +248,36 @@ func findMetaByRefineAndProperty(book *epub.Book, ID string, property string) ep
 		}
 	}
 	return epub.Metafield{}
+}
+
+func addMediaOverlay(link *models.Link, linkEpub *epub.Manifest, book *epub.Book) {
+	if linkEpub.MediaOverlay != "" {
+		meta := findMetaByRefineAndProperty(book, linkEpub.MediaOverlay, "media:duration")
+		// format 0:33:35.025
+		// splitDuration := strings.Split(meta.Data, ":")
+		link.Duration = meta.Data
+	}
+
+}
+
+func fillTOCFromNCX(publication *models.Publication, book *epub.Book) {
+	if len(book.Ncx.Points) > 0 {
+		for _, point := range book.Ncx.Points {
+			fillTOCFromNavPoint(publication, book, point)
+		}
+	}
+}
+
+func fillTOCFromNavPoint(publication *models.Publication, book *epub.Book, point epub.NavPoint) {
+
+	link := models.Link{}
+	link.Href = point.Content.Src
+	link.Title = point.Text
+	publication.TOC = append(publication.TOC, link)
+	if len(point.Points) > 0 {
+		for _, p := range point.Points {
+			fillTOCFromNavPoint(publication, book, p)
+		}
+	}
+
 }
