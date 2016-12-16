@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"errors"
 	"io"
 	"path"
 
@@ -10,13 +11,13 @@ import (
 // List TODO add doc
 type List struct {
 	publicationType string
-	fetcher         (func(models.Publication, string) (io.ReadSeeker, string))
+	fetcher         (func(models.Publication, string) (io.ReadSeeker, string, error))
 }
 
 var fetcherList []List
 
 // Fetch TODO add doc
-func Fetch(publication models.Publication, publicationRessource string) (io.ReadSeeker, string) {
+func Fetch(publication models.Publication, publicationRessource string) (io.ReadSeeker, string, error) {
 	var typePublication string
 
 	for _, key := range publication.Internal {
@@ -33,7 +34,7 @@ func Fetch(publication models.Publication, publicationRessource string) (io.Read
 		}
 	}
 
-	return nil, ""
+	return nil, "", errors.New("can't find fetcher")
 }
 
 // FilePath return the complete path for the ressource

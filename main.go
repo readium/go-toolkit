@@ -77,7 +77,11 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	filename := vars["filename"]
 
-	publication := getPublication(filename, req)
+	publication, err := getPublication(filename, req)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
 
 	j, _ := json.Marshal(publication)
 
@@ -93,9 +97,18 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	assetname := vars["asset"]
 
-	publication := getPublication(vars["filename"], req)
+	publication, err := getPublication(vars["filename"], req)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+
 	zipMutex.Lock()
-	epubReader, mediaType := fetcher.Fetch(publication, assetname)
+	epubReader, mediaType, err := fetcher.Fetch(publication, assetname)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
 	zipMutex.Unlock()
 	runtime.Gosched()
 
@@ -106,9 +119,10 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 
 }
 
-func getPublication(filename string, req *http.Request) models.Publication {
+func getPublication(filename string, req *http.Request) (models.Publication, error) {
 	var current currentBook
 	var publication models.Publication
+	var err error
 
 	for _, book := range currentBookList {
 		if filename == book.filename {
@@ -120,12 +134,15 @@ func getPublication(filename string, req *http.Request) models.Publication {
 		manifestURL := "http://" + req.Host + "/" + filename + "/manifest.json"
 		filenamePath, _ := base64.StdEncoding.DecodeString(filename)
 
-		publication = parser.Parse(string(filenamePath), manifestURL)
+		publication, err = parser.Parse(string(filenamePath), manifestURL)
+		if err != nil {
+			return models.Publication{}, err
+		}
 
 		currentBookList = append(currentBookList, currentBook{filename: filename, publication: publication, timestamp: time.Now()})
 	} else {
 		publication = current.publication
 	}
 
-	return publication
+	return publication, nil
 }

@@ -2,7 +2,7 @@ package parser
 
 import (
 	"archive/zip"
-	"fmt"
+	"errors"
 	"path/filepath"
 	"strings"
 
@@ -14,16 +14,14 @@ func init() {
 }
 
 // CbzParser TODO add doc
-func CbzParser(filePath string, selfURL string) models.Publication {
+func CbzParser(filePath string, selfURL string) (models.Publication, error) {
 	var publication models.Publication
 
 	publication.Metadata.Title = filePathToTitle(filePath)
 	publication.Metadata.Identifier = filePath
 	zipReader, err := zip.OpenReader(filePath)
 	if err != nil {
-		fmt.Println("failed to open zip " + filePath)
-		fmt.Println(err)
-		return publication
+		return publication, errors.New("can't open or parse cbz file with err : " + err.Error())
 	}
 
 	publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "cbz"})
@@ -38,7 +36,7 @@ func CbzParser(filePath string, selfURL string) models.Publication {
 		}
 	}
 
-	return publication
+	return publication, nil
 }
 
 func filePathToTitle(filePath string) string {

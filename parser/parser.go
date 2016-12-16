@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"path/filepath"
 
 	"github.com/feedbooks/webpub-streamer/models"
@@ -9,13 +10,13 @@ import (
 // List TODO add doc
 type List struct {
 	fileExt string
-	parser  (func(filePath string, selfURL string) models.Publication)
+	parser  (func(filePath string, selfURL string) (models.Publication, error))
 }
 
 var parserList []List
 
 // Parse TODO add doc
-func Parse(filePath string, selfURL string) models.Publication {
+func Parse(filePath string, selfURL string) (models.Publication, error) {
 
 	fileExt := filepath.Ext(filePath)
 	for _, parserFunc := range parserList {
@@ -24,5 +25,5 @@ func Parse(filePath string, selfURL string) models.Publication {
 		}
 	}
 
-	return models.Publication{}
+	return models.Publication{}, errors.New("can't find parser")
 }

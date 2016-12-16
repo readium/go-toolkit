@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 // Publication Main structure for a publication
 type Publication struct {
@@ -127,20 +130,20 @@ type PublicationCollection struct {
 }
 
 // GetCover return the link for the cover
-func (publication *Publication) GetCover() Link {
+func (publication *Publication) GetCover() (Link, error) {
 	return publication.searchLinkByRel("cover")
 }
 
 // GetNavDoc return the link for the navigation document
-func (publication *Publication) GetNavDoc() Link {
+func (publication *Publication) GetNavDoc() (Link, error) {
 	return publication.searchLinkByRel("nav")
 }
 
-func (publication *Publication) searchLinkByRel(rel string) Link {
+func (publication *Publication) searchLinkByRel(rel string) (Link, error) {
 	for _, resource := range publication.Resources {
 		for _, resRel := range resource.Rel {
 			if resRel == rel {
-				return resource
+				return resource, nil
 			}
 		}
 	}
@@ -148,7 +151,7 @@ func (publication *Publication) searchLinkByRel(rel string) Link {
 	for _, item := range publication.Spine {
 		for _, spineRel := range item.Rel {
 			if spineRel == rel {
-				return item
+				return item, nil
 			}
 		}
 	}
@@ -156,10 +159,10 @@ func (publication *Publication) searchLinkByRel(rel string) Link {
 	for _, link := range publication.Links {
 		for _, linkRel := range link.Rel {
 			if linkRel == rel {
-				return link
+				return link, nil
 			}
 		}
 	}
 
-	return Link{}
+	return Link{}, errors.New("Can't find " + rel + " in publication")
 }

@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 	"time"
 
@@ -14,7 +14,7 @@ func init() {
 }
 
 // EpubParser TODO add doc
-func EpubParser(filePath string, selfURL string) models.Publication {
+func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 	var publication models.Publication
 	var metaStruct models.Metadata
 	var epubVersion string
@@ -36,8 +36,7 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 
 	book, err := epub.Open(filePath)
 	if err != nil {
-		fmt.Println(err)
-		return models.Publication{}
+		return models.Publication{}, errors.New("can't open or parse epub file with err : " + err.Error())
 	}
 
 	if book.Container.Rootfile.Version != "" {
@@ -82,7 +81,7 @@ func EpubParser(filePath string, selfURL string) models.Publication {
 	addCoverRel(&publication, book)
 	fillTOCFromNCX(&publication, book)
 
-	return publication
+	return publication, nil
 }
 
 func fillSpineAndResource(publication *models.Publication, book *epub.Book) {

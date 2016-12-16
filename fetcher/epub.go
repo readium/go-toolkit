@@ -14,7 +14,7 @@ func init() {
 }
 
 // FetchEpub TODO add doc
-func FetchEpub(publication models.Publication, publicationResource string) (io.ReadSeeker, string) {
+func FetchEpub(publication models.Publication, publicationResource string) (io.ReadSeeker, string, error) {
 	var mediaType string
 	var reader *zip.ReadCloser
 	var assetFd io.ReadCloser
@@ -36,5 +36,5 @@ func FetchEpub(publication models.Publication, publicationResource string) (io.R
 	assetFd.Close()
 	readerSeeker := bytes.NewReader(buff)
 
-	return readerSeeker, mediaType
+	return readerSeeker, mediaType, nil
 }
