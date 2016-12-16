@@ -136,7 +136,7 @@ func (publication *Publication) GetCover() (Link, error) {
 
 // GetNavDoc return the link for the navigation document
 func (publication *Publication) GetNavDoc() (Link, error) {
-	return publication.searchLinkByRel("nav")
+	return publication.searchLinkByRel("contents")
 }
 
 func (publication *Publication) searchLinkByRel(rel string) (Link, error) {

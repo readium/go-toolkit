@@ -211,7 +211,7 @@ func addRelToLink(link *models.Link, linkEpub *epub.Manifest) {
 	}
 
 	if linkEpub.Properties == "nav" {
-		link.Rel = append(link.Rel, "nav")
+		link.Rel = append(link.Rel, "contents")
 	}
 
 }
