@@ -2,9 +2,11 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/feedbooks/epub"
 	"github.com/feedbooks/webpub-streamer/models"
 )
@@ -79,8 +81,12 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 
 	fillSpineAndResource(&publication, book)
 	addCoverRel(&publication, book)
-	fillTOCFromNCX(&publication, book)
 
+	fillTOCFromNavDoc(&publication, book)
+	if len(publication.TOC) == 0 {
+		fillTOCFromNCX(&publication, book)
+		fillPageListFromNCX(&publication, book)
+	}
 	return publication, nil
 }
 
@@ -136,14 +142,6 @@ func addContributor(publication *models.Publication, book *epub.Book, epubVersio
 	var contributor models.Contributor
 
 	contributor.Name = cont.Data
-	if epubVersion == "3.0" {
-		meta := findMetaByRefineAndProperty(book, cont.ID, "role")
-		if meta.Property == "role" {
-			contributor.Role = meta.Data
-		}
-	} else {
-		contributor.Role = cont.Role
-	}
 
 	switch contributor.Role {
 	case "aut":
@@ -169,6 +167,14 @@ func addContributor(publication *models.Publication, book *epub.Book, epubVersio
 	case "pbl":
 		publication.Metadata.Publisher = append(publication.Metadata.Publisher, contributor)
 	default:
+		if epubVersion == "3.0" {
+			meta := findMetaByRefineAndProperty(book, cont.ID, "role")
+			if meta.Property == "role" {
+				contributor.Role = meta.Data
+			}
+		} else {
+			contributor.Role = cont.Role
+		}
 		publication.Metadata.Contributor = append(publication.Metadata.Contributor, contributor)
 	}
 }
@@ -257,6 +263,53 @@ func addMediaOverlay(link *models.Link, linkEpub *epub.Manifest, book *epub.Book
 		link.Duration = meta.Data
 	}
 
+}
+
+func fillTOCFromNavDoc(publication *models.Publication, book *epub.Book) {
+
+	navLink, err := publication.GetNavDoc()
+	if err != nil {
+		return
+	}
+
+	navReader, err := book.Open(navLink.Href)
+	if err != nil {
+		return
+	}
+	defer navReader.Close()
+	doc, err := goquery.NewDocumentFromReader(navReader)
+	if err != nil {
+		return
+	}
+
+	doc.Find("nav").Each(func(j int, navElem *goquery.Selection) {
+		typeNav, _ := navElem.Attr("epub:type")
+		fmt.Println(typeNav)
+		if typeNav == "toc" {
+			olElem := navElem.Find("ol")
+			olElem.Find("li").Each(func(i int, s *goquery.Selection) {
+				// For each item found, get the band and title
+				href, _ := s.Find("a").Attr("href")
+				title := s.Find("a").Text()
+				link := models.Link{}
+				link.Href = href
+				link.Title = title
+				publication.TOC = append(publication.TOC, link)
+			})
+		}
+	})
+
+}
+
+func fillPageListFromNCX(publication *models.Publication, book *epub.Book) {
+	if len(book.Ncx.PageList.PageTarget) > 0 {
+		for _, pageTarget := range book.Ncx.PageList.PageTarget {
+			link := models.Link{}
+			link.Href = pageTarget.Content.Src
+			link.Title = pageTarget.Text
+			publication.PageList = append(publication.PageList, link)
+		}
+	}
 }
 
 func fillTOCFromNCX(publication *models.Publication, book *epub.Book) {

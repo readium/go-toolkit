@@ -57,7 +57,7 @@ type Metadata struct {
 	Rendition       *Rendition    `json:"rendition,omitempty"`
 	Source          string        `json:"source,omitempty"`
 	EpubType        []string      `json:"epub-type,omitempty"`
-	Right           string        `json:"right,omitempty"`
+	Right           string        `json:"rights,omitempty"`
 	Subject         []Subject     `json:"subject,omitempty"`
 
 	OtherMetadata []Meta `json:"-"` //Extension point for other metadata
@@ -73,7 +73,7 @@ type Meta struct {
 // Link object used in collections and links
 type Link struct {
 	Href       string   `json:"href"`
-	TypeLink   string   `json:"type"`
+	TypeLink   string   `json:"type,omitempty"`
 	Rel        []string `json:"rel,omitempty"`
 	Height     int      `json:"height,omitempty"`
 	Width      int      `json:"width,omitempty"`
