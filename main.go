@@ -87,7 +87,7 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 
 	var identJSON bytes.Buffer
 	json.Indent(&identJSON, j, "", " ")
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/webpub+json; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	identJSON.WriteTo(w)
 	return

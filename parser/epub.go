@@ -31,7 +31,7 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 		self := models.Link{
 			Rel:      []string{"self"},
 			Href:     selfURL,
-			TypeLink: "application/json",
+			TypeLink: "application/webpub+json",
 		}
 		publication.Links[0] = self
 	}
