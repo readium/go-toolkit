@@ -1,6 +1,6 @@
 # Readium-2 Streamer in Go
 
-This project is based on the [Readium-2 Streamer architecture](https://github.com/readium/readium-2/blob/master/doc/streamer/README.md) that basically takes an EPUB as an input and exposes in HTTP:
+This project is based on the [Readium-2 Streamer architecture](https://github.com/readium/readium-2/blob/master/streamer/README.md) that basically takes an EPUB as an input and exposes in HTTP:
 
 - a [Web Publication Manifest](https://github.com/HadrienGardeur/webpub-manifest) based on the OPF of the original EPUB
 - resources from the container (HTML, CSS, images etc.)
