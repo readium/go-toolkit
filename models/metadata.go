@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // Metadata for the default context in WebPub
 type Metadata struct {
 	RDFType         string        `json:"@type,omitempty"` //Defaults to schema.org for EBook

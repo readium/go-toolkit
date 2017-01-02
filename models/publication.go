@@ -1,9 +1,6 @@
 package models
 
-import (
-	"errors"
-	"time"
-)
+import "errors"
 
 // Publication Main structure for a publication
 type Publication struct {
@@ -20,7 +17,7 @@ type Publication struct {
 	LOV       []Link   `json:"lov,omitempty"` //List of videos
 	LOT       []Link   `json:"lot,omitempty"` //List of tables
 
-	MediaOverlays    []MediaOverlayNode		 `json:"-"`
+	MediaOverlays    []MediaOverlayNode      `json:"-"`
 	OtherLinks       []Link                  `json:"-"` //Extension point for links that shouldn't show up in the manifest
 	OtherCollections []PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
 	Internal         []Internal              `json:"-"`
