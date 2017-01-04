@@ -40,6 +40,7 @@ type Link struct {
 	Properties []string `json:"properties,omitempty"`
 	Duration   string   `json:"duration,omitempty"`
 	Templated  bool     `json:"templated,omitempty"`
+	Children   []Link   `json:"children,omitempty"`
 }
 
 // PublicationCollection is used as an extension points for other collections in a Publication

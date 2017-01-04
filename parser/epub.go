@@ -315,21 +315,21 @@ func fillPageListFromNCX(publication *models.Publication, book *epub.Book) {
 func fillTOCFromNCX(publication *models.Publication, book *epub.Book) {
 	if len(book.Ncx.Points) > 0 {
 		for _, point := range book.Ncx.Points {
-			fillTOCFromNavPoint(publication, book, point)
+			fillTOCFromNavPoint(publication, book, point, &publication.TOC)
 		}
 	}
 }
 
-func fillTOCFromNavPoint(publication *models.Publication, book *epub.Book, point epub.NavPoint) {
+func fillTOCFromNavPoint(publication *models.Publication, book *epub.Book, point epub.NavPoint, node *[]models.Link) {
 
 	link := models.Link{}
 	link.Href = point.Content.Src
 	link.Title = point.Text
-	publication.TOC = append(publication.TOC, link)
 	if len(point.Points) > 0 {
 		for _, p := range point.Points {
-			fillTOCFromNavPoint(publication, book, p)
+			fillTOCFromNavPoint(publication, book, p, &link.Children)
 		}
 	}
+	*node = append(*node, link)
 
 }
