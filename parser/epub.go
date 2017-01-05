@@ -2,7 +2,6 @@ package parser
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -292,6 +291,14 @@ func fillTOCFromNavDoc(publication *models.Publication, book *epub.Book) {
 		if typeNav == "toc" {
 			olElem := navElem.ChildrenFiltered("ol")
 			fillTOCFromNavDocWithOL(olElem, &publication.TOC)
+		}
+		if typeNav == "page-list" {
+			olElem := navElem.ChildrenFiltered("ol")
+			fillTOCFromNavDocWithOL(olElem, &publication.PageList)
+		}
+		if typeNav == "landmarks" {
+			olElem := navElem.ChildrenFiltered("ol")
+			fillTOCFromNavDocWithOL(olElem, &publication.Landmarks)
 		}
 	})
 
