@@ -211,13 +211,18 @@ func addIdentifier(publication *models.Publication, book *epub.Book, epubVersion
 }
 
 func addRelToLink(link *models.Link, linkEpub *epub.Manifest) {
+	var properties []string
 
-	if linkEpub.Properties == "cover-image" {
-		link.Rel = append(link.Rel, "cover")
-	}
+	properties = strings.Split(linkEpub.Properties, " ")
 
-	if linkEpub.Properties == "nav" {
-		link.Rel = append(link.Rel, "contents")
+	for _, p := range properties {
+		if p == "cover-image" {
+			link.Rel = append(link.Rel, "cover")
+		}
+
+		if p == "nav" {
+			link.Rel = append(link.Rel, "contents")
+		}
 	}
 
 }
@@ -284,21 +289,32 @@ func fillTOCFromNavDoc(publication *models.Publication, book *epub.Book) {
 
 	doc.Find("nav").Each(func(j int, navElem *goquery.Selection) {
 		typeNav, _ := navElem.Attr("epub:type")
-		fmt.Println(typeNav)
 		if typeNav == "toc" {
-			olElem := navElem.Find("ol")
-			olElem.Find("li").Each(func(i int, s *goquery.Selection) {
-				// For each item found, get the band and title
-				href, _ := s.Find("a").Attr("href")
-				title := s.Find("a").Text()
-				link := models.Link{}
-				link.Href = href
-				link.Title = title
-				publication.TOC = append(publication.TOC, link)
-			})
+			olElem := navElem.ChildrenFiltered("ol")
+			fillTOCFromNavDocWithOL(olElem, &publication.TOC)
 		}
 	})
 
+}
+
+func fillTOCFromNavDocWithOL(olElem *goquery.Selection, node *[]models.Link) {
+	olElem.ChildrenFiltered("li").Each(func(i int, s *goquery.Selection) {
+		if s.ChildrenFiltered("span").Text() != "" {
+			nextOlElem := s.ChildrenFiltered("ol")
+			fillTOCFromNavDocWithOL(nextOlElem, node)
+		} else {
+			href, _ := s.ChildrenFiltered("a").Attr("href")
+			title := s.ChildrenFiltered("a").Text()
+			link := models.Link{}
+			link.Href = href
+			link.Title = title
+			nextOlElem := s.ChildrenFiltered("ol")
+			if nextOlElem != nil {
+				fillTOCFromNavDocWithOL(nextOlElem, &link.Children)
+			}
+			*node = append(*node, link)
+		}
+	})
 }
 
 func fillPageListFromNCX(publication *models.Publication, book *epub.Book) {
