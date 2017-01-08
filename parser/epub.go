@@ -362,16 +362,24 @@ func fillTOCFromNavPoint(publication *models.Publication, book *epub.Book, point
 }
 
 func fillCalibreSerieInfo(publication *models.Publication, book *epub.Book) {
+	var serie string
+	var seriePosition float32
+
 	for _, m := range book.Opf.Metadata.Meta {
 		if m.Name == "calibre:series" {
-			publication.Metadata.Serie = m.Content
+			serie = m.Content
 		}
 		if m.Name == "calibre:series_index" {
 			index, err := strconv.ParseFloat(m.Content, 32)
 			if err == nil {
-				publication.Metadata.SerieNumber = float32(index)
+				seriePosition = float32(index)
 			}
 		}
+	}
+
+	if serie != "" {
+		collection := models.Collection{Name: serie, Position: seriePosition}
+		publication.Metadata.BelongsTo.Series = append(publication.Metadata.BelongsTo.Series, collection)
 	}
 
 }
