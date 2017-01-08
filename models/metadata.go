@@ -30,6 +30,8 @@ type Metadata struct {
 	EpubType        []string      `json:"epub-type,omitempty"`
 	Right           string        `json:"rights,omitempty"`
 	Subject         []Subject     `json:"subject,omitempty"`
+	Serie           string        `json:"serie,omitempty"`
+	SerieNumber     float32       `json:"serie_number,omitempty"`
 
 	OtherMetadata []Meta `json:"-"` //Extension point for other metadata
 }
