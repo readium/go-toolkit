@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -54,6 +55,7 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 	publication.Metadata.Language = book.Opf.Metadata.Language
 	addIdentifier(&publication, book, epubVersion)
 	publication.Metadata.Right = strings.Join(book.Opf.Metadata.Rights, " ")
+	publication.Metadata.Description = book.Opf.Metadata.Description[0]
 
 	if len(book.Opf.Metadata.Publisher) > 0 {
 		for _, pub := range book.Opf.Metadata.Publisher {
@@ -86,6 +88,8 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 		fillTOCFromNCX(&publication, book)
 		fillPageListFromNCX(&publication, book)
 	}
+
+	fillCalibreSerieInfo(&publication, book)
 	return publication, nil
 }
 
@@ -354,5 +358,28 @@ func fillTOCFromNavPoint(publication *models.Publication, book *epub.Book, point
 		}
 	}
 	*node = append(*node, link)
+
+}
+
+func fillCalibreSerieInfo(publication *models.Publication, book *epub.Book) {
+	var serie string
+	var seriePosition float32
+
+	for _, m := range book.Opf.Metadata.Meta {
+		if m.Name == "calibre:series" {
+			serie = m.Content
+		}
+		if m.Name == "calibre:series_index" {
+			index, err := strconv.ParseFloat(m.Content, 32)
+			if err == nil {
+				seriePosition = float32(index)
+			}
+		}
+	}
+
+	if serie != "" {
+		collection := models.Collection{Name: serie, Position: seriePosition}
+		publication.Metadata.BelongsTo.Series = append(publication.Metadata.BelongsTo.Series, collection)
+	}
 
 }
