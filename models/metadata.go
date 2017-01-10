@@ -30,7 +30,7 @@ type Metadata struct {
 	EpubType        []string      `json:"epub-type,omitempty"`
 	Right           string        `json:"rights,omitempty"`
 	Subject         []Subject     `json:"subject,omitempty"`
-	BelongsTo       BelongsTo     `json:"belongs_to,omitempty"`
+	BelongsTo       *BelongsTo    `json:"belongs_to,omitempty"`
 
 	OtherMetadata []Meta `json:"-"` //Extension point for other metadata
 }
