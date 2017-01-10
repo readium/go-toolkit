@@ -11,6 +11,8 @@ import (
 	"github.com/feedbooks/webpub-streamer/models"
 )
 
+const epub3 = "3.0"
+
 func init() {
 	parserList = append(parserList, List{fileExt: "epub", parser: EpubParser})
 }
@@ -55,7 +57,9 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 	publication.Metadata.Language = book.Opf.Metadata.Language
 	addIdentifier(&publication, book, epubVersion)
 	publication.Metadata.Right = strings.Join(book.Opf.Metadata.Rights, " ")
-	publication.Metadata.Description = book.Opf.Metadata.Description[0]
+	if len(book.Opf.Metadata.Description) > 0 {
+		publication.Metadata.Description = book.Opf.Metadata.Description[0]
+	}
 
 	if len(book.Opf.Metadata.Publisher) > 0 {
 		for _, pub := range book.Opf.Metadata.Publisher {
@@ -78,6 +82,10 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 		for _, cont := range book.Opf.Metadata.Creator {
 			addContributor(&publication, book, epubVersion, cont)
 		}
+	}
+
+	if epubVersion == epub3 {
+		findContributorInMeta(&publication, book, epubVersion)
 	}
 
 	fillSpineAndResource(&publication, book)
@@ -141,12 +149,35 @@ func findInManifestByID(book *epub.Book, ID string) models.Link {
 	return models.Link{}
 }
 
+func findContributorInMeta(publication *models.Publication, book *epub.Book, epubVersion string) {
+
+	for _, meta := range book.Opf.Metadata.Meta {
+		if meta.Property == "dcterms:creator" || meta.Property == "dcterms:contributor" {
+			cont := epub.Author{}
+			cont.Data = meta.Data
+			cont.ID = meta.ID
+			addContributor(publication, book, epubVersion, cont)
+
+		}
+	}
+
+}
+
 func addContributor(publication *models.Publication, book *epub.Book, epubVersion string, cont epub.Author) {
 	var contributor models.Contributor
+	var role string
 
 	contributor.Name = cont.Data
+	if epubVersion == "3.0" {
+		meta := findMetaByRefineAndProperty(book, cont.ID, "role")
+		if meta.Property == "role" {
+			role = meta.Data
+		}
+	} else {
+		role = cont.Role
+	}
 
-	switch contributor.Role {
+	switch role {
 	case "aut":
 		publication.Metadata.Author = append(publication.Metadata.Author, contributor)
 	case "trl":
@@ -170,14 +201,7 @@ func addContributor(publication *models.Publication, book *epub.Book, epubVersio
 	case "pbl":
 		publication.Metadata.Publisher = append(publication.Metadata.Publisher, contributor)
 	default:
-		if epubVersion == "3.0" {
-			meta := findMetaByRefineAndProperty(book, cont.ID, "role")
-			if meta.Property == "role" {
-				contributor.Role = meta.Data
-			}
-		} else {
-			contributor.Role = cont.Role
-		}
+		contributor.Role = role
 		publication.Metadata.Contributor = append(publication.Metadata.Contributor, contributor)
 	}
 }
