@@ -108,10 +108,13 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 func fillSpineAndResource(publication *models.Publication, book *epub.Book) {
 
 	for _, item := range book.Opf.Spine.Items {
-		linkItem := findInManifestByID(book, item.IDref)
+		if item.Linear == "yes" || item.Linear == "" {
 
-		if linkItem.Href != "" {
-			publication.Spine = append(publication.Spine, linkItem)
+			linkItem := findInManifestByID(book, item.IDref)
+
+			if linkItem.Href != "" {
+				publication.Spine = append(publication.Spine, linkItem)
+			}
 		}
 	}
 

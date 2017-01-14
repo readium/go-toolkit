@@ -16,14 +16,15 @@ type testDataStruct struct {
 	thirdChapter string
 	tocChildren  bool
 	Source       string
+	NoLinear     string
 }
 
 func TestPublication(t *testing.T) {
 	testData := []testDataStruct{
-		{"../test/empty.epub", errors.New("can't open or parse epub file with err : open ../test/empty.epub: no such file or directory"), "", "", "", "", false, ""},
-		{"../test/moby-dick.epub", nil, "Moby-Dick", "Herman Melville", "code.google.com.epub-samples.moby-dick-basic", "ETYMOLOGY.", false, ""},
-		{"../test/kusamakura.epub", nil, "草枕", "夏目 漱石", "http://www.aozora.gr.jp/cards/000148/card776.html", "三", false, ""},
-		{"../test/feedbooks_book_6816.epub", nil, "Mémoires d'Outre-tombe", "François-René de Chateaubriand", "urn:uuid:47f6aaf6-aa7e-11e6-8357-4c72b9252ec6", "Partie 1", true, "www.ebooksfrance.com"},
+		{"../test/empty.epub", errors.New("can't open or parse epub file with err : open ../test/empty.epub: no such file or directory"), "", "", "", "", false, "", ""},
+		{"../test/moby-dick.epub", nil, "Moby-Dick", "Herman Melville", "code.google.com.epub-samples.moby-dick-basic", "ETYMOLOGY.", false, "", "cover.xhtml"},
+		{"../test/kusamakura.epub", nil, "草枕", "夏目 漱石", "http://www.aozora.gr.jp/cards/000148/card776.html", "三", false, "", ""},
+		{"../test/feedbooks_book_6816.epub", nil, "Mémoires d'Outre-tombe", "François-René de Chateaubriand", "urn:uuid:47f6aaf6-aa7e-11e6-8357-4c72b9252ec6", "Partie 1", true, "www.ebooksfrance.com", ""},
 	}
 
 	for _, d := range testData {
@@ -79,6 +80,20 @@ func TestPublication(t *testing.T) {
 			Convey("dc:source is good", func() {
 				So(publication.Metadata.Source, ShouldEqual, d.Source)
 			})
+
+			if d.NoLinear != "" {
+				Convey("item no linear is not in spine", func() {
+					findItemInSpine := false
+
+					for _, it := range publication.Spine {
+						if it.Href == d.NoLinear {
+							findItemInSpine = true
+						}
+					}
+
+					So(findItemInSpine, ShouldEqual, false)
+				})
+			}
 
 		})
 	}
