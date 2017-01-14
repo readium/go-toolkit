@@ -67,6 +67,10 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 		}
 	}
 
+	if len(book.Opf.Metadata.Source) > 0 {
+		publication.Metadata.Source = book.Opf.Metadata.Source[0]
+	}
+
 	if book.Opf.Spine.PageProgression != "" {
 		publication.Metadata.Direction = book.Opf.Spine.PageProgression
 	} else {
