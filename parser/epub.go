@@ -63,7 +63,7 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 
 	if len(book.Opf.Metadata.Publisher) > 0 {
 		for _, pub := range book.Opf.Metadata.Publisher {
-			publication.Metadata.Publisher = append(publication.Metadata.Publisher, models.Contributor{Name: pub})
+			publication.Metadata.Publisher = append(publication.Metadata.Publisher, models.Contributor{Name: models.MultiLanguage{SingleString: pub}})
 		}
 	}
 
@@ -174,13 +174,26 @@ func addContributor(publication *models.Publication, book *epub.Book, epubVersio
 	var contributor models.Contributor
 	var role string
 
-	contributor.Name = cont.Data
 	if epubVersion == "3.0" {
 		meta := findMetaByRefineAndProperty(book, cont.ID, "role")
 		if meta.Property == "role" {
 			role = meta.Data
 		}
+
+		metaAlt := findAllMetaByRefineAndProperty(book, cont.ID, "alternate-script")
+		if len(metaAlt) > 0 {
+			contributor.Name.MultiString = make(map[string]string)
+			contributor.Name.MultiString[publication.Metadata.Language[0]] = cont.Data
+
+			for _, m := range metaAlt {
+				contributor.Name.MultiString[m.Lang] = m.Data
+			}
+		} else {
+			contributor.Name.SingleString = cont.Data
+		}
+
 	} else {
+		contributor.Name.SingleString = cont.Data
 		role = cont.Role
 	}
 
@@ -292,6 +305,17 @@ func findMetaByRefineAndProperty(book *epub.Book, ID string, property string) ep
 		}
 	}
 	return epub.Metafield{}
+}
+
+func findAllMetaByRefineAndProperty(book *epub.Book, ID string, property string) []epub.Metafield {
+	var metas []epub.Metafield
+
+	for _, metaTag := range book.Opf.Metadata.Meta {
+		if metaTag.Refine == "#"+ID && metaTag.Property == property {
+			metas = append(metas, metaTag)
+		}
+	}
+	return metas
 }
 
 func addMediaOverlay(link *models.Link, linkEpub *epub.Manifest, book *epub.Book) {

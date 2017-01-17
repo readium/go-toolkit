@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Metadata for the default context in WebPub
 type Metadata struct {
@@ -44,10 +47,10 @@ type Meta struct {
 
 // Contributor construct used internally for all contributors
 type Contributor struct {
-	Name       string `json:"name"`
-	SortAs     string `json:"sort_as,omitempty"`
-	Identifier string `json:"identifier,omitempty"`
-	Role       string `json:"role,omitempty"`
+	Name       MultiLanguage `json:"name,omitempty"`
+	SortAs     string        `json:"sort_as,omitempty"`
+	Identifier string        `json:"identifier,omitempty"`
+	Role       string        `json:"role,omitempty"`
 }
 
 // Rendition object for reflow/FXL
@@ -78,4 +81,17 @@ type Collection struct {
 	SortAs     string  `json:"sort_as,omitempty"`
 	Identifier string  `json:"identifier,omitempty"`
 	Position   float32 `json:"position,omitempty"`
+}
+
+type MultiLanguage struct {
+	SingleString string
+	MultiString  map[string]string
+}
+
+func (m MultiLanguage) MarshalJSON() ([]byte, error) {
+	if len(m.MultiString) > 0 {
+		return json.Marshal(m.MultiString)
+	} else {
+		return json.Marshal(m.SingleString)
+	}
 }
