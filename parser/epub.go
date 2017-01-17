@@ -250,10 +250,10 @@ func addTitle(publication *models.Publication, book *epub.Book, epubVersion stri
 		metaAlt := findAllMetaByRefineAndProperty(book, mainTitle.ID, "alternate-script")
 		if len(metaAlt) > 0 {
 			publication.Metadata.Title.MultiString = make(map[string]string)
-			publication.Metadata.Title.MultiString[mainTitle.Lang] = mainTitle.Data
+			publication.Metadata.Title.MultiString[strings.ToLower(mainTitle.Lang)] = mainTitle.Data
 
 			for _, m := range metaAlt {
-				publication.Metadata.Title.MultiString[m.Lang] = m.Data
+				publication.Metadata.Title.MultiString[strings.ToLower(m.Lang)] = m.Data
 			}
 		} else {
 			publication.Metadata.Title.SingleString = mainTitle.Data

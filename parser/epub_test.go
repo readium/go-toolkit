@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -17,14 +18,15 @@ type testDataStruct struct {
 	tocChildren  bool
 	Source       string
 	NoLinear     string
+	MultipleLang bool
 }
 
 func TestPublication(t *testing.T) {
 	testData := []testDataStruct{
-		{"../test/empty.epub", errors.New("can't open or parse epub file with err : open ../test/empty.epub: no such file or directory"), "", "", "", "", false, "", ""},
-		{"../test/moby-dick.epub", nil, "Moby-Dick", "Herman Melville", "code.google.com.epub-samples.moby-dick-basic", "ETYMOLOGY.", false, "", "cover.xhtml"},
-		{"../test/kusamakura.epub", nil, "草枕", "夏目 漱石", "http://www.aozora.gr.jp/cards/000148/card776.html", "三", false, "", ""},
-		{"../test/feedbooks_book_6816.epub", nil, "Mémoires d'Outre-tombe", "François-René de Chateaubriand", "urn:uuid:47f6aaf6-aa7e-11e6-8357-4c72b9252ec6", "Partie 1", true, "www.ebooksfrance.com", ""},
+		{"../test/empty.epub", errors.New("can't open or parse epub file with err : open ../test/empty.epub: no such file or directory"), "", "", "", "", false, "", "", false},
+		{"../test/moby-dick.epub", nil, "Moby-Dick", "Herman Melville", "code.google.com.epub-samples.moby-dick-basic", "ETYMOLOGY.", false, "", "cover.xhtml", false},
+		{"../test/kusamakura.epub", nil, "草枕", "夏目 漱石", "http://www.aozora.gr.jp/cards/000148/card776.html", "三", false, "", "", true},
+		{"../test/feedbooks_book_6816.epub", nil, "Mémoires d'Outre-tombe", "François-René de Chateaubriand", "urn:uuid:47f6aaf6-aa7e-11e6-8357-4c72b9252ec6", "Partie 1", true, "www.ebooksfrance.com", "", false},
 	}
 
 	for _, d := range testData {
@@ -37,9 +39,21 @@ func TestPublication(t *testing.T) {
 					So(err, ShouldEqual, nil)
 				}
 			})
-			Convey("The title is good", func() {
-				So(publication.Metadata.Title, ShouldEqual, d.title)
-			})
+
+			if d.MultipleLang == true {
+				Convey("The title has multiple language", func() {
+					So(publication.Metadata.Title.MultiString, ShouldNotBeEmpty)
+				})
+
+				fmt.Println(publication.Metadata.Language[0])
+				Convey("The title is good", func() {
+					So(publication.Metadata.Title.MultiString[publication.Metadata.Language[0]], ShouldEqual, d.title)
+				})
+			} else {
+				Convey("The title is good", func() {
+					So(publication.Metadata.Title.String(), ShouldEqual, d.title)
+				})
+			}
 
 			if err == nil {
 				Convey("There must be an author", func() {
@@ -49,7 +63,7 @@ func TestPublication(t *testing.T) {
 
 			if d.authorName != "" && len(publication.Metadata.Author) > 0 {
 				Convey("first author is good", func() {
-					So(publication.Metadata.Author[0].Name, ShouldEqual, d.authorName)
+					So(publication.Metadata.Author[0].Name.String(), ShouldEqual, d.authorName)
 				})
 			}
 
