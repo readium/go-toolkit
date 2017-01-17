@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -53,7 +54,7 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 	publication.Internal = append(publication.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
 	publication.Internal = append(publication.Internal, models.Internal{Name: "rootfile", Value: book.Container.Rootfile.Path})
 
-	addTitle(&publication, &book.Opf, epubVersion)
+	addTitle(&publication, book, epubVersion)
 	publication.Metadata.Language = book.Opf.Metadata.Language
 	addIdentifier(&publication, book, epubVersion)
 	publication.Metadata.Right = strings.Join(book.Opf.Metadata.Rights, " ")
@@ -226,21 +227,43 @@ func addContributor(publication *models.Publication, book *epub.Book, epubVersio
 	}
 }
 
-func addTitle(publication *models.Publication, opf *epub.Opf, epubVersion string) {
+func addTitle(publication *models.Publication, book *epub.Book, epubVersion string) {
 
-	if len(opf.Metadata.Title) > 1 && epubVersion == "3.0" {
-		for _, titleTag := range opf.Metadata.Title {
-			for _, metaTag := range opf.Metadata.Meta {
-				if metaTag.Refine == "#"+titleTag.ID {
-					if metaTag.Data == "main" {
-						publication.Metadata.Title = titleTag.Data
+	if epubVersion == "3.0" {
+		var mainTitle epub.Title
+
+		if len(book.Opf.Metadata.Title) > 1 {
+			for _, titleTag := range book.Opf.Metadata.Title {
+				for _, metaTag := range book.Opf.Metadata.Meta {
+					if metaTag.Refine == "#"+titleTag.ID {
+						if metaTag.Data == "main" {
+							fmt.Println(titleTag)
+							mainTitle = titleTag
+						}
 					}
 				}
 			}
+		} else {
+			mainTitle = book.Opf.Metadata.Title[0]
 		}
+
+		metaAlt := findAllMetaByRefineAndProperty(book, mainTitle.ID, "alternate-script")
+		if len(metaAlt) > 0 {
+			publication.Metadata.Title.MultiString = make(map[string]string)
+			publication.Metadata.Title.MultiString[mainTitle.Lang] = mainTitle.Data
+
+			for _, m := range metaAlt {
+				publication.Metadata.Title.MultiString[m.Lang] = m.Data
+			}
+		} else {
+			publication.Metadata.Title.SingleString = mainTitle.Data
+		}
+
 	} else {
-		publication.Metadata.Title = opf.Metadata.Title[0].Data
+		publication.Metadata.Title.SingleString = book.Opf.Metadata.Title[0].Data
 	}
+
+	fmt.Println(publication.Metadata.Title)
 
 }
 
