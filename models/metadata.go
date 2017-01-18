@@ -1,11 +1,14 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Metadata for the default context in WebPub
 type Metadata struct {
 	RDFType         string        `json:"@type,omitempty"` //Defaults to schema.org for EBook
-	Title           string        `json:"title"`
+	Title           MultiLanguage `json:"title"`
 	Identifier      string        `json:"identifier"`
 	Author          []Contributor `json:"author,omitempty"`
 	Translator      []Contributor `json:"translator,omitempty"`
@@ -44,10 +47,10 @@ type Meta struct {
 
 // Contributor construct used internally for all contributors
 type Contributor struct {
-	Name       string `json:"name"`
-	SortAs     string `json:"sort_as,omitempty"`
-	Identifier string `json:"identifier,omitempty"`
-	Role       string `json:"role,omitempty"`
+	Name       MultiLanguage `json:"name,omitempty"`
+	SortAs     string        `json:"sort_as,omitempty"`
+	Identifier string        `json:"identifier,omitempty"`
+	Role       string        `json:"role,omitempty"`
 }
 
 // Rendition object for reflow/FXL
@@ -78,4 +81,30 @@ type Collection struct {
 	SortAs     string  `json:"sort_as,omitempty"`
 	Identifier string  `json:"identifier,omitempty"`
 	Position   float32 `json:"position,omitempty"`
+}
+
+// MultiLanguage store the a basic string when we only have one lang
+// Store in a hash by language for multiple string representation
+type MultiLanguage struct {
+	SingleString string
+	MultiString  map[string]string
+}
+
+// MarshalJSON overwrite json marshalling for MultiLanguage
+// when we have an entry in the Multi fields we use it
+// otherwise we use the single string
+func (m MultiLanguage) MarshalJSON() ([]byte, error) {
+	if len(m.MultiString) > 0 {
+		return json.Marshal(m.MultiString)
+	}
+	return json.Marshal(m.SingleString)
+}
+
+func (m MultiLanguage) String() string {
+	if len(m.MultiString) > 0 {
+		for _, s := range m.MultiString {
+			return s
+		}
+	}
+	return m.SingleString
 }

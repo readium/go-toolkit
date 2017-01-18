@@ -17,7 +17,7 @@ func init() {
 func CbzParser(filePath string, selfURL string) (models.Publication, error) {
 	var publication models.Publication
 
-	publication.Metadata.Title = filePathToTitle(filePath)
+	publication.Metadata.Title.SingleString = filePathToTitle(filePath)
 	publication.Metadata.Identifier = filePath
 	zipReader, err := zip.OpenReader(filePath)
 	if err != nil {
