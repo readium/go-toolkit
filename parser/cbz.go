@@ -14,7 +14,7 @@ func init() {
 }
 
 // CbzParser TODO add doc
-func CbzParser(filePath string, selfURL string) (models.Publication, error) {
+func CbzParser(filePath string) (models.Publication, error) {
 	var publication models.Publication
 
 	publication.Metadata.Title.SingleString = filePathToTitle(filePath)

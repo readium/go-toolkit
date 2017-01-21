@@ -88,3 +88,17 @@ func (publication *Publication) searchLinkByRel(rel string) (Link, error) {
 
 	return Link{}, errors.New("Can't find " + rel + " in publication")
 }
+
+// AddLink Add link in publication link self or search
+func (publication *Publication) AddLink(typeLink string, rel []string, url string, templated bool) {
+	link := Link{
+		Rel:      rel,
+		Href:     url,
+		TypeLink: typeLink,
+	}
+	if templated == true {
+		link.Templated = true
+	}
+
+	publication.Links = append(publication.Links, link)
+}

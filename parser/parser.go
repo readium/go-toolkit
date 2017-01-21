@@ -10,18 +10,18 @@ import (
 // List TODO add doc
 type List struct {
 	fileExt string
-	parser  (func(filePath string, selfURL string) (models.Publication, error))
+	parser  (func(filePath string) (models.Publication, error))
 }
 
 var parserList []List
 
 // Parse TODO add doc
-func Parse(filePath string, selfURL string) (models.Publication, error) {
+func Parse(filePath string) (models.Publication, error) {
 
 	fileExt := filepath.Ext(filePath)
 	for _, parserFunc := range parserList {
 		if fileExt == "."+parserFunc.fileExt {
-			return parserFunc.parser(filePath, selfURL)
+			return parserFunc.parser(filePath)
 		}
 	}
 

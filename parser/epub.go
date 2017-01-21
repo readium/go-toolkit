@@ -3,6 +3,7 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -19,7 +20,7 @@ func init() {
 }
 
 // EpubParser TODO add doc
-func EpubParser(filePath string, selfURL string) (models.Publication, error) {
+func EpubParser(filePath string) (models.Publication, error) {
 	var publication models.Publication
 	var metaStruct models.Metadata
 	var epubVersion string
@@ -27,17 +28,7 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 	timeNow := time.Now()
 	metaStruct.Modified = &timeNow
 	publication.Metadata = metaStruct
-	publication.Links = make([]models.Link, 1)
 	publication.Resources = make([]models.Link, 0)
-
-	if selfURL != "" {
-		self := models.Link{
-			Rel:      []string{"self"},
-			Href:     selfURL,
-			TypeLink: "application/webpub+json",
-		}
-		publication.Links[0] = self
-	}
 
 	book, err := epub.Open(filePath)
 	if err != nil {
@@ -50,6 +41,9 @@ func EpubParser(filePath string, selfURL string) (models.Publication, error) {
 		epubVersion = book.Opf.Version
 	}
 
+	_, filename := filepath.Split(filePath)
+
+	publication.Internal = append(publication.Internal, models.Internal{Name: "filename", Value: filename})
 	publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "epub"})
 	publication.Internal = append(publication.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
 	publication.Internal = append(publication.Internal, models.Internal{Name: "rootfile", Value: book.Container.Rootfile.Path})
@@ -237,7 +231,6 @@ func addTitle(publication *models.Publication, book *epub.Book, epubVersion stri
 				for _, metaTag := range book.Opf.Metadata.Meta {
 					if metaTag.Refine == "#"+titleTag.ID {
 						if metaTag.Data == "main" {
-							fmt.Println(titleTag)
 							mainTitle = titleTag
 						}
 					}
