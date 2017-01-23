@@ -176,10 +176,14 @@ func getPublication(filename string, req *http.Request) (models.Publication, err
 		}
 		current = currentBook{filename: filename, publication: publication, timestamp: time.Now(), indexed: false}
 		currentBookList = append(currentBookList, current)
-		go indexBook(publication)
+		if searcher.CanBeSearch(publication) {
+			go indexBook(publication)
+		}
 	} else {
 		publication = current.publication
-		go indexBook(publication)
+		if searcher.CanBeSearch(publication) {
+			go indexBook(publication)
+		}
 	}
 
 	return publication, nil
