@@ -171,8 +171,9 @@ func getPublication(filename string, req *http.Request) (models.Publication, err
 			return models.Publication{}, err
 		}
 		publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
-		publication.AddLink("", []string{"search"}, "http://"+req.Host+"/"+filename+"/search?query={searchTerms}", true)
-
+		if searcher.CanBeSearch(publication) {
+			publication.AddLink("", []string{"search"}, "http://"+req.Host+"/"+filename+"/search?query={searchTerms}", true)
+		}
 		current = currentBook{filename: filename, publication: publication, timestamp: time.Now(), indexed: false}
 		currentBookList = append(currentBookList, current)
 		go indexBook(publication)
