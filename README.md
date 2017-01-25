@@ -23,6 +23,8 @@ The server will bind itself to an available port on `localhost` and return a URI
 
 Releases for stable versions are available at: https://github.com/Feedbooks/webpub-streamer/releases
 
+Or with docker installed you can use this commande : sudo docker run --rm -v "$PWD":/usr/src/myapp -w /usr/src/myapp golang:1.8 go get ; go build -v 
+
 ##Live Demo
 
-A live demo is available at: https://proto.myopds.com/
+A live demo is available at: https://proto.myopds.com/ 
