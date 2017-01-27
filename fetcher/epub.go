@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/feedbooks/webpub-streamer/models"
+	"github.com/feedbooks/r2-streamer-go/models"
 )
 
 func init() {

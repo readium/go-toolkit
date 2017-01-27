@@ -10,7 +10,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/feedbooks/epub"
-	"github.com/feedbooks/webpub-streamer/models"
+	"github.com/feedbooks/r2-streamer-go/models"
 )
 
 const epub3 = "3.0"

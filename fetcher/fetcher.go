@@ -5,7 +5,7 @@ import (
 	"io"
 	"path"
 
-	"github.com/feedbooks/webpub-streamer/models"
+	"github.com/feedbooks/r2-streamer-go/models"
 )
 
 // List TODO add doc

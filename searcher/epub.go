@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 
 	"github.com/blevesearch/bleve"
-	"github.com/feedbooks/webpub-streamer/fetcher"
-	"github.com/feedbooks/webpub-streamer/models"
+	"github.com/feedbooks/r2-streamer-go/fetcher"
+	"github.com/feedbooks/r2-streamer-go/models"
 )
 
 func init() {
