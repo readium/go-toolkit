@@ -31,7 +31,7 @@ func TestPublication(t *testing.T) {
 
 	for _, d := range testData {
 		Convey("Given "+d.title+" book", t, func() {
-			publication, err := Parse(d.filepath, "http://localhost/")
+			publication, err := Parse(d.filepath)
 			Convey("There no exception parsing", func() {
 				if d.err != nil {
 					So(err.Error(), ShouldEqual, d.err.Error())
