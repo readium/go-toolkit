@@ -43,17 +43,6 @@ type Link struct {
 	Children   []Link      `json:"children,omitempty"`
 }
 
-// Properties object use to link properties
-type Properties struct {
-	Contains     []string `json:"contains,omitempty"`
-	Layout       string   `json:"layout,omitempty"`
-	MediaOverlay string   `json:"media-overlay,omitempty"`
-	Orientation  string   `json:"orientation,omitempty"`
-	Overflow     string   `json:"overflow,omitempty"`
-	Page         string   `json:"page,omitempty"`
-	Spread       string   `json:"spread,omitempty"`
-}
-
 // PublicationCollection is used as an extension points for other collections in a Publication
 type PublicationCollection struct {
 	Role     string

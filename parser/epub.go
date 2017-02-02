@@ -88,6 +88,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 	}
 
 	fillSpineAndResource(&publication, book)
+	addRendition(&publication, book)
 	addCoverRel(&publication, book)
 
 	fillTOCFromNavDoc(&publication, book)
@@ -356,8 +357,34 @@ func addToLinkFromProperties(link *models.Link, propertiesString string) {
 			propertiesStruct.Overflow = "scrolled"
 		}
 
-		link.Properties = &propertiesStruct
+		if propertiesStruct.Layout != "" || propertiesStruct.Orientation != "" || propertiesStruct.Overflow != "" || propertiesStruct.Page != "" || propertiesStruct.Spread != "" || len(propertiesStruct.Contains) > 0 {
+			link.Properties = &propertiesStruct
+		}
+	}
+}
 
+func addRendition(publication *models.Publication, book *epub.Book) {
+	var rendition models.Properties
+
+	for _, meta := range book.Opf.Metadata.Meta {
+		switch meta.Property {
+		case "rendition:layout":
+			if meta.Data == "pre-paginated" {
+				rendition.Layout = "fixed"
+			} else if meta.Data == "reflowable" {
+				rendition.Layout = "reflowable"
+			}
+		case "rendition:orientation":
+			rendition.Orientation = meta.Data
+		case "rendition:spread":
+			rendition.Spread = meta.Data
+		case "rendition:flow":
+			rendition.Overflow = meta.Data
+		}
+	}
+
+	if rendition.Layout != "" || rendition.Orientation != "" || rendition.Overflow != "" || rendition.Page != "" || rendition.Spread != "" {
+		publication.Metadata.Rendition = &rendition
 	}
 }
 
