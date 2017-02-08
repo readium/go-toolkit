@@ -2,7 +2,6 @@ package parser
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -24,13 +23,24 @@ func EpubParser(filePath string) (models.Publication, error) {
 	var publication models.Publication
 	var metaStruct models.Metadata
 	var epubVersion string
+	var err error
+	var book *epub.Book
 
 	timeNow := time.Now()
 	metaStruct.Modified = &timeNow
 	publication.Metadata = metaStruct
 	publication.Resources = make([]models.Link, 0)
 
-	book, err := epub.Open(filePath)
+	fileExt := filepath.Ext(filePath)
+	if fileExt == "" {
+		book, err = epub.OpenDir(filePath)
+		publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "epub_dir"})
+		publication.Internal = append(publication.Internal, models.Internal{Name: "basepath", Value: filePath})
+	} else {
+		book, err = epub.Open(filePath)
+		publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "epub"})
+		publication.Internal = append(publication.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
+	}
 	if err != nil {
 		return models.Publication{}, errors.New("can't open or parse epub file with err : " + err.Error())
 	}
@@ -44,8 +54,6 @@ func EpubParser(filePath string) (models.Publication, error) {
 	_, filename := filepath.Split(filePath)
 
 	publication.Internal = append(publication.Internal, models.Internal{Name: "filename", Value: filename})
-	publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "epub"})
-	publication.Internal = append(publication.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
 	publication.Internal = append(publication.Internal, models.Internal{Name: "rootfile", Value: book.Container.Rootfile.Path})
 
 	addTitle(&publication, book, epubVersion)
@@ -256,8 +264,6 @@ func addTitle(publication *models.Publication, book *epub.Book, epubVersion stri
 	} else {
 		publication.Metadata.Title.SingleString = book.Opf.Metadata.Title[0].Data
 	}
-
-	fmt.Println(publication.Metadata.Title)
 
 }
 

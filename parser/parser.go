@@ -19,6 +19,9 @@ var parserList []List
 func Parse(filePath string) (models.Publication, error) {
 
 	fileExt := filepath.Ext(filePath)
+	if fileExt == "" {
+		fileExt = ".epub"
+	}
 	for _, parserFunc := range parserList {
 		if fileExt == "."+parserFunc.fileExt {
 			return parserFunc.parser(filePath)
