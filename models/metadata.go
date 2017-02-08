@@ -28,7 +28,7 @@ type Metadata struct {
 	PublicationDate *time.Time    `json:"published,omitempty"`
 	Description     string        `json:"description,omitempty"`
 	Direction       string        `json:"direction,omitempty"`
-	Rendition       *Rendition    `json:"rendition,omitempty"`
+	Rendition       *Properties   `json:"rendition,omitempty"`
 	Source          string        `json:"source,omitempty"`
 	EpubType        []string      `json:"epub-type,omitempty"`
 	Right           string        `json:"rights,omitempty"`
@@ -53,12 +53,16 @@ type Contributor struct {
 	Role       string        `json:"role,omitempty"`
 }
 
-// Rendition object for reflow/FXL
-type Rendition struct {
-	Flow        string `json:"flow,omitempty"`
-	Layout      string `json:"layout,omitempty"`
-	Orientation string `json:"orientation,omitempty"`
-	Spread      string `json:"spread,omitempty"`
+// Properties object use to link properties
+// Use also in Rendition for fxl
+type Properties struct {
+	Contains     []string `json:"contains,omitempty"`
+	Layout       string   `json:"layout,omitempty"`
+	MediaOverlay string   `json:"media-overlay,omitempty"`
+	Orientation  string   `json:"orientation,omitempty"`
+	Overflow     string   `json:"overflow,omitempty"`
+	Page         string   `json:"page,omitempty"`
+	Spread       string   `json:"spread,omitempty"`
 }
 
 // Subject as based on EPUB 3.1 and WePpub

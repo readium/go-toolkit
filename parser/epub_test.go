@@ -21,6 +21,17 @@ type testDataStruct struct {
 	MultipleLang bool
 }
 
+type testDataFixedStruct struct {
+	filepath             string
+	renditionLayout      string
+	renditionOrientation string
+	renditionSpread      string
+	linkLayout           string
+	linkOrientation      string
+	linkSpread           string
+	linkPage             string
+}
+
 func TestPublication(t *testing.T) {
 	testData := []testDataStruct{
 		{"../test/empty.epub", errors.New("can't open or parse epub file with err : open ../test/empty.epub: no such file or directory"), "", "", "", "", false, "", "", false},
@@ -112,4 +123,89 @@ func TestPublication(t *testing.T) {
 		})
 	}
 
+}
+
+func TestFixedPublication(t *testing.T) {
+	testData := []testDataFixedStruct{
+		{"../test/page-blanche.epub", "fixed", "auto", "auto", "", "", "", "right"},
+		{"../test/cole-voyage-of-life.epub", "", "", "", "fixed", "landscape", "none", ""},
+	}
+
+	for _, d := range testData {
+		Convey("Given "+d.filepath+" book", t, func() {
+			publication, _ := Parse(d.filepath)
+			if d.renditionLayout != "" {
+				Convey("There Layout info", func() {
+					So(publication.Metadata.Rendition.Layout, ShouldEqual, d.renditionLayout)
+				})
+			}
+			if d.renditionOrientation != "" {
+				Convey("There Orientation info", func() {
+					So(publication.Metadata.Rendition.Orientation, ShouldEqual, d.renditionOrientation)
+				})
+			}
+			if d.renditionSpread != "" {
+				Convey("There Spread info", func() {
+					So(publication.Metadata.Rendition.Spread, ShouldEqual, d.renditionSpread)
+				})
+			}
+
+			if d.linkLayout != "" {
+				Convey("There layout info in link", func() {
+					layout := false
+					for _, item := range publication.Spine {
+						if item.Properties != nil {
+							if item.Properties.Layout == d.linkLayout {
+								layout = true
+							}
+						}
+					}
+					So(layout, ShouldEqual, true)
+				})
+
+			}
+
+			if d.linkOrientation != "" {
+				Convey("There orientation info in link", func() {
+					orientation := false
+					for _, item := range publication.Spine {
+						if item.Properties != nil {
+							if item.Properties.Orientation == d.linkOrientation {
+								orientation = true
+							}
+						}
+					}
+					So(orientation, ShouldEqual, true)
+				})
+			}
+
+			if d.linkSpread != "" {
+				Convey("There spread info in link", func() {
+					spread := false
+					for _, item := range publication.Spine {
+						if item.Properties != nil {
+							if item.Properties.Spread == d.linkSpread {
+								spread = true
+							}
+						}
+					}
+					So(spread, ShouldEqual, true)
+				})
+			}
+
+			if d.linkPage != "" {
+				Convey("There page info in link", func() {
+					page := false
+					for _, item := range publication.Spine {
+						if item.Properties != nil {
+							if item.Properties.Page == d.linkPage {
+								page = true
+							}
+						}
+					}
+					So(page, ShouldEqual, true)
+				})
+			}
+		})
+	}
 }

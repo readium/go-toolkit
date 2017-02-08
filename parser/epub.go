@@ -88,6 +88,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 	}
 
 	fillSpineAndResource(&publication, book)
+	addRendition(&publication, book)
 	addCoverRel(&publication, book)
 
 	fillTOCFromNavDoc(&publication, book)
@@ -119,7 +120,7 @@ func fillSpineAndResource(publication *models.Publication, book *epub.Book) {
 			linkItem := models.Link{}
 			linkItem.TypeLink = item.MediaType
 			linkItem.Href = item.Href
-			addRelToLink(&linkItem, &item)
+			addRelAndPropertiesToLink(&linkItem, &item, book)
 			addMediaOverlay(&linkItem, &item, book)
 			publication.Resources = append(publication.Resources, linkItem)
 		}
@@ -143,7 +144,7 @@ func findInManifestByID(book *epub.Book, ID string) models.Link {
 			linkItem := models.Link{}
 			linkItem.TypeLink = item.MediaType
 			linkItem.Href = item.Href
-			addRelToLink(&linkItem, &item)
+			addRelAndPropertiesToLink(&linkItem, &item, book)
 			addMediaOverlay(&linkItem, &item, book)
 			return linkItem
 		}
@@ -273,21 +274,118 @@ func addIdentifier(publication *models.Publication, book *epub.Book, epubVersion
 	}
 }
 
-func addRelToLink(link *models.Link, linkEpub *epub.Manifest) {
-	var properties []string
+func addRelAndPropertiesToLink(link *models.Link, linkEpub *epub.Manifest, book *epub.Book) {
 
-	properties = strings.Split(linkEpub.Properties, " ")
+	if linkEpub.Properties != "" {
+		addToLinkFromProperties(link, linkEpub.Properties)
+	}
+	spineProperties := findPropertiesInSpineForManifest(linkEpub, book)
+	if spineProperties != "" {
+		addToLinkFromProperties(link, spineProperties)
+	}
+}
 
-	for _, p := range properties {
-		if p == "cover-image" {
-			link.Rel = append(link.Rel, "cover")
-		}
+func findPropertiesInSpineForManifest(linkEpub *epub.Manifest, book *epub.Book) string {
 
-		if p == "nav" {
-			link.Rel = append(link.Rel, "contents")
+	for _, item := range book.Opf.Spine.Items {
+		if item.IDref == linkEpub.ID {
+			return item.Properties
 		}
 	}
 
+	return ""
+}
+
+func addToLinkFromProperties(link *models.Link, propertiesString string) {
+	var properties []string
+	var propertiesStruct models.Properties
+
+	properties = strings.Split(propertiesString, " ")
+
+	// vocabulary list can be consulted here https://idpf.github.io/epub-vocabs/rendition/
+	for _, p := range properties {
+		switch p {
+		case "cover-image":
+			link.Rel = append(link.Rel, "cover")
+		case "nav":
+			link.Rel = append(link.Rel, "contents")
+		case "scripted":
+			propertiesStruct.Contains = append(propertiesStruct.Contains, "js")
+		case "mathml":
+			propertiesStruct.Contains = append(propertiesStruct.Contains, "mathml")
+		case "onix-record":
+			propertiesStruct.Contains = append(propertiesStruct.Contains, "onix")
+		case "svg":
+			propertiesStruct.Contains = append(propertiesStruct.Contains, "svg")
+		case "xmp-record":
+			propertiesStruct.Contains = append(propertiesStruct.Contains, "xmp")
+		case "remote-resources":
+			propertiesStruct.Contains = append(propertiesStruct.Contains, "remote-resources")
+		case "page-spread-left":
+			propertiesStruct.Page = "left"
+		case "page-spread-right":
+			propertiesStruct.Page = "right"
+		case "page-spread-center":
+			propertiesStruct.Page = "center"
+		case "rendition:spread-none":
+			propertiesStruct.Spread = "none"
+		case "rendition:spread-auto":
+			propertiesStruct.Spread = "auto"
+		case "rendition:spread-landscape":
+			propertiesStruct.Spread = "landscape"
+		case "rendition:spread-portrait":
+			propertiesStruct.Spread = "portrait"
+		case "rendition:spread-both":
+			propertiesStruct.Spread = "both"
+		case "rendition:layout-reflowable":
+			propertiesStruct.Layout = "reflowable"
+		case "rendition:layout-pre-paginated":
+			propertiesStruct.Layout = "fixed"
+		case "rendition:orientation-auto":
+			propertiesStruct.Orientation = "auto"
+		case "rendition:orientation-landscape":
+			propertiesStruct.Orientation = "landscape"
+		case "rendition:orientation-portrait":
+			propertiesStruct.Orientation = "portrait"
+		case "rendition:flow-auto":
+			propertiesStruct.Overflow = "auto"
+		case "rendition:flow-paginated":
+			propertiesStruct.Overflow = "paginated"
+		case "rendition:flow-scrolled-continuous":
+			propertiesStruct.Overflow = "scrolled-continuous"
+		case "rendition:flow-scrolled-doc":
+			propertiesStruct.Overflow = "scrolled"
+		}
+
+		if propertiesStruct.Layout != "" || propertiesStruct.Orientation != "" || propertiesStruct.Overflow != "" || propertiesStruct.Page != "" || propertiesStruct.Spread != "" || len(propertiesStruct.Contains) > 0 {
+			link.Properties = &propertiesStruct
+		}
+	}
+}
+
+func addRendition(publication *models.Publication, book *epub.Book) {
+	var rendition models.Properties
+
+	for _, meta := range book.Opf.Metadata.Meta {
+		switch meta.Property {
+		case "rendition:layout":
+			if meta.Data == "pre-paginated" {
+				rendition.Layout = "fixed"
+			} else if meta.Data == "reflowable" {
+				rendition.Layout = "reflowable"
+			}
+		case "rendition:orientation":
+			rendition.Orientation = meta.Data
+		case "rendition:spread":
+			rendition.Spread = meta.Data
+		case "rendition:flow":
+			rendition.Overflow = meta.Data
+		}
+	}
+
+	if rendition.Layout != "" || rendition.Orientation != "" || rendition.Overflow != "" || rendition.Page != "" || rendition.Spread != "" {
+		publication.Metadata.Rendition = &rendition
+	}
 }
 
 func addCoverRel(publication *models.Publication, book *epub.Book) {
