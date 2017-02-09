@@ -31,16 +31,17 @@ type Internal struct {
 
 // Link object used in collections and links
 type Link struct {
-	Href       string      `json:"href"`
-	TypeLink   string      `json:"type,omitempty"`
-	Rel        []string    `json:"rel,omitempty"`
-	Height     int         `json:"height,omitempty"`
-	Width      int         `json:"width,omitempty"`
-	Title      string      `json:"title,omitempty"`
-	Properties *Properties `json:"properties,omitempty"`
-	Duration   string      `json:"duration,omitempty"`
-	Templated  bool        `json:"templated,omitempty"`
-	Children   []Link      `json:"children,omitempty"`
+	Href           string      `json:"href"`
+	TypeLink       string      `json:"type,omitempty"`
+	Rel            []string    `json:"rel,omitempty"`
+	Height         int         `json:"height,omitempty"`
+	Width          int         `json:"width,omitempty"`
+	Title          string      `json:"title,omitempty"`
+	Properties     *Properties `json:"properties,omitempty"`
+	Duration       string      `json:"duration,omitempty"`
+	Templated      bool        `json:"templated,omitempty"`
+	Children       []Link      `json:"children,omitempty"`
+	CryptAlgorithm string      `json:"-"`
 }
 
 // PublicationCollection is used as an extension points for other collections in a Publication
