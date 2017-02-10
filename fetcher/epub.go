@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/feedbooks/r2-streamer-go/decoder"
 	"github.com/feedbooks/r2-streamer-go/models"
 )
 
@@ -18,6 +19,7 @@ func FetchEpub(publication models.Publication, publicationResource string) (io.R
 	var mediaType string
 	var reader *zip.ReadCloser
 	var assetFd io.ReadCloser
+	var link models.Link
 
 	for _, data := range publication.Internal {
 		if data.Name == "epub" {
@@ -32,9 +34,18 @@ func FetchEpub(publication models.Publication, publicationResource string) (io.R
 		}
 	}
 
+	for _, linkRes := range publication.Resources {
+		if publicationResource == linkRes.Href {
+			link = linkRes
+		}
+	}
 	buff, _ := ioutil.ReadAll(assetFd)
 	assetFd.Close()
 	readerSeeker := bytes.NewReader(buff)
+	readerSeekerDecode, err := decoder.Decode(publication, link, readerSeeker)
+	if err != nil {
+		return readerSeekerDecode, mediaType, nil
+	}
 
 	return readerSeeker, mediaType, nil
 }
