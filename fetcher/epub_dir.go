@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/feedbooks/r2-streamer-go/decoder"
 	"github.com/feedbooks/r2-streamer-go/models"
 )
 
@@ -18,6 +19,7 @@ func FetchEpubDir(publication models.Publication, publicationResource string) (i
 	var mediaType string
 	var basePath string
 	var rootFile string
+	var link models.Link
 
 	for _, data := range publication.Internal {
 		if data.Name == "basepath" {
@@ -34,5 +36,15 @@ func FetchEpubDir(publication models.Publication, publicationResource string) (i
 		fmt.Println(err)
 	}
 
+	for _, linkRes := range publication.Resources {
+		if publicationResource == linkRes.Href {
+			link = linkRes
+		}
+	}
+
+	readerSeekerDecode, err := decoder.Decode(publication, link, fd)
+	if err == nil {
+		return readerSeekerDecode, mediaType, nil
+	}
 	return fd, mediaType, nil
 }

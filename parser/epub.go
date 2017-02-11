@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -34,15 +35,18 @@ func EpubParser(filePath string) (models.Publication, error) {
 	fileExt := filepath.Ext(filePath)
 	if fileExt == "" {
 		book, err = epub.OpenDir(filePath)
+		if err != nil {
+			return models.Publication{}, errors.New("can't open or parse epub file with err : " + err.Error())
+		}
 		publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "epub_dir"})
 		publication.Internal = append(publication.Internal, models.Internal{Name: "basepath", Value: filePath})
 	} else {
 		book, err = epub.Open(filePath)
+		if err != nil {
+			return models.Publication{}, errors.New("can't open or parse epub file with err : " + err.Error())
+		}
 		publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "epub"})
 		publication.Internal = append(publication.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
-	}
-	if err != nil {
-		return models.Publication{}, errors.New("can't open or parse epub file with err : " + err.Error())
 	}
 
 	if book.Container.Rootfile.Version != "" {
@@ -106,6 +110,8 @@ func EpubParser(filePath string) (models.Publication, error) {
 	}
 
 	fillCalibreSerieInfo(&publication, book)
+	fillEncryptionInfo(&publication, book)
+
 	return publication, nil
 }
 
@@ -557,4 +563,34 @@ func fillCalibreSerieInfo(publication *models.Publication, book *epub.Book) {
 		publication.Metadata.BelongsTo.Series = append(publication.Metadata.BelongsTo.Series, collection)
 	}
 
+}
+
+func fillEncryptionInfo(publication *models.Publication, book *epub.Book) {
+
+	for _, encInfo := range book.Encryption.EncryptedData {
+		resURI := encInfo.CipherData.CipherReference.URI
+		for i, l := range publication.Resources {
+			if resURI == FilePath(*publication, l.Href) {
+				publication.Resources[i].CryptAlgorithm = encInfo.EncryptionMethod.Algorithm
+			}
+		}
+		for i, l := range publication.Spine {
+			if resURI == FilePath(*publication, l.Href) {
+				publication.Spine[i].CryptAlgorithm = encInfo.EncryptionMethod.Algorithm
+			}
+		}
+	}
+}
+
+// FilePath return the complete path for the ressource
+func FilePath(publication models.Publication, publicationResource string) string {
+	var rootFile string
+
+	for _, data := range publication.Internal {
+		if data.Name == "rootfile" {
+			rootFile = data.Value.(string)
+		}
+	}
+
+	return path.Join(path.Dir(rootFile), publicationResource)
 }
