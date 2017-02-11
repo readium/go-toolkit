@@ -1,0 +1,3 @@
+[submodule "test/readium-test-files"]
+	path = test/readium-test-files
+	url = git@github.com:readium/readium-test-files.git

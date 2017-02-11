@@ -13,11 +13,11 @@ import (
 )
 
 func init() {
-	decoderList = append(decoderList, List{decoderAlgorithm: "http://www.idpf.org/2008/embedding", decoder: DecodeIpdfFont})
+	decoderList = append(decoderList, List{decoderAlgorithm: "http://www.idpf.org/2008/embedding", decoder: DecodeIdpfFont})
 }
 
-// DecodeIpdfFont decode obfuscate fonts using idpf spec http://www.idpf.org/epub/20/spec/FontManglingSpec.html
-func DecodeIpdfFont(publication models.Publication, link models.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
+// DecodeIdpfFont decode obfuscate fonts using idpf spec http://www.idpf.org/epub/20/spec/FontManglingSpec.html
+func DecodeIdpfFont(publication models.Publication, link models.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
 	var count int
 
 	key := getHashKey(publication)
