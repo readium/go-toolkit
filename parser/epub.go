@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"path"
@@ -626,9 +625,8 @@ func fillMediaOverlay(publication *models.Publication, book *epub.Book) {
 		}
 	}
 
-	j, _ := json.Marshal(publication.MediaOverlays)
-
-	fmt.Println(string(j))
+	//	j, _ := json.Marshal(publication.MediaOverlays)
+	//	fmt.Println(string(j))
 }
 
 func addSeqToMediaOverlay(mo *[]models.MediaOverlayNode, seq epub.Seq) {
