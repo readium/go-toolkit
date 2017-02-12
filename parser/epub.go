@@ -1,7 +1,9 @@
 package parser
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -111,6 +113,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 
 	fillCalibreSerieInfo(&publication, book)
 	fillEncryptionInfo(&publication, book)
+	fillMediaOverlay(&publication, book)
 
 	return publication, nil
 }
@@ -593,4 +596,134 @@ func FilePath(publication models.Publication, publicationResource string) string
 	}
 
 	return path.Join(path.Dir(rootFile), publicationResource)
+}
+
+func fillMediaOverlay(publication *models.Publication, book *epub.Book) {
+
+	for _, item := range publication.Resources {
+		if item.TypeLink == "application/smil+xml" {
+			mo := models.MediaOverlayNode{}
+			smil := book.GetSMIL(item.Href)
+			mo.Role = append(mo.Role, "section")
+			mo.Text = smil.Body.TextRef
+			if len(smil.Body.Par) > 0 {
+				for _, par := range smil.Body.Par {
+					p := models.MediaOverlayNode{}
+					p.Text = par.Text.Src
+					p.Audio = par.Audio.Src
+					mo.Children = append(mo.Children, p)
+				}
+			}
+
+			if len(smil.Body.Seq) > 0 {
+				for _, s := range smil.Body.Seq {
+					addSeqToMediaOverlay(&mo.Children, s)
+				}
+			}
+
+			//addSeqToMediaOverlay(&mo.Children, smil.Body.Seq)
+			publication.MediaOverlays = append(publication.MediaOverlays, mo)
+		}
+	}
+
+	j, _ := json.Marshal(publication.MediaOverlays)
+
+	fmt.Println(string(j))
+}
+
+func addSeqToMediaOverlay(mo *[]models.MediaOverlayNode, seq epub.Seq) {
+
+	moc := models.MediaOverlayNode{}
+	moc.Role = append(moc.Role, "section")
+	moc.Text = seq.TextRef
+	if len(seq.Par) > 0 {
+		for _, par := range seq.Par {
+			p := models.MediaOverlayNode{}
+			p.Text = par.Text.Src
+			p.Audio = par.Audio.Src
+			p.Audio += "#t="
+			p.Audio += smilTimeToSecondes(par.Audio.ClipBegin)
+			p.Audio += ","
+			p.Audio += smilTimeToSecondes(par.Audio.ClipEnd)
+			moc.Children = append(moc.Children, p)
+		}
+	}
+
+	if len(seq.Seq) > 0 {
+		for _, s := range seq.Seq {
+			addSeqToMediaOverlay(&moc.Children, s)
+		}
+	}
+
+	*mo = append(*mo, moc)
+
+}
+
+func smilTimeToSecondes(smilTime string) string {
+
+	if strings.Contains(smilTime, "h") {
+		hArr := strings.Split(strings.Replace(smilTime, "h", "", 1), ".")
+		timeCount := 0
+		hour, _ := strconv.Atoi(hArr[0])
+		timeCount += hour * 60 * 60
+		min, _ := strconv.Atoi(hArr[1])
+		fmt.Println(min)
+		minConv := min * 60 / 100
+		fmt.Println(minConv)
+		timeCount += minConv * 60
+		return strconv.Itoa(timeCount)
+	} else if strings.Contains(smilTime, "ms") {
+		ms, _ := strconv.Atoi(strings.Replace(smilTime, "ms", "", 1))
+		if ms < 1000 {
+			return "0." + strings.Replace(smilTime, "ms", "", 1)
+		}
+		res := strconv.FormatFloat(float64(ms)/1000, 'f', -1, 32)
+		return res
+	} else if strings.Contains(smilTime, "s") {
+		return strings.Replace(smilTime, "s", "", 1)
+	}
+
+	tArr := strings.Split(smilTime, ":")
+	switch len(tArr) {
+	case 1:
+		return smilTime
+	case 2:
+		sArr := strings.Split(tArr[1], ".")
+		if len(sArr) > 1 {
+			timeCount := 0
+			min, _ := strconv.Atoi(tArr[0])
+			timeCount += min * 60
+			sec, _ := strconv.Atoi(sArr[0])
+			timeCount += sec
+			return strconv.Itoa(timeCount) + "." + sArr[1]
+		}
+		timeCount := 0
+		min, _ := strconv.Atoi(tArr[0])
+		timeCount += min * 60
+		sec, _ := strconv.Atoi(tArr[1])
+		timeCount += sec
+		return strconv.Itoa(timeCount)
+	case 3:
+		sArr := strings.Split(tArr[2], ".")
+		if len(sArr) > 1 {
+			timeCount := 0
+			hour, _ := strconv.Atoi(tArr[0])
+			timeCount += hour * 60 * 60
+			min, _ := strconv.Atoi(tArr[1])
+			timeCount += min * 60
+			sec, _ := strconv.Atoi(sArr[0])
+			timeCount += sec
+			return strconv.Itoa(timeCount) + "." + sArr[1]
+		}
+		timeCount := 0
+		hour, _ := strconv.Atoi(tArr[0])
+		timeCount += hour * 60 * 60
+		min, _ := strconv.Atoi(tArr[1])
+		timeCount += min * 60
+		sec, _ := strconv.Atoi(sArr[0])
+		timeCount += sec
+		return strconv.Itoa(timeCount)
+	}
+
+	return ""
 }
