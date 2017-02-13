@@ -640,9 +640,9 @@ func addSeqToMediaOverlay(mo *[]models.MediaOverlayNode, seq epub.Seq) {
 			p.Text = par.Text.Src
 			p.Audio = par.Audio.Src
 			p.Audio += "#t="
-			p.Audio += smilTimeToSecondes(par.Audio.ClipBegin)
+			p.Audio += smilTimeToSeconds(par.Audio.ClipBegin)
 			p.Audio += ","
-			p.Audio += smilTimeToSecondes(par.Audio.ClipEnd)
+			p.Audio += smilTimeToSeconds(par.Audio.ClipEnd)
 			moc.Children = append(moc.Children, p)
 		}
 	}
@@ -657,7 +657,7 @@ func addSeqToMediaOverlay(mo *[]models.MediaOverlayNode, seq epub.Seq) {
 
 }
 
-func smilTimeToSecondes(smilTime string) string {
+func smilTimeToSeconds(smilTime string) string {
 
 	if strings.Contains(smilTime, "h") {
 		hArr := strings.Split(strings.Replace(smilTime, "h", "", 1), ".")

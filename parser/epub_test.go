@@ -221,12 +221,13 @@ func TestSmilTime(t *testing.T) {
 		{"0:05:01.2", "301.2"},
 		{"124:59:36", "449976"},
 		{"5:34:31.396", "20071.396"},
+		{"", ""},
 	}
 
 	for _, d := range testData {
 		Convey("Given "+d[0], t, func() {
 			Convey("This should convert to "+d[1], func() {
-				So(smilTimeToSecondes(d[0]), ShouldEqual, d[1])
+				So(smilTimeToSeconds(d[0]), ShouldEqual, d[1])
 			})
 		})
 	}
