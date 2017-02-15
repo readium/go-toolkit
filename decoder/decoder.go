@@ -2,7 +2,6 @@ package decoder
 
 import (
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/feedbooks/r2-streamer-go/models"
@@ -19,7 +18,6 @@ var decoderList []List
 // Decode decode the ressource
 func Decode(publication models.Publication, link models.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
 
-	fmt.Println(link.CryptAlgorithm)
 	for _, decoderFunc := range decoderList {
 		if link.CryptAlgorithm == decoderFunc.decoderAlgorithm {
 			return decoderFunc.decoder(publication, link, reader)
@@ -27,4 +25,15 @@ func Decode(publication models.Publication, link models.Link, reader io.ReadSeek
 	}
 
 	return nil, errors.New("can't find fetcher")
+}
+
+// NeedToDecode check if there a decoder for this resource
+func NeedToDecode(publication models.Publication, link models.Link) bool {
+	for _, decoderFunc := range decoderList {
+		if link.CryptAlgorithm == decoderFunc.decoderAlgorithm {
+			return true
+		}
+	}
+
+	return false
 }

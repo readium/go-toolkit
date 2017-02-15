@@ -39,12 +39,16 @@ func FetchEpub(publication models.Publication, publicationResource string) (io.R
 			link = linkRes
 		}
 	}
+
 	buff, _ := ioutil.ReadAll(assetFd)
 	assetFd.Close()
 	readerSeeker := bytes.NewReader(buff)
-	readerSeekerDecode, err := decoder.Decode(publication, link, readerSeeker)
-	if err != nil {
-		return readerSeekerDecode, mediaType, nil
+
+	if decoder.NeedToDecode(publication, link) {
+		readerSeekerDecode, err := decoder.Decode(publication, link, readerSeeker)
+		if err != nil {
+			return readerSeekerDecode, mediaType, nil
+		}
 	}
 
 	return readerSeeker, mediaType, nil
