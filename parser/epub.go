@@ -113,6 +113,9 @@ func EpubParser(filePath string) (models.Publication, error) {
 	fillCalibreSerieInfo(&publication, book)
 	fillEncryptionInfo(&publication, book)
 	fillMediaOverlay(&publication, book)
+	if len(publication.MediaOverlays) > 0 {
+		addMediaOverlayToLink(&publication)
+	}
 
 	return publication, nil
 }
@@ -595,6 +598,32 @@ func FilePath(publication models.Publication, publicationResource string) string
 	}
 
 	return path.Join(path.Dir(rootFile), publicationResource)
+}
+
+func addMediaOverlayToLink(publication *models.Publication) {
+
+	for i, l := range publication.Resources {
+		ov := publication.FindMediaOverlayByHref(l.Href)
+		if len(ov) > 0 {
+			if l.Properties == nil {
+				publication.Resources[i].Properties = &models.Properties{MediaOverlay: "{url}" + l.Href}
+			} else {
+				l.Properties.MediaOverlay = "{url}" + l.Href
+			}
+		}
+	}
+
+	for i, l := range publication.Spine {
+		ov := publication.FindMediaOverlayByHref(l.Href)
+		if len(ov) > 0 {
+			if l.Properties == nil {
+				publication.Spine[i].Properties = &models.Properties{MediaOverlay: "{url}" + l.Href}
+			} else {
+				l.Properties.MediaOverlay = "{url}" + l.Href
+			}
+		}
+	}
+
 }
 
 func fillMediaOverlay(publication *models.Publication, book *epub.Book) {

@@ -11,6 +11,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -167,10 +168,27 @@ func getPublication(filename string, req *http.Request) (models.Publication, err
 		filenamePath, _ := base64.StdEncoding.DecodeString(filename)
 
 		publication, err = parser.Parse(string(filenamePath))
+		hasMediaOverlay := false
+		for i, l := range publication.Resources {
+			if l.Properties != nil && l.Properties.MediaOverlay != "" {
+				publication.Resources[i].Properties.MediaOverlay = strings.Replace(publication.Resources[i].Properties.MediaOverlay, "{url}", "/"+filename+"/media-overlay?resource=", 1)
+				hasMediaOverlay = true
+			}
+		}
+		for i, l := range publication.Spine {
+			if l.Properties != nil && l.Properties.MediaOverlay != "" {
+				publication.Spine[i].Properties.MediaOverlay = strings.Replace(publication.Spine[i].Properties.MediaOverlay, "{url}", "/"+filename+"/media-overlay?resource=", 1)
+				hasMediaOverlay = true
+			}
+		}
+
 		if err != nil {
 			return models.Publication{}, err
 		}
-		publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
+		publication.AddLink("application/vnd.readium.mo+json", []string{"media-overlay"}, "http://"+req.Host+"/"+filename+"/media-overlay?resource={path}", true)
+		if hasMediaOverlay {
+			publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
+		}
 		if searcher.CanBeSearch(publication) {
 			publication.AddLink("", []string{"search"}, "http://"+req.Host+"/"+filename+"/search?query={searchTerms}", true)
 		}

@@ -1,6 +1,9 @@
 package models
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 // Publication Main structure for a publication
 type Publication struct {
@@ -102,4 +105,33 @@ func (publication *Publication) AddLink(typeLink string, rel []string, url strin
 	}
 
 	publication.Links = append(publication.Links, link)
+}
+
+// FindMediaOverlayByHref search in media overlay structure for url that match
+func (publication *Publication) FindMediaOverlayByHref(href string) []MediaOverlayNode {
+	var overlay []MediaOverlayNode
+
+	overlay = findMediaOverlayNodeByHref(publication.MediaOverlays, href)
+
+	return overlay
+}
+
+func findMediaOverlayNodeByHref(nodes []MediaOverlayNode, href string) []MediaOverlayNode {
+	var overlay []MediaOverlayNode
+
+	for _, media := range nodes {
+		if strings.Contains(media.Text, href) {
+			overlay = append(overlay, media)
+		}
+		if len(media.Children) > 0 {
+			ov := findMediaOverlayNodeByHref(media.Children, href)
+			if len(ov) > 0 {
+				for _, v := range ov {
+					overlay = append(overlay, v)
+				}
+			}
+		}
+	}
+
+	return overlay
 }
