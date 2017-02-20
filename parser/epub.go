@@ -14,6 +14,9 @@ import (
 )
 
 const epub3 = "3.0"
+const epub31 = "3.1"
+const epub2 = "2.0"
+const epub201 = "2.0.1"
 const autoMeta = "auto"
 const noneMeta = "none"
 const reflowableMeta = "reflowable"
@@ -52,12 +55,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 		publication.Internal = append(publication.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
 	}
 
-	if book.Container.Rootfile.Version != "" {
-		epubVersion = book.Container.Rootfile.Version
-	} else if book.Opf.Version != "" {
-		epubVersion = book.Opf.Version
-	}
-
+	epubVersion = getEpubVersion(book)
 	_, filename := filepath.Split(filePath)
 
 	publication.Internal = append(publication.Internal, models.Internal{Name: "filename", Value: filename})
@@ -114,6 +112,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 
 	fillCalibreSerieInfo(&publication, book)
 	fillSubject(&publication, book)
+	fillPublicationDate(&publication, book)
 	fillEncryptionInfo(&publication, book)
 
 	return publication, nil
@@ -605,4 +604,63 @@ func fillSubject(publication *models.Publication, book *epub.Book) {
 		publication.Metadata.Subject = append(publication.Metadata.Subject, sub)
 	}
 
+}
+
+func fillPublicationDate(publication *models.Publication, book *epub.Book) {
+	var date time.Time
+	var err error
+
+	if len(book.Opf.Metadata.Date) > 0 {
+
+		if isEpub3OrMore(book) {
+			if strings.Contains(book.Opf.Metadata.Date[0].Data, "T") {
+				date, err = time.Parse(time.RFC3339, book.Opf.Metadata.Date[0].Data)
+			} else {
+				date, err = time.Parse("2006-01-02", book.Opf.Metadata.Date[0].Data)
+			}
+			if err == nil {
+				publication.Metadata.PublicationDate = &date
+				return
+			}
+		}
+		for _, da := range book.Opf.Metadata.Date {
+			if strings.Contains(da.Event, "publication") {
+				count := strings.Count(da.Data, "-")
+				switch count {
+				case 0:
+					date, err = time.Parse("2006", da.Data)
+				case 1:
+					date, err = time.Parse("2006-01", da.Data)
+				case 2:
+					date, err = time.Parse("2006-01-02", da.Data)
+				}
+				if err == nil {
+					publication.Metadata.PublicationDate = &date
+					return
+				}
+			}
+		}
+
+	}
+}
+
+func getEpubVersion(book *epub.Book) string {
+
+	if book.Container.Rootfile.Version != "" {
+		return book.Container.Rootfile.Version
+	} else if book.Opf.Version != "" {
+		return book.Opf.Version
+	}
+
+	return ""
+}
+
+func isEpub3OrMore(book *epub.Book) bool {
+
+	version := getEpubVersion(book)
+	if version == epub3 || version == epub31 {
+		return true
+	}
+
+	return false
 }
