@@ -2,7 +2,6 @@ package parser
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -138,8 +137,6 @@ func TestPublication(t *testing.T) {
 			if d.PublicationDate != "" {
 				Convey("There Publication date in book", func() {
 					dateParsed, _ := time.Parse("2006-01-02", d.PublicationDate)
-					fmt.Println(publication.Metadata.PublicationDate)
-					fmt.Println(dateParsed)
 
 					sameDate := dateParsed.Equal(*publication.Metadata.PublicationDate)
 					So(sameDate, ShouldBeTrue)
@@ -232,6 +229,31 @@ func TestFixedPublication(t *testing.T) {
 					So(page, ShouldEqual, true)
 				})
 			}
+		})
+	}
+}
+
+func TestSmilTime(t *testing.T) {
+	testData := [][]string{
+		{"12.345", "12.345"},
+		{"2345ms", "2.345"},
+		{"345ms", "0.345"},
+		{"7.75h", "27900"},
+		{"76.2s", "76.2"},
+		{"00:56.78", "56.78"},
+		{"09:58", "598"},
+		{"0:00:04", "4"},
+		{"0:05:01.2", "301.2"},
+		{"124:59:36", "449976"},
+		{"5:34:31.396", "20071.396"},
+		{"", ""},
+	}
+
+	for _, d := range testData {
+		Convey("Given "+d[0], t, func() {
+			Convey("This should convert to "+d[1], func() {
+				So(smilTimeToSeconds(d[0]), ShouldEqual, d[1])
+			})
 		})
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"unicode"
@@ -21,7 +20,6 @@ func DecodeIdpfFont(publication models.Publication, link models.Link, reader io.
 	var count int
 
 	key := getHashKey(publication)
-	fmt.Println(key)
 	if string(key) == "" {
 		return nil, errors.New("can't find hash key")
 	}
