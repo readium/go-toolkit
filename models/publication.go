@@ -123,14 +123,14 @@ func findMediaOverlayNodeByHref(nodes []MediaOverlayNode, href string) []MediaOv
 		if strings.Contains(media.Text, href) {
 			overlay = append(overlay, media)
 		}
-		if len(media.Children) > 0 {
-			ov := findMediaOverlayNodeByHref(media.Children, href)
-			if len(ov) > 0 {
-				for _, v := range ov {
-					overlay = append(overlay, v)
-				}
-			}
-		}
+		// if len(media.Children) > 0 {
+		// 	ov := findMediaOverlayNodeByHref(media.Children, href)
+		// 	if len(ov) > 0 {
+		// 		for _, v := range ov {
+		// 			overlay = append(overlay, v)
+		// 		}
+		// 	}
+		// }
 	}
 
 	return overlay

@@ -80,6 +80,7 @@ func bookHandler(test bool) http.Handler {
 
 	serv.HandleFunc("/{filename}/manifest.json", getManifest)
 	serv.HandleFunc("/{filename}/search", search)
+	serv.HandleFunc("/{filename}/media-overlay", mediaOverlay)
 	serv.HandleFunc("/{filename}/{asset:.*}", getAsset)
 	return serv
 }
@@ -149,6 +150,33 @@ func search(w http.ResponseWriter, req *http.Request) {
 
 	j, _ := json.Marshal(searchReturn)
 	json.Indent(&returnJSON, j, "", "  ")
+	returnJSON.WriteTo(w)
+}
+
+func mediaOverlay(w http.ResponseWriter, req *http.Request) {
+	var returnJSON bytes.Buffer
+	vars := mux.Vars(req)
+	var mediaOverlay struct {
+		MediaOverlay []models.MediaOverlayNode `json:"media-overlay"`
+	}
+
+	publication, err := getPublication(vars["filename"], req)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	resource := req.URL.Query().Get("resource")
+	media := publication.FindMediaOverlayByHref(resource)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	mediaOverlay.MediaOverlay = media
+	j, _ := json.Marshal(mediaOverlay)
+	json.Indent(&returnJSON, j, "", "  ")
+	w.Header().Set("Content-Type", "application/vnd.readium.mo+json")
 	returnJSON.WriteTo(w)
 }
 
