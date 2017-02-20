@@ -15,6 +15,12 @@ import (
 )
 
 const epub3 = "3.0"
+const epub31 = "3.1"
+const epub2 = "2.0"
+const epub201 = "2.0.1"
+const autoMeta = "auto"
+const noneMeta = "none"
+const reflowableMeta = "reflowable"
 
 func init() {
 	parserList = append(parserList, List{fileExt: "epub", parser: EpubParser})
@@ -50,12 +56,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 		publication.Internal = append(publication.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
 	}
 
-	if book.Container.Rootfile.Version != "" {
-		epubVersion = book.Container.Rootfile.Version
-	} else if book.Opf.Version != "" {
-		epubVersion = book.Opf.Version
-	}
-
+	epubVersion = getEpubVersion(book)
 	_, filename := filepath.Split(filePath)
 
 	publication.Internal = append(publication.Internal, models.Internal{Name: "filename", Value: filename})
@@ -111,6 +112,8 @@ func EpubParser(filePath string) (models.Publication, error) {
 	}
 
 	fillCalibreSerieInfo(&publication, book)
+	fillSubject(&publication, book)
+	fillPublicationDate(&publication, book)
 	fillEncryptionInfo(&publication, book)
 	fillMediaOverlay(&publication, book)
 	if len(publication.MediaOverlays) > 0 {
@@ -345,9 +348,9 @@ func addToLinkFromProperties(link *models.Link, propertiesString string) {
 		case "page-spread-center":
 			propertiesStruct.Page = "center"
 		case "rendition:spread-none":
-			propertiesStruct.Spread = "none"
+			propertiesStruct.Spread = noneMeta
 		case "rendition:spread-auto":
-			propertiesStruct.Spread = "auto"
+			propertiesStruct.Spread = autoMeta
 		case "rendition:spread-landscape":
 			propertiesStruct.Spread = "landscape"
 		case "rendition:spread-portrait":
@@ -355,7 +358,7 @@ func addToLinkFromProperties(link *models.Link, propertiesString string) {
 		case "rendition:spread-both":
 			propertiesStruct.Spread = "both"
 		case "rendition:layout-reflowable":
-			propertiesStruct.Layout = "reflowable"
+			propertiesStruct.Layout = reflowableMeta
 		case "rendition:layout-pre-paginated":
 			propertiesStruct.Layout = "fixed"
 		case "rendition:orientation-auto":
@@ -365,7 +368,7 @@ func addToLinkFromProperties(link *models.Link, propertiesString string) {
 		case "rendition:orientation-portrait":
 			propertiesStruct.Orientation = "portrait"
 		case "rendition:flow-auto":
-			propertiesStruct.Overflow = "auto"
+			propertiesStruct.Overflow = autoMeta
 		case "rendition:flow-paginated":
 			propertiesStruct.Overflow = "paginated"
 		case "rendition:flow-scrolled-continuous":
@@ -623,6 +626,13 @@ func addMediaOverlayToLink(publication *models.Publication) {
 			}
 		}
 	}
+}
+
+func fillSubject(publication *models.Publication, book *epub.Book) {
+	for _, s := range book.Opf.Metadata.Subject {
+		sub := models.Subject{Name: s.Data, Code: s.Term, Scheme: s.Authority}
+		publication.Metadata.Subject = append(publication.Metadata.Subject, sub)
+	}
 
 }
 
@@ -753,4 +763,63 @@ func smilTimeToSeconds(smilTime string) string {
 	}
 
 	return ""
+}
+
+func fillPublicationDate(publication *models.Publication, book *epub.Book) {
+	var date time.Time
+	var err error
+
+	if len(book.Opf.Metadata.Date) > 0 {
+
+		if isEpub3OrMore(book) {
+			if strings.Contains(book.Opf.Metadata.Date[0].Data, "T") {
+				date, err = time.Parse(time.RFC3339, book.Opf.Metadata.Date[0].Data)
+			} else {
+				date, err = time.Parse("2006-01-02", book.Opf.Metadata.Date[0].Data)
+			}
+			if err == nil {
+				publication.Metadata.PublicationDate = &date
+				return
+			}
+		}
+		for _, da := range book.Opf.Metadata.Date {
+			if strings.Contains(da.Event, "publication") {
+				count := strings.Count(da.Data, "-")
+				switch count {
+				case 0:
+					date, err = time.Parse("2006", da.Data)
+				case 1:
+					date, err = time.Parse("2006-01", da.Data)
+				case 2:
+					date, err = time.Parse("2006-01-02", da.Data)
+				}
+				if err == nil {
+					publication.Metadata.PublicationDate = &date
+					return
+				}
+			}
+		}
+
+	}
+}
+
+func getEpubVersion(book *epub.Book) string {
+
+	if book.Container.Rootfile.Version != "" {
+		return book.Container.Rootfile.Version
+	} else if book.Opf.Version != "" {
+		return book.Opf.Version
+	}
+
+	return ""
+}
+
+func isEpub3OrMore(book *epub.Book) bool {
+
+	version := getEpubVersion(book)
+	if version == epub3 || version == epub31 {
+		return true
+	}
+
+	return false
 }

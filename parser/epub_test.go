@@ -3,21 +3,24 @@ package parser
 import (
 	"errors"
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 type testDataStruct struct {
-	filepath     string
-	err          error
-	title        string
-	authorName   string
-	identifier   string
-	thirdChapter string
-	tocChildren  bool
-	Source       string
-	NoLinear     string
-	MultipleLang bool
+	filepath        string
+	err             error
+	title           string
+	authorName      string
+	identifier      string
+	thirdChapter    string
+	tocChildren     bool
+	Source          string
+	NoLinear        string
+	MultipleLang    bool
+	HasSubject      string
+	PublicationDate string
 }
 
 type testDataFixedStruct struct {
@@ -33,10 +36,11 @@ type testDataFixedStruct struct {
 
 func TestPublication(t *testing.T) {
 	testData := []testDataStruct{
-		{"../test/empty.epub", errors.New("can't open or parse epub file with err : open ../test/empty.epub: no such file or directory"), "", "", "", "", false, "", "", false},
-		{"../test/moby-dick.epub", nil, "Moby-Dick", "Herman Melville", "code.google.com.epub-samples.moby-dick-basic", "ETYMOLOGY.", false, "", "cover.xhtml", false},
-		{"../test/kusamakura.epub", nil, "草枕", "夏目 漱石", "http://www.aozora.gr.jp/cards/000148/card776.html", "三", false, "", "", true},
-		{"../test/feedbooks_book_6816.epub", nil, "Mémoires d'Outre-tombe", "François-René de Chateaubriand", "urn:uuid:47f6aaf6-aa7e-11e6-8357-4c72b9252ec6", "Partie 1", true, "www.ebooksfrance.com", "", false},
+		{"../test/empty.epub", errors.New("can't open or parse epub file with err : open ../test/empty.epub: no such file or directory"), "", "", "", "", false, "", "", false, "", ""},
+		{"../test/moby-dick.epub", nil, "Moby-Dick", "Herman Melville", "code.google.com.epub-samples.moby-dick-basic", "ETYMOLOGY.", false, "", "cover.xhtml", false, "", ""},
+		{"../test/kusamakura.epub", nil, "草枕", "夏目 漱石", "http://www.aozora.gr.jp/cards/000148/card776.html", "三", false, "", "", true, "", ""},
+		{"../test/feedbooks_book_6816.epub", nil, "Mémoires d'Outre-tombe", "François-René de Chateaubriand", "urn:uuid:47f6aaf6-aa7e-11e6-8357-4c72b9252ec6", "Partie 1", true, "www.ebooksfrance.com", "", false, "Non-Fiction", "1850-01-01"},
+		{"../test/readium-test-files/demos/alice3/", nil, "Alice's Adventures in Wonderland", "", "urn:uuid:7408D53A-5383-40AA-8078-5256C872AE41", "III. A Caucus-Race and a Long Tale", false, "", "", false, "", "1865-07-04"},
 	}
 
 	for _, d := range testData {
@@ -64,7 +68,7 @@ func TestPublication(t *testing.T) {
 				})
 			}
 
-			if err == nil {
+			if err == nil && d.authorName != "" {
 				Convey("There must be an author", func() {
 					So(len(publication.Metadata.Author), ShouldBeGreaterThanOrEqualTo, 1)
 				})
@@ -115,6 +119,27 @@ func TestPublication(t *testing.T) {
 					}
 
 					So(findItemInSpine, ShouldEqual, false)
+				})
+			}
+
+			if d.HasSubject != "" {
+				Convey("There "+d.HasSubject+"Subject in book", func() {
+					findSubject := false
+					for _, s := range publication.Metadata.Subject {
+						if s.Name == d.HasSubject {
+							findSubject = true
+						}
+					}
+					So(findSubject, ShouldEqual, true)
+				})
+			}
+
+			if d.PublicationDate != "" {
+				Convey("There Publication date in book", func() {
+					dateParsed, _ := time.Parse("2006-01-02", d.PublicationDate)
+
+					sameDate := dateParsed.Equal(*publication.Metadata.PublicationDate)
+					So(sameDate, ShouldBeTrue)
 				})
 			}
 

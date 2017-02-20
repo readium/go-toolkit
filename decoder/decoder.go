@@ -26,3 +26,14 @@ func Decode(publication models.Publication, link models.Link, reader io.ReadSeek
 
 	return nil, errors.New("can't find fetcher")
 }
+
+// NeedToDecode check if there a decoder for this resource
+func NeedToDecode(publication models.Publication, link models.Link) bool {
+	for _, decoderFunc := range decoderList {
+		if link.CryptAlgorithm == decoderFunc.decoderAlgorithm {
+			return true
+		}
+	}
+
+	return false
+}
