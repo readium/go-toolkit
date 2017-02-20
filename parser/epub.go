@@ -455,9 +455,8 @@ func findAllMetaByRefineAndProperty(book *epub.Book, ID string, property string)
 func addMediaOverlay(link *models.Link, linkEpub *epub.Manifest, book *epub.Book) {
 	if linkEpub.MediaOverlay != "" {
 		meta := findMetaByRefineAndProperty(book, linkEpub.MediaOverlay, "media:duration")
-		// format 0:33:35.025
-		// splitDuration := strings.Split(meta.Data, ":")
-		link.Duration = meta.Data
+
+		link.Duration = smilTimeToSeconds(meta.Data)
 	}
 
 }
