@@ -14,6 +14,9 @@ import (
 )
 
 const epub3 = "3.0"
+const autoMeta = "auto"
+const noneMeta = "none"
+const reflowableMeta = "reflowable"
 
 func init() {
 	parserList = append(parserList, List{fileExt: "epub", parser: EpubParser})
@@ -110,6 +113,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 	}
 
 	fillCalibreSerieInfo(&publication, book)
+	fillSubject(&publication, book)
 	fillEncryptionInfo(&publication, book)
 
 	return publication, nil
@@ -340,9 +344,9 @@ func addToLinkFromProperties(link *models.Link, propertiesString string) {
 		case "page-spread-center":
 			propertiesStruct.Page = "center"
 		case "rendition:spread-none":
-			propertiesStruct.Spread = "none"
+			propertiesStruct.Spread = noneMeta
 		case "rendition:spread-auto":
-			propertiesStruct.Spread = "auto"
+			propertiesStruct.Spread = autoMeta
 		case "rendition:spread-landscape":
 			propertiesStruct.Spread = "landscape"
 		case "rendition:spread-portrait":
@@ -350,7 +354,7 @@ func addToLinkFromProperties(link *models.Link, propertiesString string) {
 		case "rendition:spread-both":
 			propertiesStruct.Spread = "both"
 		case "rendition:layout-reflowable":
-			propertiesStruct.Layout = "reflowable"
+			propertiesStruct.Layout = reflowableMeta
 		case "rendition:layout-pre-paginated":
 			propertiesStruct.Layout = "fixed"
 		case "rendition:orientation-auto":
@@ -360,7 +364,7 @@ func addToLinkFromProperties(link *models.Link, propertiesString string) {
 		case "rendition:orientation-portrait":
 			propertiesStruct.Orientation = "portrait"
 		case "rendition:flow-auto":
-			propertiesStruct.Overflow = "auto"
+			propertiesStruct.Overflow = autoMeta
 		case "rendition:flow-paginated":
 			propertiesStruct.Overflow = "paginated"
 		case "rendition:flow-scrolled-continuous":
@@ -593,4 +597,12 @@ func FilePath(publication models.Publication, publicationResource string) string
 	}
 
 	return path.Join(path.Dir(rootFile), publicationResource)
+}
+
+func fillSubject(publication *models.Publication, book *epub.Book) {
+	for _, s := range book.Opf.Metadata.Subject {
+		sub := models.Subject{Name: s.Data, Code: s.Term, Scheme: s.Authority}
+		publication.Metadata.Subject = append(publication.Metadata.Subject, sub)
+	}
+
 }

@@ -19,6 +19,7 @@ type testDataStruct struct {
 	Source       string
 	NoLinear     string
 	MultipleLang bool
+	HasSubject   string
 }
 
 type testDataFixedStruct struct {
@@ -34,10 +35,10 @@ type testDataFixedStruct struct {
 
 func TestPublication(t *testing.T) {
 	testData := []testDataStruct{
-		{"../test/empty.epub", errors.New("can't open or parse epub file with err : open ../test/empty.epub: no such file or directory"), "", "", "", "", false, "", "", false},
-		{"../test/moby-dick.epub", nil, "Moby-Dick", "Herman Melville", "code.google.com.epub-samples.moby-dick-basic", "ETYMOLOGY.", false, "", "cover.xhtml", false},
-		{"../test/kusamakura.epub", nil, "草枕", "夏目 漱石", "http://www.aozora.gr.jp/cards/000148/card776.html", "三", false, "", "", true},
-		{"../test/feedbooks_book_6816.epub", nil, "Mémoires d'Outre-tombe", "François-René de Chateaubriand", "urn:uuid:47f6aaf6-aa7e-11e6-8357-4c72b9252ec6", "Partie 1", true, "www.ebooksfrance.com", "", false},
+		{"../test/empty.epub", errors.New("can't open or parse epub file with err : open ../test/empty.epub: no such file or directory"), "", "", "", "", false, "", "", false, ""},
+		{"../test/moby-dick.epub", nil, "Moby-Dick", "Herman Melville", "code.google.com.epub-samples.moby-dick-basic", "ETYMOLOGY.", false, "", "cover.xhtml", false, ""},
+		{"../test/kusamakura.epub", nil, "草枕", "夏目 漱石", "http://www.aozora.gr.jp/cards/000148/card776.html", "三", false, "", "", true, ""},
+		{"../test/feedbooks_book_6816.epub", nil, "Mémoires d'Outre-tombe", "François-René de Chateaubriand", "urn:uuid:47f6aaf6-aa7e-11e6-8357-4c72b9252ec6", "Partie 1", true, "www.ebooksfrance.com", "", false, "Non-Fiction"},
 	}
 
 	for _, d := range testData {
@@ -117,6 +118,18 @@ func TestPublication(t *testing.T) {
 					}
 
 					So(findItemInSpine, ShouldEqual, false)
+				})
+			}
+
+			if d.HasSubject != "" {
+				Convey("There "+d.HasSubject+"Subject in book", func() {
+					findSubject := false
+					for _, s := range publication.Metadata.Subject {
+						if s.Name == d.HasSubject {
+							findSubject = true
+						}
+					}
+					So(findSubject, ShouldEqual, true)
 				})
 			}
 
