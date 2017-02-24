@@ -62,7 +62,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 	publication.Internal = append(publication.Internal, models.Internal{Name: "filename", Value: filename})
 	publication.Internal = append(publication.Internal, models.Internal{Name: "rootfile", Value: book.Container.Rootfile.Path})
 
-	addTitle(&publication, book, epubVersion)
+	addTitle(&publication, book)
 	publication.Metadata.Language = book.Opf.Metadata.Language
 	addIdentifier(&publication, book, epubVersion)
 	publication.Metadata.Right = strings.Join(book.Opf.Metadata.Rights, " ")
@@ -244,9 +244,9 @@ func addContributor(publication *models.Publication, book *epub.Book, epubVersio
 	}
 }
 
-func addTitle(publication *models.Publication, book *epub.Book, epubVersion string) {
+func addTitle(publication *models.Publication, book *epub.Book) {
 
-	if epubVersion == "3.0" {
+	if isEpub3OrMore(book) {
 		var mainTitle epub.Title
 
 		if len(book.Opf.Metadata.Title) > 1 {
@@ -276,7 +276,9 @@ func addTitle(publication *models.Publication, book *epub.Book, epubVersion stri
 		}
 
 	} else {
-		publication.Metadata.Title.SingleString = book.Opf.Metadata.Title[0].Data
+		if len(book.Opf.Metadata.Title) > 0 {
+			publication.Metadata.Title.SingleString = book.Opf.Metadata.Title[0].Data
+		}
 	}
 
 }
@@ -290,7 +292,9 @@ func addIdentifier(publication *models.Publication, book *epub.Book, epubVersion
 			}
 		}
 	} else {
-		publication.Metadata.Identifier = book.Opf.Metadata.Identifier[0].Data
+		if len(book.Opf.Metadata.Identifier) > 0 {
+			publication.Metadata.Identifier = book.Opf.Metadata.Identifier[0].Data
+		}
 	}
 }
 
