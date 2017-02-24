@@ -107,6 +107,15 @@ func (publication *Publication) AddLink(typeLink string, rel []string, url strin
 	publication.Links = append(publication.Links, link)
 }
 
+// FindAllMediaOverlay return all media overlay structure from struct
+func (publication *Publication) FindAllMediaOverlay() []MediaOverlayNode {
+	var overlay []MediaOverlayNode
+
+	overlay = publication.MediaOverlays
+
+	return overlay
+}
+
 // FindMediaOverlayByHref search in media overlay structure for url that match
 func (publication *Publication) FindMediaOverlayByHref(href string) []MediaOverlayNode {
 	var overlay []MediaOverlayNode

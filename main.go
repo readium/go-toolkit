@@ -155,6 +155,8 @@ func search(w http.ResponseWriter, req *http.Request) {
 
 func mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
+	var media []models.MediaOverlayNode
+
 	vars := mux.Vars(req)
 	var mediaOverlay struct {
 		MediaOverlay []models.MediaOverlayNode `json:"media-overlay"`
@@ -167,10 +169,11 @@ func mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	}
 
 	resource := req.URL.Query().Get("resource")
-	media := publication.FindMediaOverlayByHref(resource)
-	if err != nil {
-		w.WriteHeader(500)
-		return
+	if resource == "" {
+		media = publication.FindAllMediaOverlay()
+
+	} else {
+		media = publication.FindMediaOverlayByHref(resource)
 	}
 
 	mediaOverlay.MediaOverlay = media
