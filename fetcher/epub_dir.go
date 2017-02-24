@@ -6,8 +6,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/feedbooks/r2-streamer-go/decoder"
-	"github.com/feedbooks/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/decoder"
+	"github.com/readium/r2-streamer-go/models"
 )
 
 func init() {

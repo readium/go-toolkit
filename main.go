@@ -16,11 +16,11 @@ import (
 	"time"
 
 	"github.com/blevesearch/bleve"
-	"github.com/feedbooks/r2-streamer-go/fetcher"
-	"github.com/feedbooks/r2-streamer-go/models"
-	"github.com/feedbooks/r2-streamer-go/parser"
-	"github.com/feedbooks/r2-streamer-go/searcher"
 	"github.com/gorilla/mux"
+	"github.com/readium/r2-streamer-go/fetcher"
+	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/parser"
+	"github.com/readium/r2-streamer-go/searcher"
 	"github.com/urfave/negroni"
 )
 

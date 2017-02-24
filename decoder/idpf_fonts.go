@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"unicode"
 
-	"github.com/feedbooks/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/models"
 )
 
 func init() {

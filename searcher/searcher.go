@@ -3,7 +3,7 @@ package searcher
 import (
 	"errors"
 
-	"github.com/feedbooks/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/models"
 )
 
 // List TODO add doc
