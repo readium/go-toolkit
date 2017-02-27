@@ -19,7 +19,7 @@ var decoderList []List
 func Decode(publication models.Publication, link models.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
 
 	for _, decoderFunc := range decoderList {
-		if link.CryptAlgorithm == decoderFunc.decoderAlgorithm {
+		if link.Properties != nil && link.Properties.Encrypted != nil && link.Properties.Encrypted.Algorithm == decoderFunc.decoderAlgorithm {
 			return decoderFunc.decoder(publication, link, reader)
 		}
 	}
@@ -30,7 +30,7 @@ func Decode(publication models.Publication, link models.Link, reader io.ReadSeek
 // NeedToDecode check if there a decoder for this resource
 func NeedToDecode(publication models.Publication, link models.Link) bool {
 	for _, decoderFunc := range decoderList {
-		if link.CryptAlgorithm == decoderFunc.decoderAlgorithm {
+		if link.Properties != nil && link.Properties.Encrypted != nil && link.Properties.Encrypted.Algorithm == decoderFunc.decoderAlgorithm {
 			return true
 		}
 	}

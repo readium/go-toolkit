@@ -579,15 +579,36 @@ func fillCalibreSerieInfo(publication *models.Publication, book *epub.Book) {
 func fillEncryptionInfo(publication *models.Publication, book *epub.Book) {
 
 	for _, encInfo := range book.Encryption.EncryptedData {
+		encrypted := models.Encrypted{}
+		encrypted.Algorithm = encInfo.EncryptionMethod.Algorithm
+		if len(encInfo.EncryptionProperties) > 0 {
+			for _, prop := range encInfo.EncryptionProperties {
+				if prop.Compression.OriginalLength != "" {
+					encrypted.Size, _ = strconv.Atoi(prop.Compression.OriginalLength)
+					if prop.Compression.Method == "8" {
+						encrypted.Package = "deflate"
+					} else {
+						encrypted.Package = "none"
+					}
+				}
+			}
+		}
 		resURI := encInfo.CipherData.CipherReference.URI
+
 		for i, l := range publication.Resources {
 			if resURI == FilePath(*publication, l.Href) {
-				publication.Resources[i].CryptAlgorithm = encInfo.EncryptionMethod.Algorithm
+				if l.Properties == nil {
+					publication.Resources[i].Properties = &models.Properties{}
+				}
+				publication.Resources[i].Properties.Encrypted = &encrypted
 			}
 		}
 		for i, l := range publication.Spine {
 			if resURI == FilePath(*publication, l.Href) {
-				publication.Spine[i].CryptAlgorithm = encInfo.EncryptionMethod.Algorithm
+				if l.Properties == nil {
+					publication.Spine[i].Properties = &models.Properties{}
+				}
+				publication.Spine[i].Properties.Encrypted = &encrypted
 			}
 		}
 	}
