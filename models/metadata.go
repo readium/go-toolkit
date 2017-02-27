@@ -56,13 +56,23 @@ type Contributor struct {
 // Properties object use to link properties
 // Use also in Rendition for fxl
 type Properties struct {
-	Contains     []string `json:"contains,omitempty"`
-	Layout       string   `json:"layout,omitempty"`
-	MediaOverlay string   `json:"media-overlay,omitempty"`
-	Orientation  string   `json:"orientation,omitempty"`
-	Overflow     string   `json:"overflow,omitempty"`
-	Page         string   `json:"page,omitempty"`
-	Spread       string   `json:"spread,omitempty"`
+	Contains     []string   `json:"contains,omitempty"`
+	Layout       string     `json:"layout,omitempty"`
+	MediaOverlay string     `json:"media-overlay,omitempty"`
+	Orientation  string     `json:"orientation,omitempty"`
+	Overflow     string     `json:"overflow,omitempty"`
+	Page         string     `json:"page,omitempty"`
+	Spread       string     `json:"spread,omitempty"`
+	Encrypted    *Encrypted `json:"encrypted,omitempty"`
+}
+
+// Encrypted contains metadata from encryption xml
+type Encrypted struct {
+	Scheme    string `json:"scheme,omitempty"`
+	Profile   string `json:"profile,omitempty"`
+	Algorithm string `json:"algorithm,omitempty"`
+	Package   string `json:"package,omitempty"`
+	Size      int    `json:"size,omitempty"`
 }
 
 // Subject as based on EPUB 3.1 and WePpub
