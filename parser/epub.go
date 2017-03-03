@@ -21,6 +21,7 @@ const epub201 = "2.0.1"
 const autoMeta = "auto"
 const noneMeta = "none"
 const reflowableMeta = "reflowable"
+const mediaOverlayURL = "media-overlay?resource="
 
 func init() {
 	parserList = append(parserList, List{fileExt: "epub", parser: EpubParser})
@@ -116,9 +117,10 @@ func EpubParser(filePath string) (models.Publication, error) {
 	fillPublicationDate(&publication, book)
 	fillEncryptionInfo(&publication, book)
 	fillMediaOverlay(&publication, book)
-	if len(publication.MediaOverlays) > 0 {
-		addMediaOverlayToLink(&publication)
-	}
+	// TODO: move in fill function
+	// if len(publication.MediaOverlays) > 0 {
+	// 	addMediaOverlayToLink(&publication)
+	// }
 
 	return publication, nil
 }
@@ -627,31 +629,6 @@ func FilePath(publication models.Publication, publicationResource string) string
 	return path.Join(path.Dir(rootFile), publicationResource)
 }
 
-func addMediaOverlayToLink(publication *models.Publication) {
-
-	for i, l := range publication.Resources {
-		ov := publication.FindMediaOverlayByHref(l.Href)
-		if len(ov) > 0 {
-			if l.Properties == nil {
-				publication.Resources[i].Properties = &models.Properties{MediaOverlay: "{url}" + l.Href}
-			} else {
-				l.Properties.MediaOverlay = "{url}" + l.Href
-			}
-		}
-	}
-
-	for i, l := range publication.Spine {
-		ov := publication.FindMediaOverlayByHref(l.Href)
-		if len(ov) > 0 {
-			if l.Properties == nil {
-				publication.Spine[i].Properties = &models.Properties{MediaOverlay: "{url}" + l.Href}
-			} else {
-				l.Properties.MediaOverlay = "{url}" + l.Href
-			}
-		}
-	}
-}
-
 func fillSubject(publication *models.Publication, book *epub.Epub) {
 	for _, s := range book.Opf.Metadata.Subject {
 		sub := models.Subject{Name: s.Data, Code: s.Term, Scheme: s.Authority}
@@ -679,24 +656,28 @@ func fillMediaOverlay(publication *models.Publication, book *epub.Epub) {
 
 			if len(smil.Body.Seq) > 0 {
 				for _, s := range smil.Body.Seq {
-					addSeqToMediaOverlay(&mo.Children, s)
+					addSeqToMediaOverlay(publication, &mo.Children, s, mo.Text)
 				}
 			}
 
-			//addSeqToMediaOverlay(&mo.Children, smil.Body.Seq)
-			publication.MediaOverlays = append(publication.MediaOverlays, mo)
+			baseHref := strings.Split(mo.Text, "#")[0]
+			link := findLinKByHref(publication, baseHref)
+			link.MediaOverlays = append(link.MediaOverlays, mo)
+			if link.Properties == nil {
+				link.Properties = &models.Properties{MediaOverlay: mediaOverlayURL + link.Href}
+			} else {
+				link.Properties.MediaOverlay = mediaOverlayURL + link.Href
+			}
 		}
 	}
-
-	//	j, _ := json.Marshal(publication.MediaOverlays)
-	//	fmt.Println(string(j))
 }
 
-func addSeqToMediaOverlay(mo *[]models.MediaOverlayNode, seq epub.Seq) {
+func addSeqToMediaOverlay(publication *models.Publication, mo *[]models.MediaOverlayNode, seq epub.Seq, href string) {
 
 	moc := models.MediaOverlayNode{}
 	moc.Role = append(moc.Role, "section")
 	moc.Text = seq.TextRef
+
 	if len(seq.Par) > 0 {
 		for _, par := range seq.Par {
 			p := models.MediaOverlayNode{}
@@ -712,11 +693,22 @@ func addSeqToMediaOverlay(mo *[]models.MediaOverlayNode, seq epub.Seq) {
 
 	if len(seq.Seq) > 0 {
 		for _, s := range seq.Seq {
-			addSeqToMediaOverlay(&moc.Children, s)
+			addSeqToMediaOverlay(publication, &moc.Children, s, moc.Text)
 		}
 	}
-
-	*mo = append(*mo, moc)
+	baseHref := strings.Split(moc.Text, "#")[0]
+	baseHrefParent := strings.Split(href, "#")[0]
+	if baseHref == baseHrefParent {
+		*mo = append(*mo, moc)
+	} else {
+		link := findLinKByHref(publication, baseHref)
+		link.MediaOverlays = append(link.MediaOverlays, moc)
+		if link.Properties == nil {
+			link.Properties = &models.Properties{MediaOverlay: mediaOverlayURL + link.Href}
+		} else {
+			link.Properties.MediaOverlay = mediaOverlayURL + link.Href
+		}
+	}
 
 }
 
@@ -846,4 +838,14 @@ func isEpub3OrMore(book *epub.Epub) bool {
 	}
 
 	return false
+}
+
+func findLinKByHref(publication *models.Publication, href string) *models.Link {
+	for i, l := range publication.Spine {
+		if strings.Contains(href, l.Href) {
+			return &publication.Spine[i]
+		}
+	}
+
+	return &models.Link{}
 }

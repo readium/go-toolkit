@@ -20,7 +20,6 @@ type Publication struct {
 	LOV       []Link   `json:"lov,omitempty"` //List of videos
 	LOT       []Link   `json:"lot,omitempty"` //List of tables
 
-	MediaOverlays    []MediaOverlayNode      `json:"-"`
 	OtherLinks       []Link                  `json:"-"` //Extension point for links that shouldn't show up in the manifest
 	OtherCollections []PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
 	Internal         []Internal              `json:"-"`
@@ -34,16 +33,17 @@ type Internal struct {
 
 // Link object used in collections and links
 type Link struct {
-	Href       string      `json:"href"`
-	TypeLink   string      `json:"type,omitempty"`
-	Rel        []string    `json:"rel,omitempty"`
-	Height     int         `json:"height,omitempty"`
-	Width      int         `json:"width,omitempty"`
-	Title      string      `json:"title,omitempty"`
-	Properties *Properties `json:"properties,omitempty"`
-	Duration   string      `json:"duration,omitempty"`
-	Templated  bool        `json:"templated,omitempty"`
-	Children   []Link      `json:"children,omitempty"`
+	Href          string             `json:"href"`
+	TypeLink      string             `json:"type,omitempty"`
+	Rel           []string           `json:"rel,omitempty"`
+	Height        int                `json:"height,omitempty"`
+	Width         int                `json:"width,omitempty"`
+	Title         string             `json:"title,omitempty"`
+	Properties    *Properties        `json:"properties,omitempty"`
+	Duration      string             `json:"duration,omitempty"`
+	Templated     bool               `json:"templated,omitempty"`
+	Children      []Link             `json:"children,omitempty"`
+	MediaOverlays []MediaOverlayNode `json:"-"`
 }
 
 // PublicationCollection is used as an extension points for other collections in a Publication
@@ -110,7 +110,13 @@ func (publication *Publication) AddLink(typeLink string, rel []string, url strin
 func (publication *Publication) FindAllMediaOverlay() []MediaOverlayNode {
 	var overlay []MediaOverlayNode
 
-	overlay = publication.MediaOverlays
+	for _, l := range publication.Spine {
+		if len(l.MediaOverlays) > 0 {
+			for _, ov := range l.MediaOverlays {
+				overlay = append(overlay, ov)
+			}
+		}
+	}
 
 	return overlay
 }
@@ -119,26 +125,14 @@ func (publication *Publication) FindAllMediaOverlay() []MediaOverlayNode {
 func (publication *Publication) FindMediaOverlayByHref(href string) []MediaOverlayNode {
 	var overlay []MediaOverlayNode
 
-	overlay = findMediaOverlayNodeByHref(publication.MediaOverlays, href)
-
-	return overlay
-}
-
-func findMediaOverlayNodeByHref(nodes []MediaOverlayNode, href string) []MediaOverlayNode {
-	var overlay []MediaOverlayNode
-
-	for _, media := range nodes {
-		if strings.Contains(media.Text, href) {
-			overlay = append(overlay, media)
+	for _, l := range publication.Spine {
+		if strings.Contains(l.Href, href) {
+			if len(l.MediaOverlays) > 0 {
+				for _, ov := range l.MediaOverlays {
+					overlay = append(overlay, ov)
+				}
+			}
 		}
-		// if len(media.Children) > 0 {
-		// 	ov := findMediaOverlayNodeByHref(media.Children, href)
-		// 	if len(ov) > 0 {
-		// 		for _, v := range ov {
-		// 			overlay = append(overlay, v)
-		// 		}
-		// 	}
-		// }
 	}
 
 	return overlay

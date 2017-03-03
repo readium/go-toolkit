@@ -11,7 +11,6 @@ import (
 	"os"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -200,15 +199,8 @@ func getPublication(filename string, req *http.Request) (models.Publication, err
 
 		publication, err = parser.Parse(string(filenamePath))
 		hasMediaOverlay := false
-		for i, l := range publication.Resources {
+		for _, l := range publication.Spine {
 			if l.Properties != nil && l.Properties.MediaOverlay != "" {
-				publication.Resources[i].Properties.MediaOverlay = strings.Replace(publication.Resources[i].Properties.MediaOverlay, "{url}", "/"+filename+"/media-overlay?resource=", 1)
-				hasMediaOverlay = true
-			}
-		}
-		for i, l := range publication.Spine {
-			if l.Properties != nil && l.Properties.MediaOverlay != "" {
-				publication.Spine[i].Properties.MediaOverlay = strings.Replace(publication.Spine[i].Properties.MediaOverlay, "{url}", "/"+filename+"/media-overlay?resource=", 1)
 				hasMediaOverlay = true
 			}
 		}
