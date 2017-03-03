@@ -105,6 +105,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 	fillSpineAndResource(&publication, book)
 	addRendition(&publication, book)
 	addCoverRel(&publication, book)
+	fillEncryptionInfo(&publication, book)
 
 	fillTOCFromNavDoc(&publication, book)
 	if len(publication.TOC) == 0 {
@@ -115,7 +116,6 @@ func EpubParser(filePath string) (models.Publication, error) {
 	fillCalibreSerieInfo(&publication, book)
 	fillSubject(&publication, book)
 	fillPublicationDate(&publication, book)
-	fillEncryptionInfo(&publication, book)
 	fillMediaOverlay(&publication, book)
 	// TODO: move in fill function
 	// if len(publication.MediaOverlays) > 0 {
@@ -583,6 +583,10 @@ func fillEncryptionInfo(publication *models.Publication, book *epub.Epub) {
 	for _, encInfo := range book.Encryption.EncryptedData {
 		encrypted := models.Encrypted{}
 		encrypted.Algorithm = encInfo.EncryptionMethod.Algorithm
+		if book.LCP.ID != "" {
+			encrypted.Profile = book.LCP.Encryption.Profile
+			encrypted.Scheme = "http://readium.org/2014/01/lcp"
+		}
 		if len(encInfo.EncryptionProperties) > 0 {
 			for _, prop := range encInfo.EncryptionProperties {
 				if prop.Compression.OriginalLength != "" {
