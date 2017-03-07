@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"path"
@@ -618,6 +619,19 @@ func fillEncryptionInfo(publication *models.Publication, book *epub.Epub) {
 			}
 		}
 	}
+
+	if book.LCP.ID != "" {
+		decodedKeyCheck, _ := base64.StdEncoding.DecodeString(book.LCP.Encryption.UserKey.KeyCheck)
+		decodedContentKey, _ := base64.StdEncoding.DecodeString(book.LCP.Encryption.ContentKey.EncryptedValue)
+
+		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_id", Value: book.LCP.ID})
+		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_content_key", Value: decodedContentKey})
+		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_content_key_algorithm", Value: book.LCP.Encryption.ContentKey.Algorithm})
+		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_user_hint", Value: book.LCP.Encryption.UserKey.TextHint})
+		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_user_key_check", Value: decodedKeyCheck})
+		publication.AddLink("", []string{"lcp"}, "add_passphrase", false)
+	}
+
 }
 
 // FilePath return the complete path for the ressource

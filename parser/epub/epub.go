@@ -104,7 +104,7 @@ func OpenEpub(fn string) (*Epub, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer zipFile.Close()
+	//	defer zipFile.Close()
 
 	epb := Epub{zipFd: zipFile}
 	errCont := epb.parseXML("META-INF/container.xml", &epb.Container)

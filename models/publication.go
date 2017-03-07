@@ -137,3 +137,7 @@ func (publication *Publication) FindMediaOverlayByHref(href string) []MediaOverl
 
 	return overlay
 }
+
+func (publication *Publication) AddLCPPassphrase(passphrase string) {
+	publication.Internal = append(publication.Internal, Internal{Name: "lcp_passphrase", Value: passphrase})
+}
