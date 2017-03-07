@@ -11,13 +11,13 @@ type LCP struct {
 	Encryption struct {
 		Profile    string `json:"profile"`
 		ContentKey struct {
-			EncryptedValue []byte `json:"encrypted_value"`
+			EncryptedValue string `json:"encrypted_value"`
 			Algorithm      string `json:"algorithm"`
 		} `json:"content_key"`
 		UserKey struct {
 			TextHint  string `json:"text_hint"`
 			Algorithm string `json:"algorithm"`
-			KeyCheck  []byte `json:"key_check"`
+			KeyCheck  string `json:"key_check"`
 		} `json:"user_key"`
 	} `json:"encryption"`
 	Links []struct {
@@ -28,7 +28,7 @@ type LCP struct {
 		Templated string `json:"templated"`
 		Profile   string `json:"profile"`
 		Length    int    `json:"length"`
-		Hash      []byte `json:"hash"`
+		Hash      string `json:"hash"`
 	} `json:"links"`
 	Rights struct {
 		Print int        `json:"print"`
@@ -44,7 +44,7 @@ type LCP struct {
 	}
 	Signature struct {
 		Algorithm   string `json:"algorithm"`
-		Certificate []byte `json:"certificate"`
-		Value       []byte `json:"value"`
+		Certificate string `json:"certificate"`
+		Value       string `json:"value"`
 	}
 }

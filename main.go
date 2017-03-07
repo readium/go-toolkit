@@ -78,6 +78,7 @@ func bookHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
 	serv.HandleFunc("/{filename}/manifest.json", getManifest)
+	serv.HandleFunc("/{filename}/lcp_passphrase", pushPassphrase)
 	serv.HandleFunc("/{filename}/search", search)
 	serv.HandleFunc("/{filename}/media-overlay", mediaOverlay)
 	serv.HandleFunc("/{filename}/{asset:.*}", getAsset)
@@ -150,6 +151,20 @@ func search(w http.ResponseWriter, req *http.Request) {
 	j, _ := json.Marshal(searchReturn)
 	json.Indent(&returnJSON, j, "", "  ")
 	returnJSON.WriteTo(w)
+}
+
+func pushPassphrase(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	password := req.FormValue("password")
+
+	publication, err := getPublication(vars["filename"], req)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	publication.AddLCPPassphrase(password)
 }
 
 func mediaOverlay(w http.ResponseWriter, req *http.Request) {

@@ -3,6 +3,7 @@ package fetcher
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -40,6 +41,12 @@ func FetchEpub(publication models.Publication, publicationResource string) (io.R
 		}
 	}
 
+	for _, linkRes := range publication.Spine {
+		if publicationResource == linkRes.Href {
+			link = linkRes
+		}
+	}
+
 	buff, _ := ioutil.ReadAll(assetFd)
 	assetFd.Close()
 	readerSeeker := bytes.NewReader(buff)
@@ -47,8 +54,10 @@ func FetchEpub(publication models.Publication, publicationResource string) (io.R
 	if decoder.NeedToDecode(publication, link) {
 		readerSeekerDecode, err := decoder.Decode(publication, link, readerSeeker)
 		if err != nil {
-			return readerSeekerDecode, mediaType, nil
+			fmt.Println(err)
+			return nil, "", err
 		}
+		return readerSeekerDecode, mediaType, nil
 	}
 
 	return readerSeeker, mediaType, nil

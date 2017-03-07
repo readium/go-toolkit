@@ -42,12 +42,19 @@ func FetchEpubDir(publication models.Publication, publicationResource string) (i
 		}
 	}
 
-	if decoder.NeedToDecode(publication, link) {
-
-		readerSeekerDecode, err := decoder.Decode(publication, link, fd)
-		if err == nil {
-			return readerSeekerDecode, mediaType, nil
+	for _, linkRes := range publication.Spine {
+		if publicationResource == linkRes.Href {
+			link = linkRes
 		}
+	}
+
+	if decoder.NeedToDecode(publication, link) {
+		readerSeekerDecode, err := decoder.Decode(publication, link, fd)
+		if err != nil {
+			fmt.Println(err)
+			return nil, "", err
+		}
+		return readerSeekerDecode, mediaType, nil
 	}
 	return fd, mediaType, nil
 }
