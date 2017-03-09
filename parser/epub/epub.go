@@ -90,10 +90,10 @@ func (epub *Epub) ZipReader() *zip.ReadCloser {
 }
 
 // GetSMIL parse and return SMIL structure
-func (epub *Epub) GetSMIL(ressouce string) SMIL {
+func (epub *Epub) GetSMIL(ressource string) SMIL {
 	var smil SMIL
 
-	epub.parseXML(ressouce, &smil)
+	epub.parseXML(epub.filename(ressource), &smil)
 
 	return smil
 }
