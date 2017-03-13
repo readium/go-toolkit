@@ -223,9 +223,10 @@ func getPublication(filename string, req *http.Request) (models.Publication, err
 		if err != nil {
 			return models.Publication{}, err
 		}
-		publication.AddLink("application/vnd.readium.mo+json", []string{"media-overlay"}, "http://"+req.Host+"/"+filename+"/media-overlay?resource={path}", true)
+
+		publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
 		if hasMediaOverlay {
-			publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
+			publication.AddLink("application/vnd.readium.mo+json", []string{"media-overlay"}, "http://"+req.Host+"/"+filename+"/media-overlay?resource={path}", true)
 		}
 		if searcher.CanBeSearch(publication) {
 			publication.AddLink("", []string{"search"}, "http://"+req.Host+"/"+filename+"/search?query={searchTerms}", true)
