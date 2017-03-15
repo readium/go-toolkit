@@ -3,6 +3,8 @@ package models
 import (
 	"errors"
 	"strings"
+
+	"github.com/readium/r2-streamer-go/parser/epub"
 )
 
 // Publication Main structure for a publication
@@ -23,6 +25,7 @@ type Publication struct {
 	OtherLinks       []Link                  `json:"-"` //Extension point for links that shouldn't show up in the manifest
 	OtherCollections []PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
 	Internal         []Internal              `json:"-"`
+	LCP              epub.LCP                `json:"-"`
 }
 
 // Internal TODO
@@ -138,6 +141,20 @@ func (publication *Publication) FindMediaOverlayByHref(href string) []MediaOverl
 	return overlay
 }
 
+// AddLCPPassphrase function to add internal metadata for decrypting LCP resources
 func (publication *Publication) AddLCPPassphrase(passphrase string) {
 	publication.Internal = append(publication.Internal, Internal{Name: "lcp_passphrase", Value: passphrase})
+}
+
+// GetLCPData return the raw lcpl document
+func (publication *Publication) GetLCPData() string {
+	var buff string
+
+	for _, data := range publication.Internal {
+		if data.Name == "lcp" {
+			buff = data.Value.(string)
+		}
+	}
+
+	return buff
 }

@@ -487,17 +487,22 @@ func fillTOCFromNavDoc(publication *models.Publication, book *epub.Epub) {
 
 	doc.Find("nav").Each(func(j int, navElem *goquery.Selection) {
 		typeNav, _ := navElem.Attr("epub:type")
-		if typeNav == "toc" {
-			olElem := navElem.ChildrenFiltered("ol")
+		olElem := navElem.ChildrenFiltered("ol")
+		switch typeNav {
+		case "toc":
 			fillTOCFromNavDocWithOL(olElem, &publication.TOC)
-		}
-		if typeNav == "page-list" {
-			olElem := navElem.ChildrenFiltered("ol")
+		case "page-list":
 			fillTOCFromNavDocWithOL(olElem, &publication.PageList)
-		}
-		if typeNav == "landmarks" {
-			olElem := navElem.ChildrenFiltered("ol")
+		case "landmarks":
 			fillTOCFromNavDocWithOL(olElem, &publication.Landmarks)
+		case "lot":
+			fillTOCFromNavDocWithOL(olElem, &publication.LOT)
+		case "loa":
+			fillTOCFromNavDocWithOL(olElem, &publication.LOA)
+		case "loi":
+			fillTOCFromNavDocWithOL(olElem, &publication.LOI)
+		case "lov":
+			fillTOCFromNavDocWithOL(olElem, &publication.LOV)
 		}
 	})
 
@@ -623,6 +628,7 @@ func fillEncryptionInfo(publication *models.Publication, book *epub.Epub) {
 	if book.LCP.ID != "" {
 		decodedKeyCheck, _ := base64.StdEncoding.DecodeString(book.LCP.Encryption.UserKey.KeyCheck)
 		decodedContentKey, _ := base64.StdEncoding.DecodeString(book.LCP.Encryption.ContentKey.EncryptedValue)
+		publication.LCP = book.LCP
 
 		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_id", Value: book.LCP.ID})
 		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_content_key", Value: decodedContentKey})
@@ -630,6 +636,7 @@ func fillEncryptionInfo(publication *models.Publication, book *epub.Epub) {
 		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_user_hint", Value: book.LCP.Encryption.UserKey.TextHint})
 		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_user_key_check", Value: decodedKeyCheck})
 		publication.AddLink("", []string{"lcp"}, "add_passphrase", false)
+
 	}
 
 }
