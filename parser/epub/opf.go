@@ -2,12 +2,13 @@ package epub
 
 //Opf content.opf
 type Opf struct {
-	Metadata         Metadata   `xml:"metadata"`
-	Manifest         []Manifest `xml:"manifest>item"`
-	Spine            Spine      `xml:"spine"`
-	UniqueIdentifier string     `xml:"unique-identifier,attr"`
-	Dir              string     `xml:"dir,attr"`
-	Version          string     `xml:"version,attr"`
+	Metadata         Metadata    `xml:"metadata"`
+	Manifest         []Manifest  `xml:"manifest>item"`
+	Spine            Spine       `xml:"spine"`
+	Guide            []Reference `xml:"guide>reference"`
+	UniqueIdentifier string      `xml:"unique-identifier,attr"`
+	Dir              string      `xml:"dir,attr"`
+	Version          string      `xml:"version,attr"`
 }
 
 //Metadata metadata
@@ -28,7 +29,6 @@ type Metadata struct {
 	Coverage    []string     `xml:"coverage"`
 	Rights      []string     `xml:"rights"`
 	Meta        []Metafield  `xml:"meta"`
-	Guide       []Reference  `xml:"guide"`
 }
 
 // Identifier identifier

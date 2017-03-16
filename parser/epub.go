@@ -112,6 +112,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 	if len(publication.TOC) == 0 {
 		fillTOCFromNCX(&publication, book)
 		fillPageListFromNCX(&publication, book)
+		fillLandmarksFromGuide(&publication, book)
 	}
 
 	fillCalibreSerieInfo(&publication, book)
@@ -543,6 +544,19 @@ func fillTOCFromNCX(publication *models.Publication, book *epub.Epub) {
 	if len(book.Ncx.Points) > 0 {
 		for _, point := range book.Ncx.Points {
 			fillTOCFromNavPoint(publication, book, point, &publication.TOC)
+		}
+	}
+}
+
+func fillLandmarksFromGuide(publication *models.Publication, book *epub.Epub) {
+	if len(book.Opf.Guide) > 0 {
+		for _, ref := range book.Opf.Guide {
+			if ref.Href != "" {
+				link := models.Link{}
+				link.Href = ref.Href
+				link.Title = ref.Title
+				publication.Landmarks = append(publication.Landmarks, link)
+			}
 		}
 	}
 }
