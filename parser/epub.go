@@ -491,38 +491,41 @@ func fillTOCFromNavDoc(publication *models.Publication, book *epub.Epub) {
 		olElem := navElem.ChildrenFiltered("ol")
 		switch typeNav {
 		case "toc":
-			fillTOCFromNavDocWithOL(olElem, &publication.TOC)
+			fillTOCFromNavDocWithOL(olElem, &publication.TOC, navLink.Href)
 		case "page-list":
-			fillTOCFromNavDocWithOL(olElem, &publication.PageList)
+			fillTOCFromNavDocWithOL(olElem, &publication.PageList, navLink.Href)
 		case "landmarks":
-			fillTOCFromNavDocWithOL(olElem, &publication.Landmarks)
+			fillTOCFromNavDocWithOL(olElem, &publication.Landmarks, navLink.Href)
 		case "lot":
-			fillTOCFromNavDocWithOL(olElem, &publication.LOT)
+			fillTOCFromNavDocWithOL(olElem, &publication.LOT, navLink.Href)
 		case "loa":
-			fillTOCFromNavDocWithOL(olElem, &publication.LOA)
+			fillTOCFromNavDocWithOL(olElem, &publication.LOA, navLink.Href)
 		case "loi":
-			fillTOCFromNavDocWithOL(olElem, &publication.LOI)
+			fillTOCFromNavDocWithOL(olElem, &publication.LOI, navLink.Href)
 		case "lov":
-			fillTOCFromNavDocWithOL(olElem, &publication.LOV)
+			fillTOCFromNavDocWithOL(olElem, &publication.LOV, navLink.Href)
 		}
 	})
 
 }
 
-func fillTOCFromNavDocWithOL(olElem *goquery.Selection, node *[]models.Link) {
+func fillTOCFromNavDocWithOL(olElem *goquery.Selection, node *[]models.Link, navDocURL string) {
 	olElem.ChildrenFiltered("li").Each(func(i int, s *goquery.Selection) {
 		if s.ChildrenFiltered("span").Text() != "" {
 			nextOlElem := s.ChildrenFiltered("ol")
-			fillTOCFromNavDocWithOL(nextOlElem, node)
+			fillTOCFromNavDocWithOL(nextOlElem, node, navDocURL)
 		} else {
 			href, _ := s.ChildrenFiltered("a").Attr("href")
+			if href[0] == '#' {
+				href = navDocURL + href
+			}
 			title := s.ChildrenFiltered("a").Text()
 			link := models.Link{}
 			link.Href = href
 			link.Title = title
 			nextOlElem := s.ChildrenFiltered("ol")
 			if nextOlElem != nil {
-				fillTOCFromNavDocWithOL(nextOlElem, &link.Children)
+				fillTOCFromNavDocWithOL(nextOlElem, &link.Children, navDocURL)
 			}
 			*node = append(*node, link)
 		}
