@@ -334,9 +334,9 @@ func addToLinkFromProperties(link *models.Link, propertiesString string) {
 	for _, p := range properties {
 		switch p {
 		case "cover-image":
-			link.Rel = append(link.Rel, "cover")
+			link.AddRel("cover")
 		case "nav":
-			link.Rel = append(link.Rel, "contents")
+			link.AddRel("contents")
 		case "scripted":
 			propertiesStruct.Contains = append(propertiesStruct.Contains, "js")
 		case "mathml":
@@ -430,7 +430,7 @@ func addCoverRel(publication *models.Publication, book *epub.Epub) {
 		if manifestInfo.Href != "" {
 			for i, item := range publication.Resources {
 				if item.Href == manifestInfo.Href {
-					publication.Resources[i].Rel = append(item.Rel, "cover")
+					publication.Resources[i].AddRel("cover")
 				}
 			}
 		}

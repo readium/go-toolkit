@@ -122,3 +122,17 @@ func (m MultiLanguage) String() string {
 	}
 	return m.SingleString
 }
+
+func (link *Link) AddRel(rel string) {
+	relAlreadyPresent := false
+
+	for _, r := range link.Rel {
+		if r == rel {
+			relAlreadyPresent = true
+		}
+	}
+
+	if relAlreadyPresent == false {
+		link.Rel = append(link.Rel, rel)
+	}
+}
