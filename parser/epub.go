@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/base64"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"path"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/readium/r2-streamer-go/fetcher"
 	"github.com/readium/r2-streamer-go/models"
 	"github.com/readium/r2-streamer-go/parser/epub"
 )
@@ -25,7 +27,7 @@ const reflowableMeta = "reflowable"
 const mediaOverlayURL = "media-overlay?resource="
 
 func init() {
-	parserList = append(parserList, List{fileExt: "epub", parser: EpubParser})
+	parserList = append(parserList, List{fileExt: "epub", parser: EpubParser, callback: EpubCallback})
 }
 
 // EpubParser TODO add doc
@@ -119,12 +121,13 @@ func EpubParser(filePath string) (models.Publication, error) {
 	fillSubject(&publication, book)
 	fillPublicationDate(&publication, book)
 	fillMediaOverlay(&publication, book)
-	// TODO: move in fill function
-	// if len(publication.MediaOverlays) > 0 {
-	// 	addMediaOverlayToLink(&publication)
-	// }
 
 	return publication, nil
+}
+
+// EpubCallback reparse smil file and more to come
+func EpubCallback(publication *models.Publication) {
+	fillMediaOverlay(publication, nil)
 }
 
 func fillSpineAndResource(publication *models.Publication, book *epub.Epub) {
@@ -680,11 +683,18 @@ func fillSubject(publication *models.Publication, book *epub.Epub) {
 }
 
 func fillMediaOverlay(publication *models.Publication, book *epub.Epub) {
+	var smil epub.SMIL
 
 	for _, item := range publication.Resources {
 		if item.TypeLink == "application/smil+xml" {
 			mo := models.MediaOverlayNode{}
-			smil := book.GetSMIL(item.Href)
+			if book == nil {
+				fd, _, _ := fetcher.Fetch(*publication, item.Href)
+				dec := xml.NewDecoder(fd)
+				dec.Decode(&smil)
+			} else {
+				smil = book.GetSMIL(item.Href)
+			}
 			mo.Role = append(mo.Role, "section")
 			mo.Text = smil.Body.TextRef
 			if len(smil.Body.Par) > 0 {

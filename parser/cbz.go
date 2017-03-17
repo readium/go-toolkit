@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	parserList = append(parserList, List{fileExt: "cbz", parser: CbzParser})
+	parserList = append(parserList, List{fileExt: "cbz", parser: CbzParser, callback: CbzCallback})
 }
 
 // CbzParser TODO add doc
@@ -37,6 +37,11 @@ func CbzParser(filePath string) (models.Publication, error) {
 	}
 
 	return publication, nil
+}
+
+// CbzCallback empty function to respect interface
+func CbzCallback(publication *models.Publication) {
+
 }
 
 func filePathToTitle(filePath string) string {

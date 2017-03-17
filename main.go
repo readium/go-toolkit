@@ -165,6 +165,16 @@ func pushPassphrase(w http.ResponseWriter, req *http.Request) {
 	}
 
 	publication.AddLCPPassphrase(password)
+	parser.CallbackParse(&publication)
+
+	j, _ := json.Marshal(publication)
+
+	var identJSON bytes.Buffer
+	json.Indent(&identJSON, j, "", " ")
+	w.Header().Set("Content-Type", "application/webpub+json; charset=utf-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	identJSON.WriteTo(w)
+	return
 }
 
 func mediaOverlay(w http.ResponseWriter, req *http.Request) {

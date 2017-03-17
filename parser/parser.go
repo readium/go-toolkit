@@ -9,8 +9,9 @@ import (
 
 // List TODO add doc
 type List struct {
-	fileExt string
-	parser  (func(filePath string) (models.Publication, error))
+	fileExt  string
+	parser   (func(filePath string) (models.Publication, error))
+	callback (func(*models.Publication))
 }
 
 var parserList []List
@@ -29,4 +30,21 @@ func Parse(filePath string) (models.Publication, error) {
 	}
 
 	return models.Publication{}, errors.New("can't find parser")
+}
+
+// CallbackParse call function too parse element that can be encrypted or obfuscated
+func CallbackParse(publication *models.Publication) {
+	var typePublication string
+
+	for _, key := range publication.Internal {
+		if key.Name == "type" {
+			typePublication = key.Value.(string)
+		}
+	}
+
+	for _, parserFunc := range parserList {
+		if typePublication == parserFunc.fileExt {
+			parserFunc.callback(publication)
+		}
+	}
 }
