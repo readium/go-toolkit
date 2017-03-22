@@ -92,12 +92,12 @@ func EpubParser(filePath string) (models.Publication, error) {
 
 	if len(book.Opf.Metadata.Contributor) > 0 {
 		for _, cont := range book.Opf.Metadata.Contributor {
-			addContributor(&publication, book, epubVersion, cont)
+			addContributor(&publication, book, epubVersion, cont, "")
 		}
 	}
 	if len(book.Opf.Metadata.Creator) > 0 {
 		for _, cont := range book.Opf.Metadata.Creator {
-			addContributor(&publication, book, epubVersion, cont)
+			addContributor(&publication, book, epubVersion, cont, "aut")
 		}
 	}
 
@@ -188,14 +188,14 @@ func findContributorInMeta(publication *models.Publication, book *epub.Epub, epu
 			cont := epub.Author{}
 			cont.Data = meta.Data
 			cont.ID = meta.ID
-			addContributor(publication, book, epubVersion, cont)
+			addContributor(publication, book, epubVersion, cont, "")
 
 		}
 	}
 
 }
 
-func addContributor(publication *models.Publication, book *epub.Epub, epubVersion string, cont epub.Author) {
+func addContributor(publication *models.Publication, book *epub.Epub, epubVersion string, cont epub.Author, forcedRole string) {
 	var contributor models.Contributor
 	var role string
 
@@ -203,6 +203,9 @@ func addContributor(publication *models.Publication, book *epub.Epub, epubVersio
 		meta := findMetaByRefineAndProperty(book, cont.ID, "role")
 		if meta.Property == "role" {
 			role = meta.Data
+		}
+		if role == "" && forcedRole != "" {
+			role = forcedRole
 		}
 
 		metaAlt := findAllMetaByRefineAndProperty(book, cont.ID, "alternate-script")
@@ -220,6 +223,9 @@ func addContributor(publication *models.Publication, book *epub.Epub, epubVersio
 	} else {
 		contributor.Name.SingleString = cont.Data
 		role = cont.Role
+		if role == "" && forcedRole != "" {
+			role = forcedRole
+		}
 	}
 
 	switch role {
