@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -98,9 +100,21 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 	j, _ := json.Marshal(publication)
 
 	var identJSON bytes.Buffer
+
 	json.Indent(&identJSON, j, "", " ")
 	w.Header().Set("Content-Type", "application/webpub+json; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	hashJSONRaw := sha256.Sum256(identJSON.Bytes())
+	hashJSON := base64.RawStdEncoding.EncodeToString(hashJSONRaw[:])
+
+	if match := req.Header.Get("If-None-Match"); match != "" {
+		if strings.Contains(match, hashJSON) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+	}
+	w.Header().Set("Etag", hashJSON)
 	identJSON.WriteTo(w)
 	return
 }
@@ -126,7 +140,8 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", mediaType)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	http.ServeContent(w, req, assetname, time.Now(), epubReader)
+	w.Header().Set("Cache-Control", "public,max-age=86400")
+	http.ServeContent(w, req, assetname, time.Time{}, epubReader)
 	return
 
 }
