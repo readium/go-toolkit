@@ -57,6 +57,32 @@ type PublicationCollection struct {
 	Children []PublicationCollection
 }
 
+// LCPHandler struct to generate json to return to the navigator for the lcp information
+type LCPHandler struct {
+	Identifier string `json:"identifier,omitempty"`
+	Profile    string `json:"profile,omitempty"`
+	Key        struct {
+		Ready bool   `json:"ready,omitempty"`
+		Check string `json:"check,omitempty"`
+	} `json:"key,omitempty"`
+	Hint struct {
+		Text string `json:"text,omitempty"`
+		URL  string `json:"url,omitempty"`
+	} `json:"hint,omitempty"`
+	Support struct {
+		Mail string `json:"mail,omitempty"`
+		URL  string `json:"url,omitempty"`
+		Tel  string `json:"tel,omitempty"`
+	} `json:"support"`
+}
+
+// LCPHandlerPost struct to unmarshal hash send for decrypting lcp
+type LCPHandlerPost struct {
+	Key struct {
+		Token string `json:"token,omitempty"`
+	}
+}
+
 // GetCover return the link for the cover
 func (publication *Publication) GetCover() (Link, error) {
 	return publication.searchLinkByRel("cover")
@@ -146,15 +172,68 @@ func (publication *Publication) AddLCPPassphrase(passphrase string) {
 	publication.Internal = append(publication.Internal, Internal{Name: "lcp_passphrase", Value: passphrase})
 }
 
-// GetLCPData return the raw lcpl document
-func (publication *Publication) GetLCPData() string {
-	var buff string
+// AddLCPToken function to add internal metadata for decrypting LCP resources
+func (publication *Publication) AddLCPToken(token string) {
+	publication.AddToInternal("lcp_hash", token)
+}
 
+func (publication *Publication) findFromInternal(key string) Internal {
 	for _, data := range publication.Internal {
-		if data.Name == "lcp" {
-			buff = data.Value.(string)
+		if data.Name == key {
+			return data
 		}
 	}
+	return Internal{}
+}
 
-	return buff
+func (publication *Publication) getStringFromInternal(key string) string {
+
+	data := publication.findFromInternal(key)
+	if data.Name != "" {
+		return data.Value.(string)
+	}
+	return ""
+}
+
+func (publication *Publication) getBytesFromInternal(key string) []byte {
+
+	data := publication.findFromInternal(key)
+	if data.Name != "" {
+		return data.Value.([]byte)
+	}
+	return []byte("")
+}
+
+// AddToInternal push data to internal struct in publication
+func (publication *Publication) AddToInternal(key string, value interface{}) {
+	publication.Internal = append(publication.Internal, Internal{Name: key, Value: value})
+}
+
+// GetLCPJSON return the raw lcp license json from META-INF/license.lcpl
+// if the data is present else return emtpy string
+func (publication *Publication) GetLCPJSON() []byte {
+	data := publication.getBytesFromInternal("lcpl")
+
+	return data
+}
+
+// GetLCPHandlerInfo return the lcp handler struct for marshalling
+func (publication *Publication) GetLCPHandlerInfo() (LCPHandler, error) {
+	var info LCPHandler
+
+	if publication.LCP.ID != "" {
+		info.Identifier = publication.LCP.ID
+		info.Hint.Text = publication.LCP.Encryption.UserKey.TextHint
+		info.Key.Check = publication.LCP.Encryption.UserKey.KeyCheck
+		info.Profile = publication.LCP.Encryption.Profile
+		for _, l := range publication.LCP.Links {
+			if l.Rel == "hint" {
+				info.Hint.URL = l.Href
+			}
+		}
+
+		return info, nil
+	}
+
+	return info, errors.New("no LCP information")
 }

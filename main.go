@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -78,7 +79,8 @@ func bookHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
 	serv.HandleFunc("/{filename}/manifest.json", getManifest)
-	serv.HandleFunc("/{filename}/lcp_passphrase", pushPassphrase)
+	serv.HandleFunc("/{filename}/license-handler.json", pushPassphrase)
+	serv.HandleFunc("/{filename}/license.lcpl", getLCPLicense)
 	serv.HandleFunc("/{filename}/search", search)
 	serv.HandleFunc("/{filename}/media-overlay", mediaOverlay)
 	serv.HandleFunc("/{filename}/{asset:.*}", getAsset)
@@ -153,10 +155,8 @@ func search(w http.ResponseWriter, req *http.Request) {
 	returnJSON.WriteTo(w)
 }
 
-func pushPassphrase(w http.ResponseWriter, req *http.Request) {
+func getLCPLicense(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-
-	password := req.FormValue("password")
 
 	publication, err := getPublication(vars["filename"], req)
 	if err != nil {
@@ -164,14 +164,52 @@ func pushPassphrase(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	publication.AddLCPPassphrase(password)
-	parser.CallbackParse(&publication)
+	data := publication.GetLCPJSON()
+	if string(data) == "" {
+		w.WriteHeader(404)
+		return
+	}
+	w.Header().Set("Content-Type", "application/vnd.readium.lcp.license-1.0+json")
+	w.Write(data)
+}
 
-	j, _ := json.Marshal(publication)
+func pushPassphrase(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	publication, err := getPublication(vars["filename"], req)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	if req.Method == "POST" {
+
+	} else {
+		var postInfo models.LCPHandlerPost
+		buff, errRead := ioutil.ReadAll(req.Body)
+		if errRead != nil {
+			w.WriteHeader(500)
+			return
+		}
+		json.Unmarshal(buff, postInfo)
+		if postInfo.Key.Token == "" {
+			w.WriteHeader(500)
+			return
+		}
+		publication.AddLCPToken(postInfo.Key.Token)
+	}
+
+	data, err := publication.GetLCPHandlerInfo()
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	j, _ := json.Marshal(data)
 
 	var identJSON bytes.Buffer
 	json.Indent(&identJSON, j, "", " ")
-	w.Header().Set("Content-Type", "application/webpub+json; charset=utf-8")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	identJSON.WriteTo(w)
 	return

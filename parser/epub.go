@@ -49,22 +49,22 @@ func EpubParser(filePath string) (models.Publication, error) {
 		if err != nil {
 			return models.Publication{}, errors.New("can't open or parse epub file with err : " + err.Error())
 		}
-		publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "epub_dir"})
-		publication.Internal = append(publication.Internal, models.Internal{Name: "basepath", Value: filePath})
+		publication.AddToInternal("type", "epub_dir")
+		publication.AddToInternal("basepath", filePath)
 	} else {
 		book, err = epub.OpenEpub(filePath)
 		if err != nil {
 			return models.Publication{}, errors.New("can't open or parse epub file with err : " + err.Error())
 		}
-		publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "epub"})
-		publication.Internal = append(publication.Internal, models.Internal{Name: "epub", Value: book.ZipReader()})
+		publication.AddToInternal("type", "epub")
+		publication.AddToInternal("epub", book.ZipReader())
 	}
 
 	epubVersion = getEpubVersion(book)
 	_, filename := filepath.Split(filePath)
 
-	publication.Internal = append(publication.Internal, models.Internal{Name: "filename", Value: filename})
-	publication.Internal = append(publication.Internal, models.Internal{Name: "rootfile", Value: book.Container.Rootfile.Path})
+	publication.AddToInternal("filename", filename)
+	publication.AddToInternal("rootfile", book.Container.Rootfile.Path)
 
 	addTitle(&publication, book)
 	publication.Metadata.Language = book.Opf.Metadata.Language
@@ -656,12 +656,16 @@ func fillEncryptionInfo(publication *models.Publication, book *epub.Epub) {
 		decodedContentKey, _ := base64.StdEncoding.DecodeString(book.LCP.Encryption.ContentKey.EncryptedValue)
 		publication.LCP = book.LCP
 
-		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_id", Value: book.LCP.ID})
-		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_content_key", Value: decodedContentKey})
-		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_content_key_algorithm", Value: book.LCP.Encryption.ContentKey.Algorithm})
-		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_user_hint", Value: book.LCP.Encryption.UserKey.TextHint})
-		publication.Internal = append(publication.Internal, models.Internal{Name: "lcp_user_key_check", Value: decodedKeyCheck})
-		publication.AddLink("", []string{"lcp"}, "add_passphrase", false)
+		lcpData, errLcp := book.GetData("META-INF/license.lcpl")
+		if errLcp == nil {
+			publication.AddToInternal("lcpl", lcpData)
+		}
+		publication.AddToInternal("lcp_id", book.LCP.ID)
+		publication.AddToInternal("lcp_content_key", decodedContentKey)
+		publication.AddToInternal("lcp_content_key_algorithm", book.LCP.Encryption.ContentKey.Algorithm)
+		publication.AddToInternal("lcp_user_hint", book.LCP.Encryption.UserKey.TextHint)
+		publication.AddToInternal("lcp_user_key_check", decodedKeyCheck)
+		publication.AddLink("application/vnd.readium.lcp.license-1.0+json", []string{"license"}, "license.lcpl", false)
 
 	}
 
