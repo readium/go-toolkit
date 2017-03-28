@@ -16,7 +16,7 @@ func init() {
 }
 
 // FetchEpub TODO add doc
-func FetchEpub(publication models.Publication, publicationResource string) (io.ReadSeeker, string, error) {
+func FetchEpub(publication *models.Publication, publicationResource string) (io.ReadSeeker, string, error) {
 	var reader *zip.ReadCloser
 	var assetFd io.ReadCloser
 	var link models.Link

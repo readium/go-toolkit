@@ -59,7 +59,8 @@ func (epub *Epub) parseJSON(filename string, v interface{}) error {
 	return dec.Decode(v)
 }
 
-func (epub *Epub) getData(filename string) ([]byte, error) {
+// GetData return raw data from file
+func (epub *Epub) GetData(filename string) ([]byte, error) {
 	fd, err := epub.open(filename)
 	if err != nil {
 		return nil, nil

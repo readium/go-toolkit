@@ -15,7 +15,7 @@ func init() {
 }
 
 // FetchEpubDir TODO add doc
-func FetchEpubDir(publication models.Publication, publicationResource string) (io.ReadSeeker, string, error) {
+func FetchEpubDir(publication *models.Publication, publicationResource string) (io.ReadSeeker, string, error) {
 	var mediaType string
 	var basePath string
 	var rootFile string

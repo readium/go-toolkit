@@ -17,7 +17,7 @@ func init() {
 }
 
 // DecodeAdobeFont decode obfuscate fonts using idpf spec http://www.idpf.org/epub/20/spec/FontManglingSpec.html
-func DecodeAdobeFont(publication models.Publication, link models.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
+func DecodeAdobeFont(publication *models.Publication, link models.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
 	var count int
 
 	key := getAdobeHashKey(publication)
@@ -45,7 +45,7 @@ func DecodeAdobeFont(publication models.Publication, link models.Link, reader io
 	return readerSeeker, nil
 }
 
-func getAdobeHashKey(publication models.Publication) []byte {
+func getAdobeHashKey(publication *models.Publication) []byte {
 	var stringKey []rune
 	var key []byte
 
