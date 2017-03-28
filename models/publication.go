@@ -79,8 +79,8 @@ type LCPHandler struct {
 // LCPHandlerPost struct to unmarshal hash send for decrypting lcp
 type LCPHandlerPost struct {
 	Key struct {
-		Token string `json:"token,omitempty"`
-	}
+		Hash string `json:"hash"`
+	} `json:"key"`
 }
 
 // GetCover return the link for the cover
@@ -172,9 +172,9 @@ func (publication *Publication) AddLCPPassphrase(passphrase string) {
 	publication.Internal = append(publication.Internal, Internal{Name: "lcp_passphrase", Value: passphrase})
 }
 
-// AddLCPToken function to add internal metadata for decrypting LCP resources
-func (publication *Publication) AddLCPToken(token string) {
-	publication.AddToInternal("lcp_hash", token)
+// AddLCPHash function to add internal metadata for decrypting LCP resources
+func (publication *Publication) AddLCPHash(token []byte) {
+	publication.AddToInternal("lcp_hash_passphrase", token)
 }
 
 func (publication *Publication) findFromInternal(key string) Internal {
@@ -186,7 +186,8 @@ func (publication *Publication) findFromInternal(key string) Internal {
 	return Internal{}
 }
 
-func (publication *Publication) getStringFromInternal(key string) string {
+// GetStringFromInternal get data store in internal struct in string
+func (publication *Publication) GetStringFromInternal(key string) string {
 
 	data := publication.findFromInternal(key)
 	if data.Name != "" {
@@ -195,7 +196,8 @@ func (publication *Publication) getStringFromInternal(key string) string {
 	return ""
 }
 
-func (publication *Publication) getBytesFromInternal(key string) []byte {
+// GetBytesFromInternal get data store in internal structure in byte
+func (publication *Publication) GetBytesFromInternal(key string) []byte {
 
 	data := publication.findFromInternal(key)
 	if data.Name != "" {
@@ -212,7 +214,7 @@ func (publication *Publication) AddToInternal(key string, value interface{}) {
 // GetLCPJSON return the raw lcp license json from META-INF/license.lcpl
 // if the data is present else return emtpy string
 func (publication *Publication) GetLCPJSON() []byte {
-	data := publication.getBytesFromInternal("lcpl")
+	data := publication.GetBytesFromInternal("lcpl")
 
 	return data
 }
@@ -225,6 +227,7 @@ func (publication *Publication) GetLCPHandlerInfo() (LCPHandler, error) {
 		info.Identifier = publication.LCP.ID
 		info.Hint.Text = publication.LCP.Encryption.UserKey.TextHint
 		info.Key.Check = publication.LCP.Encryption.UserKey.KeyCheck
+		info.Key.Ready = false
 		info.Profile = publication.LCP.Encryption.Profile
 		for _, l := range publication.LCP.Links {
 			if l.Rel == "hint" {

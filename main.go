@@ -19,6 +19,7 @@ import (
 
 	"github.com/blevesearch/bleve"
 	"github.com/gorilla/mux"
+	"github.com/readium/r2-streamer-go/decoder/lcp"
 	"github.com/readium/r2-streamer-go/fetcher"
 	"github.com/readium/r2-streamer-go/models"
 	"github.com/readium/r2-streamer-go/parser"
@@ -159,7 +160,7 @@ func search(w http.ResponseWriter, req *http.Request) {
 	}
 
 	searchTerm := req.URL.Query().Get("query")
-	searchReturn, err := searcher.Search(publication, searchTerm)
+	searchReturn, err := searcher.Search(*publication, searchTerm)
 	if err != nil {
 		w.WriteHeader(500)
 		return
@@ -197,27 +198,34 @@ func pushPassphrase(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if req.Method == "POST" {
-
-	} else {
-		var postInfo models.LCPHandlerPost
-		buff, errRead := ioutil.ReadAll(req.Body)
-		if errRead != nil {
-			w.WriteHeader(500)
-			return
-		}
-		json.Unmarshal(buff, postInfo)
-		if postInfo.Key.Token == "" {
-			w.WriteHeader(500)
-			return
-		}
-		publication.AddLCPToken(postInfo.Key.Token)
-	}
-
 	data, err := publication.GetLCPHandlerInfo()
 	if err != nil {
 		w.WriteHeader(500)
 		return
+	}
+
+	if req.Method == http.MethodPost {
+		var postInfo models.LCPHandlerPost
+		buff, errRead := ioutil.ReadAll(req.Body)
+		if errRead != nil {
+			fmt.Println("can't read body")
+			w.WriteHeader(401)
+		} else {
+			errUnMarsh := json.Unmarshal(buff, &postInfo)
+			if errUnMarsh != nil {
+				fmt.Println("can't unmarshal " + errUnMarsh.Error())
+				w.WriteHeader(401)
+			} else {
+				key, _ := base64.StdEncoding.DecodeString(postInfo.Key.Hash)
+				publication.AddLCPHash(key)
+				if lcp.HasGoodKey(publication) == false {
+					w.WriteHeader(401)
+				} else {
+					data.Key.Ready = true
+					updatePublication(*publication, vars["filename"])
+				}
+			}
+		}
 	}
 
 	j, _ := json.Marshal(data)
@@ -260,10 +268,8 @@ func mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	returnJSON.WriteTo(w)
 }
 
-func getPublication(filename string, req *http.Request) (models.Publication, error) {
+func getPublication(filename string, req *http.Request) (*models.Publication, error) {
 	var current currentBook
-	var publication models.Publication
-	var err error
 
 	for _, book := range currentBookList {
 		if filename == book.filename {
@@ -275,7 +281,7 @@ func getPublication(filename string, req *http.Request) (models.Publication, err
 		manifestURL := "http://" + req.Host + "/" + filename + "/manifest.json"
 		filenamePath, _ := base64.StdEncoding.DecodeString(filename)
 
-		publication, err = parser.Parse(string(filenamePath))
+		publication, err := parser.Parse(string(filenamePath))
 		hasMediaOverlay := false
 		for _, l := range publication.Spine {
 			if l.Properties != nil && l.Properties.MediaOverlay != "" {
@@ -284,7 +290,7 @@ func getPublication(filename string, req *http.Request) (models.Publication, err
 		}
 
 		if err != nil {
-			return models.Publication{}, err
+			return &models.Publication{}, err
 		}
 
 		publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
@@ -299,14 +305,21 @@ func getPublication(filename string, req *http.Request) (models.Publication, err
 		// if searcher.CanBeSearch(publication) {
 		// 	go indexBook(publication)
 		// }
-	} else {
-		publication = current.publication
-		// if searcher.CanBeSearch(publication) {
-		// 	go indexBook(publication)
-		// }
+		return &publication, nil
+	}
+	return &current.publication, nil
+	// if searcher.CanBeSearch(publication) {
+	// 	go indexBook(publication)
+	// }
+}
+
+func updatePublication(publicaton models.Publication, filename string) {
+	for i, book := range currentBookList {
+		if filename == book.filename {
+			currentBookList[i].publication = publicaton
+		}
 	}
 
-	return publication, nil
 }
 
 // func indexBook(publication models.Publication) {

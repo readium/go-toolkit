@@ -699,7 +699,7 @@ func fillMediaOverlay(publication *models.Publication, book *epub.Epub) {
 		if item.TypeLink == "application/smil+xml" {
 			mo := models.MediaOverlayNode{}
 			if book == nil {
-				fd, _, _ := fetcher.Fetch(*publication, item.Href)
+				fd, _, _ := fetcher.Fetch(publication, item.Href)
 				dec := xml.NewDecoder(fd)
 				dec.Decode(&smil)
 			} else {

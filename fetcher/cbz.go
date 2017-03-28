@@ -14,7 +14,7 @@ func init() {
 }
 
 // FetchCbz TODO add doc
-func FetchCbz(publication models.Publication, publicationResource string) (io.ReadSeeker, string, error) {
+func FetchCbz(publication *models.Publication, publicationResource string) (io.ReadSeeker, string, error) {
 	var mediaType string
 	var reader *zip.ReadCloser
 	var assetFd io.ReadCloser
