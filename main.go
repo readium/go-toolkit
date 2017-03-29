@@ -118,6 +118,16 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	w.Header().Set("Etag", hashJSON)
+
+	links := publication.GetPreFetchResources()
+	if len(links) > 0 {
+		prefetch := ""
+		for _, l := range links {
+			prefetch = prefetch + "<" + l.Href + ">;" + "rel=prefetch,"
+		}
+		w.Header().Set("Link", prefetch)
+	}
+
 	identJSON.WriteTo(w)
 	return
 }

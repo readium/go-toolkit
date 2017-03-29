@@ -240,3 +240,21 @@ func (publication *Publication) GetLCPHandlerInfo() (LCPHandler, error) {
 
 	return info, errors.New("no LCP information")
 }
+
+// GetPreFetchResources select resources that match media type we want to
+// prefetch with the manifest
+func (publication *Publication) GetPreFetchResources() []Link {
+	var resources []Link
+
+	mediaTypes := []string{"text/css", "application/vnd.ms-opentype", "text/javascript"}
+
+	for _, l := range publication.Resources {
+		for _, m := range mediaTypes {
+			if l.TypeLink == m {
+				resources = append(resources, l)
+			}
+		}
+	}
+
+	return resources
+}
