@@ -145,7 +145,7 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 	zipMutex.Lock()
 	epubReader, mediaType, err := fetcher.Fetch(publication, assetname)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(404)
 		return
 	}
 	zipMutex.Unlock()

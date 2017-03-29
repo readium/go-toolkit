@@ -3,6 +3,7 @@ package fetcher
 import (
 	"archive/zip"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -20,6 +21,7 @@ func FetchEpub(publication *models.Publication, publicationResource string) (io.
 	var reader *zip.ReadCloser
 	var assetFd io.ReadCloser
 	var link models.Link
+	var errOpen error
 
 	for _, data := range publication.Internal {
 		if data.Name == "epub" {
@@ -30,8 +32,15 @@ func FetchEpub(publication *models.Publication, publicationResource string) (io.
 	resourcePath := FilePath(publication, publicationResource)
 	for _, f := range reader.File {
 		if f.Name == resourcePath {
-			assetFd, _ = f.Open()
+			assetFd, errOpen = f.Open()
+			if errOpen != nil {
+				return nil, "", errOpen
+			}
 		}
+	}
+
+	if assetFd == nil {
+		return nil, "", errors.New("resource not found")
 	}
 
 	for _, linkRes := range publication.Resources {
