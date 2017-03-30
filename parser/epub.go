@@ -622,11 +622,11 @@ func fillEncryptionInfo(publication *models.Publication, book *epub.Epub) {
 		if len(encInfo.EncryptionProperties) > 0 {
 			for _, prop := range encInfo.EncryptionProperties {
 				if prop.Compression.OriginalLength != "" {
-					encrypted.Size, _ = strconv.Atoi(prop.Compression.OriginalLength)
+					encrypted.OriginalLength, _ = strconv.Atoi(prop.Compression.OriginalLength)
 					if prop.Compression.Method == "8" {
-						encrypted.Package = "deflate"
+						encrypted.Compression = "deflate"
 					} else {
-						encrypted.Package = "none"
+						encrypted.Compression = "none"
 					}
 				}
 			}

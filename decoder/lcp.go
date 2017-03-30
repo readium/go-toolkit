@@ -29,7 +29,7 @@ func DecodeLCP(publication *models.Publication, link models.Link, reader io.Read
 		return nil, errDec
 	}
 
-	if link.Properties.Encrypted.Package == "deflate" {
+	if link.Properties.Encrypted.Compression == "deflate" {
 		flateReader := flate.NewReader(bytes.NewReader(cipherRes.Bytes()))
 		buff, _ := ioutil.ReadAll(flateReader)
 		flateReader.Close()

@@ -31,7 +31,7 @@ type Metadata struct {
 	Rendition       *Properties   `json:"rendition,omitempty"`
 	Source          string        `json:"source,omitempty"`
 	EpubType        []string      `json:"epub-type,omitempty"`
-	Right           string        `json:"rights,omitempty"`
+	Rights          string        `json:"rights,omitempty"`
 	Subject         []Subject     `json:"subject,omitempty"`
 	BelongsTo       *BelongsTo    `json:"belongs_to,omitempty"`
 
@@ -68,11 +68,11 @@ type Properties struct {
 
 // Encrypted contains metadata from encryption xml
 type Encrypted struct {
-	Scheme    string `json:"scheme,omitempty"`
-	Profile   string `json:"profile,omitempty"`
-	Algorithm string `json:"algorithm,omitempty"`
-	Package   string `json:"package,omitempty"`
-	Size      int    `json:"size,omitempty"`
+	Scheme         string `json:"scheme,omitempty"`
+	Profile        string `json:"profile,omitempty"`
+	Algorithm      string `json:"algorithm,omitempty"`
+	Compression    string `json:"compression,omitempty"`
+	OriginalLength int    `json:"original-length,omitempty"`
 }
 
 // Subject as based on EPUB 3.1 and WePpub
