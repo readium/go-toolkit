@@ -69,7 +69,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 	addTitle(&publication, book)
 	publication.Metadata.Language = book.Opf.Metadata.Language
 	addIdentifier(&publication, book, epubVersion)
-	publication.Metadata.Right = strings.Join(book.Opf.Metadata.Rights, " ")
+	publication.Metadata.Rights = strings.Join(book.Opf.Metadata.Rights, " ")
 	if len(book.Opf.Metadata.Description) > 0 {
 		publication.Metadata.Description = book.Opf.Metadata.Description[0]
 	}

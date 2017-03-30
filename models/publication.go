@@ -258,3 +258,18 @@ func (publication *Publication) GetPreFetchResources() []Link {
 
 	return resources
 }
+
+// AddRel add rel information to Link, will check if the
+func (link *Link) AddRel(rel string) {
+	relAlreadyPresent := false
+
+	for _, r := range link.Rel {
+		if r == rel {
+			relAlreadyPresent = true
+		}
+	}
+
+	if relAlreadyPresent == false {
+		link.Rel = append(link.Rel, rel)
+	}
+}
