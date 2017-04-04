@@ -51,7 +51,7 @@ type Title struct {
 	Data string `xml:",chardata"`
 	ID   string `xml:"id,attr"`
 	Lang string `xml:"lang,attr"`
-	Dir  string `xml:"dir"`
+	Dir  string `xml:"dir,attr"`
 }
 
 // Author author
