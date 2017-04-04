@@ -8,29 +8,31 @@ type Ncx struct {
 
 //NavPoint nav point
 type NavPoint struct {
+	ID          string     `xml:"id,attr"`
 	Text        string     `xml:"navLabel>text"`
 	Content     Content    `xml:"content"`
 	Points      []NavPoint `xml:"navPoint"`
-	PlayerOrder int        `xml:"playOrder"`
+	PlayerOrder int        `xml:"playOrder,attr"`
 }
 
 //Content nav-point content
 type Content struct {
-	Src string `xml:"src,attr" json:"src"`
+	Src string `xml:"src,attr"`
 }
 
 // PageList page list
 type PageList struct {
 	PageTarget []PageTarget `xml:"pageTarget"`
-	Class      string       `xml:"class"`
-	ID         string       `xml:"id"`
+	Class      string       `xml:"class,attr"`
+	ID         string       `xml:"id,attr"`
 }
 
 // PageTarget page target
 type PageTarget struct {
+	ID        string  `xml:"id,attr"`
 	Text      string  `xml:"navLabel>text"`
-	Value     string  `xml:"value"`
-	Type      string  `xml:"type"`
-	PlayOrder int     `xml:"playOrder"`
+	Value     string  `xml:"value,attr"`
+	Type      string  `xml:"type,attr"`
+	PlayOrder int     `xml:"playOrder,attr"`
 	Content   Content `xml:"content"`
 }
