@@ -26,7 +26,13 @@ type EncryptionMethod struct {
 }
 
 type KeyInfo struct {
-	Resource string `xml:",chardata"`
+	Resource        string          `xml:",chardata"`
+	RetrievalMethod RetrievalMethod `xml:"RetrievalMethod"`
+}
+
+type RetrievalMethod struct {
+	URI  string `xml:"URI,attr"`
+	Type string `xml:"Type,attr"`
 }
 
 type CipherData struct {
