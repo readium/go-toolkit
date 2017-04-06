@@ -101,7 +101,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 		}
 	}
 
-	if epubVersion == epub3 {
+	if epubVersion == isEpub3OrMore(book) {
 		findContributorInMeta(&publication, book, epubVersion)
 	}
 
@@ -199,7 +199,7 @@ func addContributor(publication *models.Publication, book *epub.Epub, epubVersio
 	var contributor models.Contributor
 	var role string
 
-	if epubVersion == "3.0" {
+	if isEpub3OrMore(book) {
 		meta := findMetaByRefineAndProperty(book, cont.ID, "role")
 		if meta.Property == "role" {
 			role = meta.Data
