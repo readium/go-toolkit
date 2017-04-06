@@ -211,10 +211,10 @@ func addContributor(publication *models.Publication, book *epub.Epub, epubVersio
 		metaAlt := findAllMetaByRefineAndProperty(book, cont.ID, "alternate-script")
 		if len(metaAlt) > 0 {
 			contributor.Name.MultiString = make(map[string]string)
-			contributor.Name.MultiString[publication.Metadata.Language[0]] = strings.ToLower(cont.Data)
+			contributor.Name.MultiString[strings.ToLower(publication.Metadata.Language[0])] = cont.Data
 
 			for _, m := range metaAlt {
-				contributor.Name.MultiString[m.Lang] = m.Data
+				contributor.Name.MultiString[strings.ToLower(m.Lang)] = m.Data
 			}
 		} else {
 			contributor.Name.SingleString = cont.Data
