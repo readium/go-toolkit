@@ -101,7 +101,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 		}
 	}
 
-	if epubVersion == isEpub3OrMore(book) {
+	if isEpub3OrMore(book) {
 		findContributorInMeta(&publication, book, epubVersion)
 	}
 
