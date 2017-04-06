@@ -96,6 +96,7 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 
 	publication, err := getPublication(filename, req)
 	if err != nil {
+		fmt.Println(err)
 		w.WriteHeader(500)
 		return
 	}
