@@ -125,7 +125,7 @@ func OpenEpub(fn string) (*Epub, error) {
 		if manf.ID == epb.Opf.Spine.Toc {
 			errToc := epb.parseXML(epb.filename(manf.Href), &epb.Ncx)
 			if errToc != nil {
-				return nil, errToc
+				// return nil, errToc
 			}
 			break
 		}
