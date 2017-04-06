@@ -35,16 +35,16 @@ type LCP struct {
 		Copy  int        `json:"copy"`
 		Start *time.Time `json:"start"`
 		End   *time.Time `json:"end"`
-	}
+	} `json:"rights"`
 	User struct {
 		ID        string   `json:"id"`
 		Email     string   `json:"email"`
 		Name      string   `json:"name"`
 		Encrypted []string `json:"encrypted"`
-	}
+	} `json:"user"`
 	Signature struct {
 		Algorithm   string `json:"algorithm"`
 		Certificate string `json:"certificate"`
 		Value       string `json:"value"`
-	}
+	} `json:"signature"`
 }
