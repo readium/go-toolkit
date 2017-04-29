@@ -605,6 +605,9 @@ func fillCalibreSerieInfo(publication *models.Publication, book *epub.Epub) {
 
 	if serie != "" {
 		collection := models.Collection{Name: serie, Position: seriePosition}
+		if publication.Metadata.BelongsTo == nil {
+			publication.Metadata.BelongsTo = &models.BelongsTo{}
+		}
 		publication.Metadata.BelongsTo.Series = append(publication.Metadata.BelongsTo.Series, collection)
 	}
 
