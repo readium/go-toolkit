@@ -284,3 +284,23 @@ func (link *Link) AddRel(rel string) {
 func (link *Link) AddHrefAbsolute(href string, baseFile string) {
 	link.Href = path.Join(path.Dir(baseFile), href)
 }
+
+//TransformLinkToFullURL concatenate a base url to all links
+func (publication *Publication) TransformLinkToFullURL(baseURL string) {
+
+	for i := range publication.Spine {
+		publication.Spine[i].Href = baseURL + publication.Spine[i].Href
+	}
+
+	for i := range publication.Resources {
+		publication.Resources[i].Href = baseURL + publication.Resources[i].Href
+	}
+
+	for i := range publication.TOC {
+		publication.TOC[i].Href = baseURL + publication.TOC[i].Href
+	}
+
+	for i := range publication.Landmarks {
+		publication.Landmarks[i].Href = baseURL + publication.Landmarks[i].Href
+	}
+}
