@@ -19,7 +19,6 @@ func init() {
 // DecodeLCP decode lcp encrypted file
 func DecodeLCP(publication *models.Publication, link models.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
 
-	fmt.Println("will check key")
 	if lcp.HasGoodKey(publication) == false {
 		return nil, errors.New(missingOrBadKey)
 	}

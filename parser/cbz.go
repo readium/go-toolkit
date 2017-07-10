@@ -21,6 +21,7 @@ func CbzParser(filePath string) (models.Publication, error) {
 	var publication models.Publication
 
 	publication.Metadata.Identifier = filePath
+	publication.Metadata.RDFType = "http://schema.org/ComicIssue"
 
 	zipReader, err := zip.OpenReader(filePath)
 	if err != nil {

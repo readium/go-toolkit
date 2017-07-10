@@ -8,17 +8,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"os"
-	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/blevesearch/bleve"
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/copier"
+	"github.com/opds-community/libopds2-go/opds2"
 	"github.com/readium/r2-streamer-go/decoder/lcp"
 	"github.com/readium/r2-streamer-go/fetcher"
 	"github.com/readium/r2-streamer-go/models"
@@ -37,43 +36,53 @@ type currentBook struct {
 
 var currentBookList []currentBook
 var zipMutex sync.Mutex
+var feed opds2.Feed
 
 // Serv TODO add doc
 func main() {
 
-	if len(os.Args) < 2 {
-		fmt.Println("missing filename")
-		os.Exit(1)
-	}
+	// if len(os.Args) < 2 {
+	// 	fmt.Println("missing filename")
+	// 	os.Exit(1)
+	// }
+	//
+	// filename := os.Args[1]
 
-	filename := os.Args[1]
+	go createOPDSFeed()
 
 	n := negroni.Classic()
 	n.Use(negroni.NewStatic(http.Dir("public")))
 	n.UseHandler(bookHandler(false))
 
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		panic(err)
-	}
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		panic(err)
-	}
-
-	freePort := l.Addr().(*net.TCPAddr).Port
-	l.Close()
+	// addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// l, err := net.ListenTCP("tcp", addr)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	//
+	// freePort := l.Addr().(*net.TCPAddr).Port
+	// l.Close()
 
 	s := &http.Server{
 		Handler:        n,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
-		Addr:           "localhost:" + strconv.Itoa(freePort),
+		//		Addr:           "localhost:" + strconv.Itoa(freePort),
+		Addr: "localhost:8080",
 	}
 
-	filenamePath := base64.StdEncoding.EncodeToString([]byte(filename))
-	fmt.Println("http://localhost:" + strconv.Itoa(freePort) + "/" + filenamePath + "/manifest.json")
+	// filenamePath := base64.StdEncoding.EncodeToString([]byte(filename))
+	//fmt.Println("http://localhost:" + strconv.Itoa(freePort) + "/" + filenamePath + "/manifest.json")
+	// fmt.Println("http://localhost:8080/" + filenamePath + "/manifest.json")
+
+	if len(os.Args) > 1 {
+		filenamePath := base64.StdEncoding.EncodeToString([]byte(os.Args[1]))
+		fmt.Println("http://localhost:8080/" + filenamePath + "/manifest.json")
+	}
 
 	log.Fatal(s.ListenAndServe())
 }
@@ -87,6 +96,8 @@ func bookHandler(test bool) http.Handler {
 	serv.HandleFunc("/{filename}/search", search)
 	serv.HandleFunc("/{filename}/media-overlay", mediaOverlay)
 	serv.HandleFunc("/{filename}/{asset:.*}", getAsset)
+	serv.HandleFunc("/publications.json", opdsFeedHandler)
+
 	return serv
 }
 
@@ -143,14 +154,11 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	zipMutex.Lock()
 	epubReader, mediaType, err := fetcher.Fetch(publication, assetname)
 	if err != nil {
 		w.WriteHeader(404)
 		return
 	}
-	zipMutex.Unlock()
-	runtime.Gosched()
 
 	w.Header().Set("Content-Type", mediaType)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -336,3 +344,79 @@ func updatePublication(publicaton models.Publication, filename string) {
 // func indexBook(publication models.Publication) {
 // 	searcher.Index(publication)
 // }
+
+func createOPDSFeed() {
+
+	t := time.Now()
+	files, err := ioutil.ReadDir("publication")
+	if err != nil {
+		return
+	}
+	for _, f := range files {
+		pub, errParse := parser.Parse("publication/" + f.Name())
+		if errParse == nil {
+			filename := base64.StdEncoding.EncodeToString([]byte("publication/" + f.Name()))
+			baseURL := "http://localhost:8080/" + filename + "/"
+			AddPublicationToFeed(&feed, pub, baseURL)
+		}
+	}
+	if len(feed.Publications) > 0 {
+		feed.Context = []string{"http://opds-spec.org/opds.jsonld"}
+		l := opds2.Link{}
+		l.Href = "http://localhost:8080/publications.json"
+		l.Rel = []string{"self"}
+		l.TypeLink = "application/opds+json"
+		feed.Links = append(feed.Links, l)
+		feed.Metadata.Modified = &t
+		feed.Metadata.RDFType = "http://schema.org/DataFeed"
+		feed.Metadata.NumberOfItems = len(feed.Publications)
+		feed.Metadata.Title = "Readium 2 OPDS 2.0 Feed"
+	}
+
+}
+
+// AddPublicationToFeed filter publication fields and add it to the feed
+func AddPublicationToFeed(feed *opds2.Feed, publication models.Publication, baseURL string) {
+	var pub opds2.Publication
+	var coverLink opds2.Link
+
+	copier.Copy(&pub, publication)
+	l := opds2.Link{}
+	l.Rel = []string{"self"}
+	l.Href = baseURL + "manifest.json"
+	l.TypeLink = "application/webpub+json"
+	pub.Links = append(pub.Links, l)
+	img, err := publication.GetCover()
+	if img.Href != "" && err == nil {
+		img.Href = baseURL + img.Href
+		copier.Copy(&coverLink, img)
+		pub.Images = append(pub.Images, coverLink)
+	}
+
+	feed.Publications = append(feed.Publications, pub)
+}
+
+func opdsFeedHandler(w http.ResponseWriter, req *http.Request) {
+
+	j, _ := json.Marshal(feed)
+
+	var identJSON bytes.Buffer
+
+	json.Indent(&identJSON, j, "", " ")
+	w.Header().Set("Content-Type", "application/opds+json; charset=utf-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	hashJSONRaw := sha256.Sum256(identJSON.Bytes())
+	hashJSON := base64.RawStdEncoding.EncodeToString(hashJSONRaw[:])
+
+	if match := req.Header.Get("If-None-Match"); match != "" {
+		if strings.Contains(match, hashJSON) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+	}
+	w.Header().Set("Etag", hashJSON)
+
+	identJSON.WriteTo(w)
+	return
+}

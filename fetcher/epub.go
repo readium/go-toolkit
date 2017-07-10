@@ -29,9 +29,8 @@ func FetchEpub(publication *models.Publication, publicationResource string) (io.
 		}
 	}
 
-	resourcePath := FilePath(publication, publicationResource)
 	for _, f := range reader.File {
-		if f.Name == resourcePath {
+		if f.Name == publicationResource {
 			assetFd, errOpen = f.Open()
 			if errOpen != nil {
 				return nil, "", errOpen

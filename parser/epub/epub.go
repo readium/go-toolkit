@@ -15,6 +15,7 @@ import (
 // Epub represent epub data
 type Epub struct {
 	Ncx        Ncx
+	NcxPath    string
 	Opf        Opf
 	Container  Container
 	Encryption Encryption
@@ -27,6 +28,11 @@ type Epub struct {
 //Open open resource file
 func (epub *Epub) Open(filepath string) (io.ReadCloser, error) {
 	return epub.open(epub.filename(filepath))
+}
+
+//RawOpen open resource file without filepath transform
+func (epub *Epub) RawOpen(filepath string) (io.ReadCloser, error) {
+	return epub.open(filepath)
 }
 
 //Close close file reader
@@ -94,7 +100,7 @@ func (epub *Epub) ZipReader() *zip.ReadCloser {
 func (epub *Epub) GetSMIL(ressource string) SMIL {
 	var smil SMIL
 
-	epub.parseXML(epub.filename(ressource), &smil)
+	epub.parseXML(ressource, &smil)
 
 	return smil
 }
@@ -123,6 +129,7 @@ func OpenEpub(fn string) (*Epub, error) {
 
 	for _, manf := range epb.Opf.Manifest {
 		if manf.ID == epb.Opf.Spine.Toc {
+			epb.NcxPath = epb.filename(manf.Href)
 			errToc := epb.parseXML(epb.filename(manf.Href), &epb.Ncx)
 			if errToc != nil {
 				// return nil, errToc

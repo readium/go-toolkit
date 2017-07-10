@@ -34,15 +34,16 @@ type Metadata struct {
 	Rights          string        `json:"rights,omitempty"`
 	Subject         []Subject     `json:"subject,omitempty"`
 	BelongsTo       *BelongsTo    `json:"belongs_to,omitempty"`
+	Duration        int           `json:"duration,omitempty"`
 
 	OtherMetadata []Meta `json:"-"` //Extension point for other metadata
 }
 
 // Meta is a generic structure for other metadata
 type Meta struct {
-	property string
-	value    string
-	children []Meta
+	Property string
+	Value    interface{}
+	Children []Meta
 }
 
 // Contributor construct used internally for all contributors

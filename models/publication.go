@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"path"
 	"strings"
 
 	"github.com/readium/r2-streamer-go/parser/epub"
@@ -12,7 +13,7 @@ type Publication struct {
 	Context   []string `json:"@context,omitempty"`
 	Metadata  Metadata `json:"metadata"`
 	Links     []Link   `json:"links"`
-	Spine     []Link   `json:"spine"`
+	Spine     []Link   `json:"spine,omitempty"`
 	Resources []Link   `json:"resources,omitempty"` //Replaces the manifest but less redundant
 	TOC       []Link   `json:"toc,omitempty"`
 	PageList  []Link   `json:"page-list,omitempty"`
@@ -46,6 +47,7 @@ type Link struct {
 	Duration      string             `json:"duration,omitempty"`
 	Templated     bool               `json:"templated,omitempty"`
 	Children      []Link             `json:"children,omitempty"`
+	Bitrate       int                `json:"bitrate,omitempty"`
 	MediaOverlays []MediaOverlayNode `json:"-"`
 }
 
@@ -124,10 +126,13 @@ func (publication *Publication) searchLinkByRel(rel string) (Link, error) {
 // AddLink Add link in publication link self or search
 func (publication *Publication) AddLink(typeLink string, rel []string, url string, templated bool) {
 	link := Link{
-		Rel:      rel,
 		Href:     url,
 		TypeLink: typeLink,
 	}
+	if len(rel) > 0 {
+		link.Rel = rel
+	}
+
 	if templated == true {
 		link.Templated = true
 	}
@@ -272,4 +277,10 @@ func (link *Link) AddRel(rel string) {
 	if relAlreadyPresent == false {
 		link.Rel = append(link.Rel, rel)
 	}
+}
+
+// AddHrefAbsolute modify Href field with a calculated path based on a
+// referend file
+func (link *Link) AddHrefAbsolute(href string, baseFile string) {
+	link.Href = path.Join(path.Dir(baseFile), href)
 }

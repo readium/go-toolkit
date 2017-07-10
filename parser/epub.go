@@ -86,8 +86,6 @@ func EpubParser(filePath string) (models.Publication, error) {
 
 	if book.Opf.Spine.PageProgression != "" {
 		publication.Metadata.Direction = book.Opf.Spine.PageProgression
-	} else {
-		publication.Metadata.Direction = "default"
 	}
 
 	if len(book.Opf.Metadata.Contributor) > 0 {
@@ -148,7 +146,7 @@ func fillSpineAndResource(publication *models.Publication, book *epub.Epub) {
 		if linkSpine.Href == "" {
 			linkItem := models.Link{}
 			linkItem.TypeLink = item.MediaType
-			linkItem.Href = item.Href
+			linkItem.AddHrefAbsolute(item.Href, book.Container.Rootfile.Path)
 			addRelAndPropertiesToLink(&linkItem, &item, book)
 			addMediaOverlay(&linkItem, &item, book)
 			publication.Resources = append(publication.Resources, linkItem)
@@ -172,7 +170,7 @@ func findInManifestByID(book *epub.Epub, ID string) models.Link {
 		if item.ID == ID {
 			linkItem := models.Link{}
 			linkItem.TypeLink = item.MediaType
-			linkItem.Href = item.Href
+			linkItem.AddHrefAbsolute(item.Href, book.Container.Rootfile.Path)
 			addRelAndPropertiesToLink(&linkItem, &item, book)
 			addMediaOverlay(&linkItem, &item, book)
 			return linkItem
@@ -484,14 +482,15 @@ func fillTOCFromNavDoc(publication *models.Publication, book *epub.Epub) {
 	if err != nil {
 		return
 	}
-
-	navReader, err := book.Open(navLink.Href)
+	navReader, err := book.RawOpen(navLink.Href)
 	if err != nil {
+		fmt.Println("can't open nav doc file : " + err.Error())
 		return
 	}
 	defer navReader.Close()
 	doc, err := goquery.NewDocumentFromReader(navReader)
 	if err != nil {
+		fmt.Println("can't parse navdoc : " + err.Error())
 		return
 	}
 
@@ -530,7 +529,7 @@ func fillTOCFromNavDocWithOL(olElem *goquery.Selection, node *[]models.Link, nav
 			}
 			title := s.ChildrenFiltered("a").Text()
 			link := models.Link{}
-			link.Href = href
+			link.AddHrefAbsolute(href, navDocURL)
 			link.Title = title
 			nextOlElem := s.ChildrenFiltered("ol")
 			if nextOlElem != nil {
@@ -545,7 +544,7 @@ func fillPageListFromNCX(publication *models.Publication, book *epub.Epub) {
 	if len(book.Ncx.PageList.PageTarget) > 0 {
 		for _, pageTarget := range book.Ncx.PageList.PageTarget {
 			link := models.Link{}
-			link.Href = pageTarget.Content.Src
+			link.AddHrefAbsolute(pageTarget.Content.Src, book.NcxPath)
 			link.Title = pageTarget.Text
 			publication.PageList = append(publication.PageList, link)
 		}
@@ -565,7 +564,7 @@ func fillLandmarksFromGuide(publication *models.Publication, book *epub.Epub) {
 		for _, ref := range book.Opf.Guide {
 			if ref.Href != "" {
 				link := models.Link{}
-				link.Href = ref.Href
+				link.AddHrefAbsolute(ref.Href, book.Container.Rootfile.Path)
 				link.Title = ref.Title
 				publication.Landmarks = append(publication.Landmarks, link)
 			}
@@ -576,7 +575,7 @@ func fillLandmarksFromGuide(publication *models.Publication, book *epub.Epub) {
 func fillTOCFromNavPoint(publication *models.Publication, book *epub.Epub, point epub.NavPoint, node *[]models.Link) {
 
 	link := models.Link{}
-	link.Href = point.Content.Src
+	link.AddHrefAbsolute(point.Content.Src, book.NcxPath)
 	link.Title = point.Text
 	if len(point.Points) > 0 {
 		for _, p := range point.Points {
@@ -709,24 +708,24 @@ func fillMediaOverlay(publication *models.Publication, book *epub.Epub) {
 				smil = book.GetSMIL(item.Href)
 			}
 			mo.Role = append(mo.Role, "section")
-			mo.Text = smil.Body.TextRef
+			mo.AddHrefAbsolute(smil.Body.TextRef, item.Href)
 			if len(smil.Body.Par) > 0 {
 				for _, par := range smil.Body.Par {
 					p := models.MediaOverlayNode{}
-					p.Text = par.Text.Src
-					p.Audio = par.Audio.Src
+					p.AddHrefAbsolute(par.Text.Src, item.Href)
+					p.AddAudioAbsolute(par.Audio.Src, item.Href)
 					mo.Children = append(mo.Children, p)
 				}
 			}
 
 			if len(smil.Body.Seq) > 0 {
 				for _, s := range smil.Body.Seq {
-					addSeqToMediaOverlay(publication, &mo.Children, s, mo.Text)
+					addSeqToMediaOverlay(publication, &mo.Children, s, mo.Text, item.Href)
 				}
 			}
 
 			baseHref := strings.Split(mo.Text, "#")[0]
-			link := findLinKByHref(publication, baseHref)
+			link := findLinKByHref(publication, baseHref, item.Href)
 			link.MediaOverlays = append(link.MediaOverlays, mo)
 			if link.Properties == nil {
 				link.Properties = &models.Properties{MediaOverlay: mediaOverlayURL + link.Href}
@@ -737,28 +736,30 @@ func fillMediaOverlay(publication *models.Publication, book *epub.Epub) {
 	}
 }
 
-func addSeqToMediaOverlay(publication *models.Publication, mo *[]models.MediaOverlayNode, seq epub.Seq, href string) {
+func addSeqToMediaOverlay(publication *models.Publication, mo *[]models.MediaOverlayNode, seq epub.Seq, href string, smilHref string) {
 
 	moc := models.MediaOverlayNode{}
 	moc.Role = append(moc.Role, "section")
-	moc.Text = seq.TextRef
+	moc.AddHrefAbsolute(seq.TextRef, smilHref)
 
 	if len(seq.Par) > 0 {
 		for _, par := range seq.Par {
 			p := models.MediaOverlayNode{}
-			p.Text = par.Text.Src
-			p.Audio = par.Audio.Src
-			p.Audio += "#t="
-			p.Audio += smilTimeToSeconds(par.Audio.ClipBegin)
-			p.Audio += ","
-			p.Audio += smilTimeToSeconds(par.Audio.ClipEnd)
+			p.AddHrefAbsolute(par.Text.Src, smilHref)
+			p.AddAudioAbsolute(par.Audio.Src, smilHref)
+			if par.Audio.ClipBegin != "" && par.Audio.ClipEnd != "" {
+				p.Audio += "#t="
+				p.Audio += smilTimeToSeconds(par.Audio.ClipBegin)
+				p.Audio += ","
+				p.Audio += smilTimeToSeconds(par.Audio.ClipEnd)
+			}
 			moc.Children = append(moc.Children, p)
 		}
 	}
 
 	if len(seq.Seq) > 0 {
 		for _, s := range seq.Seq {
-			addSeqToMediaOverlay(publication, &moc.Children, s, moc.Text)
+			addSeqToMediaOverlay(publication, &moc.Children, s, moc.Text, smilHref)
 		}
 	}
 	baseHref := strings.Split(moc.Text, "#")[0]
@@ -766,7 +767,7 @@ func addSeqToMediaOverlay(publication *models.Publication, mo *[]models.MediaOve
 	if baseHref == baseHrefParent {
 		*mo = append(*mo, moc)
 	} else {
-		link := findLinKByHref(publication, baseHref)
+		link := findLinKByHref(publication, baseHref, smilHref)
 		link.MediaOverlays = append(link.MediaOverlays, moc)
 		if link.Properties == nil {
 			link.Properties = &models.Properties{MediaOverlay: mediaOverlayURL + link.Href}
@@ -785,9 +786,7 @@ func smilTimeToSeconds(smilTime string) string {
 		hour, _ := strconv.Atoi(hArr[0])
 		timeCount += hour * 60 * 60
 		min, _ := strconv.Atoi(hArr[1])
-		fmt.Println(min)
 		minConv := min * 60 / 100
-		fmt.Println(minConv)
 		timeCount += minConv * 60
 		return strconv.Itoa(timeCount)
 	} else if strings.Contains(smilTime, "ms") {
@@ -905,9 +904,13 @@ func isEpub3OrMore(book *epub.Epub) bool {
 	return false
 }
 
-func findLinKByHref(publication *models.Publication, href string) *models.Link {
+func findLinKByHref(publication *models.Publication, href string, rootFile string) *models.Link {
+	if href == "" {
+		return &models.Link{}
+	}
+
 	for i, l := range publication.Spine {
-		if strings.Contains(href, l.Href) {
+		if l.Href == href {
 			return &publication.Spine[i]
 		}
 	}
