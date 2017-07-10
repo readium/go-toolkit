@@ -636,7 +636,7 @@ func fillEncryptionInfo(publication *models.Publication, book *epub.Epub) {
 		resURI := encInfo.CipherData.CipherReference.URI
 
 		for i, l := range publication.Resources {
-			if resURI == FilePath(*publication, l.Href) {
+			if resURI == l.Href {
 				if l.Properties == nil {
 					publication.Resources[i].Properties = &models.Properties{}
 				}
@@ -644,7 +644,7 @@ func fillEncryptionInfo(publication *models.Publication, book *epub.Epub) {
 			}
 		}
 		for i, l := range publication.Spine {
-			if resURI == FilePath(*publication, l.Href) {
+			if resURI == l.Href {
 				if l.Properties == nil {
 					publication.Spine[i].Properties = &models.Properties{}
 				}
