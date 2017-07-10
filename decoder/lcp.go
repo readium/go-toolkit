@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/flate"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 
