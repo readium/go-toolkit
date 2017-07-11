@@ -21,6 +21,7 @@ func CbzParser(filePath string) (models.Publication, error) {
 	var publication models.Publication
 
 	publication.Metadata.Identifier = filePath
+	publication.Context = append(publication.Context, "http://readium.org/webpub/default.jsonld")
 	publication.Metadata.RDFType = "http://schema.org/ComicIssue"
 
 	zipReader, err := zip.OpenReader(filePath)
