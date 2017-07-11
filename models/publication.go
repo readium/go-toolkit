@@ -289,18 +289,26 @@ func (link *Link) AddHrefAbsolute(href string, baseFile string) {
 func (publication *Publication) TransformLinkToFullURL(baseURL string) {
 
 	for i := range publication.Spine {
-		publication.Spine[i].Href = baseURL + publication.Spine[i].Href
+		if !(strings.Contains(publication.Spine[i].Href, "http://") || strings.Contains(publication.Spine[i].Href, "https://")) {
+			publication.Spine[i].Href = baseURL + publication.Spine[i].Href
+		}
 	}
 
 	for i := range publication.Resources {
-		publication.Resources[i].Href = baseURL + publication.Resources[i].Href
+		if !(strings.Contains(publication.Resources[i].Href, "http://") || strings.Contains(publication.Resources[i].Href, "https://")) {
+			publication.Resources[i].Href = baseURL + publication.Resources[i].Href
+		}
 	}
 
 	for i := range publication.TOC {
-		publication.TOC[i].Href = baseURL + publication.TOC[i].Href
+		if !(strings.Contains(publication.TOC[i].Href, "http://") || strings.Contains(publication.TOC[i].Href, "https://")) {
+			publication.TOC[i].Href = baseURL + publication.TOC[i].Href
+		}
 	}
 
 	for i := range publication.Landmarks {
-		publication.Landmarks[i].Href = baseURL + publication.Landmarks[i].Href
+		if !(strings.Contains(publication.Landmarks[i].Href, "http://") || strings.Contains(publication.Landmarks[i].Href, "https://")) {
+			publication.Landmarks[i].Href = baseURL + publication.Landmarks[i].Href
+		}
 	}
 }
