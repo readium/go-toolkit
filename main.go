@@ -156,6 +156,10 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 
 	epubReader, mediaType, err := fetcher.Fetch(publication, assetname)
 	if err != nil {
+		if err.Error() == "missing or bad key" {
+			w.WriteHeader(401)
+			return
+		}
 		w.WriteHeader(404)
 		return
 	}
