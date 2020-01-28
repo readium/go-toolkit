@@ -139,7 +139,7 @@ func fillSpineAndResource(publication *models.Publication, book *epub.Epub) {
 			linkItem := findInManifestByID(book, item.IDref)
 
 			if linkItem.Href != "" {
-				publication.Spine = append(publication.Spine, linkItem)
+				publication.ReadingOrder = append(publication.ReadingOrder, linkItem)
 			}
 		}
 	}
@@ -159,7 +159,7 @@ func fillSpineAndResource(publication *models.Publication, book *epub.Epub) {
 }
 
 func findInSpineByHref(publication *models.Publication, href string) models.Link {
-	for _, l := range publication.Spine {
+	for _, l := range publication.ReadingOrder {
 		if l.Href == href {
 			return l
 		}
@@ -646,12 +646,12 @@ func fillEncryptionInfo(publication *models.Publication, book *epub.Epub) {
 				publication.Resources[i].Properties.Encrypted = &encrypted
 			}
 		}
-		for i, l := range publication.Spine {
+		for i, l := range publication.ReadingOrder {
 			if resURI == l.Href {
 				if l.Properties == nil {
-					publication.Spine[i].Properties = &models.Properties{}
+					publication.ReadingOrder[i].Properties = &models.Properties{}
 				}
-				publication.Spine[i].Properties.Encrypted = &encrypted
+				publication.ReadingOrder[i].Properties.Encrypted = &encrypted
 			}
 		}
 	}
@@ -912,9 +912,9 @@ func findLinKByHref(publication *models.Publication, href string, rootFile strin
 		return &models.Link{}
 	}
 
-	for i, l := range publication.Spine {
+	for i, l := range publication.ReadingOrder {
 		if l.Href == href {
-			return &publication.Spine[i]
+			return &publication.ReadingOrder[i]
 		}
 	}
 
