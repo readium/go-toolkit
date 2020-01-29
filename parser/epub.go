@@ -60,7 +60,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 		publication.AddToInternal("epub", book.ZipReader())
 	}
 
-	publication.Context = append(publication.Context, "http://readium.org/webpub/default.jsonld")
+	publication.Context = append(publication.Context, "https://readium.org/webpub-manifest/context.jsonld")
 	publication.Metadata.RDFType = "http://schema.org/Book"
 
 	epubVersion = getEpubVersion(book)
