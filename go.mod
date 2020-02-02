@@ -14,6 +14,7 @@ require (
 	github.com/gorilla/mux v1.7.3
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/opds-community/libopds2-go v0.0.0-20170628075933-9c163cf60f6e
+	github.com/smartystreets/goconvey v1.6.4
 	github.com/steveyen/gtreap v0.0.0-20150807155958-0abe01ef9be2 // indirect
 	github.com/urfave/negroni v1.0.0
 )
