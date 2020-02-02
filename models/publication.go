@@ -10,18 +10,18 @@ import (
 
 // Publication Main structure for a publication
 type Publication struct {
-	Context   []string `json:"@context,omitempty"`
-	Metadata  Metadata `json:"metadata"`
-	Links     []Link   `json:"links"`
-	Spine     []Link   `json:"spine,omitempty"`
-	Resources []Link   `json:"resources,omitempty"` //Replaces the manifest but less redundant
-	TOC       []Link   `json:"toc,omitempty"`
-	PageList  []Link   `json:"page-list,omitempty"`
-	Landmarks []Link   `json:"landmarks,omitempty"`
-	LOI       []Link   `json:"loi,omitempty"` //List of illustrations
-	LOA       []Link   `json:"loa,omitempty"` //List of audio files
-	LOV       []Link   `json:"lov,omitempty"` //List of videos
-	LOT       []Link   `json:"lot,omitempty"` //List of tables
+	Context      []string `json:"@context,omitempty"`
+	Metadata     Metadata `json:"metadata"`
+	Links        []Link   `json:"links"`
+	ReadingOrder []Link   `json:"readingOrder,omitempty"`
+	Resources    []Link   `json:"resources,omitempty"` //Replaces the manifest but less redundant
+	TOC          []Link   `json:"toc,omitempty"`
+	PageList     []Link   `json:"page-list,omitempty"`
+	Landmarks    []Link   `json:"landmarks,omitempty"`
+	LOI          []Link   `json:"loi,omitempty"` //List of illustrations
+	LOA          []Link   `json:"loa,omitempty"` //List of audio files
+	LOV          []Link   `json:"lov,omitempty"` //List of videos
+	LOT          []Link   `json:"lot,omitempty"` //List of tables
 
 	OtherLinks       []Link                  `json:"-"` //Extension point for links that shouldn't show up in the manifest
 	OtherCollections []PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
@@ -104,7 +104,7 @@ func (publication *Publication) searchLinkByRel(rel string) (Link, error) {
 		}
 	}
 
-	for _, item := range publication.Spine {
+	for _, item := range publication.ReadingOrder {
 		for _, spineRel := range item.Rel {
 			if spineRel == rel {
 				return item, nil
@@ -144,7 +144,7 @@ func (publication *Publication) AddLink(typeLink string, rel []string, url strin
 func (publication *Publication) FindAllMediaOverlay() []MediaOverlayNode {
 	var overlay []MediaOverlayNode
 
-	for _, l := range publication.Spine {
+	for _, l := range publication.ReadingOrder {
 		if len(l.MediaOverlays) > 0 {
 			for _, ov := range l.MediaOverlays {
 				overlay = append(overlay, ov)
@@ -159,7 +159,7 @@ func (publication *Publication) FindAllMediaOverlay() []MediaOverlayNode {
 func (publication *Publication) FindMediaOverlayByHref(href string) []MediaOverlayNode {
 	var overlay []MediaOverlayNode
 
-	for _, l := range publication.Spine {
+	for _, l := range publication.ReadingOrder {
 		if strings.Contains(l.Href, href) {
 			if len(l.MediaOverlays) > 0 {
 				for _, ov := range l.MediaOverlays {
@@ -288,9 +288,9 @@ func (link *Link) AddHrefAbsolute(href string, baseFile string) {
 //TransformLinkToFullURL concatenate a base url to all links
 func (publication *Publication) TransformLinkToFullURL(baseURL string) {
 
-	for i := range publication.Spine {
-		if !(strings.Contains(publication.Spine[i].Href, "http://") || strings.Contains(publication.Spine[i].Href, "https://")) {
-			publication.Spine[i].Href = baseURL + publication.Spine[i].Href
+	for i := range publication.ReadingOrder {
+		if !(strings.Contains(publication.ReadingOrder[i].Href, "http://") || strings.Contains(publication.ReadingOrder[i].Href, "https://")) {
+			publication.ReadingOrder[i].Href = baseURL + publication.ReadingOrder[i].Href
 		}
 	}
 

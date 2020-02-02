@@ -37,7 +37,7 @@ func CbzParser(filePath string) (models.Publication, error) {
 		linkItem.TypeLink = getMediaTypeByName(f.Name)
 		linkItem.Href = f.Name
 		if linkItem.TypeLink != "" {
-			publication.Spine = append(publication.Spine, linkItem)
+			publication.ReadingOrder = append(publication.ReadingOrder, linkItem)
 		}
 		if f.Name == "ComicInfo.xml" {
 			fd, _ := f.Open()
@@ -121,7 +121,7 @@ func comicRackMetadata(publication *models.Publication, fd io.ReadCloser) {
 			if p.Type == "FrontCover" {
 				l.AddRel("cover")
 			}
-			l.Href = publication.Spine[p.Image].Href
+			l.Href = publication.ReadingOrder[p.Image].Href
 			if p.ImageHeight != 0 {
 				l.Height = p.ImageHeight
 			}

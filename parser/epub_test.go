@@ -112,7 +112,7 @@ func TestPublication(t *testing.T) {
 				Convey("item no linear is not in spine", func() {
 					findItemInSpine := false
 
-					for _, it := range publication.Spine {
+					for _, it := range publication.ReadingOrder {
 						if it.Href == d.NoLinear {
 							findItemInSpine = true
 						}
@@ -176,7 +176,7 @@ func TestFixedPublication(t *testing.T) {
 			if d.linkLayout != "" {
 				Convey("There layout info in link", func() {
 					layout := false
-					for _, item := range publication.Spine {
+					for _, item := range publication.ReadingOrder {
 						if item.Properties != nil {
 							if item.Properties.Layout == d.linkLayout {
 								layout = true
@@ -191,7 +191,7 @@ func TestFixedPublication(t *testing.T) {
 			if d.linkOrientation != "" {
 				Convey("There orientation info in link", func() {
 					orientation := false
-					for _, item := range publication.Spine {
+					for _, item := range publication.ReadingOrder {
 						if item.Properties != nil {
 							if item.Properties.Orientation == d.linkOrientation {
 								orientation = true
@@ -205,7 +205,7 @@ func TestFixedPublication(t *testing.T) {
 			if d.linkSpread != "" {
 				Convey("There spread info in link", func() {
 					spread := false
-					for _, item := range publication.Spine {
+					for _, item := range publication.ReadingOrder {
 						if item.Properties != nil {
 							if item.Properties.Spread == d.linkSpread {
 								spread = true
@@ -219,7 +219,7 @@ func TestFixedPublication(t *testing.T) {
 			if d.linkPage != "" {
 				Convey("There page info in link", func() {
 					page := false
-					for _, item := range publication.Spine {
+					for _, item := range publication.ReadingOrder {
 						if item.Properties != nil {
 							if item.Properties.Page == d.linkPage {
 								page = true

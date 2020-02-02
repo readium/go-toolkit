@@ -306,7 +306,7 @@ func getPublication(filename string, req *http.Request) (*models.Publication, er
 
 		publication, err := parser.Parse(string(filenamePath))
 		hasMediaOverlay := false
-		for _, l := range publication.Spine {
+		for _, l := range publication.ReadingOrder {
 			if l.Properties != nil && l.Properties.MediaOverlay != "" {
 				hasMediaOverlay = true
 			}

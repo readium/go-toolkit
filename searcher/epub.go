@@ -73,7 +73,7 @@ func indexEpub(publication models.Publication) {
 	//
 	// 		bleveIndex, _ = bleve.New(bleveIndexFile, indexMapping)
 	//
-	// 		for _, s := range publication.Spine {
+	// 		for _, s := range publication.ReadingOrder {
 	// 			reader, _, _ := fetcher.Fetch(publication, s.Href)
 	// 			buff, _ := ioutil.ReadAll(reader)
 	// 			fmt.Println("indexing " + s.Href)

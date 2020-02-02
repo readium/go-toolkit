@@ -48,7 +48,7 @@ func FetchEpub(publication *models.Publication, publicationResource string) (io.
 		}
 	}
 
-	for _, linkRes := range publication.Spine {
+	for _, linkRes := range publication.ReadingOrder {
 		if publicationResource == linkRes.Href {
 			link = linkRes
 		}
