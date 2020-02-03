@@ -372,7 +372,7 @@ func addToLinkFromProperties(link *models.Link, propertiesString string) {
 		case "rendition:spread-landscape":
 			propertiesStruct.Spread = "landscape"
 		case "rendition:spread-portrait":
-			propertiesStruct.Spread = "portrait"
+			propertiesStruct.Spread = "both"
 		case "rendition:spread-both":
 			propertiesStruct.Spread = "both"
 		case "rendition:layout-reflowable":
