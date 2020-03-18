@@ -122,6 +122,20 @@ func TestPublication(t *testing.T) {
 				})
 			}
 
+			Convey("readingOrder and resources are mutually exclusive", func() {
+				findItemInResources := false
+
+				for _, this := range publication.ReadingOrder {
+					for _, that := range publication.Resources {
+						if this.Href == that.Href {
+							findItemInResources = true
+						}
+					}
+				}
+
+				So(findItemInResources, ShouldEqual, false)
+			})
+
 			if d.HasSubject != "" {
 				Convey("There "+d.HasSubject+"Subject in book", func() {
 					findSubject := false
