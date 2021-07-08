@@ -145,11 +145,12 @@ func fillSpineAndResource(publication *models.Publication, book *epub.Epub) {
 	}
 
 	for _, item := range book.Opf.Manifest {
-		linkSpine := findInSpineByHref(publication, item.Href)
+		linkItem := models.Link{}
+		linkItem.TypeLink = item.MediaType
+		linkItem.AddHrefAbsolute(item.Href, book.Container.Rootfile.Path)
+
+		linkSpine := findInSpineByHref(publication, linkItem.Href)
 		if linkSpine.Href == "" {
-			linkItem := models.Link{}
-			linkItem.TypeLink = item.MediaType
-			linkItem.AddHrefAbsolute(item.Href, book.Container.Rootfile.Path)
 			addRelAndPropertiesToLink(&linkItem, &item, book)
 			addMediaOverlay(&linkItem, &item, book)
 			publication.Resources = append(publication.Resources, linkItem)
