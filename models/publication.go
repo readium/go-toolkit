@@ -16,7 +16,7 @@ type Publication struct {
 	ReadingOrder []Link   `json:"readingOrder,omitempty"`
 	Resources    []Link   `json:"resources,omitempty"` //Replaces the manifest but less redundant
 	TOC          []Link   `json:"toc,omitempty"`
-	PageList     []Link   `json:"page-list,omitempty"`
+	PageList     []Link   `json:"pageList,omitempty"`
 	Landmarks    []Link   `json:"landmarks,omitempty"`
 	LOI          []Link   `json:"loi,omitempty"` //List of illustrations
 	LOA          []Link   `json:"loa,omitempty"` //List of audio files
