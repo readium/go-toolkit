@@ -28,7 +28,7 @@ type Metadata struct {
 	PublicationDate *time.Time    `json:"published,omitempty"`
 	Description     string        `json:"description,omitempty"`
 	Direction       string        `json:"direction,omitempty"`
-	Rendition       *Properties   `json:"rendition,omitempty"`
+	Presentation    *Properties   `json:"presentation,omitempty"`
 	Source          string        `json:"source,omitempty"`
 	EpubType        []string      `json:"epub-type,omitempty"`
 	Rights          string        `json:"rights,omitempty"`

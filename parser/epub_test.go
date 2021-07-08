@@ -173,17 +173,17 @@ func TestFixedPublication(t *testing.T) {
 			publication, _ := Parse(d.filepath)
 			if d.renditionLayout != "" {
 				Convey("There Layout info", func() {
-					So(publication.Metadata.Rendition.Layout, ShouldEqual, d.renditionLayout)
+					So(publication.Metadata.Presentation.Layout, ShouldEqual, d.renditionLayout)
 				})
 			}
 			if d.renditionOrientation != "" {
 				Convey("There Orientation info", func() {
-					So(publication.Metadata.Rendition.Orientation, ShouldEqual, d.renditionOrientation)
+					So(publication.Metadata.Presentation.Orientation, ShouldEqual, d.renditionOrientation)
 				})
 			}
 			if d.renditionSpread != "" {
 				Convey("There Spread info", func() {
-					So(publication.Metadata.Rendition.Spread, ShouldEqual, d.renditionSpread)
+					So(publication.Metadata.Presentation.Spread, ShouldEqual, d.renditionSpread)
 				})
 			}
 

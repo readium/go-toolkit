@@ -107,7 +107,7 @@ func EpubParser(filePath string) (models.Publication, error) {
 	}
 
 	fillSpineAndResource(&publication, book)
-	addRendition(&publication, book)
+	addPresentation(&publication, book)
 	addCoverRel(&publication, book)
 	fillEncryptionInfo(&publication, book)
 
@@ -402,28 +402,28 @@ func addToLinkFromProperties(link *models.Link, propertiesString string) {
 	}
 }
 
-func addRendition(publication *models.Publication, book *epub.Epub) {
-	var rendition models.Properties
+func addPresentation(publication *models.Publication, book *epub.Epub) {
+	var presentation models.Properties
 
 	for _, meta := range book.Opf.Metadata.Meta {
 		switch meta.Property {
 		case "rendition:layout":
 			if meta.Data == "pre-paginated" {
-				rendition.Layout = "fixed"
+				presentation.Layout = "fixed"
 			} else if meta.Data == "reflowable" {
-				rendition.Layout = "reflowable"
+				presentation.Layout = "reflowable"
 			}
 		case "rendition:orientation":
-			rendition.Orientation = meta.Data
+			presentation.Orientation = meta.Data
 		case "rendition:spread":
-			rendition.Spread = meta.Data
+			presentation.Spread = meta.Data
 		case "rendition:flow":
-			rendition.Overflow = meta.Data
+			presentation.Overflow = meta.Data
 		}
 	}
 
-	if rendition.Layout != "" || rendition.Orientation != "" || rendition.Overflow != "" || rendition.Page != "" || rendition.Spread != "" {
-		publication.Metadata.Rendition = &rendition
+	if presentation.Layout != "" || presentation.Orientation != "" || presentation.Overflow != "" || presentation.Page != "" || presentation.Spread != "" {
+		publication.Metadata.Presentation = &presentation
 	}
 }
 
