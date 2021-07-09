@@ -4,20 +4,20 @@ import (
 	"errors"
 	"path/filepath"
 
-	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
 // List TODO add doc
 type List struct {
 	fileExt  string
-	parser   (func(filePath string) (models.Publication, error))
-	callback (func(*models.Publication))
+	parser   (func(filePath string) (pub.Publication, error))
+	callback (func(*pub.Publication))
 }
 
 var parserList []List
 
 // Parse TODO add doc
-func Parse(filePath string) (models.Publication, error) {
+func Parse(filePath string) (pub.Publication, error) {
 
 	fileExt := filepath.Ext(filePath)
 	if fileExt == "" {
@@ -29,11 +29,11 @@ func Parse(filePath string) (models.Publication, error) {
 		}
 	}
 
-	return models.Publication{}, errors.New("can't find parser")
+	return pub.Publication{}, errors.New("can't find parser")
 }
 
 // CallbackParse call function too parse element that can be encrypted or obfuscated
-func CallbackParse(publication *models.Publication) {
+func CallbackParse(publication *pub.Publication) {
 	var typePublication string
 
 	for _, key := range publication.Internal {

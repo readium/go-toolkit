@@ -1,4 +1,4 @@
-package models
+package pub
 
 import "path"
 

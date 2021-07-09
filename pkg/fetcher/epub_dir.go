@@ -6,8 +6,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/readium/r2-streamer-go/decoder"
-	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/pkg/decoder"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
 func init() {
@@ -15,11 +15,11 @@ func init() {
 }
 
 // FetchEpubDir TODO add doc
-func FetchEpubDir(publication *models.Publication, publicationResource string) (io.ReadSeeker, string, error) {
+func FetchEpubDir(publication *pub.Publication, publicationResource string) (io.ReadSeeker, string, error) {
 	var mediaType string
 	var basePath string
 	var rootFile string
-	var link models.Link
+	var link pub.Link
 
 	for _, data := range publication.Internal {
 		if data.Name == "basepath" {

@@ -1,11 +1,11 @@
-package models
+package pub
 
 import (
 	"errors"
 	"path"
 	"strings"
 
-	"github.com/readium/r2-streamer-go/parser/epub"
+	"github.com/readium/r2-streamer-go/pkg/parser/epub"
 )
 
 // Publication Main structure for a publication

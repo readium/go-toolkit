@@ -8,8 +8,8 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/readium/r2-streamer-go/decoder"
-	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/pkg/decoder"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
 func init() {
@@ -17,10 +17,10 @@ func init() {
 }
 
 // FetchEpub TODO add doc
-func FetchEpub(publication *models.Publication, publicationResource string) (io.ReadSeeker, string, error) {
+func FetchEpub(publication *pub.Publication, publicationResource string) (io.ReadSeeker, string, error) {
 	var reader *zip.ReadCloser
 	var assetFd io.ReadCloser
-	var link models.Link
+	var link pub.Link
 	var errOpen error
 
 	for _, data := range publication.Internal {

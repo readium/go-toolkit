@@ -4,7 +4,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
 // missingOrBadKey error return when the key is missing or not correct
@@ -14,13 +14,13 @@ const missingOrBadKey = "missing or bad key"
 type List struct {
 	decoderAlgorithm string
 	decoderScheme    string // only for lcp or other encrypted resource
-	decoder          (func(*models.Publication, models.Link, io.ReadSeeker) (io.ReadSeeker, error))
+	decoder          (func(*pub.Publication, pub.Link, io.ReadSeeker) (io.ReadSeeker, error))
 }
 
 var decoderList []List
 
 // Decode decode the ressource
-func Decode(publication *models.Publication, link models.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
+func Decode(publication *pub.Publication, link pub.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
 
 	for _, decoderFunc := range decoderList {
 		if link.Properties != nil && link.Properties.Encrypted != nil && link.Properties.Encrypted.Algorithm == decoderFunc.decoderAlgorithm && decoderFunc.decoderScheme == link.Properties.Encrypted.Scheme {
@@ -32,7 +32,7 @@ func Decode(publication *models.Publication, link models.Link, reader io.ReadSee
 }
 
 // NeedToDecode check if there a decoder for this resource
-func NeedToDecode(publication *models.Publication, link models.Link) bool {
+func NeedToDecode(publication *pub.Publication, link pub.Link) bool {
 	for _, decoderFunc := range decoderList {
 		if link.Properties != nil && link.Properties.Encrypted != nil && link.Properties.Encrypted.Algorithm == decoderFunc.decoderAlgorithm && decoderFunc.decoderScheme == link.Properties.Encrypted.Scheme {
 			return true

@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
 // DecryptData decrypt data from the stream
-func DecryptData(publication *models.Publication, link models.Link, reader io.ReadSeeker) (bytes.Buffer, error) {
+func DecryptData(publication *pub.Publication, link pub.Link, reader io.ReadSeeker) (bytes.Buffer, error) {
 	var cipherRes bytes.Buffer
 	var cipherContentKey bytes.Buffer
 

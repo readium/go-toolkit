@@ -5,12 +5,12 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
 // HasGoodKey check if the Publication contains hashed pass phrase or pass
 // phrase and these information are good
-func HasGoodKey(publication *models.Publication) bool {
+func HasGoodKey(publication *pub.Publication) bool {
 
 	hashPassphrase := publication.GetBytesFromInternal("lcp_hash_passphrase")
 	if len(hashPassphrase) > 0 {
@@ -32,7 +32,7 @@ func HasGoodKey(publication *models.Publication) bool {
 }
 
 // CheckPassphrase create and store the hash and call the check for hashed pass phrse
-func CheckPassphrase(publication *models.Publication, passphrase string) bool {
+func CheckPassphrase(publication *pub.Publication, passphrase string) bool {
 	hashPasswd := sha256.Sum256([]byte(passphrase))
 	publication.AddToInternal("lcp_hash_passphrase", hashPasswd[:])
 	return CheckHashPassphrase(publication, hashPasswd[:])
@@ -40,7 +40,7 @@ func CheckPassphrase(publication *models.Publication, passphrase string) bool {
 
 // CheckHashPassphrase check if the hash is good by decrypting the key check
 // and compare it to the license id
-func CheckHashPassphrase(publication *models.Publication, hashPassphrase []byte) bool {
+func CheckHashPassphrase(publication *pub.Publication, hashPassphrase []byte) bool {
 	var cipher bytes.Buffer
 
 	keyCheck := publication.GetBytesFromInternal("lcp_user_key_check")

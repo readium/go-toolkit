@@ -5,19 +5,19 @@ import (
 	"io"
 	"path"
 
-	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
 // List TODO add doc
 type List struct {
 	publicationType string
-	fetcher         (func(*models.Publication, string) (io.ReadSeeker, string, error))
+	fetcher         (func(*pub.Publication, string) (io.ReadSeeker, string, error))
 }
 
 var fetcherList []List
 
 // Fetch TODO add doc
-func Fetch(publication *models.Publication, publicationRessource string) (io.ReadSeeker, string, error) {
+func Fetch(publication *pub.Publication, publicationRessource string) (io.ReadSeeker, string, error) {
 	var typePublication string
 
 	for _, key := range publication.Internal {
@@ -38,7 +38,7 @@ func Fetch(publication *models.Publication, publicationRessource string) (io.Rea
 }
 
 // FilePath return the complete path for the ressource
-func FilePath(publication *models.Publication, publicationResource string) string {
+func FilePath(publication *pub.Publication, publicationResource string) string {
 	var rootFile string
 
 	for _, data := range publication.Internal {
