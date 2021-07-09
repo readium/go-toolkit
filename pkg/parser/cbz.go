@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/readium/r2-streamer-go/models"
-	"github.com/readium/r2-streamer-go/parser/comicrack"
+	"github.com/readium/r2-streamer-go/pkg/parser/comicrack"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
 func init() {
@@ -17,8 +17,8 @@ func init() {
 }
 
 // CbzParser TODO add doc
-func CbzParser(filePath string) (models.Publication, error) {
-	var publication models.Publication
+func CbzParser(filePath string) (pub.Publication, error) {
+	var publication pub.Publication
 
 	publication.Metadata.Identifier = filePath
 	publication.Context = append(publication.Context, "https://readium.org/webpub-manifest/context.jsonld")
@@ -29,11 +29,11 @@ func CbzParser(filePath string) (models.Publication, error) {
 		return publication, errors.New("can't open or parse cbz file with err : " + err.Error())
 	}
 
-	publication.Internal = append(publication.Internal, models.Internal{Name: "type", Value: "cbz"})
-	publication.Internal = append(publication.Internal, models.Internal{Name: "cbz", Value: zipReader})
+	publication.Internal = append(publication.Internal, pub.Internal{Name: "type", Value: "cbz"})
+	publication.Internal = append(publication.Internal, pub.Internal{Name: "cbz", Value: zipReader})
 
 	for _, f := range zipReader.File {
-		linkItem := models.Link{}
+		linkItem := pub.Link{}
 		linkItem.TypeLink = getMediaTypeByName(f.Name)
 		linkItem.Href = f.Name
 		if linkItem.TypeLink != "" {
@@ -54,7 +54,7 @@ func CbzParser(filePath string) (models.Publication, error) {
 }
 
 // CbzCallback empty function to respect interface
-func CbzCallback(publication *models.Publication) {
+func CbzCallback(publication *pub.Publication) {
 
 }
 
@@ -81,23 +81,23 @@ func getMediaTypeByName(filePath string) string {
 	}
 }
 
-func comicRackMetadata(publication *models.Publication, fd io.ReadCloser) {
+func comicRackMetadata(publication *pub.Publication, fd io.ReadCloser) {
 
 	meta := comicrack.Parse(fd)
 	if meta.Writer != "" {
-		cont := models.Contributor{Name: models.MultiLanguage{SingleString: meta.Writer}}
+		cont := pub.Contributor{Name: pub.MultiLanguage{SingleString: meta.Writer}}
 		publication.Metadata.Author = append(publication.Metadata.Author, cont)
 	}
 	if meta.Penciller != "" {
-		cont := models.Contributor{Name: models.MultiLanguage{SingleString: meta.Writer}}
+		cont := pub.Contributor{Name: pub.MultiLanguage{SingleString: meta.Writer}}
 		publication.Metadata.Penciler = append(publication.Metadata.Penciler, cont)
 	}
 	if meta.Colorist != "" {
-		cont := models.Contributor{Name: models.MultiLanguage{SingleString: meta.Writer}}
+		cont := pub.Contributor{Name: pub.MultiLanguage{SingleString: meta.Writer}}
 		publication.Metadata.Colorist = append(publication.Metadata.Colorist, cont)
 	}
 	if meta.Inker != "" {
-		cont := models.Contributor{Name: models.MultiLanguage{SingleString: meta.Writer}}
+		cont := pub.Contributor{Name: pub.MultiLanguage{SingleString: meta.Writer}}
 		publication.Metadata.Inker = append(publication.Metadata.Inker, cont)
 	}
 
@@ -117,7 +117,7 @@ func comicRackMetadata(publication *models.Publication, fd io.ReadCloser) {
 
 	if len(meta.Pages) > 0 {
 		for _, p := range meta.Pages {
-			l := models.Link{}
+			l := pub.Link{}
 			if p.Type == "FrontCover" {
 				l.AddRel("cover")
 			}

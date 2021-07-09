@@ -7,8 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/readium/r2-streamer-go/decoder/lcp"
-	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/pkg/decoder/lcp"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
 func init() {
@@ -16,7 +16,7 @@ func init() {
 }
 
 // DecodeLCP decode lcp encrypted file
-func DecodeLCP(publication *models.Publication, link models.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
+func DecodeLCP(publication *pub.Publication, link pub.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
 
 	if lcp.HasGoodKey(publication) == false {
 		return nil, errors.New(missingOrBadKey)

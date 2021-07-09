@@ -1,4 +1,4 @@
-package models
+package pub
 
 type SearchResults struct {
 	Query        string         `json:"query"`

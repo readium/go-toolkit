@@ -18,17 +18,17 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/copier"
 	"github.com/opds-community/libopds2-go/opds2"
-	"github.com/readium/r2-streamer-go/decoder/lcp"
-	"github.com/readium/r2-streamer-go/fetcher"
-	"github.com/readium/r2-streamer-go/models"
-	"github.com/readium/r2-streamer-go/parser"
-	"github.com/readium/r2-streamer-go/searcher"
+	"github.com/readium/r2-streamer-go/pkg/decoder/lcp"
+	"github.com/readium/r2-streamer-go/pkg/fetcher"
+	"github.com/readium/r2-streamer-go/pkg/parser"
+	"github.com/readium/r2-streamer-go/pkg/pub"
+	"github.com/readium/r2-streamer-go/pkg/searcher"
 	"github.com/urfave/negroni"
 )
 
 type currentBook struct {
 	filename    string
-	publication models.Publication
+	publication pub.Publication
 	timestamp   time.Time
 	bleveIndex  bleve.Index
 	indexed     bool
@@ -228,7 +228,7 @@ func pushPassphrase(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if req.Method == http.MethodPost {
-		var postInfo models.LCPHandlerPost
+		var postInfo pub.LCPHandlerPost
 		buff, errRead := ioutil.ReadAll(req.Body)
 		if errRead != nil {
 			fmt.Println("can't read body")
@@ -263,11 +263,11 @@ func pushPassphrase(w http.ResponseWriter, req *http.Request) {
 
 func mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
-	var media []models.MediaOverlayNode
+	var media []pub.MediaOverlayNode
 
 	vars := mux.Vars(req)
 	var mediaOverlay struct {
-		MediaOverlay []models.MediaOverlayNode `json:"media-overlay"`
+		MediaOverlay []pub.MediaOverlayNode `json:"media-overlay"`
 	}
 
 	publication, err := getPublication(vars["filename"], req)
@@ -291,7 +291,7 @@ func mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	returnJSON.WriteTo(w)
 }
 
-func getPublication(filename string, req *http.Request) (*models.Publication, error) {
+func getPublication(filename string, req *http.Request) (*pub.Publication, error) {
 	var current currentBook
 
 	for _, book := range currentBookList {
@@ -313,7 +313,7 @@ func getPublication(filename string, req *http.Request) (*models.Publication, er
 		}
 
 		if err != nil {
-			return &models.Publication{}, err
+			return &pub.Publication{}, err
 		}
 
 		publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
@@ -336,7 +336,7 @@ func getPublication(filename string, req *http.Request) (*models.Publication, er
 	// }
 }
 
-func updatePublication(publicaton models.Publication, filename string) {
+func updatePublication(publicaton pub.Publication, filename string) {
 	for i, book := range currentBookList {
 		if filename == book.filename {
 			currentBookList[i].publication = publicaton
@@ -345,7 +345,7 @@ func updatePublication(publicaton models.Publication, filename string) {
 
 }
 
-// func indexBook(publication models.Publication) {
+// func indexBook(publication pub.Publication) {
 // 	searcher.Index(publication)
 // }
 
@@ -380,7 +380,7 @@ func createOPDSFeed() {
 }
 
 // AddPublicationToFeed filter publication fields and add it to the feed
-func AddPublicationToFeed(feed *opds2.Feed, publication models.Publication, baseURL string) {
+func AddPublicationToFeed(feed *opds2.Feed, publication pub.Publication, baseURL string) {
 	var pub opds2.Publication
 	var coverLink opds2.Link
 

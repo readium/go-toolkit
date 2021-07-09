@@ -6,11 +6,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-var testPublication models.Publication
+var testPublication pub.Publication
 var testFonts []byte
 
 func init() {
@@ -26,7 +26,7 @@ func TestAdobeFonts(t *testing.T) {
 	f, _ := os.Open("../test/readium-test-files/functional/smoke-tests/SmokeTestFXL/fonts/cut-cut.adb.woff")
 
 	Convey("Given cut-cut.adb.woff fonts", t, func() {
-		fd, _ := DecodeAdobeFont(&testPublication, models.Link{}, f)
+		fd, _ := DecodeAdobeFont(&testPublication, pub.Link{}, f)
 		buff, _ := ioutil.ReadAll(fd)
 		Convey("The adobe fonts is deobfuscated", func() {
 			So(bytes.Equal(buff, testFonts), ShouldBeTrue)
@@ -41,7 +41,7 @@ func TestIdpfFonts(t *testing.T) {
 	f, _ := os.Open("../test/readium-test-files/functional/smoke-tests/SmokeTestFXL/fonts/cut-cut.obf.woff")
 
 	Convey("Given cut-cut.obf.woff fonts", t, func() {
-		fd, _ := DecodeIdpfFont(&testPublication, models.Link{}, f)
+		fd, _ := DecodeIdpfFont(&testPublication, pub.Link{}, f)
 		buff, _ := ioutil.ReadAll(fd)
 		Convey("The idpf fonts is deobfuscated", func() {
 			So(bytes.Equal(buff, testFonts), ShouldBeTrue)

@@ -3,20 +3,20 @@ package searcher
 import (
 	"errors"
 
-	"github.com/readium/r2-streamer-go/models"
+	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
 // List TODO add doc
 type List struct {
 	publicationType string
-	searcher        (func(models.Publication, string) (models.SearchResults, error))
-	indexer         (func(models.Publication))
+	searcher        (func(pub.Publication, string) (pub.SearchResults, error))
+	indexer         (func(pub.Publication))
 }
 
 var searcherList []List
 
 // CanBeSearch check if the publication type has a search interface
-func CanBeSearch(publication models.Publication) bool {
+func CanBeSearch(publication pub.Publication) bool {
 	var typePublication string
 
 	for _, key := range publication.Internal {
@@ -37,7 +37,7 @@ func CanBeSearch(publication models.Publication) bool {
 }
 
 // Search TODO add doc
-func Search(publication models.Publication, query string) (models.SearchResults, error) {
+func Search(publication pub.Publication, query string) (pub.SearchResults, error) {
 	var typePublication string
 
 	for _, key := range publication.Internal {
@@ -54,11 +54,11 @@ func Search(publication models.Publication, query string) (models.SearchResults,
 		}
 	}
 
-	return models.SearchResults{}, errors.New("can't find searcher")
+	return pub.SearchResults{}, errors.New("can't find searcher")
 }
 
 // Index TODO add doc
-func Index(publication models.Publication) {
+func Index(publication pub.Publication) {
 	var typePublication string
 
 	for _, key := range publication.Internal {
