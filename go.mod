@@ -18,19 +18,19 @@ require (
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20200203212716-c811ad88dec4 // indirect
 	github.com/glycerine/go-unsnap-stream v0.0.0-20190901134440-81cf024a9e0a // indirect
-	github.com/golang/protobuf v1.3.5 // indirect
 	github.com/gorilla/mux v1.7.4
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/opds-community/libopds2-go v0.0.0-20170628075933-9c163cf60f6e
 	github.com/remyoudompheng/bigfft v0.0.0-20190728182440-6a916e37a237 // indirect
+	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/smartystreets/goconvey v1.6.4
+	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/viper v1.8.1
 	github.com/steveyen/gtreap v0.0.0-20150807155958-0abe01ef9be2 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/urfave/negroni v1.0.0
 	go.etcd.io/bbolt v1.3.3 // indirect
-	golang.org/x/net v0.0.0-20200301022130-244492dfa37a // indirect
-	golang.org/x/sys v0.0.0-20200317113312-5766fd39f98d // indirect
 )

@@ -1,0 +1,12 @@
+# Example of a local env config file, useful for development
+env-name = "local"
+sentry-dsn = "https://deadbeef@sentry.tld"
+cache-dsn = "local://not-yet-determined-scheme"
+origins = ["example.com", "localhost", "127.0.0.1"]
+log-level = "debug"
+bind-address = "localhost"
+bind-port = "15080"
+publication-path = "./publications"
+static-path = "./public"
+
+# log-file, log-format, log-level also available
