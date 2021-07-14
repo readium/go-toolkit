@@ -37,7 +37,7 @@ func main() {
 		Addr:           bind,
 		Handler:        s.Init(),
 	}
-	logrus.Printf("Starting HTTP Server listening at %q", server.Addr)
+	logrus.Printf("Starting HTTP Server listening at %q", "http://"+server.Addr)
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {
 		logrus.Printf("%v", err)
 	} else {
