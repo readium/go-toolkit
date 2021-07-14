@@ -28,7 +28,7 @@ type Config struct {
 }
 
 // NewConfig creates a Config instance
-func NewConfig() *Config {
+func NewConfig() Config {
 	cnf := Config{
 		EnvName:         "local",
 		BindAddr:        net.ParseIP("127.0.0.1"),
