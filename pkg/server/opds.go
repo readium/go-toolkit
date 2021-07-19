@@ -1,4 +1,4 @@
-package r2go
+package server
 
 import (
 	"github.com/jinzhu/copier"

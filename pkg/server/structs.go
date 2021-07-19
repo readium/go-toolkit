@@ -1,4 +1,4 @@
-package r2go
+package server
 
 import (
 	"time"
@@ -7,7 +7,7 @@ import (
 	"github.com/readium/r2-streamer-go/pkg/pub"
 )
 
-type R2GoConfig struct {
+type ServerConfig struct {
 	Bind      string   // The address to listen on
 	Origins   []string // The CORS origins allowed (not yet implemented)
 	SentryDSN string   // Sentry DSN (not yet implemented)

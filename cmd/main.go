@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	streamer "github.com/readium/r2-streamer-go"
 	"github.com/readium/r2-streamer-go/internal/config"
 	"github.com/readium/r2-streamer-go/internal/logging"
+	"github.com/readium/r2-streamer-go/pkg/server"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -20,7 +20,7 @@ func init() {
 
 func main() {
 	bind := fmt.Sprintf("%s:%d", viper.GetString("bind-address"), viper.GetInt("bind-port"))
-	conf := streamer.R2GoConfig{
+	conf := server.ServerConfig{
 		Bind:            bind,
 		Origins:         viper.GetStringSlice("origins"),
 		PublicationPath: viper.GetString("publication-path"),
@@ -28,7 +28,7 @@ func main() {
 		SentryDSN:       viper.GetString("sentry-dsn"),
 		CacheDSN:        viper.GetString("cache-dsn"),
 	}
-	s := streamer.NewR2GoServer(conf)
+	s := server.NewR2GoServer(conf)
 
 	server := &http.Server{
 		ReadTimeout:    10 * time.Second,

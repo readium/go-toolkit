@@ -43,7 +43,7 @@ func NewConfig() Config {
 		LogFormat: "text",
 		LogLevel:  "info",
 	}
-	return &cnf
+	return cnf
 }
 
 // InDev determines whether the server is being run in a dev env

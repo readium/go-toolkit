@@ -1,4 +1,4 @@
-package r2go
+package server
 
 import (
 	"bytes"
@@ -24,13 +24,13 @@ import (
 )
 
 type R2GoServer struct {
-	config          R2GoConfig
+	config          ServerConfig
 	currentBookList []currentBook
 	zipMutex        sync.Mutex
 	feed            *opds2.Feed
 }
 
-func NewR2GoServer(config R2GoConfig) *R2GoServer {
+func NewR2GoServer(config ServerConfig) *R2GoServer {
 	return &R2GoServer{
 		config: config,
 		feed:   new(opds2.Feed),
