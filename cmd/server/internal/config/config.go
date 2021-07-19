@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/readium/r2-streamer-go/internal/consts"
+	"github.com/readium/r2-streamer-go/cmd/server/internal/consts"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
