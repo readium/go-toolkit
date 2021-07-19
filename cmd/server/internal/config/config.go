@@ -107,6 +107,7 @@ func (cnf *Config) BindFlags() {
 	viper.SetConfigName(configName)
 	viper.SetConfigType("toml")
 	viper.AddConfigPath("./configs")
+	viper.AddConfigPath("./cmd/server/configs")
 	viper.AddConfigPath("/configs")
 	viper.AddConfigPath("/etc/" + consts.APP_ACRONYM)
 
