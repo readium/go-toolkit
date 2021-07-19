@@ -23,21 +23,21 @@ import (
 	"github.com/urfave/negroni"
 )
 
-type R2GoServer struct {
+type PublicationServer struct {
 	config          ServerConfig
 	currentBookList []currentBook
 	zipMutex        sync.Mutex
 	feed            *opds2.Feed
 }
 
-func NewR2GoServer(config ServerConfig) *R2GoServer {
-	return &R2GoServer{
+func NewPublicationServer(config ServerConfig) *PublicationServer {
+	return &PublicationServer{
 		config: config,
 		feed:   new(opds2.Feed),
 	}
 }
 
-func (s *R2GoServer) Init() http.Handler {
+func (s *PublicationServer) Init() http.Handler {
 	go s.createOPDSFeed()
 
 	n := negroni.Classic()
@@ -46,7 +46,7 @@ func (s *R2GoServer) Init() http.Handler {
 	return n
 }
 
-func (s *R2GoServer) bookHandler(test bool) http.Handler {
+func (s *PublicationServer) bookHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
 	serv.HandleFunc("/{filename}/manifest.json", s.getManifest)
@@ -60,7 +60,7 @@ func (s *R2GoServer) bookHandler(test bool) http.Handler {
 	return serv
 }
 
-func (s *R2GoServer) getManifest(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) getManifest(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	filename := vars["filename"]
 
@@ -102,7 +102,7 @@ func (s *R2GoServer) getManifest(w http.ResponseWriter, req *http.Request) {
 	identJSON.WriteTo(w)
 }
 
-func (s *R2GoServer) getAsset(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) getAsset(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	assetname := vars["asset"]
 
@@ -128,7 +128,7 @@ func (s *R2GoServer) getAsset(w http.ResponseWriter, req *http.Request) {
 	http.ServeContent(w, req, assetname, time.Time{}, epubReader)
 }
 
-func (s *R2GoServer) search(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) search(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
 	vars := mux.Vars(req)
 
@@ -150,7 +150,7 @@ func (s *R2GoServer) search(w http.ResponseWriter, req *http.Request) {
 	returnJSON.WriteTo(w)
 }
 
-func (s *R2GoServer) getLCPLicense(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) getLCPLicense(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
 	publication, err := s.getPublication(vars["filename"], req)
@@ -168,7 +168,7 @@ func (s *R2GoServer) getLCPLicense(w http.ResponseWriter, req *http.Request) {
 	w.Write(data)
 }
 
-func (s *R2GoServer) pushPassphrase(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) pushPassphrase(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
 	publication, err := s.getPublication(vars["filename"], req)
@@ -216,7 +216,7 @@ func (s *R2GoServer) pushPassphrase(w http.ResponseWriter, req *http.Request) {
 	identJSON.WriteTo(w)
 }
 
-func (s *R2GoServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
 	var media []pub.MediaOverlayNode
 
@@ -246,7 +246,7 @@ func (s *R2GoServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	returnJSON.WriteTo(w)
 }
 
-func (s *R2GoServer) getPublication(filename string, req *http.Request) (*pub.Publication, error) {
+func (s *PublicationServer) getPublication(filename string, req *http.Request) (*pub.Publication, error) {
 	var current currentBook
 
 	for _, book := range s.currentBookList {
@@ -291,7 +291,7 @@ func (s *R2GoServer) getPublication(filename string, req *http.Request) (*pub.Pu
 	// }
 }
 
-func (s *R2GoServer) updatePublication(publicaton pub.Publication, filename string) {
+func (s *PublicationServer) updatePublication(publicaton pub.Publication, filename string) {
 	for i, book := range s.currentBookList {
 		if filename == book.filename {
 			s.currentBookList[i].publication = publicaton
@@ -300,7 +300,7 @@ func (s *R2GoServer) updatePublication(publicaton pub.Publication, filename stri
 
 }
 
-func (s *R2GoServer) createOPDSFeed() {
+func (s *PublicationServer) createOPDSFeed() {
 	t := time.Now()
 	println(s.config.PublicationPath)
 	files, err := ioutil.ReadDir(s.config.PublicationPath)
@@ -330,7 +330,7 @@ func (s *R2GoServer) createOPDSFeed() {
 	}
 }
 
-func (s *R2GoServer) opdsFeedHandler(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) opdsFeedHandler(w http.ResponseWriter, req *http.Request) {
 	j, _ := json.Marshal(s.feed)
 
 	var identJSON bytes.Buffer

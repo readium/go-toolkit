@@ -27,7 +27,7 @@ func main() {
 		SentryDSN:       viper.GetString("sentry-dsn"),
 		CacheDSN:        viper.GetString("cache-dsn"),
 	}
-	s := NewR2GoServer(conf)
+	s := NewPublicationServer(conf)
 
 	server := &http.Server{
 		ReadTimeout:    10 * time.Second,
