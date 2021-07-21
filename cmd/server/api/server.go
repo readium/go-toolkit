@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"bytes"
@@ -7,16 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"os"
+	"path"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/blevesearch/bleve"
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/copier"
 	"github.com/opds-community/libopds2-go/opds2"
 	"github.com/readium/r2-streamer-go/pkg/decoder/lcp"
 	"github.com/readium/r2-streamer-go/pkg/fetcher"
@@ -26,86 +23,48 @@ import (
 	"github.com/urfave/negroni"
 )
 
-type currentBook struct {
-	filename    string
-	publication pub.Publication
-	timestamp   time.Time
-	bleveIndex  bleve.Index
-	indexed     bool
+type PublicationServer struct {
+	config          ServerConfig
+	currentBookList []currentBook
+	zipMutex        sync.Mutex
+	feed            *opds2.Feed
 }
 
-var currentBookList []currentBook
-var zipMutex sync.Mutex
-var feed opds2.Feed
+func NewPublicationServer(config ServerConfig) *PublicationServer {
+	return &PublicationServer{
+		config: config,
+		feed:   new(opds2.Feed),
+	}
+}
 
-// Serv TODO add doc
-func main() {
-
-	// if len(os.Args) < 2 {
-	// 	fmt.Println("missing filename")
-	// 	os.Exit(1)
-	// }
-	//
-	// filename := os.Args[1]
-
-	go createOPDSFeed()
+func (s *PublicationServer) Init() http.Handler {
+	go s.createOPDSFeed()
 
 	n := negroni.Classic()
-	n.Use(negroni.NewStatic(http.Dir("public")))
-	n.UseHandler(bookHandler(false))
-
-	// addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// l, err := net.ListenTCP("tcp", addr)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	//
-	// freePort := l.Addr().(*net.TCPAddr).Port
-	// l.Close()
-
-	s := &http.Server{
-		Handler:        n,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-		//		Addr:           "localhost:" + strconv.Itoa(freePort),
-		Addr: "localhost:8080",
-	}
-
-	// filenamePath := base64.StdEncoding.EncodeToString([]byte(filename))
-	//fmt.Println("http://localhost:" + strconv.Itoa(freePort) + "/" + filenamePath + "/manifest.json")
-	// fmt.Println("http://localhost:8080/" + filenamePath + "/manifest.json")
-
-	if len(os.Args) > 1 {
-		filenamePath := base64.StdEncoding.EncodeToString([]byte(os.Args[1]))
-		fmt.Println("http://localhost:8080/" + filenamePath + "/manifest.json")
-	}
-
-	log.Fatal(s.ListenAndServe())
+	n.Use(negroni.NewStatic(http.Dir(s.config.StaticPath)))
+	n.UseHandler(s.bookHandler(false))
+	return n
 }
 
-func bookHandler(test bool) http.Handler {
+func (s *PublicationServer) bookHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
-	serv.HandleFunc("/{filename}/manifest.json", getManifest)
-	serv.HandleFunc("/{filename}/license-handler.json", pushPassphrase)
-	serv.HandleFunc("/{filename}/license.lcpl", getLCPLicense)
-	serv.HandleFunc("/{filename}/search", search)
-	serv.HandleFunc("/{filename}/media-overlay", mediaOverlay)
-	serv.HandleFunc("/{filename}/{asset:.*}", getAsset)
-	serv.HandleFunc("/publications.json", opdsFeedHandler)
+	serv.HandleFunc("/{filename}/manifest.json", s.getManifest)
+	serv.HandleFunc("/{filename}/license-handler.json", s.pushPassphrase)
+	serv.HandleFunc("/{filename}/license.lcpl", s.getLCPLicense)
+	serv.HandleFunc("/{filename}/search", s.search)
+	serv.HandleFunc("/{filename}/media-overlay", s.mediaOverlay)
+	serv.HandleFunc("/{filename}/{asset:.*}", s.getAsset)
+	serv.HandleFunc("/publications.json", s.opdsFeedHandler)
 
 	return serv
 }
 
-func getManifest(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) getManifest(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	filename := vars["filename"]
 
-	publication, err := getPublication(filename, req)
+	publication, err := s.getPublication(filename, req)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(500)
@@ -118,7 +77,7 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 
 	json.Indent(&identJSON, j, "", " ")
 	w.Header().Set("Content-Type", "application/webpub+json; charset=utf-8")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
 
 	hashJSONRaw := sha256.Sum256(identJSON.Bytes())
 	hashJSON := base64.RawStdEncoding.EncodeToString(hashJSONRaw[:])
@@ -141,14 +100,13 @@ func getManifest(w http.ResponseWriter, req *http.Request) {
 	}
 
 	identJSON.WriteTo(w)
-	return
 }
 
-func getAsset(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) getAsset(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	assetname := vars["asset"]
 
-	publication, err := getPublication(vars["filename"], req)
+	publication, err := s.getPublication(vars["filename"], req)
 	if err != nil {
 		w.WriteHeader(500)
 		return
@@ -165,18 +123,16 @@ func getAsset(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", mediaType)
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
 	w.Header().Set("Cache-Control", "public,max-age=86400")
 	http.ServeContent(w, req, assetname, time.Time{}, epubReader)
-	return
-
 }
 
-func search(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) search(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
 	vars := mux.Vars(req)
 
-	publication, err := getPublication(vars["filename"], req)
+	publication, err := s.getPublication(vars["filename"], req)
 	if err != nil {
 		w.WriteHeader(500)
 		return
@@ -194,10 +150,10 @@ func search(w http.ResponseWriter, req *http.Request) {
 	returnJSON.WriteTo(w)
 }
 
-func getLCPLicense(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) getLCPLicense(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	publication, err := getPublication(vars["filename"], req)
+	publication, err := s.getPublication(vars["filename"], req)
 	if err != nil {
 		w.WriteHeader(500)
 		return
@@ -212,10 +168,10 @@ func getLCPLicense(w http.ResponseWriter, req *http.Request) {
 	w.Write(data)
 }
 
-func pushPassphrase(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) pushPassphrase(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	publication, err := getPublication(vars["filename"], req)
+	publication, err := s.getPublication(vars["filename"], req)
 	if err != nil {
 		w.WriteHeader(500)
 		return
@@ -241,11 +197,11 @@ func pushPassphrase(w http.ResponseWriter, req *http.Request) {
 			} else {
 				key, _ := base64.StdEncoding.DecodeString(postInfo.Key.Hash)
 				publication.AddLCPHash(key)
-				if lcp.HasGoodKey(publication) == false {
+				if !lcp.HasGoodKey(publication) {
 					w.WriteHeader(401)
 				} else {
 					data.Key.Ready = true
-					updatePublication(*publication, vars["filename"])
+					s.updatePublication(*publication, vars["filename"])
 				}
 			}
 		}
@@ -256,12 +212,11 @@ func pushPassphrase(w http.ResponseWriter, req *http.Request) {
 	var identJSON bytes.Buffer
 	json.Indent(&identJSON, j, "", " ")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
 	identJSON.WriteTo(w)
-	return
 }
 
-func mediaOverlay(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
 	var media []pub.MediaOverlayNode
 
@@ -270,7 +225,7 @@ func mediaOverlay(w http.ResponseWriter, req *http.Request) {
 		MediaOverlay []pub.MediaOverlayNode `json:"media-overlay"`
 	}
 
-	publication, err := getPublication(vars["filename"], req)
+	publication, err := s.getPublication(vars["filename"], req)
 	if err != nil {
 		w.WriteHeader(500)
 		return
@@ -291,10 +246,10 @@ func mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	returnJSON.WriteTo(w)
 }
 
-func getPublication(filename string, req *http.Request) (*pub.Publication, error) {
+func (s *PublicationServer) getPublication(filename string, req *http.Request) (*pub.Publication, error) {
 	var current currentBook
 
-	for _, book := range currentBookList {
+	for _, book := range s.currentBookList {
 		if filename == book.filename {
 			current = book
 		}
@@ -324,7 +279,7 @@ func getPublication(filename string, req *http.Request) (*pub.Publication, error
 			publication.AddLink("", []string{"search"}, "http://"+req.Host+"/"+filename+"/search?query={searchTerms}", true)
 		}
 		current = currentBook{filename: filename, publication: publication, timestamp: time.Now(), indexed: false}
-		currentBookList = append(currentBookList, current)
+		s.currentBookList = append(s.currentBookList, current)
 		// if searcher.CanBeSearch(publication) {
 		// 	go indexBook(publication)
 		// }
@@ -336,79 +291,53 @@ func getPublication(filename string, req *http.Request) (*pub.Publication, error
 	// }
 }
 
-func updatePublication(publicaton pub.Publication, filename string) {
-	for i, book := range currentBookList {
+func (s *PublicationServer) updatePublication(publicaton pub.Publication, filename string) {
+	for i, book := range s.currentBookList {
 		if filename == book.filename {
-			currentBookList[i].publication = publicaton
+			s.currentBookList[i].publication = publicaton
 		}
 	}
 
 }
 
-// func indexBook(publication pub.Publication) {
-// 	searcher.Index(publication)
-// }
-
-func createOPDSFeed() {
-
+func (s *PublicationServer) createOPDSFeed() {
 	t := time.Now()
-	files, err := ioutil.ReadDir("publication")
+	println(s.config.PublicationPath)
+	files, err := ioutil.ReadDir(s.config.PublicationPath)
 	if err != nil {
 		return
 	}
 	for _, f := range files {
-		pub, errParse := parser.Parse("publication/" + f.Name())
+		pubPath := path.Join(s.config.PublicationPath, f.Name())
+		pub, errParse := parser.Parse(pubPath)
 		if errParse == nil {
-			filename := base64.StdEncoding.EncodeToString([]byte("publication/" + f.Name()))
-			baseURL := "http://localhost:8080/" + filename + "/"
-			AddPublicationToFeed(&feed, pub, baseURL)
+			filename := base64.StdEncoding.EncodeToString([]byte(pubPath))
+			baseURL := "http://" + s.config.Bind + "/" + filename + "/" // TODO remove hardcoded scheme
+			AddPublicationToFeed(s.feed, pub, baseURL)
 		}
 	}
-	if len(feed.Publications) > 0 {
-		feed.Context = []string{"http://opds-spec.org/opds.jsonld"}
+	if len(s.feed.Publications) > 0 {
+		s.feed.Context = []string{"http://opds-spec.org/opds.jsonld"}
 		l := opds2.Link{}
-		l.Href = "http://localhost:8080/publications.json"
+		l.Href = "http://" + s.config.Bind + "/publications.json" // TODO remove hardcoded scheme
 		l.Rel = []string{"self"}
 		l.TypeLink = "application/opds+json"
-		feed.Links = append(feed.Links, l)
-		feed.Metadata.Modified = &t
-		feed.Metadata.RDFType = "http://schema.org/DataFeed"
-		feed.Metadata.NumberOfItems = len(feed.Publications)
-		feed.Metadata.Title = "Readium 2 OPDS 2.0 Feed"
+		s.feed.Links = append(s.feed.Links, l)
+		s.feed.Metadata.Modified = &t
+		s.feed.Metadata.RDFType = "http://schema.org/DataFeed"
+		s.feed.Metadata.NumberOfItems = len(s.feed.Publications)
+		s.feed.Metadata.Title = "Readium 2 OPDS 2.0 Feed"
 	}
-
 }
 
-// AddPublicationToFeed filter publication fields and add it to the feed
-func AddPublicationToFeed(feed *opds2.Feed, publication pub.Publication, baseURL string) {
-	var pub opds2.Publication
-	var coverLink opds2.Link
-
-	copier.Copy(&pub, publication)
-	l := opds2.Link{}
-	l.Rel = []string{"self"}
-	l.Href = baseURL + "manifest.json"
-	l.TypeLink = "application/webpub+json"
-	pub.Links = append(pub.Links, l)
-	img, err := publication.GetCover()
-	if img.Href != "" && err == nil {
-		img.Href = baseURL + img.Href
-		copier.Copy(&coverLink, img)
-		pub.Images = append(pub.Images, coverLink)
-	}
-
-	feed.Publications = append(feed.Publications, pub)
-}
-
-func opdsFeedHandler(w http.ResponseWriter, req *http.Request) {
-
-	j, _ := json.Marshal(feed)
+func (s *PublicationServer) opdsFeedHandler(w http.ResponseWriter, req *http.Request) {
+	j, _ := json.Marshal(s.feed)
 
 	var identJSON bytes.Buffer
 
 	json.Indent(&identJSON, j, "", " ")
 	w.Header().Set("Content-Type", "application/opds+json; charset=utf-8")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
 
 	hashJSONRaw := sha256.Sum256(identJSON.Bytes())
 	hashJSON := base64.RawStdEncoding.EncodeToString(hashJSONRaw[:])
@@ -422,5 +351,4 @@ func opdsFeedHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Etag", hashJSON)
 
 	identJSON.WriteTo(w)
-	return
 }
