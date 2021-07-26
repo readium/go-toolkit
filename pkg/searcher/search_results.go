@@ -1,4 +1,4 @@
-package pub
+package searcher
 
 type SearchResults struct {
 	Query        string         `json:"query"`
@@ -15,6 +15,7 @@ type SearchResult struct {
 	Locators   Locator `json:"locators"`
 }
 
+// TODO remove
 type Locator struct {
 	Cfi      string  `json:"cfi,omitempty"`
 	Xpath    string  `json:"xpath,omitempty"`
