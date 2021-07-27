@@ -9,14 +9,14 @@ import (
 // List TODO add doc
 type List struct {
 	publicationType string
-	searcher        (func(pub.Publication, string) (pub.SearchResults, error))
-	indexer         (func(pub.Publication))
+	searcher        (func(pub.Manifest, string) (SearchResults, error))
+	indexer         (func(pub.Manifest))
 }
 
 var searcherList []List
 
 // CanBeSearch check if the publication type has a search interface
-func CanBeSearch(publication pub.Publication) bool {
+func CanBeSearch(publication pub.Manifest) bool {
 	var typePublication string
 
 	for _, key := range publication.Internal {
@@ -37,7 +37,7 @@ func CanBeSearch(publication pub.Publication) bool {
 }
 
 // Search TODO add doc
-func Search(publication pub.Publication, query string) (pub.SearchResults, error) {
+func Search(publication pub.Manifest, query string) (SearchResults, error) {
 	var typePublication string
 
 	for _, key := range publication.Internal {
@@ -54,11 +54,11 @@ func Search(publication pub.Publication, query string) (pub.SearchResults, error
 		}
 	}
 
-	return pub.SearchResults{}, errors.New("can't find searcher")
+	return SearchResults{}, errors.New("can't find searcher")
 }
 
 // Index TODO add doc
-func Index(publication pub.Publication) {
+func Index(publication pub.Manifest) {
 	var typePublication string
 
 	for _, key := range publication.Internal {

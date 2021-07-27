@@ -7,7 +7,7 @@ import (
 )
 
 // AddPublicationToFeed filter publication fields and add it to the feed
-func AddPublicationToFeed(feed *opds2.Feed, publication pub.Publication, baseURL string) {
+func AddPublicationToFeed(feed *opds2.Feed, publication pub.Manifest, baseURL string) {
 	var pub opds2.Publication
 	var coverLink opds2.Link
 

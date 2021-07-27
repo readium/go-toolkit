@@ -8,8 +8,8 @@ import (
 	"github.com/readium/r2-streamer-go/pkg/parser/epub"
 )
 
-// Publication Main structure for a publication
-type Publication struct {
+// Manifest Main structure for a publication
+type Manifest struct {
 	Context      []string `json:"@context,omitempty"`
 	Metadata     Metadata `json:"metadata"`
 	Links        []Link   `json:"links"`
@@ -23,10 +23,9 @@ type Publication struct {
 	LOV          []Link   `json:"lov,omitempty"` //List of videos
 	LOT          []Link   `json:"lot,omitempty"` //List of tables
 
-	OtherLinks       []Link                  `json:"-"` //Extension point for links that shouldn't show up in the manifest
-	OtherCollections []PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
-	Internal         []Internal              `json:"-"`
-	LCP              epub.LCP                `json:"-"`
+	Subcollections map[string][]PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
+	Internal       []Internal                         `json:"-"`
+	LCP            epub.LCP                           `json:"-"`
 }
 
 // Internal TODO
@@ -35,26 +34,10 @@ type Internal struct {
 	Value interface{}
 }
 
-// Link object used in collections and links
-type Link struct {
-	Href          string             `json:"href"`
-	TypeLink      string             `json:"type,omitempty"`
-	Rel           []string           `json:"rel,omitempty"`
-	Height        int                `json:"height,omitempty"`
-	Width         int                `json:"width,omitempty"`
-	Title         string             `json:"title,omitempty"`
-	Properties    *Properties        `json:"properties,omitempty"`
-	Duration      string             `json:"duration,omitempty"`
-	Templated     bool               `json:"templated,omitempty"`
-	Children      []Link             `json:"children,omitempty"`
-	Bitrate       int                `json:"bitrate,omitempty"`
-	MediaOverlays []MediaOverlayNode `json:"-"`
-}
-
 // PublicationCollection is used as an extension points for other collections in a Publication
 type PublicationCollection struct {
 	Role     string
-	Metadata []Meta
+	Metadata map[string]interface{}
 	Links    []Link
 	Children []PublicationCollection
 }
@@ -86,18 +69,18 @@ type LCPHandlerPost struct {
 }
 
 // GetCover return the link for the cover
-func (publication *Publication) GetCover() (Link, error) {
+func (publication *Manifest) GetCover() (Link, error) {
 	return publication.searchLinkByRel("cover")
 }
 
 // GetNavDoc return the link for the navigation document
-func (publication *Publication) GetNavDoc() (Link, error) {
+func (publication *Manifest) GetNavDoc() (Link, error) {
 	return publication.searchLinkByRel("contents")
 }
 
-func (publication *Publication) searchLinkByRel(rel string) (Link, error) {
+func (publication *Manifest) searchLinkByRel(rel string) (Link, error) {
 	for _, resource := range publication.Resources {
-		for _, resRel := range resource.Rel {
+		for _, resRel := range resource.Rels {
 			if resRel == rel {
 				return resource, nil
 			}
@@ -105,7 +88,7 @@ func (publication *Publication) searchLinkByRel(rel string) (Link, error) {
 	}
 
 	for _, item := range publication.ReadingOrder {
-		for _, spineRel := range item.Rel {
+		for _, spineRel := range item.Rels {
 			if spineRel == rel {
 				return item, nil
 			}
@@ -113,7 +96,7 @@ func (publication *Publication) searchLinkByRel(rel string) (Link, error) {
 	}
 
 	for _, link := range publication.Links {
-		for _, linkRel := range link.Rel {
+		for _, linkRel := range link.Rels {
 			if linkRel == rel {
 				return link, nil
 			}
@@ -124,13 +107,13 @@ func (publication *Publication) searchLinkByRel(rel string) (Link, error) {
 }
 
 // AddLink Add link in publication link self or search
-func (publication *Publication) AddLink(typeLink string, rel []string, url string, templated bool) {
+func (publication *Manifest) AddLink(typeLink string, rel []string, url string, templated bool) {
 	link := Link{
-		Href:     url,
-		TypeLink: typeLink,
+		Href: url,
+		Type: typeLink,
 	}
 	if len(rel) > 0 {
-		link.Rel = rel
+		link.Rels = rel
 	}
 
 	if templated == true {
@@ -140,49 +123,17 @@ func (publication *Publication) AddLink(typeLink string, rel []string, url strin
 	publication.Links = append(publication.Links, link)
 }
 
-// FindAllMediaOverlay return all media overlay structure from struct
-func (publication *Publication) FindAllMediaOverlay() []MediaOverlayNode {
-	var overlay []MediaOverlayNode
-
-	for _, l := range publication.ReadingOrder {
-		if len(l.MediaOverlays) > 0 {
-			for _, ov := range l.MediaOverlays {
-				overlay = append(overlay, ov)
-			}
-		}
-	}
-
-	return overlay
-}
-
-// FindMediaOverlayByHref search in media overlay structure for url that match
-func (publication *Publication) FindMediaOverlayByHref(href string) []MediaOverlayNode {
-	var overlay []MediaOverlayNode
-
-	for _, l := range publication.ReadingOrder {
-		if strings.Contains(l.Href, href) {
-			if len(l.MediaOverlays) > 0 {
-				for _, ov := range l.MediaOverlays {
-					overlay = append(overlay, ov)
-				}
-			}
-		}
-	}
-
-	return overlay
-}
-
 // AddLCPPassphrase function to add internal metadata for decrypting LCP resources
-func (publication *Publication) AddLCPPassphrase(passphrase string) {
+func (publication *Manifest) AddLCPPassphrase(passphrase string) {
 	publication.Internal = append(publication.Internal, Internal{Name: "lcp_passphrase", Value: passphrase})
 }
 
 // AddLCPHash function to add internal metadata for decrypting LCP resources
-func (publication *Publication) AddLCPHash(token []byte) {
+func (publication *Manifest) AddLCPHash(token []byte) {
 	publication.AddToInternal("lcp_hash_passphrase", token)
 }
 
-func (publication *Publication) findFromInternal(key string) Internal {
+func (publication *Manifest) findFromInternal(key string) Internal {
 	for _, data := range publication.Internal {
 		if data.Name == key {
 			return data
@@ -192,7 +143,7 @@ func (publication *Publication) findFromInternal(key string) Internal {
 }
 
 // GetStringFromInternal get data store in internal struct in string
-func (publication *Publication) GetStringFromInternal(key string) string {
+func (publication *Manifest) GetStringFromInternal(key string) string {
 
 	data := publication.findFromInternal(key)
 	if data.Name != "" {
@@ -202,7 +153,7 @@ func (publication *Publication) GetStringFromInternal(key string) string {
 }
 
 // GetBytesFromInternal get data store in internal structure in byte
-func (publication *Publication) GetBytesFromInternal(key string) []byte {
+func (publication *Manifest) GetBytesFromInternal(key string) []byte {
 
 	data := publication.findFromInternal(key)
 	if data.Name != "" {
@@ -212,20 +163,20 @@ func (publication *Publication) GetBytesFromInternal(key string) []byte {
 }
 
 // AddToInternal push data to internal struct in publication
-func (publication *Publication) AddToInternal(key string, value interface{}) {
+func (publication *Manifest) AddToInternal(key string, value interface{}) {
 	publication.Internal = append(publication.Internal, Internal{Name: key, Value: value})
 }
 
 // GetLCPJSON return the raw lcp license json from META-INF/license.lcpl
 // if the data is present else return emtpy string
-func (publication *Publication) GetLCPJSON() []byte {
+func (publication *Manifest) GetLCPJSON() []byte {
 	data := publication.GetBytesFromInternal("lcpl")
 
 	return data
 }
 
 // GetLCPHandlerInfo return the lcp handler struct for marshalling
-func (publication *Publication) GetLCPHandlerInfo() (LCPHandler, error) {
+func (publication *Manifest) GetLCPHandlerInfo() (LCPHandler, error) {
 	var info LCPHandler
 
 	if publication.LCP.ID != "" {
@@ -248,14 +199,14 @@ func (publication *Publication) GetLCPHandlerInfo() (LCPHandler, error) {
 
 // GetPreFetchResources select resources that match media type we want to
 // prefetch with the manifest
-func (publication *Publication) GetPreFetchResources() []Link {
+func (publication *Manifest) GetPreFetchResources() []Link {
 	var resources []Link
 
 	mediaTypes := []string{"text/css", "application/vnd.ms-opentype", "text/javascript"}
 
 	for _, l := range publication.Resources {
 		for _, m := range mediaTypes {
-			if l.TypeLink == m {
+			if l.Type == m {
 				resources = append(resources, l)
 			}
 		}
@@ -268,14 +219,14 @@ func (publication *Publication) GetPreFetchResources() []Link {
 func (link *Link) AddRel(rel string) {
 	relAlreadyPresent := false
 
-	for _, r := range link.Rel {
+	for _, r := range link.Rels {
 		if r == rel {
 			relAlreadyPresent = true
 		}
 	}
 
 	if relAlreadyPresent == false {
-		link.Rel = append(link.Rel, rel)
+		link.Rels = append(link.Rels, rel)
 	}
 }
 
@@ -286,7 +237,7 @@ func (link *Link) AddHrefAbsolute(href string, baseFile string) {
 }
 
 //TransformLinkToFullURL concatenate a base url to all links
-func (publication *Publication) TransformLinkToFullURL(baseURL string) {
+func (publication *Manifest) TransformLinkToFullURL(baseURL string) {
 
 	for i := range publication.ReadingOrder {
 		if !(strings.Contains(publication.ReadingOrder[i].Href, "http://") || strings.Contains(publication.ReadingOrder[i].Href, "https://")) {

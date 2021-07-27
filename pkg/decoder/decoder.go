@@ -14,16 +14,16 @@ const missingOrBadKey = "missing or bad key"
 type List struct {
 	decoderAlgorithm string
 	decoderScheme    string // only for lcp or other encrypted resource
-	decoder          (func(*pub.Publication, pub.Link, io.ReadSeeker) (io.ReadSeeker, error))
+	decoder          (func(*pub.Manifest, pub.Link, io.ReadSeeker) (io.ReadSeeker, error))
 }
 
 var decoderList []List
 
 // Decode decode the ressource
-func Decode(publication *pub.Publication, link pub.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
+func Decode(publication *pub.Manifest, link pub.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
 
 	for _, decoderFunc := range decoderList {
-		if link.Properties != nil && link.Properties.Encrypted != nil && link.Properties.Encrypted.Algorithm == decoderFunc.decoderAlgorithm && decoderFunc.decoderScheme == link.Properties.Encrypted.Scheme {
+		if link.Properties != nil && link.Properties.Encryption != nil && link.Properties.Encryption.Algorithm == decoderFunc.decoderAlgorithm && decoderFunc.decoderScheme == link.Properties.Encryption.Scheme {
 			return decoderFunc.decoder(publication, link, reader)
 		}
 	}
@@ -32,9 +32,9 @@ func Decode(publication *pub.Publication, link pub.Link, reader io.ReadSeeker) (
 }
 
 // NeedToDecode check if there a decoder for this resource
-func NeedToDecode(publication *pub.Publication, link pub.Link) bool {
+func NeedToDecode(publication *pub.Manifest, link pub.Link) bool {
 	for _, decoderFunc := range decoderList {
-		if link.Properties != nil && link.Properties.Encrypted != nil && link.Properties.Encrypted.Algorithm == decoderFunc.decoderAlgorithm && decoderFunc.decoderScheme == link.Properties.Encrypted.Scheme {
+		if link.Properties != nil && link.Properties.Encryption != nil && link.Properties.Encryption.Algorithm == decoderFunc.decoderAlgorithm && decoderFunc.decoderScheme == link.Properties.Encryption.Scheme {
 			return true
 		}
 	}

@@ -12,14 +12,14 @@ import (
 )
 
 // DecryptData decrypt data from the stream
-func DecryptData(publication *pub.Publication, link pub.Link, reader io.ReadSeeker) (bytes.Buffer, error) {
+func DecryptData(publication *pub.Manifest, link pub.Link, reader io.ReadSeeker) (bytes.Buffer, error) {
 	var cipherRes bytes.Buffer
 	var cipherContentKey bytes.Buffer
 
 	contentKey := publication.GetBytesFromInternal("lcp_content_key")
 	hashPassphrase := publication.GetBytesFromInternal("lcp_hash_passphrase")
 
-	if link.Properties.Encrypted.Algorithm == "http://www.w3.org/2001/04/xmlenc#aes256-cbc" {
+	if link.Properties.Encryption.Algorithm == "http://www.w3.org/2001/04/xmlenc#aes256-cbc" {
 
 		contentKeyReader := bytes.NewBuffer(contentKey)
 		err := decryptAESCBC(hashPassphrase, contentKeyReader, &cipherContentKey)

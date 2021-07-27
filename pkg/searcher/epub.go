@@ -11,7 +11,7 @@ func init() {
 }
 
 // FetchEpub TODO add doc
-func searchEpub(publication pub.Publication, searchTerm string) (pub.SearchResults, error) {
+func searchEpub(publication pub.Manifest, searchTerm string) (SearchResults, error) {
 	// var bleveIndex bleve.Index
 	// var bleveIndexFile string
 	// var err error
@@ -52,10 +52,10 @@ func searchEpub(publication pub.Publication, searchTerm string) (pub.SearchResul
 	//
 	// 	return searchReturn, nil
 	// }
-	return pub.SearchResults{}, errors.New("can't find results")
+	return SearchResults{}, errors.New("can't find results")
 }
 
-func indexEpub(publication pub.Publication) {
+func indexEpub(publication pub.Manifest) {
 	// var err error
 	// var bleveIndexFile string
 	// var bleveIndex bleve.Index

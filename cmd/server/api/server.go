@@ -53,7 +53,7 @@ func (s *PublicationServer) bookHandler(test bool) http.Handler {
 	serv.HandleFunc("/{filename}/license-handler.json", s.pushPassphrase)
 	serv.HandleFunc("/{filename}/license.lcpl", s.getLCPLicense)
 	serv.HandleFunc("/{filename}/search", s.search)
-	serv.HandleFunc("/{filename}/media-overlay", s.mediaOverlay)
+	// serv.HandleFunc("/{filename}/media-overlay", s.mediaOverlay)
 	serv.HandleFunc("/{filename}/{asset:.*}", s.getAsset)
 	serv.HandleFunc("/publications.json", s.opdsFeedHandler)
 
@@ -216,7 +216,7 @@ func (s *PublicationServer) pushPassphrase(w http.ResponseWriter, req *http.Requ
 	identJSON.WriteTo(w)
 }
 
-func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {
+/*func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
 	var media []pub.MediaOverlayNode
 
@@ -244,9 +244,9 @@ func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Reques
 	json.Indent(&returnJSON, j, "", "  ")
 	w.Header().Set("Content-Type", "application/vnd.readium.mo+json")
 	returnJSON.WriteTo(w)
-}
+}*/
 
-func (s *PublicationServer) getPublication(filename string, req *http.Request) (*pub.Publication, error) {
+func (s *PublicationServer) getPublication(filename string, req *http.Request) (*pub.Manifest, error) {
 	var current currentBook
 
 	for _, book := range s.currentBookList {
@@ -268,7 +268,7 @@ func (s *PublicationServer) getPublication(filename string, req *http.Request) (
 		}
 
 		if err != nil {
-			return &pub.Publication{}, err
+			return &pub.Manifest{}, err
 		}
 
 		publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
@@ -291,7 +291,7 @@ func (s *PublicationServer) getPublication(filename string, req *http.Request) (
 	// }
 }
 
-func (s *PublicationServer) updatePublication(publicaton pub.Publication, filename string) {
+func (s *PublicationServer) updatePublication(publicaton pub.Manifest, filename string) {
 	for i, book := range s.currentBookList {
 		if filename == book.filename {
 			s.currentBookList[i].publication = publicaton

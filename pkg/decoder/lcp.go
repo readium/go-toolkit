@@ -16,7 +16,7 @@ func init() {
 }
 
 // DecodeLCP decode lcp encrypted file
-func DecodeLCP(publication *pub.Publication, link pub.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
+func DecodeLCP(publication *pub.Manifest, link pub.Link, reader io.ReadSeeker) (io.ReadSeeker, error) {
 
 	if lcp.HasGoodKey(publication) == false {
 		return nil, errors.New(missingOrBadKey)
@@ -27,7 +27,7 @@ func DecodeLCP(publication *pub.Publication, link pub.Link, reader io.ReadSeeker
 		return nil, errDec
 	}
 
-	if link.Properties.Encrypted.Compression == "deflate" {
+	if link.Properties.Encryption.Compression == "deflate" {
 		flateReader := flate.NewReader(bytes.NewReader(cipherRes.Bytes()))
 		buff, _ := ioutil.ReadAll(flateReader)
 		flateReader.Close()

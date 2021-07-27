@@ -19,7 +19,7 @@ type ServerConfig struct {
 
 type currentBook struct {
 	filename    string
-	publication pub.Publication
+	publication pub.Manifest
 	timestamp   time.Time
 	bleveIndex  bleve.Index
 	indexed     bool

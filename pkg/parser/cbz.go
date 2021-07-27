@@ -17,12 +17,12 @@ func init() {
 }
 
 // CbzParser TODO add doc
-func CbzParser(filePath string) (pub.Publication, error) {
-	var publication pub.Publication
+func CbzParser(filePath string) (pub.Manifest, error) {
+	var publication pub.Manifest
 
 	publication.Metadata.Identifier = filePath
 	publication.Context = append(publication.Context, "https://readium.org/webpub-manifest/context.jsonld")
-	publication.Metadata.RDFType = "http://schema.org/ComicIssue"
+	publication.Metadata.Type = "http://schema.org/ComicIssue"
 
 	zipReader, err := zip.OpenReader(filePath)
 	if err != nil {
@@ -34,9 +34,9 @@ func CbzParser(filePath string) (pub.Publication, error) {
 
 	for _, f := range zipReader.File {
 		linkItem := pub.Link{}
-		linkItem.TypeLink = getMediaTypeByName(f.Name)
+		linkItem.Type = getMediaTypeByName(f.Name)
 		linkItem.Href = f.Name
-		if linkItem.TypeLink != "" {
+		if linkItem.Type != "" {
 			publication.ReadingOrder = append(publication.ReadingOrder, linkItem)
 		}
 		if f.Name == "ComicInfo.xml" {
@@ -46,15 +46,15 @@ func CbzParser(filePath string) (pub.Publication, error) {
 		}
 	}
 
-	if publication.Metadata.Title.String() == "" {
-		publication.Metadata.Title.SingleString = filePathToTitle(filePath)
+	if publication.Metadata.Title() == "" {
+		publication.Metadata.LocalizedTitle.SingleString = filePathToTitle(filePath)
 	}
 
 	return publication, nil
 }
 
 // CbzCallback empty function to respect interface
-func CbzCallback(publication *pub.Publication) {
+func CbzCallback(publication *pub.Manifest) {
 
 }
 
@@ -81,37 +81,37 @@ func getMediaTypeByName(filePath string) string {
 	}
 }
 
-func comicRackMetadata(publication *pub.Publication, fd io.ReadCloser) {
+func comicRackMetadata(publication *pub.Manifest, fd io.ReadCloser) {
 
 	meta := comicrack.Parse(fd)
 	if meta.Writer != "" {
-		cont := pub.Contributor{Name: pub.MultiLanguage{SingleString: meta.Writer}}
-		publication.Metadata.Author = append(publication.Metadata.Author, cont)
+		cont := pub.Contributor{LocalizedName: pub.MultiLanguage{SingleString: meta.Writer}}
+		publication.Metadata.Authors = append(publication.Metadata.Authors, cont)
 	}
 	if meta.Penciller != "" {
-		cont := pub.Contributor{Name: pub.MultiLanguage{SingleString: meta.Writer}}
-		publication.Metadata.Penciler = append(publication.Metadata.Penciler, cont)
+		cont := pub.Contributor{LocalizedName: pub.MultiLanguage{SingleString: meta.Writer}}
+		publication.Metadata.Pencilers = append(publication.Metadata.Pencilers, cont)
 	}
 	if meta.Colorist != "" {
-		cont := pub.Contributor{Name: pub.MultiLanguage{SingleString: meta.Writer}}
-		publication.Metadata.Colorist = append(publication.Metadata.Colorist, cont)
+		cont := pub.Contributor{LocalizedName: pub.MultiLanguage{SingleString: meta.Writer}}
+		publication.Metadata.Colorists = append(publication.Metadata.Colorists, cont)
 	}
 	if meta.Inker != "" {
-		cont := pub.Contributor{Name: pub.MultiLanguage{SingleString: meta.Writer}}
-		publication.Metadata.Inker = append(publication.Metadata.Inker, cont)
+		cont := pub.Contributor{LocalizedName: pub.MultiLanguage{SingleString: meta.Writer}}
+		publication.Metadata.Inkers = append(publication.Metadata.Inkers, cont)
 	}
 
 	if meta.Title != "" {
-		publication.Metadata.Title.SingleString = meta.Title
+		publication.Metadata.LocalizedTitle.SingleString = meta.Title
 	}
 
-	if publication.Metadata.Title.String() == "" {
+	if publication.Metadata.Title() == "" {
 		if meta.Series != "" {
 			title := meta.Series
 			if meta.Number != 0 {
 				title = title + " - " + strconv.Itoa(meta.Number)
 			}
-			publication.Metadata.Title.SingleString = title
+			publication.Metadata.LocalizedTitle.SingleString = title
 		}
 	}
 

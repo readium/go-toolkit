@@ -17,7 +17,7 @@ func init() {
 }
 
 // FetchEpub TODO add doc
-func FetchEpub(publication *pub.Publication, publicationResource string) (io.ReadSeeker, string, error) {
+func FetchEpub(publication *pub.Manifest, publicationResource string) (io.ReadSeeker, string, error) {
 	var reader *zip.ReadCloser
 	var assetFd io.ReadCloser
 	var link pub.Link
@@ -64,8 +64,8 @@ func FetchEpub(publication *pub.Publication, publicationResource string) (io.Rea
 			fmt.Println(err)
 			return nil, "", err
 		}
-		return readerSeekerDecode, link.TypeLink, nil
+		return readerSeekerDecode, link.Type, nil
 	}
 
-	return readerSeeker, link.TypeLink, nil
+	return readerSeeker, link.Type, nil
 }

@@ -2,7 +2,6 @@ package parser
 
 import (
 	"encoding/base64"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"path"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/readium/r2-streamer-go/pkg/fetcher"
 	"github.com/readium/r2-streamer-go/pkg/parser/epub"
 	"github.com/readium/r2-streamer-go/pkg/pub"
 )
@@ -31,8 +29,8 @@ func init() {
 }
 
 // EpubParser TODO add doc
-func EpubParser(filePath string) (pub.Publication, error) {
-	var publication pub.Publication
+func EpubParser(filePath string) (pub.Manifest, error) {
+	var publication pub.Manifest
 	var metaStruct pub.Metadata
 	var epubVersion string
 	var err error
@@ -47,21 +45,21 @@ func EpubParser(filePath string) (pub.Publication, error) {
 	if fileExt == "" {
 		book, err = epub.OpenDir(filePath)
 		if err != nil {
-			return pub.Publication{}, errors.New("can't open or parse epub file with err : " + err.Error())
+			return pub.Manifest{}, errors.New("can't open or parse epub file with err : " + err.Error())
 		}
 		publication.AddToInternal("type", "epub_dir")
 		publication.AddToInternal("basepath", filePath)
 	} else {
 		book, err = epub.OpenEpub(filePath)
 		if err != nil {
-			return pub.Publication{}, errors.New("can't open or parse epub file with err : " + err.Error())
+			return pub.Manifest{}, errors.New("can't open or parse epub file with err : " + err.Error())
 		}
 		publication.AddToInternal("type", "epub")
 		publication.AddToInternal("epub", book.ZipReader())
 	}
 
 	publication.Context = append(publication.Context, "https://readium.org/webpub-manifest/context.jsonld")
-	publication.Metadata.RDFType = "http://schema.org/Book"
+	publication.Metadata.Type = "http://schema.org/Book"
 
 	epubVersion = getEpubVersion(book)
 	_, filename := filepath.Split(filePath)
@@ -70,25 +68,25 @@ func EpubParser(filePath string) (pub.Publication, error) {
 	publication.AddToInternal("rootfile", book.Container.Rootfile.Path)
 
 	addTitle(&publication, book)
-	publication.Metadata.Language = book.Opf.Metadata.Language
+	publication.Metadata.Languages = book.Opf.Metadata.Language
 	addIdentifier(&publication, book, epubVersion)
-	publication.Metadata.Rights = strings.Join(book.Opf.Metadata.Rights, " ")
 	if len(book.Opf.Metadata.Description) > 0 {
 		publication.Metadata.Description = book.Opf.Metadata.Description[0]
 	}
 
 	if len(book.Opf.Metadata.Publisher) > 0 {
 		for _, opub := range book.Opf.Metadata.Publisher {
-			publication.Metadata.Publisher = append(publication.Metadata.Publisher, pub.Contributor{Name: pub.MultiLanguage{SingleString: opub}})
+			publication.Metadata.Publishers = append(publication.Metadata.Publishers, pub.Contributor{LocalizedName: pub.MultiLanguage{SingleString: opub}})
 		}
 	}
 
-	if len(book.Opf.Metadata.Source) > 0 {
+	/*if len(book.Opf.Metadata.Source) > 0 {
 		publication.Metadata.Source = book.Opf.Metadata.Source[0]
-	}
+	}*/
 
 	if book.Opf.Spine.PageProgression != "" {
-		publication.Metadata.Direction = book.Opf.Spine.PageProgression
+		// TODO convert to definite "enum" values
+		publication.Metadata.ReadingProgression = pub.ReadingProgression(book.Opf.Spine.PageProgression)
 	}
 
 	if len(book.Opf.Metadata.Contributor) > 0 {
@@ -121,17 +119,17 @@ func EpubParser(filePath string) (pub.Publication, error) {
 	fillCalibreSerieInfo(&publication, book)
 	fillSubject(&publication, book)
 	fillPublicationDate(&publication, book)
-	fillMediaOverlay(&publication, book)
+	// fillMediaOverlay(&publication, book)
 
 	return publication, nil
 }
 
 // EpubCallback reparse smil file and more to come
-func EpubCallback(publication *pub.Publication) {
-	fillMediaOverlay(publication, nil)
+func EpubCallback(publication *pub.Manifest) {
+	// fillMediaOverlay(publication, nil)
 }
 
-func fillSpineAndResource(publication *pub.Publication, book *epub.Epub) {
+func fillSpineAndResource(publication *pub.Manifest, book *epub.Epub) {
 
 	for _, item := range book.Opf.Spine.Items {
 		if item.Linear == "yes" || item.Linear == "" {
@@ -146,20 +144,20 @@ func fillSpineAndResource(publication *pub.Publication, book *epub.Epub) {
 
 	for _, item := range book.Opf.Manifest {
 		linkItem := pub.Link{}
-		linkItem.TypeLink = item.MediaType
+		linkItem.Type = item.MediaType
 		linkItem.AddHrefAbsolute(item.Href, book.Container.Rootfile.Path)
 
 		linkSpine := findInSpineByHref(publication, linkItem.Href)
 		if linkSpine.Href == "" {
 			addRelAndPropertiesToLink(&linkItem, &item, book)
-			addMediaOverlay(&linkItem, &item, book)
+			// addMediaOverlay(&linkItem, &item, book)
 			publication.Resources = append(publication.Resources, linkItem)
 		}
 	}
 
 }
 
-func findInSpineByHref(publication *pub.Publication, href string) pub.Link {
+func findInSpineByHref(publication *pub.Manifest, href string) pub.Link {
 	for _, l := range publication.ReadingOrder {
 		if l.Href == href {
 			return l
@@ -173,17 +171,17 @@ func findInManifestByID(book *epub.Epub, ID string) pub.Link {
 	for _, item := range book.Opf.Manifest {
 		if item.ID == ID {
 			linkItem := pub.Link{}
-			linkItem.TypeLink = item.MediaType
+			linkItem.Type = item.MediaType
 			linkItem.AddHrefAbsolute(item.Href, book.Container.Rootfile.Path)
 			addRelAndPropertiesToLink(&linkItem, &item, book)
-			addMediaOverlay(&linkItem, &item, book)
+			// addMediaOverlay(&linkItem, &item, book)
 			return linkItem
 		}
 	}
 	return pub.Link{}
 }
 
-func findContributorInMeta(publication *pub.Publication, book *epub.Epub, epubVersion string) {
+func findContributorInMeta(publication *pub.Manifest, book *epub.Epub, epubVersion string) {
 
 	for _, meta := range book.Opf.Metadata.Meta {
 		if meta.Property == "dcterms:creator" || meta.Property == "dcterms:contributor" {
@@ -197,7 +195,7 @@ func findContributorInMeta(publication *pub.Publication, book *epub.Epub, epubVe
 
 }
 
-func addContributor(publication *pub.Publication, book *epub.Epub, epubVersion string, cont epub.Author, forcedRole string) {
+func addContributor(publication *pub.Manifest, book *epub.Epub, epubVersion string, cont epub.Author, forcedRole string) {
 	var contributor pub.Contributor
 	var role string
 
@@ -212,18 +210,18 @@ func addContributor(publication *pub.Publication, book *epub.Epub, epubVersion s
 
 		metaAlt := findAllMetaByRefineAndProperty(book, cont.ID, "alternate-script")
 		if len(metaAlt) > 0 {
-			contributor.Name.MultiString = make(map[string]string)
-			contributor.Name.MultiString[strings.ToLower(publication.Metadata.Language[0])] = cont.Data
+			contributor.LocalizedName.MultiString = make(map[string]string)
+			contributor.LocalizedName.MultiString[strings.ToLower(publication.Metadata.Languages[0])] = cont.Data
 
 			for _, m := range metaAlt {
-				contributor.Name.MultiString[strings.ToLower(m.Lang)] = m.Data
+				contributor.LocalizedName.MultiString[strings.ToLower(m.Lang)] = m.Data
 			}
 		} else {
-			contributor.Name.SingleString = cont.Data
+			contributor.LocalizedName.SingleString = cont.Data
 		}
 
 	} else {
-		contributor.Name.SingleString = cont.Data
+		contributor.LocalizedName.SingleString = cont.Data
 		role = cont.Role
 		if role == "" && forcedRole != "" {
 			role = forcedRole
@@ -232,34 +230,34 @@ func addContributor(publication *pub.Publication, book *epub.Epub, epubVersion s
 
 	switch role {
 	case "aut":
-		publication.Metadata.Author = append(publication.Metadata.Author, contributor)
+		publication.Metadata.Authors = append(publication.Metadata.Authors, contributor)
 	case "trl":
-		publication.Metadata.Translator = append(publication.Metadata.Author, contributor)
+		publication.Metadata.Translators = append(publication.Metadata.Translators, contributor)
 	case "art":
-		publication.Metadata.Artist = append(publication.Metadata.Artist, contributor)
+		publication.Metadata.Artists = append(publication.Metadata.Artists, contributor)
 	case "edt":
-		publication.Metadata.Editor = append(publication.Metadata.Editor, contributor)
+		publication.Metadata.Editors = append(publication.Metadata.Editors, contributor)
 	case "ill":
-		publication.Metadata.Illustrator = append(publication.Metadata.Illustrator, contributor)
+		publication.Metadata.Illustrators = append(publication.Metadata.Illustrators, contributor)
 		//	case "???":
 		//		metadata.Letterer = append(metadata.Letterer, contributor)
 		//	case "pen":
 		//		metadata.Penciler = append(metadata.Penciler, contributor)
 	case "clr":
-		publication.Metadata.Colorist = append(publication.Metadata.Colorist, contributor)
+		publication.Metadata.Colorists = append(publication.Metadata.Colorists, contributor)
 		//	case "ink":
 		//		metadata.Inker = append(metadata.Inker, contributor)
 	case "nrt":
-		publication.Metadata.Narrator = append(publication.Metadata.Narrator, contributor)
+		publication.Metadata.Narrators = append(publication.Metadata.Narrators, contributor)
 	case "pbl":
-		publication.Metadata.Publisher = append(publication.Metadata.Publisher, contributor)
+		publication.Metadata.Publishers = append(publication.Metadata.Publishers, contributor)
 	default:
-		contributor.Role = role
-		publication.Metadata.Contributor = append(publication.Metadata.Contributor, contributor)
+		contributor.Roles = role
+		publication.Metadata.Contributors = append(publication.Metadata.Contributors, contributor)
 	}
 }
 
-func addTitle(publication *pub.Publication, book *epub.Epub) {
+func addTitle(publication *pub.Manifest, book *epub.Epub) {
 
 	if isEpub3OrMore(book) {
 		var mainTitle epub.Title
@@ -280,25 +278,25 @@ func addTitle(publication *pub.Publication, book *epub.Epub) {
 
 		metaAlt := findAllMetaByRefineAndProperty(book, mainTitle.ID, "alternate-script")
 		if len(metaAlt) > 0 {
-			publication.Metadata.Title.MultiString = make(map[string]string)
-			publication.Metadata.Title.MultiString[strings.ToLower(mainTitle.Lang)] = mainTitle.Data
+			publication.Metadata.LocalizedTitle.MultiString = make(map[string]string)
+			publication.Metadata.LocalizedTitle.MultiString[strings.ToLower(mainTitle.Lang)] = mainTitle.Data
 
 			for _, m := range metaAlt {
-				publication.Metadata.Title.MultiString[strings.ToLower(m.Lang)] = m.Data
+				publication.Metadata.LocalizedTitle.MultiString[strings.ToLower(m.Lang)] = m.Data
 			}
 		} else {
-			publication.Metadata.Title.SingleString = mainTitle.Data
+			publication.Metadata.LocalizedTitle.SingleString = mainTitle.Data
 		}
 
 	} else {
 		if len(book.Opf.Metadata.Title) > 0 {
-			publication.Metadata.Title.SingleString = book.Opf.Metadata.Title[0].Data
+			publication.Metadata.LocalizedTitle.SingleString = book.Opf.Metadata.Title[0].Data
 		}
 	}
 
 }
 
-func addIdentifier(publication *pub.Publication, book *epub.Epub, epubVersion string) {
+func addIdentifier(publication *pub.Manifest, book *epub.Epub, epubVersion string) {
 	if len(book.Opf.Metadata.Identifier) > 1 {
 		uniqueID := book.Opf.UniqueIdentifier
 		for _, iden := range book.Opf.Metadata.Identifier {
@@ -402,7 +400,7 @@ func addToLinkFromProperties(link *pub.Link, propertiesString string) {
 	}
 }
 
-func addPresentation(publication *pub.Publication, book *epub.Epub) {
+func addPresentation(publication *pub.Manifest, book *epub.Epub) {
 	var presentation pub.Properties
 
 	for _, meta := range book.Opf.Metadata.Meta {
@@ -422,12 +420,12 @@ func addPresentation(publication *pub.Publication, book *epub.Epub) {
 		}
 	}
 
-	if presentation.Layout != "" || presentation.Orientation != "" || presentation.Overflow != "" || presentation.Page != "" || presentation.Spread != "" {
+	/*if presentation.Layout != "" || presentation.Orientation != "" || presentation.Overflow != "" || presentation.Page != "" || presentation.Spread != "" {
 		publication.Metadata.Presentation = &presentation
-	}
+	}*/
 }
 
-func addCoverRel(publication *pub.Publication, book *epub.Epub) {
+func addCoverRel(publication *pub.Manifest, book *epub.Epub) {
 	// First method using meta content
 	var coverID string
 
@@ -471,6 +469,7 @@ func findAllMetaByRefineAndProperty(book *epub.Epub, ID string, property string)
 	return metas
 }
 
+/*
 func addMediaOverlay(link *pub.Link, linkEpub *epub.Manifest, book *epub.Epub) {
 	if linkEpub.MediaOverlay != "" {
 		meta := findMetaByRefineAndProperty(book, linkEpub.MediaOverlay, "media:duration")
@@ -479,8 +478,8 @@ func addMediaOverlay(link *pub.Link, linkEpub *epub.Manifest, book *epub.Epub) {
 	}
 
 }
-
-func fillTOCFromNavDoc(publication *pub.Publication, book *epub.Epub) {
+*/
+func fillTOCFromNavDoc(publication *pub.Manifest, book *epub.Epub) {
 
 	navLink, err := publication.GetNavDoc()
 	if err != nil {
@@ -544,7 +543,7 @@ func fillTOCFromNavDocWithOL(olElem *goquery.Selection, node *[]pub.Link, navDoc
 	})
 }
 
-func fillPageListFromNCX(publication *pub.Publication, book *epub.Epub) {
+func fillPageListFromNCX(publication *pub.Manifest, book *epub.Epub) {
 	if len(book.Ncx.PageList.PageTarget) > 0 {
 		for _, pageTarget := range book.Ncx.PageList.PageTarget {
 			link := pub.Link{}
@@ -555,7 +554,7 @@ func fillPageListFromNCX(publication *pub.Publication, book *epub.Epub) {
 	}
 }
 
-func fillTOCFromNCX(publication *pub.Publication, book *epub.Epub) {
+func fillTOCFromNCX(publication *pub.Manifest, book *epub.Epub) {
 	if len(book.Ncx.Points) > 0 {
 		for _, point := range book.Ncx.Points {
 			fillTOCFromNavPoint(publication, book, point, &publication.TOC)
@@ -563,7 +562,7 @@ func fillTOCFromNCX(publication *pub.Publication, book *epub.Epub) {
 	}
 }
 
-func fillLandmarksFromGuide(publication *pub.Publication, book *epub.Epub) {
+func fillLandmarksFromGuide(publication *pub.Manifest, book *epub.Epub) {
 	if len(book.Opf.Guide) > 0 {
 		for _, ref := range book.Opf.Guide {
 			if ref.Href != "" {
@@ -576,7 +575,7 @@ func fillLandmarksFromGuide(publication *pub.Publication, book *epub.Epub) {
 	}
 }
 
-func fillTOCFromNavPoint(publication *pub.Publication, book *epub.Epub, point epub.NavPoint, node *[]pub.Link) {
+func fillTOCFromNavPoint(publication *pub.Manifest, book *epub.Epub, point epub.NavPoint, node *[]pub.Link) {
 
 	link := pub.Link{}
 	link.AddHrefAbsolute(point.Content.Src, book.NcxPath)
@@ -590,7 +589,7 @@ func fillTOCFromNavPoint(publication *pub.Publication, book *epub.Epub, point ep
 
 }
 
-func fillCalibreSerieInfo(publication *pub.Publication, book *epub.Epub) {
+func fillCalibreSerieInfo(publication *pub.Manifest, book *epub.Epub) {
 	var serie string
 	var seriePosition float32
 
@@ -608,18 +607,18 @@ func fillCalibreSerieInfo(publication *pub.Publication, book *epub.Epub) {
 
 	if serie != "" {
 		collection := pub.Collection{Name: serie, Position: seriePosition}
-		if publication.Metadata.BelongsTo == nil {
+		/*if publication.Metadata.BelongsTo == nil {
 			publication.Metadata.BelongsTo = &pub.BelongsTo{}
-		}
-		publication.Metadata.BelongsTo.Series = append(publication.Metadata.BelongsTo.Series, collection)
+		}*/
+		publication.Metadata.BelongsTo["series"] = append(publication.Metadata.BelongsToSeries(), collection)
 	}
 
 }
 
-func fillEncryptionInfo(publication *pub.Publication, book *epub.Epub) {
+func fillEncryptionInfo(publication *pub.Manifest, book *epub.Epub) {
 
 	for _, encInfo := range book.Encryption.EncryptedData {
-		encrypted := pub.Encrypted{}
+		encrypted := pub.Encryption{}
 		encrypted.Algorithm = encInfo.EncryptionMethod.Algorithm
 		if book.LCP.ID != "" {
 			encrypted.Profile = book.LCP.Encryption.Profile
@@ -644,7 +643,7 @@ func fillEncryptionInfo(publication *pub.Publication, book *epub.Epub) {
 				if l.Properties == nil {
 					publication.Resources[i].Properties = &pub.Properties{}
 				}
-				publication.Resources[i].Properties.Encrypted = &encrypted
+				publication.Resources[i].Properties.Encryption = &encrypted
 			}
 		}
 		for i, l := range publication.ReadingOrder {
@@ -652,7 +651,7 @@ func fillEncryptionInfo(publication *pub.Publication, book *epub.Epub) {
 				if l.Properties == nil {
 					publication.ReadingOrder[i].Properties = &pub.Properties{}
 				}
-				publication.ReadingOrder[i].Properties.Encrypted = &encrypted
+				publication.ReadingOrder[i].Properties.Encryption = &encrypted
 			}
 		}
 	}
@@ -678,7 +677,7 @@ func fillEncryptionInfo(publication *pub.Publication, book *epub.Epub) {
 }
 
 // FilePath return the complete path for the ressource
-func FilePath(publication pub.Publication, publicationResource string) string {
+func FilePath(publication pub.Manifest, publicationResource string) string {
 	var rootFile string
 
 	for _, data := range publication.Internal {
@@ -690,19 +689,20 @@ func FilePath(publication pub.Publication, publicationResource string) string {
 	return path.Join(path.Dir(rootFile), publicationResource)
 }
 
-func fillSubject(publication *pub.Publication, book *epub.Epub) {
+func fillSubject(publication *pub.Manifest, book *epub.Epub) {
 	for _, s := range book.Opf.Metadata.Subject {
-		sub := pub.Subject{Name: s.Data, Code: s.Term, Scheme: s.Authority}
-		publication.Metadata.Subject = append(publication.Metadata.Subject, sub)
+		sub := pub.Subject{LocalizedName: pub.MultiLanguage{SingleString: s.Data}, Code: s.Term, Scheme: s.Authority}
+		publication.Metadata.Subjects = append(publication.Metadata.Subjects, sub)
 	}
 
 }
 
-func fillMediaOverlay(publication *pub.Publication, book *epub.Epub) {
+/*
+func fillMediaOverlay(publication *pub.Manifest, book *epub.Epub) {
 	var smil epub.SMIL
 
 	for _, item := range publication.Resources {
-		if item.TypeLink == "application/smil+xml" {
+		if item.Type == "application/smil+xml" {
 			mo := pub.MediaOverlayNode{}
 			if book == nil {
 				fd, _, _ := fetcher.Fetch(publication, item.Href)
@@ -740,7 +740,7 @@ func fillMediaOverlay(publication *pub.Publication, book *epub.Epub) {
 	}
 }
 
-func addSeqToMediaOverlay(publication *pub.Publication, mo *[]pub.MediaOverlayNode, seq epub.Seq, href string, smilHref string) {
+func addSeqToMediaOverlay(publication *pub.Manifest, mo *[]pub.MediaOverlayNode, seq epub.Seq, href string, smilHref string) {
 
 	moc := pub.MediaOverlayNode{}
 	moc.Role = append(moc.Role, "section")
@@ -848,8 +848,8 @@ func smilTimeToSeconds(smilTime string) string {
 
 	return ""
 }
-
-func fillPublicationDate(publication *pub.Publication, book *epub.Epub) {
+*/
+func fillPublicationDate(publication *pub.Manifest, book *epub.Epub) {
 	var date time.Time
 	var err error
 
@@ -862,7 +862,7 @@ func fillPublicationDate(publication *pub.Publication, book *epub.Epub) {
 				date, err = time.Parse("2006-01-02", book.Opf.Metadata.Date[0].Data)
 			}
 			if err == nil {
-				publication.Metadata.PublicationDate = &date
+				publication.Metadata.Published = &date
 				return
 			}
 		}
@@ -878,7 +878,7 @@ func fillPublicationDate(publication *pub.Publication, book *epub.Epub) {
 					date, err = time.Parse("2006-01-02", da.Data)
 				}
 				if err == nil {
-					publication.Metadata.PublicationDate = &date
+					publication.Metadata.Published = &date
 					return
 				}
 			}
@@ -908,7 +908,7 @@ func isEpub3OrMore(book *epub.Epub) bool {
 	return false
 }
 
-func findLinKByHref(publication *pub.Publication, href string, rootFile string) *pub.Link {
+func findLinKByHref(publication *pub.Manifest, href string, rootFile string) *pub.Link {
 	if href == "" {
 		return &pub.Link{}
 	}

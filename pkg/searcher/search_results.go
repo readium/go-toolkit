@@ -2,7 +2,7 @@ package searcher
 
 type SearchResults struct {
 	Query        string         `json:"query"`
-	TotalResults int            `json:"total_results"`
+	TotalResults int            `json:"totalResults"`
 	Results      []SearchResult `json:"results"`
 }
 
