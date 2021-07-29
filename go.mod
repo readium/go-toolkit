@@ -29,6 +29,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.8.1
 	github.com/steveyen/gtreap v0.0.0-20150807155958-0abe01ef9be2 // indirect
+	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tinylib/msgp v1.1.2 // indirect

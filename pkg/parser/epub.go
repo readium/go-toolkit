@@ -208,11 +208,10 @@ func addContributor(publication *pub.Manifest, book *epub.Epub, epubVersion stri
 
 		metaAlt := findAllMetaByRefineAndProperty(book, cont.ID, "alternate-script")
 		if len(metaAlt) > 0 {
-			contributor.LocalizedName.Translations = make(map[string]string)
-			contributor.LocalizedName.Translations[strings.ToLower(publication.Metadata.Languages[0])] = cont.Data
+			contributor.LocalizedName.SetTranslation(strings.ToLower(publication.Metadata.Languages[0]), cont.Data)
 
 			for _, m := range metaAlt {
-				contributor.LocalizedName.Translations[strings.ToLower(m.Lang)] = m.Data
+				contributor.LocalizedName.SetTranslation(strings.ToLower(m.Lang), m.Data)
 			}
 		} else {
 			contributor.LocalizedName.SetDefaultTranslation(cont.Data)
@@ -276,11 +275,10 @@ func addTitle(publication *pub.Manifest, book *epub.Epub) {
 
 		metaAlt := findAllMetaByRefineAndProperty(book, mainTitle.ID, "alternate-script")
 		if len(metaAlt) > 0 {
-			publication.Metadata.LocalizedTitle.Translations = make(map[string]string)
-			publication.Metadata.LocalizedTitle.Translations[strings.ToLower(mainTitle.Lang)] = mainTitle.Data
+			publication.Metadata.LocalizedTitle.SetTranslation(strings.ToLower(mainTitle.Lang), mainTitle.Data)
 
 			for _, m := range metaAlt {
-				publication.Metadata.LocalizedTitle.Translations[strings.ToLower(m.Lang)] = m.Data
+				publication.Metadata.LocalizedTitle.SetTranslation(strings.ToLower(m.Lang), m.Data)
 			}
 		} else {
 			publication.Metadata.LocalizedTitle.SetDefaultTranslation(mainTitle.Data)
