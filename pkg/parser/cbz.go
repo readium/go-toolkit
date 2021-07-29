@@ -115,7 +115,7 @@ func comicRackMetadata(publication *pub.Manifest, fd io.ReadCloser) {
 		}
 	}
 
-	if len(meta.Pages) > 0 {
+	/*if len(meta.Pages) > 0 {
 		for _, p := range meta.Pages {
 			l := pub.Link{}
 			if p.Type == "FrontCover" {
@@ -134,6 +134,6 @@ func comicRackMetadata(publication *pub.Manifest, fd io.ReadCloser) {
 			publication.TOC = append(publication.TOC, l)
 
 		}
-	}
+	}*/
 
 }

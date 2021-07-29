@@ -15,7 +15,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/opds-community/libopds2-go/opds2"
-	"github.com/readium/r2-streamer-go/pkg/decoder/lcp"
 	"github.com/readium/r2-streamer-go/pkg/fetcher"
 	"github.com/readium/r2-streamer-go/pkg/parser"
 	"github.com/readium/r2-streamer-go/pkg/pub"
@@ -50,8 +49,6 @@ func (s *PublicationServer) bookHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
 	serv.HandleFunc("/{filename}/manifest.json", s.getManifest)
-	serv.HandleFunc("/{filename}/license-handler.json", s.pushPassphrase)
-	serv.HandleFunc("/{filename}/license.lcpl", s.getLCPLicense)
 	serv.HandleFunc("/{filename}/search", s.search)
 	// serv.HandleFunc("/{filename}/media-overlay", s.mediaOverlay)
 	serv.HandleFunc("/{filename}/{asset:.*}", s.getAsset)
@@ -148,72 +145,6 @@ func (s *PublicationServer) search(w http.ResponseWriter, req *http.Request) {
 	j, _ := json.Marshal(searchReturn)
 	json.Indent(&returnJSON, j, "", "  ")
 	returnJSON.WriteTo(w)
-}
-
-func (s *PublicationServer) getLCPLicense(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-
-	publication, err := s.getPublication(vars["filename"], req)
-	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
-
-	data := publication.GetLCPJSON()
-	if string(data) == "" {
-		w.WriteHeader(404)
-		return
-	}
-	w.Header().Set("Content-Type", "application/vnd.readium.lcp.license-1.0+json")
-	w.Write(data)
-}
-
-func (s *PublicationServer) pushPassphrase(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-
-	publication, err := s.getPublication(vars["filename"], req)
-	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
-
-	data, err := publication.GetLCPHandlerInfo()
-	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
-
-	if req.Method == http.MethodPost {
-		var postInfo pub.LCPHandlerPost
-		buff, errRead := ioutil.ReadAll(req.Body)
-		if errRead != nil {
-			fmt.Println("can't read body")
-			w.WriteHeader(401)
-		} else {
-			errUnMarsh := json.Unmarshal(buff, &postInfo)
-			if errUnMarsh != nil {
-				fmt.Println("can't unmarshal " + errUnMarsh.Error())
-				w.WriteHeader(401)
-			} else {
-				key, _ := base64.StdEncoding.DecodeString(postInfo.Key.Hash)
-				publication.AddLCPHash(key)
-				if !lcp.HasGoodKey(publication) {
-					w.WriteHeader(401)
-				} else {
-					data.Key.Ready = true
-					s.updatePublication(*publication, vars["filename"])
-				}
-			}
-		}
-	}
-
-	j, _ := json.Marshal(data)
-
-	var identJSON bytes.Buffer
-	json.Indent(&identJSON, j, "", " ")
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
-	identJSON.WriteTo(w)
 }
 
 /*func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {

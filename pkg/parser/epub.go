@@ -1,9 +1,7 @@
 package parser
 
 import (
-	"encoding/base64"
 	"errors"
-	"fmt"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -109,12 +107,12 @@ func EpubParser(filePath string) (pub.Manifest, error) {
 	addCoverRel(&publication, book)
 	fillEncryptionInfo(&publication, book)
 
-	fillTOCFromNavDoc(&publication, book)
+	/*fillTOCFromNavDoc(&publication, book)
 	if len(publication.TOC) == 0 {
 		fillTOCFromNCX(&publication, book)
 		fillPageListFromNCX(&publication, book)
 		fillLandmarksFromGuide(&publication, book)
-	}
+	}*/
 
 	fillCalibreSerieInfo(&publication, book)
 	fillSubject(&publication, book)
@@ -478,7 +476,7 @@ func addMediaOverlay(link *pub.Link, linkEpub *epub.Manifest, book *epub.Epub) {
 	}
 
 }
-*/
+
 func fillTOCFromNavDoc(publication *pub.Manifest, book *epub.Epub) {
 
 	navLink, err := publication.GetNavDoc()
@@ -519,6 +517,7 @@ func fillTOCFromNavDoc(publication *pub.Manifest, book *epub.Epub) {
 	})
 
 }
+*/
 
 func fillTOCFromNavDocWithOL(olElem *goquery.Selection, node *[]pub.Link, navDocURL string) {
 	olElem.ChildrenFiltered("li").Each(func(i int, s *goquery.Selection) {
@@ -543,7 +542,7 @@ func fillTOCFromNavDocWithOL(olElem *goquery.Selection, node *[]pub.Link, navDoc
 	})
 }
 
-func fillPageListFromNCX(publication *pub.Manifest, book *epub.Epub) {
+/*func fillPageListFromNCX(publication *pub.Manifest, book *epub.Epub) {
 	if len(book.Ncx.PageList.PageTarget) > 0 {
 		for _, pageTarget := range book.Ncx.PageList.PageTarget {
 			link := pub.Link{}
@@ -573,7 +572,7 @@ func fillLandmarksFromGuide(publication *pub.Manifest, book *epub.Epub) {
 			}
 		}
 	}
-}
+}*/
 
 func fillTOCFromNavPoint(publication *pub.Manifest, book *epub.Epub, point epub.NavPoint, node *[]pub.Link) {
 
@@ -656,7 +655,7 @@ func fillEncryptionInfo(publication *pub.Manifest, book *epub.Epub) {
 		}
 	}
 
-	if book.LCP.ID != "" {
+	/*if book.LCP.ID != "" {
 		decodedKeyCheck, _ := base64.StdEncoding.DecodeString(book.LCP.Encryption.UserKey.KeyCheck)
 		decodedContentKey, _ := base64.StdEncoding.DecodeString(book.LCP.Encryption.ContentKey.EncryptedValue)
 		publication.LCP = book.LCP
@@ -672,7 +671,7 @@ func fillEncryptionInfo(publication *pub.Manifest, book *epub.Epub) {
 		publication.AddToInternal("lcp_user_key_check", decodedKeyCheck)
 		publication.AddLink("application/vnd.readium.lcp.license-1.0+json", []string{"license"}, "license.lcpl", false)
 
-	}
+	}*/
 
 }
 

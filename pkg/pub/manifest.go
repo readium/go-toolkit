@@ -4,28 +4,19 @@ import (
 	"errors"
 	"path"
 	"strings"
-
-	"github.com/readium/r2-streamer-go/pkg/parser/epub"
 )
 
 // Manifest Main structure for a publication
 type Manifest struct {
-	Context      []string `json:"@context,omitempty"`
-	Metadata     Metadata `json:"metadata"`
-	Links        []Link   `json:"links"`
-	ReadingOrder []Link   `json:"readingOrder,omitempty"`
-	Resources    []Link   `json:"resources,omitempty"` //Replaces the manifest but less redundant
-	TOC          []Link   `json:"toc,omitempty"`
-	PageList     []Link   `json:"pageList,omitempty"`
-	Landmarks    []Link   `json:"landmarks,omitempty"`
-	LOI          []Link   `json:"loi,omitempty"` //List of illustrations
-	LOA          []Link   `json:"loa,omitempty"` //List of audio files
-	LOV          []Link   `json:"lov,omitempty"` //List of videos
-	LOT          []Link   `json:"lot,omitempty"` //List of tables
+	Context         []string `json:"@context,omitempty"`
+	Metadata        Metadata `json:"metadata"`
+	Links           []Link   `json:"links"`
+	ReadingOrder    []Link   `json:"readingOrder,omitempty"`
+	Resources       []Link   `json:"resources,omitempty"` //Replaces the manifest but less redundant
+	TableOfContents []Link   `json:"toc,omitempty"`
 
 	Subcollections map[string][]PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
 	Internal       []Internal                         `json:"-"`
-	LCP            epub.LCP                           `json:"-"`
 }
 
 // Internal TODO
@@ -175,28 +166,6 @@ func (publication *Manifest) GetLCPJSON() []byte {
 	return data
 }
 
-// GetLCPHandlerInfo return the lcp handler struct for marshalling
-func (publication *Manifest) GetLCPHandlerInfo() (LCPHandler, error) {
-	var info LCPHandler
-
-	if publication.LCP.ID != "" {
-		info.Identifier = publication.LCP.ID
-		info.Hint.Text = publication.LCP.Encryption.UserKey.TextHint
-		info.Key.Check = publication.LCP.Encryption.UserKey.KeyCheck
-		info.Key.Ready = false
-		info.Profile = publication.LCP.Encryption.Profile
-		for _, l := range publication.LCP.Links {
-			if l.Rel == "hint" {
-				info.Hint.URL = l.Href
-			}
-		}
-
-		return info, nil
-	}
-
-	return info, errors.New("no LCP information")
-}
-
 // GetPreFetchResources select resources that match media type we want to
 // prefetch with the manifest
 func (publication *Manifest) GetPreFetchResources() []Link {
@@ -251,15 +220,9 @@ func (publication *Manifest) TransformLinkToFullURL(baseURL string) {
 		}
 	}
 
-	for i := range publication.TOC {
-		if !(strings.Contains(publication.TOC[i].Href, "http://") || strings.Contains(publication.TOC[i].Href, "https://")) {
-			publication.TOC[i].Href = baseURL + publication.TOC[i].Href
-		}
-	}
-
-	for i := range publication.Landmarks {
-		if !(strings.Contains(publication.Landmarks[i].Href, "http://") || strings.Contains(publication.Landmarks[i].Href, "https://")) {
-			publication.Landmarks[i].Href = baseURL + publication.Landmarks[i].Href
+	for i := range publication.TableOfContents {
+		if !(strings.Contains(publication.TableOfContents[i].Href, "http://") || strings.Contains(publication.TableOfContents[i].Href, "https://")) {
+			publication.TableOfContents[i].Href = baseURL + publication.TableOfContents[i].Href
 		}
 	}
 }
