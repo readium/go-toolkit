@@ -2,7 +2,6 @@ package pub
 
 import (
 	"errors"
-	"path"
 	"strings"
 )
 
@@ -31,32 +30,6 @@ type PublicationCollection struct {
 	Metadata map[string]interface{}
 	Links    []Link
 	Children []PublicationCollection
-}
-
-// LCPHandler struct to generate json to return to the navigator for the lcp information
-type LCPHandler struct {
-	Identifier string `json:"identifier,omitempty"`
-	Profile    string `json:"profile,omitempty"`
-	Key        struct {
-		Ready bool   `json:"ready,omitempty"`
-		Check string `json:"check,omitempty"`
-	} `json:"key,omitempty"`
-	Hint struct {
-		Text string `json:"text,omitempty"`
-		URL  string `json:"url,omitempty"`
-	} `json:"hint,omitempty"`
-	Support struct {
-		Mail string `json:"mail,omitempty"`
-		URL  string `json:"url,omitempty"`
-		Tel  string `json:"tel,omitempty"`
-	} `json:"support"`
-}
-
-// LCPHandlerPost struct to unmarshal hash send for decrypting lcp
-type LCPHandlerPost struct {
-	Key struct {
-		Hash string `json:"hash"`
-	} `json:"key"`
 }
 
 // GetCover return the link for the cover
@@ -182,27 +155,6 @@ func (publication *Manifest) GetPreFetchResources() []Link {
 	}
 
 	return resources
-}
-
-// AddRel add rel information to Link, will check if the
-func (link *Link) AddRel(rel string) {
-	relAlreadyPresent := false
-
-	for _, r := range link.Rels {
-		if r == rel {
-			relAlreadyPresent = true
-		}
-	}
-
-	if relAlreadyPresent == false {
-		link.Rels = append(link.Rels, rel)
-	}
-}
-
-// AddHrefAbsolute modify Href field with a calculated path based on a
-// referend file
-func (link *Link) AddHrefAbsolute(href string, baseFile string) {
-	link.Href = path.Join(path.Dir(baseFile), href)
 }
 
 //TransformLinkToFullURL concatenate a base url to all links
