@@ -21,9 +21,9 @@ const (
 type Metadata struct {
 	Identifier         string                  `json:"identifier"` // Could be omitempty since it's optional
 	Type               string                  `json:"@type,omitempty"`
-	LocalizedTitle     MultiLanguage           `json:"title" validate:"required"` // TODO LocalizedString
-	LocalizedSubtitle  MultiLanguage           `json:"subtitle,omitempty"`        // TODO LocalizedString
-	LocalizedSortAs    MultiLanguage           `json:"sortAs,omitempty"`          // TODO LocalizedString
+	LocalizedTitle     LocalizedString         `json:"title" validate:"required"`
+	LocalizedSubtitle  *LocalizedString        `json:"subtitle,omitempty"`
+	LocalizedSortAs    *LocalizedString        `json:"sortAs,omitempty"`
 	Modified           *time.Time              `json:"modified,omitempty"`
 	Published          *time.Time              `json:"published,omitempty"`
 	Languages          []string                `json:"language,omitempty" validate:"BCP47"` // TODO validator

@@ -47,7 +47,7 @@ func CbzParser(filePath string) (pub.Manifest, error) {
 	}
 
 	if publication.Metadata.Title() == "" {
-		publication.Metadata.LocalizedTitle.SingleString = filePathToTitle(filePath)
+		publication.Metadata.LocalizedTitle.SetDefaultTranslation(filePathToTitle(filePath))
 	}
 
 	return publication, nil
@@ -85,24 +85,24 @@ func comicRackMetadata(publication *pub.Manifest, fd io.ReadCloser) {
 
 	meta := comicrack.Parse(fd)
 	if meta.Writer != "" {
-		cont := pub.Contributor{LocalizedName: pub.MultiLanguage{SingleString: meta.Writer}}
+		cont := pub.Contributor{LocalizedName: pub.NewLocalizedStringFromString(meta.Writer)}
 		publication.Metadata.Authors = append(publication.Metadata.Authors, cont)
 	}
 	if meta.Penciller != "" {
-		cont := pub.Contributor{LocalizedName: pub.MultiLanguage{SingleString: meta.Writer}}
+		cont := pub.Contributor{LocalizedName: pub.NewLocalizedStringFromString(meta.Penciller)}
 		publication.Metadata.Pencilers = append(publication.Metadata.Pencilers, cont)
 	}
 	if meta.Colorist != "" {
-		cont := pub.Contributor{LocalizedName: pub.MultiLanguage{SingleString: meta.Writer}}
+		cont := pub.Contributor{LocalizedName: pub.NewLocalizedStringFromString(meta.Colorist)}
 		publication.Metadata.Colorists = append(publication.Metadata.Colorists, cont)
 	}
 	if meta.Inker != "" {
-		cont := pub.Contributor{LocalizedName: pub.MultiLanguage{SingleString: meta.Writer}}
+		cont := pub.Contributor{LocalizedName: pub.NewLocalizedStringFromString(meta.Inker)}
 		publication.Metadata.Inkers = append(publication.Metadata.Inkers, cont)
 	}
 
 	if meta.Title != "" {
-		publication.Metadata.LocalizedTitle.SingleString = meta.Title
+		publication.Metadata.LocalizedTitle.SetDefaultTranslation(meta.Title)
 	}
 
 	if publication.Metadata.Title() == "" {
@@ -111,7 +111,7 @@ func comicRackMetadata(publication *pub.Manifest, fd io.ReadCloser) {
 			if meta.Number != 0 {
 				title = title + " - " + strconv.Itoa(meta.Number)
 			}
-			publication.Metadata.LocalizedTitle.SingleString = title
+			publication.Metadata.LocalizedTitle.SetDefaultTranslation(title)
 		}
 	}
 

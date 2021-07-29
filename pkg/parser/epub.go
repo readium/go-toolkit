@@ -74,7 +74,7 @@ func EpubParser(filePath string) (pub.Manifest, error) {
 
 	if len(book.Opf.Metadata.Publisher) > 0 {
 		for _, opub := range book.Opf.Metadata.Publisher {
-			publication.Metadata.Publishers = append(publication.Metadata.Publishers, pub.Contributor{LocalizedName: pub.MultiLanguage{SingleString: opub}})
+			publication.Metadata.Publishers = append(publication.Metadata.Publishers, pub.Contributor{LocalizedName: pub.NewLocalizedStringFromString(opub)})
 		}
 	}
 
@@ -208,18 +208,18 @@ func addContributor(publication *pub.Manifest, book *epub.Epub, epubVersion stri
 
 		metaAlt := findAllMetaByRefineAndProperty(book, cont.ID, "alternate-script")
 		if len(metaAlt) > 0 {
-			contributor.LocalizedName.MultiString = make(map[string]string)
-			contributor.LocalizedName.MultiString[strings.ToLower(publication.Metadata.Languages[0])] = cont.Data
+			contributor.LocalizedName.Translations = make(map[string]string)
+			contributor.LocalizedName.Translations[strings.ToLower(publication.Metadata.Languages[0])] = cont.Data
 
 			for _, m := range metaAlt {
-				contributor.LocalizedName.MultiString[strings.ToLower(m.Lang)] = m.Data
+				contributor.LocalizedName.Translations[strings.ToLower(m.Lang)] = m.Data
 			}
 		} else {
-			contributor.LocalizedName.SingleString = cont.Data
+			contributor.LocalizedName.SetDefaultTranslation(cont.Data)
 		}
 
 	} else {
-		contributor.LocalizedName.SingleString = cont.Data
+		contributor.LocalizedName.SetDefaultTranslation(cont.Data)
 		role = cont.Role
 		if role == "" && forcedRole != "" {
 			role = forcedRole
@@ -276,19 +276,19 @@ func addTitle(publication *pub.Manifest, book *epub.Epub) {
 
 		metaAlt := findAllMetaByRefineAndProperty(book, mainTitle.ID, "alternate-script")
 		if len(metaAlt) > 0 {
-			publication.Metadata.LocalizedTitle.MultiString = make(map[string]string)
-			publication.Metadata.LocalizedTitle.MultiString[strings.ToLower(mainTitle.Lang)] = mainTitle.Data
+			publication.Metadata.LocalizedTitle.Translations = make(map[string]string)
+			publication.Metadata.LocalizedTitle.Translations[strings.ToLower(mainTitle.Lang)] = mainTitle.Data
 
 			for _, m := range metaAlt {
-				publication.Metadata.LocalizedTitle.MultiString[strings.ToLower(m.Lang)] = m.Data
+				publication.Metadata.LocalizedTitle.Translations[strings.ToLower(m.Lang)] = m.Data
 			}
 		} else {
-			publication.Metadata.LocalizedTitle.SingleString = mainTitle.Data
+			publication.Metadata.LocalizedTitle.SetDefaultTranslation(mainTitle.Data)
 		}
 
 	} else {
 		if len(book.Opf.Metadata.Title) > 0 {
-			publication.Metadata.LocalizedTitle.SingleString = book.Opf.Metadata.Title[0].Data
+			publication.Metadata.LocalizedTitle.SetDefaultTranslation(book.Opf.Metadata.Title[0].Data)
 		}
 	}
 
@@ -690,7 +690,7 @@ func FilePath(publication pub.Manifest, publicationResource string) string {
 
 func fillSubject(publication *pub.Manifest, book *epub.Epub) {
 	for _, s := range book.Opf.Metadata.Subject {
-		sub := pub.Subject{LocalizedName: pub.MultiLanguage{SingleString: s.Data}, Code: s.Term, Scheme: s.Authority}
+		sub := pub.Subject{LocalizedName: pub.NewLocalizedStringFromString(s.Data), Code: s.Term, Scheme: s.Authority}
 		publication.Metadata.Subjects = append(publication.Metadata.Subjects, sub)
 	}
 

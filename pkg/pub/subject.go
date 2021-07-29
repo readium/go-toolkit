@@ -4,11 +4,11 @@ package pub
 // https://github.com/readium/webpub-manifest/tree/master/contexts/default#subjects
 // https://github.com/readium/webpub-manifest/blob/master/schema/subject-object.schema.json
 type Subject struct {
-	LocalizedName   MultiLanguage  `json:"name" validate:"required"` // TODO LocalizedString
-	LocalizedSortAs *MultiLanguage `json:"sortAs,omitempty"`         // TODO LocalizedString
-	Scheme          string         `json:"scheme,omitempty"`
-	Code            string         `json:"code,omitempty"`
-	Links           []Link         `json:"links,omitempty"`
+	LocalizedName   LocalizedString  `json:"name" validate:"required"`
+	LocalizedSortAs *LocalizedString `json:"sortAs,omitempty"`
+	Scheme          string           `json:"scheme,omitempty"`
+	Code            string           `json:"code,omitempty"`
+	Links           []Link           `json:"links,omitempty"`
 }
 
 func (s Subject) Name() string {
