@@ -80,7 +80,7 @@ func (publication *Manifest) AddLink(typeLink string, rel []string, url string, 
 		link.Rels = rel
 	}
 
-	if templated == true {
+	if templated {
 		link.Templated = true
 	}
 

@@ -70,7 +70,7 @@ func (l *LocalizedString) GetOrFallback(language string) string {
 	return "" // Should only get here if the map of languages is empty
 }
 
-func (l *LocalizedString) MarshalJSON() ([]byte, error) {
+func (l LocalizedString) MarshalJSON() ([]byte, error) {
 	if len(l.translations) > 1 {
 		return json.Marshal(l.translations)
 	}

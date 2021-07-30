@@ -18,7 +18,7 @@ type Link struct {
 }
 
 // AddRel add rel information to Link, will check if the
-func (link Link) AddRel(rel string) {
+func (link *Link) AddRel(rel string) {
 	relAlreadyPresent := false
 
 	for _, r := range link.Rels {
@@ -27,13 +27,13 @@ func (link Link) AddRel(rel string) {
 		}
 	}
 
-	if relAlreadyPresent == false {
+	if !relAlreadyPresent {
 		link.Rels = append(link.Rels, rel)
 	}
 }
 
 // AddHrefAbsolute modify Href field with a calculated path based on a
 // referend file
-func (link Link) AddHrefAbsolute(href string, baseFile string) {
+func (link *Link) AddHrefAbsolute(href string, baseFile string) {
 	link.Href = path.Join(path.Dir(baseFile), href)
 }

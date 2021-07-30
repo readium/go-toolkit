@@ -33,7 +33,9 @@ func (c Contributor) MarshalJSON() ([]byte, error) {
 		// If everything but name is empty, and there's just one name, contributor can be just a name
 		return json.Marshal(c.LocalizedName)
 	}
-	return json.Marshal(c)
+	type CNT Contributor // Prevent infinite recursion
+	cnt := CNT(c)
+	return json.Marshal(cnt)
 }
 
 func (c *Contributor) UnmarshalJSON(data []byte) error {
@@ -42,13 +44,29 @@ func (c *Contributor) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	switch d.(type) {
+	switch dd := d.(type) {
 	case string: // Just a single string Contributor
 		c.LocalizedName = NewLocalizedStringFromString(d.(string))
 	case map[string]interface{}: // Actual object Contributor
+		_, ok := dd["name"]
+		if !ok {
+			// No name means the contributor is invalid
+			c = nil
+			return nil
+		}
+		roles, ok := dd["role"] // "role" is a special case, since it can be a single string or a set!
+		if ok {
+			dd["role"], err = parseSetOrString(roles)
+			if err != nil {
+				return err
+			}
+		}
+		// Turn back into bytes. TODO think about a more efficient way, maybe using the "mapstructure" package
+		// Another possibility would be just manually decoding the rest of the Contributor fields
+		newdata, _ := json.Marshal(dd)
 		type CNT *Contributor // Prevent infinite recursion
 		cnt := CNT(c)
-		return json.Unmarshal(data, cnt)
+		return json.Unmarshal(newdata, cnt) // Decode final representation
 	default:
 		return errors.New("Contributor has invalid JSON object")
 	}
