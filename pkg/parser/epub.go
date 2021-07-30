@@ -249,7 +249,7 @@ func addContributor(publication *pub.Manifest, book *epub.Epub, epubVersion stri
 	case "pbl":
 		publication.Metadata.Publishers = append(publication.Metadata.Publishers, contributor)
 	default:
-		contributor.Roles = role
+		contributor.Roles = []string{role}
 		publication.Metadata.Contributors = append(publication.Metadata.Contributors, contributor)
 	}
 }
