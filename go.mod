@@ -35,4 +35,6 @@ require (
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/urfave/negroni v1.0.0
 	go.etcd.io/bbolt v1.3.3 // indirect
+	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
+	golang.org/x/text v0.3.6 // indirect
 )
