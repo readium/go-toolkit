@@ -2,7 +2,8 @@ package mediatype
 
 import (
 	"errors"
-	"sort"
+	"fmt"
+	"mime"
 	"strings"
 
 	"golang.org/x/net/html/charset"
@@ -28,33 +29,50 @@ type MediaType struct {
 // Create a new MediaType
 func NewMediaType(str string, name string, extension string) (mt MediaType, err error) {
 	if str == "" {
-		err = errors.New("Invalid empty media type")
+		err = errors.New("invalid empty media type")
 		return
 	}
 
-	// Grammar: https://tools.ietf.org/html/rfc2045#section-5.1
-	components := strings.Split(str, ";")
-	for i, component := range components {
-		components[i] = strings.TrimSpace(component)
-	}
-	types := strings.Split(components[0], "/")
-	if len(types) != 2 {
-		err = errors.New("Invalid media type: " + str)
+	mtype, params, merr := mime.ParseMediaType(str)
+	if err != nil {
+		err = merr
 		return
 	}
 
-	// > Both top-level type and subtype names are case-insensitive.
-	mt.Type = strings.ToLower(types[0])
-	mt.SubType = strings.ToLower(types[1])
+	frags := strings.SplitN(mtype, "/", 1)
+	if len(frags) != 2 {
+		err = errors.New("parsed mediatype doesn't have 2 components")
+		return
+	}
+	mt.Type = frags[0]
+	mt.SubType = frags[1]
+	mt.Parameters = params
 
-	// > Parameter names are case-insensitive and no meaning is attached to the order in which they appear.
-	parameters := make(map[string]string)
-	for _, c := range components[1:] {
-		frags := strings.Split(c, "=")
-		if len(frags) == 2 {
-			parameters[strings.ToLower(frags[0])] = frags[1]
+	/*
+		// Grammar: https://tools.ietf.org/html/rfc2045#section-5.1
+		components := strings.Split(str, ";")
+		for i, component := range components {
+			components[i] = strings.TrimSpace(component)
 		}
-	}
+		types := strings.Split(components[0], "/")
+		if len(types) != 2 {
+			err = errors.New("Invalid media type: " + str)
+			return
+		}
+
+		// > Both top-level type and subtype names are case-insensitive.
+		mt.Type = strings.ToLower(types[0])
+		mt.SubType = strings.ToLower(types[1])
+
+		// > Parameter names are case-insensitive and no meaning is attached to the order in which they appear.
+		parameters := make(map[string]string)
+		for _, c := range components[1:] {
+			frags := strings.Split(c, "=")
+			if len(frags) == 2 {
+				parameters[strings.ToLower(frags[0])] = frags[1]
+			}
+		}
+	*/
 
 	// For now, we only support case-insensitive `charset`.
 	//
@@ -66,16 +84,14 @@ func NewMediaType(str string, name string, extension string) (mt MediaType, err 
 	// > of US-ASCII.  However, no distinction is made between use of upper and lower case
 	// > letters.
 	// > https://www.iana.org/assignments/character-sets/character-sets.xhtml
-	cs, ok := parameters["charset"]
+	cs, ok := mt.Parameters["charset"]
 	if ok {
 		_, nam := charset.Lookup(cs)
 		if nam != "" {
 			cs = nam
 		}
-		parameters["charset"] = strings.ToUpper(cs)
+		mt.Parameters["charset"] = strings.ToUpper(cs)
 	}
-
-	mt.Parameters = parameters
 	return
 }
 
@@ -108,9 +124,10 @@ func (mt MediaType) Charset() encoding.Encoding {
 //
 // Non-significant parameters are also discarded.
 func (mt MediaType) CanonicalMediaType() MediaType {
-	// TODO!
+	panic("Sniffer not implemented") // TODO
 }
 
+/*
 func (mt MediaType) buildQueryParams() string {
 	if len(mt.Parameters) == 0 {
 		return ""
@@ -124,15 +141,19 @@ func (mt MediaType) buildQueryParams() string {
 	sort.Strings(rawParams) // Sort slice for consistency
 	return strings.Join(rawParams, ";")
 }
+*/
 
 // The string representation of this media type.
 func (mt MediaType) String() string {
-	if len(mt.Parameters) == 0 {
-		// Shortcut parameter string construction
-		return mt.Type + "/" + mt.SubType
-	}
-	params := mt.buildQueryParams()
-	return mt.Type + "/" + mt.SubType + ";" + params
+	return mime.FormatMediaType(mt.Type+"/"+mt.SubType, mt.Parameters)
+	/*
+		if len(mt.Parameters) == 0 {
+			// Shortcut parameter string construction
+			return mt.Type + "/" + mt.SubType
+		}
+		params := mt.buildQueryParams()
+		return mt.Type + "/" + mt.SubType + ";" + params
+	*/
 }
 
 // For JSON Marshaling
@@ -150,15 +171,76 @@ func (mt MediaType) Contains(other *MediaType) bool {
 	if other == nil || (mt.Type != "//" && mt.Type != other.Type) || (mt.SubType != "//" && mt.SubType != other.SubType) {
 		return false
 	}
-	return mt.buildQueryParams() == other.buildQueryParams()
+
+	// https://tip.golang.org/doc/go1.12#fmt
+	return fmt.Sprint(mt.Parameters) == fmt.Sprint(other.Parameters)
 }
 
 // Returns whether this media type and `other` are the same, ignoring parameters that are not in both media types.
 // For example, `text/html` matches `text/html;charset=utf-8`, but `text/html;charset=ascii` doesn't. This is basically like `contains`, but working in both directions.
-func (mt MediaType) Matches(other *MediaType) bool {
-	co := mt.Contains(other)
-	if other == nil {
-		return co
+func (mt MediaType) Matches(other ...*MediaType) bool {
+	for _, o := range other {
+		co := mt.Contains(o)
+		if other == nil && co {
+			return true
+		}
+		if co || o.Contains(&mt) {
+			return true
+		}
 	}
-	return co || other.Contains(&mt)
+	return false
+}
+
+// Returns whether this media type is structured as a ZIP archive.
+func (mt MediaType) IsZIP() bool {
+	return mt.Matches(&ZIP, &LCP_PROTECTED_AUDIOBOOK, &LCP_PROTECTED_PDF) ||
+		mt.StructuredSyntaxSuffix() == "+zip"
+}
+
+// Returns whether this media type is structured as a JSON file.
+func (mt MediaType) IsJSON() bool {
+	return mt.Matches(&JSON) || mt.StructuredSyntaxSuffix() == "+json"
+}
+
+// Returns whether this media type is of an OPDS feed.
+func (mt MediaType) IsOPDS() bool {
+	return mt.Matches(&OPDS1, &OPDS1_ENTRY, &OPDS2, &OPDS2_PUBLICATION, &OPDS_AUTHENTICATION)
+}
+
+// Returns whether this media type is of an HTML document.
+func (mt MediaType) IsHTML() bool {
+	return mt.Matches(&HTML, &XHTML)
+}
+
+// Returns whether this media type is of a bitmap image, so excluding vector-based formats.
+func (mt MediaType) IsBitmap() bool {
+	return mt.Matches(&BMP, &GIF, &JPEG, &PNG, &TIFF, &WEBP, &AVIF, &JXL)
+}
+
+// Returns whether this media type is of an image.
+func (mt MediaType) IsImage() bool {
+	return mt.Type == "image"
+}
+
+// Returns whether this media type is of an audio clip.
+func (mt MediaType) IsAudio() bool {
+	return mt.Type == "audio"
+}
+
+// Returns whether this media type is of a video clip.
+func (mt MediaType) IsVideo() bool {
+	return mt.Type == "video"
+}
+
+// Returns whether this media type is of a Readium Web Publication Manifest.
+func (mt MediaType) IsRwpm() bool {
+	return mt.Matches(&READIUM_AUDIOBOOK_MANIFEST, &DIVINA_MANIFEST, &READIUM_WEBPUB_MANIFEST)
+}
+
+// Returns whether this media type is of a publication file.
+func (mt MediaType) IsPublication() bool {
+	return mt.Matches(
+		&READIUM_AUDIOBOOK, &READIUM_AUDIOBOOK_MANIFEST, &CBZ, &DIVINA, &DIVINA_MANIFEST, &EPUB, &LCP_PROTECTED_AUDIOBOOK,
+		&LCP_PROTECTED_PDF, &LPF, &PDF, &W3C_WPUB_MANIFEST, &READIUM_WEBPUB, &READIUM_WEBPUB_MANIFEST, &ZAB,
+	)
 }
