@@ -39,7 +39,7 @@ func NewMediaType(str string, name string, extension string) (mt MediaType, err 
 		return
 	}
 
-	frags := strings.SplitN(mtype, "/", 1)
+	frags := strings.SplitN(mtype, "/", 2)
 	if len(frags) != 2 {
 		err = errors.New("parsed mediatype doesn't have 2 components")
 		return
