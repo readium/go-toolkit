@@ -24,6 +24,7 @@ func NewSnifferFileContent(file *os.File) SnifferFileContent {
 const MAX_READ_SIZE = 5 * 1024 * 1024 // 5MB
 
 func (s SnifferFileContent) Read() []byte {
+	s.file.Seek(0, io.SeekStart)
 	info, err := s.file.Stat()
 	if err != nil {
 		return nil
@@ -40,6 +41,7 @@ func (s SnifferFileContent) Read() []byte {
 }
 
 func (s SnifferFileContent) Stream() io.Reader {
+	s.file.Seek(0, io.SeekStart)
 	return bufio.NewReader(s.file)
 }
 
