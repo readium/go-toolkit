@@ -10,12 +10,6 @@ import (
 
 type Sniffer func(context SnifferContext) *MediaType
 
-var AllSniffers = []Sniffer{
-	SniffHTML, SniffOPDS, SniffLCPLicense, SniffBitmap,
-	SniffWebpub, SniffW3CWPUB, SniffEPUB, SniffLPF, SniffArchive, SniffPDF,
-	// Note SniffSystem isn't here!
-}
-
 // Sniffs an HTML document.
 func SniffHTML(context SnifferContext) *MediaType {
 	if context.HasFileExtension("htm", "html", "xht", "xhtml") || context.HasMediaType("text/html", "application/xhtml+xml") {
@@ -173,9 +167,13 @@ func SniffWebpub(context SnifferContext) *MediaType {
 func SniffW3CWPUB(context SnifferContext) *MediaType {
 	if js := context.ContentAsJSON(); js != nil {
 		if ctx, ok := js["@context"]; ok {
-			if context, ok := ctx.(string); ok {
-				if context == "https://www.w3.org/ns/wp-context" {
-					return &W3C_WPUB_MANIFEST
+			if context, ok := ctx.([]interface{}); ok {
+				for _, v := range context {
+					if val, ok := v.(string); ok {
+						if val == "https://www.w3.org/ns/wp-context" {
+							return &W3C_WPUB_MANIFEST
+						}
+					}
 				}
 			}
 		}
@@ -216,9 +214,13 @@ func SniffLPF(context SnifferContext) *MediaType {
 		var js map[string]interface{}
 		if err := json.Unmarshal(entry, &js); err == nil && js != nil {
 			if ctx, ok := js["@context"]; ok {
-				if context, ok := ctx.(string); ok {
-					if context == "https://www.w3.org/ns/pub-context" {
-						return &LPF
+				if context, ok := ctx.([]interface{}); ok {
+					for _, v := range context {
+						if val, ok := v.(string); ok {
+							if val == "https://www.w3.org/ns/pub-context" {
+								return &LPF
+							}
+						}
 					}
 				}
 			}
@@ -231,7 +233,7 @@ func SniffLPF(context SnifferContext) *MediaType {
 // Authorized extensions for resources in a CBZ archive.
 // Reference: https://wiki.mobileread.com/wiki/CBR_and_CBZ
 var cbz_extensions = []string{
-	"bmp", "dib", "jif", "jfi", "jfif", "jpg", "jpeg", "png", "tif", "tiff", "webp", // Bitmap. Note there's no AVIF or JXL
+	"bmp", "dib", "gif", "jif", "jfi", "jfif", "jpg", "jpeg", "png", "tif", "tiff", "webp", // Bitmap. Note there's no AVIF or JXL
 	"acbf", "xml", // Metadata
 }
 
@@ -260,7 +262,7 @@ func SniffArchive(context SnifferContext) *MediaType {
 		}
 		archiveContainsOnlyExtensions := func(exts []string) bool {
 			for _, zf := range archive.File {
-				if isIgnored(zf) {
+				if isIgnored(zf) || zf.FileInfo().IsDir() {
 					continue
 				}
 				contains := false
@@ -299,7 +301,7 @@ func SniffPDF(context SnifferContext) *MediaType {
 	if context.HasFileExtension("pdf") || context.HasMediaType("application/pdf") {
 		return &PDF
 	}
-	if string(context.Read(0, 5)) == "%PDF-" {
+	if string(context.Read(0, 4)) == "%PDF-" {
 		return &PDF
 	}
 
@@ -323,7 +325,7 @@ func SniffSystem(context SnifferContext) *MediaType {
 	}
 
 	for _, ext := range context.FileExtensions() {
-		nm := mime.TypeByExtension(ext)
+		nm := mime.TypeByExtension("." + ext)
 		if nm == "" {
 			continue
 		}

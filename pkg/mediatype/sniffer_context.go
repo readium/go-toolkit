@@ -2,6 +2,7 @@ package mediatype
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -100,6 +101,9 @@ func (s SnifferContext) HasMediaType(mediaTypes ...string) bool {
 func (s SnifferContext) ContentAsString() (string, error) {
 	if !s._loadedContentAsString {
 		s._loadedContentAsString = true
+		if s.content == nil {
+			return "", errors.New("no content has been loaded")
+		}
 		if s.Charset() != nil {
 			decoded, err := s.Charset().NewDecoder().Bytes(s.content.Read())
 			if err != nil {
@@ -125,7 +129,11 @@ func (s SnifferContext) ContentAsXML() *XMLNode {
 	if !s._loadedContentAsXML {
 		s._loadedContentAsXML = true
 		var n XMLNode
-		err := xml.NewDecoder(s.Stream()).Decode(&n)
+		stream := s.Stream()
+		if stream == nil {
+			return nil // No stream
+		}
+		err := xml.NewDecoder(stream).Decode(&n)
 		if err != nil {
 			return nil
 		}
@@ -153,6 +161,15 @@ func (s SnifferContext) ContentAsArchive() (*zip.Reader, error) {
 				}
 				s._contentAsArchive = zr
 			}
+		case SnifferBytesContent:
+			{
+				fileSniffer := s.content.(SnifferBytesContent)
+				zr, err := zip.NewReader(bytes.NewReader(fileSniffer.bytes), int64(len(fileSniffer.bytes)))
+				if err != nil {
+					return nil, err
+				}
+				s._contentAsArchive = zr
+			}
 		default:
 			{
 				return nil, errors.New("SnifferContent type does not support opening as an archive")
@@ -166,8 +183,12 @@ func (s SnifferContext) ContentAsArchive() (*zip.Reader, error) {
 func (s SnifferContext) ContentAsJSON() map[string]interface{} {
 	if !s._loadedContentAsJSON {
 		s._loadedContentAsJSON = true
+		stream := s.Stream()
+		if stream == nil {
+			return nil // No stream
+		}
 		var jd map[string]interface{}
-		err := json.NewDecoder(s.content.Stream()).Decode(&jd)
+		err := json.NewDecoder(stream).Decode(&jd)
 		if err != nil {
 			return nil
 		}
@@ -184,6 +205,9 @@ func (s SnifferContext) ContentAsRWPM() {
 // Raw bytes stream of the content.
 // A byte stream can be useful when sniffers only need to read a few bytes at the beginning of the file.
 func (s SnifferContext) Stream() io.Reader {
+	if s.content == nil {
+		return nil
+	}
 	return s.content.Stream()
 }
 
@@ -194,16 +218,19 @@ func (s SnifferContext) Read(start int64, end int64) []byte {
 	if end <= start {
 		return nil
 	}
-	if start == 0 && end == 0 {
-		data, err := io.ReadAll(s.content.Stream())
-		if err != nil {
-			return nil
-		}
-		return data
+	if s.content == nil {
+		return nil
 	}
 	stream := s.content.Stream()
 	if stream == nil {
 		return nil
+	}
+	if start == 0 && end == 0 {
+		data, err := io.ReadAll(stream)
+		if err != nil {
+			return nil
+		}
+		return data
 	}
 	if start > 0 {
 		_, err := io.CopyN(io.Discard, stream, start)
