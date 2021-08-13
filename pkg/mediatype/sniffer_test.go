@@ -76,7 +76,7 @@ func TestSnifferUnknownFormat(t *testing.T) {
 }
 
 func TestSnifferValidMediaTypeFallback(t *testing.T) {
-	expected, err := NewMediaType("fruit/grapes", "", "")
+	expected, err := NewMediaTypeOfString("fruit/grapes")
 	assert.NoError(t, err)
 	assert.Equal(t, &expected, MediaTypeOfString("fruit/grapes"), "valid mediatype should be sniffable")
 	assert.Equal(t, &expected, MediaTypeOf([]string{"invalid", "fruit/grapes"}, nil, Sniffers), "valid mediatype should be discoverable from provided list")

@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/htmlindex"
 )
 
 // MediaType represents a document format, identified by a unique RFC 6838 media type.
@@ -26,7 +27,8 @@ type MediaType struct {
 	Parameters map[string]string // The parameters in the media type, such as `charset=utf-8`.
 }
 
-// Create a new MediaType
+// Create a new MediaType.
+// When an error is returned, do not use the resulting MediaType, as it will be incomplete/invalid
 func NewMediaType(str string, name string, extension string) (mt MediaType, err error) {
 	if str == "" {
 		err = errors.New("invalid empty media type")
@@ -95,6 +97,10 @@ func NewMediaType(str string, name string, extension string) (mt MediaType, err 
 	return
 }
 
+func NewMediaTypeOfString(str string) (MediaType, error) {
+	return NewMediaType(str, "", "")
+}
+
 // Structured syntax suffix, e.g. `+zip` in `application/epub+zip`.
 //
 // Gives a hint on the underlying structure of this media type.
@@ -110,7 +116,7 @@ func (mt MediaType) StructuredSyntaxSuffix() string {
 // Encoding as declared in the `charset` parameter, if there's any.
 func (mt MediaType) Charset() encoding.Encoding {
 	if cs, ok := mt.Parameters["charset"]; ok {
-		cs, _ := charset.Lookup(cs)
+		cs, _ := htmlindex.Get(strings.ToLower(cs))
 		return cs
 	}
 	return nil

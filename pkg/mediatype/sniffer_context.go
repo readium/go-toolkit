@@ -34,7 +34,7 @@ type SnifferContext struct {
 func (s SnifferContext) MediaTypes() []MediaType {
 	marr := make([]MediaType, 0, len(s.mediaTypes))
 	for _, mt := range s.mediaTypes {
-		nmt, err := NewMediaType(mt, "", "")
+		nmt, err := NewMediaTypeOfString(mt)
 		if err == nil { // Only add if no error parsing
 			marr = append(marr, nmt)
 		}
@@ -84,7 +84,7 @@ func (s SnifferContext) HasFileExtension(fileExtensions ...string) bool {
 func (s SnifferContext) HasMediaType(mediaTypes ...string) bool {
 	selfMediaTypes := s.MediaTypes()
 	for _, mt := range mediaTypes {
-		nmt, err := NewMediaType(mt, "", "")
+		nmt, err := NewMediaTypeOfString(mt)
 		if err == nil { // Only compare if no error parsing
 			for _, mt := range selfMediaTypes {
 				if mt.Contains(&nmt) {
