@@ -97,6 +97,8 @@ func NewMediaType(str string, name string, extension string) (mt MediaType, err 
 	return
 }
 
+// Create a new MediaType solely from a mime string.
+// When an error is returned, do not use the resulting MediaType, as it will be incomplete/invalid
 func NewMediaTypeOfString(str string) (MediaType, error) {
 	return NewMediaType(str, "", "")
 }
