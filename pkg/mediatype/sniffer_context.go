@@ -83,11 +83,11 @@ func (s SnifferContext) HasFileExtension(fileExtensions ...string) bool {
 // Returns whether this context has any of the given media type, ignoring case and extra parameters.
 func (s SnifferContext) HasMediaType(mediaTypes ...string) bool {
 	selfMediaTypes := s.MediaTypes()
-	for _, mt := range mediaTypes {
-		nmt, err := NewMediaTypeOfString(mt)
+	for _, rmt := range mediaTypes {
+		nmt, err := NewMediaTypeOfString(rmt)
 		if err == nil { // Only compare if no error parsing
 			for _, mt := range selfMediaTypes {
-				if mt.Contains(&nmt) {
+				if nmt.Contains(&mt) {
 					return true
 				}
 			}

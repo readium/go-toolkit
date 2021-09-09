@@ -2,10 +2,10 @@ package mediatype
 
 import (
 	"errors"
-	"fmt"
 	"mime"
 	"strings"
 
+	mapset "github.com/deckarep/golang-set"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/htmlindex"
@@ -25,6 +25,10 @@ type MediaType struct {
 	Type       string            // The type component, e.g. `application` in `application/epub+zip`.
 	SubType    string            // The subtype component, e.g. `epub+zip` in `application/epub+zip`.
 	Parameters map[string]string // The parameters in the media type, such as `charset=utf-8`.
+
+	// Private until used
+	// name          string
+	fileExtension string
 }
 
 // Create a new MediaType.
@@ -34,6 +38,8 @@ func NewMediaType(str string, name string, extension string) (mt MediaType, err 
 		err = errors.New("invalid empty media type")
 		return
 	}
+
+	mt.fileExtension = extension
 
 	mtype, params, merr := mime.ParseMediaType(str)
 	if err != nil {
@@ -131,8 +137,8 @@ func (mt MediaType) Charset() encoding.Encoding {
 // canonical `application/vnd.comicbook+zip`.
 //
 // Non-significant parameters are also discarded.
-func (mt MediaType) CanonicalMediaType() MediaType {
-	panic("Sniffer not implemented") // TODO
+func (mt MediaType) CanonicalMediaType() *MediaType {
+	return MediaTypeOfString(mt.String())
 }
 
 /*
@@ -174,14 +180,31 @@ func (mt MediaType) MarshalText() ([]byte, error) {
 //
 // - [other] must match the parameters in the [parameters] property, but extra parameters are ignored.
 // - Order of parameters is ignored.
-// - Wildcards are supported, meaning that `image///` contains `image/png` and `/////` contains everything.
+// - Wildcards are supported, meaning that `image/*` contains `image/png` and `*/*` contains everything.
 func (mt MediaType) Contains(other *MediaType) bool {
-	if other == nil || (mt.Type != "//" && mt.Type != other.Type) || (mt.SubType != "//" && mt.SubType != other.SubType) {
+	if other == nil || (mt.Type != "*" && mt.Type != other.Type) || (mt.SubType != "*" && mt.SubType != other.SubType) {
 		return false
 	}
 
-	// https://tip.golang.org/doc/go1.12#fmt
-	return fmt.Sprint(mt.Parameters) == fmt.Sprint(other.Parameters)
+	mset := mapset.NewSet()
+	for mk, mv := range mt.Parameters {
+		mset.Add(mk + "=" + mv)
+	}
+	oset := mapset.NewSet()
+	for ok, ov := range other.Parameters {
+		oset.Add(ok + "=" + ov)
+	}
+
+	return mset.IsSubset(oset)
+}
+
+// Returns whether the given [other] media type is included in this media type.
+func (mt MediaType) ContainsFromString(other string) bool {
+	omt, err := NewMediaTypeOfString(other)
+	if err != nil {
+		return false
+	}
+	return mt.Contains(&omt)
 }
 
 // Returns whether this media type and `other` are the same, ignoring parameters that are not in both media types.
@@ -193,6 +216,20 @@ func (mt MediaType) Matches(other ...*MediaType) bool {
 			return true
 		}
 		if co || o.Contains(&mt) {
+			return true
+		}
+	}
+	return false
+}
+
+// Returns whether this media type and `other` are the same, ignoring parameters that are not in both media types.
+func (mt MediaType) MatchesFromString(other ...string) bool {
+	for _, o := range other {
+		omt, err := NewMediaTypeOfString(o)
+		if err != nil {
+			continue
+		}
+		if mt.Matches(&omt) {
 			return true
 		}
 	}

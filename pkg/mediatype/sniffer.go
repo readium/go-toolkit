@@ -40,11 +40,11 @@ func SniffHTML(context SnifferContext) *MediaType {
 // Sniffs an OPDS document.
 func SniffOPDS(context SnifferContext) *MediaType {
 	// OPDS 1 (Light)
-	if context.HasMediaType("application/atom+xml;profile=opds-catalog") {
-		return &OPDS1
-	}
 	if context.HasMediaType("application/atom+xml;type=entry;profile=opds-catalog") {
 		return &OPDS1_ENTRY
+	}
+	if context.HasMediaType("application/atom+xml;profile=opds-catalog") {
+		return &OPDS1
 	}
 
 	// OPDS 2 (Light)
