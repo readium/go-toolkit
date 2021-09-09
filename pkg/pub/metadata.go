@@ -41,6 +41,7 @@ type Metadata struct {
 	Contributors       []Contributor           `json:"contributor,omitempty"`
 	Publishers         []Contributor           `json:"publisher,omitempty"`
 	Imprints           []Contributor           `json:"imprint,omitempty"`
+	Presentation       *Properties             `json:"presentation,omitempty"`
 	ReadingProgression ReadingProgression      `json:"readingProgression,omitempty" validate:"readingProgression"` // TODO validator.
 	Description        string                  `json:"description,omitempty"`
 	Duration           *float64                `json:"duration,omitempty" validator:"positive"` // TODO validator

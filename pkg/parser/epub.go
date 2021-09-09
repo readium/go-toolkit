@@ -416,9 +416,9 @@ func addPresentation(publication *pub.Manifest, book *epub.Epub) {
 		}
 	}
 
-	/*if presentation.Layout != "" || presentation.Orientation != "" || presentation.Overflow != "" || presentation.Page != "" || presentation.Spread != "" {
+	if presentation.Layout != "" || presentation.Orientation != "" || presentation.Overflow != "" || presentation.Page != "" || presentation.Spread != "" {
 		publication.Metadata.Presentation = &presentation
-	}*/
+	}
 }
 
 func addCoverRel(publication *pub.Manifest, book *epub.Epub) {
