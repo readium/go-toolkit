@@ -15,10 +15,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/opds-community/libopds2-go/opds2"
-	"github.com/readium/r2-streamer-go/pkg/fetcher"
-	"github.com/readium/r2-streamer-go/pkg/parser"
-	"github.com/readium/r2-streamer-go/pkg/pub"
-	"github.com/readium/r2-streamer-go/pkg/searcher"
+	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/parser"
+	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/searcher"
 	"github.com/urfave/negroni"
 )
 

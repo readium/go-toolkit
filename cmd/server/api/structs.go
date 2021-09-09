@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/blevesearch/bleve"
-	"github.com/readium/r2-streamer-go/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/pub"
 )
 
 type ServerConfig struct {

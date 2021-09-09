@@ -3,7 +3,7 @@ package api
 import (
 	"github.com/jinzhu/copier"
 	"github.com/opds-community/libopds2-go/opds2"
-	"github.com/readium/r2-streamer-go/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/pub"
 )
 
 // AddPublicationToFeed filter publication fields and add it to the feed

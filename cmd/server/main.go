@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/readium/r2-streamer-go/cmd/server/api"
-	"github.com/readium/r2-streamer-go/cmd/server/internal/config"
-	"github.com/readium/r2-streamer-go/cmd/server/internal/logging"
+	"github.com/readium/go-toolkit/cmd/server/api"
+	"github.com/readium/go-toolkit/cmd/server/internal/config"
+	"github.com/readium/go-toolkit/cmd/server/internal/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )

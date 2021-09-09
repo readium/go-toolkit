@@ -1,4 +1,4 @@
-module github.com/readium/r2-streamer-go
+module github.com/readium/go-toolkit
 
 go 1.16
 

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/readium/r2-streamer-go/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/pub"
 )
 
 // DecryptData decrypt data from the stream

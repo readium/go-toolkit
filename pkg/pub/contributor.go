@@ -7,7 +7,7 @@ import (
 
 // Contributor
 // https://github.com/readium/webpub-manifest/tree/master/contexts/default#contributors
-// https://readium.org/webpub-manifest/schema/contributor-object.schema.json
+// https://github.com/readium/webpub-manifest/schema/contributor-object.schema.json
 type Contributor struct {
 	LocalizedName   LocalizedString  `json:"name" validate:"required"` // The name of the contributor.
 	LocalizedSortAs *LocalizedString `json:"sortAs,omitempty"`         // The string used to sort the name of the contributor.

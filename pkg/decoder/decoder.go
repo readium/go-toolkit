@@ -4,7 +4,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/readium/r2-streamer-go/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/pub"
 )
 
 // missingOrBadKey error return when the key is missing or not correct

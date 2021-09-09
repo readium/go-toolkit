@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/readium/r2-streamer-go/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/pub"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
