@@ -120,6 +120,7 @@ type Properties struct {
 	Page         string      `json:"page,omitempty"`
 	Spread       string      `json:"spread,omitempty"`
 	Encryption   *Encryption `json:"encryption,omitempty"`
+	Size         uint64      // Temporary
 }
 
 // Encryption contains metadata from encryption xml
