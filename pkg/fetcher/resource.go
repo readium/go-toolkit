@@ -162,6 +162,8 @@ func OutOfMemory(cause error) ResourceException {
 	}
 }
 
+// Equivalent to a 416 HTTP error.
+// Used when the requested range is not satisfiable (invalid)
 func RangeNotSatisfiable(cause error) ResourceException {
 	return ResourceException{
 		Code:  http.StatusRequestedRangeNotSatisfiable,
@@ -169,6 +171,8 @@ func RangeNotSatisfiable(cause error) ResourceException {
 	}
 }
 
+// Equivalent to a 504 HTTP error.
+// Used when a request for a file times out (e.g. when fetching from remote storage)
 func Timeout(cause error) ResourceException {
 	return ResourceException{
 		Code:  http.StatusGatewayTimeout,
