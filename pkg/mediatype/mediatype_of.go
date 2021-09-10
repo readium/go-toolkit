@@ -91,13 +91,15 @@ func MediaTypeOfExtension(extension string) *MediaType {
 
 // Resolves a format from a file
 func MediaTypeOfFile(file *os.File, mediaTypes []string, extensions []string, sniffers []Sniffer) *MediaType {
-	ext := filepath.Ext(file.Name())
-	if ext != "" {
-		ext = ext[1:] // Remove the leading "."
-		if extensions == nil {
-			extensions = []string{ext}
-		} else {
-			extensions = append(extensions, ext)
+	if file != nil {
+		ext := filepath.Ext(file.Name())
+		if ext != "" {
+			ext = ext[1:] // Remove the leading "."
+			if extensions == nil {
+				extensions = []string{ext}
+			} else {
+				extensions = append(extensions, ext)
+			}
 		}
 	}
 
