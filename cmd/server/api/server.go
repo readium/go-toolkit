@@ -18,7 +18,6 @@ import (
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/parser"
 	"github.com/readium/go-toolkit/pkg/pub"
-	"github.com/readium/go-toolkit/pkg/searcher"
 	"github.com/urfave/negroni"
 )
 
@@ -49,7 +48,7 @@ func (s *PublicationServer) bookHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
 	serv.HandleFunc("/{filename}/manifest.json", s.getManifest)
-	serv.HandleFunc("/{filename}/search", s.search)
+	// serv.HandleFunc("/{filename}/search", s.search)
 	// serv.HandleFunc("/{filename}/media-overlay", s.mediaOverlay)
 	serv.HandleFunc("/{filename}/{asset:.*}", s.getAsset)
 	serv.HandleFunc("/publications.json", s.opdsFeedHandler)
@@ -125,6 +124,7 @@ func (s *PublicationServer) getAsset(w http.ResponseWriter, req *http.Request) {
 	http.ServeContent(w, req, assetname, time.Time{}, epubReader)
 }
 
+/*
 func (s *PublicationServer) search(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
 	vars := mux.Vars(req)
@@ -147,7 +147,7 @@ func (s *PublicationServer) search(w http.ResponseWriter, req *http.Request) {
 	returnJSON.WriteTo(w)
 }
 
-/*func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {
+func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
 	var media []pub.MediaOverlayNode
 
@@ -206,9 +206,9 @@ func (s *PublicationServer) getPublication(filename string, req *http.Request) (
 		if hasMediaOverlay {
 			publication.AddLink("application/vnd.readium.mo+json", []string{"media-overlay"}, "http://"+req.Host+"/"+filename+"/media-overlay?resource={path}", true)
 		}
-		if searcher.CanBeSearch(publication) {
+		/*if searcher.CanBeSearch(publication) {
 			publication.AddLink("", []string{"search"}, "http://"+req.Host+"/"+filename+"/search?query={searchTerms}", true)
-		}
+		}*/
 		current = currentBook{filename: filename, publication: publication, timestamp: time.Now(), indexed: false}
 		s.currentBookList = append(s.currentBookList, current)
 		// if searcher.CanBeSearch(publication) {
