@@ -15,21 +15,13 @@ type Manifest struct {
 	TableOfContents []Link   `json:"toc,omitempty"`
 
 	Subcollections map[string][]PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
-	Internal       []Internal                         `json:"-"`
+	Internal       []Internal                         `json:"-"` // TODO remove
 }
 
 // Internal TODO
 type Internal struct {
 	Name  string
 	Value interface{}
-}
-
-// PublicationCollection is used as an extension points for other collections in a Publication
-type PublicationCollection struct {
-	Role     string
-	Metadata map[string]interface{}
-	Links    []Link
-	Children []PublicationCollection
 }
 
 // GetCover return the link for the cover

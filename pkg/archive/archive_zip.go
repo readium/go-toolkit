@@ -21,6 +21,9 @@ func (e gozipArchiveEntry) Length() uint64 {
 }
 
 func (e gozipArchiveEntry) CompressedLength() uint64 {
+	if e.file.Method == zip.Store {
+		return 0
+	}
 	return e.file.CompressedSize64
 }
 

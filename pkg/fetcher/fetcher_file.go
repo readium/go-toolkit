@@ -11,7 +11,6 @@ import (
 	"github.com/kennygrant/sanitize"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
-	"golang.org/x/text/encoding"
 )
 
 // Provides access to resources on the local file system.
@@ -20,7 +19,7 @@ type FileFetcher struct {
 	resources []Resource // This is weak on mobile
 }
 
-func (f *FileFetcher) Links() []pub.Link {
+func (f *FileFetcher) Links() ([]pub.Link, error) {
 	links := make([]pub.Link, 0)
 	for href, xpath := range f.paths {
 		axpath, err := filepath.Abs(sanitize.Path(xpath))
@@ -28,34 +27,38 @@ func (f *FileFetcher) Links() []pub.Link {
 			xpath = axpath
 		}
 
-		filepath.WalkDir(xpath, func(path string, d fs.DirEntry, err error) error {
+		err = filepath.WalkDir(xpath, func(apath string, d fs.DirEntry, err error) error {
 			if d.IsDir() || err != nil {
 				return err
 			}
 
-			apath, err := filepath.Abs(sanitize.Path(path))
-			if err == nil {
-				return err
-			}
-
 			link := pub.Link{
-				Href: filepath.Join(href, strings.TrimPrefix(apath, xpath)), // TODO double-check comparison to https://github.com/readium/r2-shared-kotlin/blob/develop/r2-shared/src/main/java/org/readium/r2/shared/fetcher/FileFetcher.kt#L48
+				Href: filepath.ToSlash(filepath.Join(href, strings.TrimPrefix(apath, xpath))),
 			}
 
 			f, err := os.Open(apath)
 			if err == nil {
-				link.Type = mediatype.MediaTypeOfFileOnly(f).String()
+				mt := mediatype.MediaTypeOfFileOnly(f)
+				if mt != nil {
+					link.Type = mt.String()
+				}
 			} else {
-				ext := filepath.Ext(f.Name())
+				ext := filepath.Ext(apath)
 				if ext != "" {
-					link.Type = mediatype.MediaTypeOfExtension(ext[1:]).String()
+					mt := mediatype.MediaTypeOfExtension(ext[1:])
+					if mt != nil {
+						link.Type = mt.String()
+					}
 				}
 			}
 			links = append(links, link)
 			return nil
 		})
+		if err != nil {
+			return nil, err
+		}
 	}
-	return links
+	return links, nil
 }
 
 func (f *FileFetcher) Get(link pub.Link) Resource {
@@ -70,11 +73,11 @@ func (f *FileFetcher) Get(link pub.Link) Resource {
 		if strings.HasPrefix(linkHref, itemHref) {
 			resourceFile := filepath.Join(itemFile, strings.TrimPrefix(linkHref, itemHref))
 			// Make sure that the requested resource is [path] or one of its descendant.
-			rapath, err := filepath.Abs(sanitize.Path(resourceFile))
+			rapath, err := filepath.Abs(sanitize.Path(filepath.ToSlash(resourceFile)))
 			if err != nil {
 				continue // TODO somehow get this error out?
 			}
-			iapath, err := filepath.Abs(sanitize.Path(itemFile))
+			iapath, err := filepath.Abs(sanitize.Path(filepath.ToSlash(itemFile)))
 			if err != nil {
 				continue // TODO somehow get this error out?
 			}
@@ -118,11 +121,11 @@ func (r *FileResource) Close() {
 	}
 }
 
-func (r *FileResource) File() fs.File {
-	return r.file
+func (r *FileResource) File() string {
+	return r.path
 }
 
-func (r *FileResource) open() (*os.File, *ResourceException) {
+func (r *FileResource) open() (*os.File, *ResourceError) {
 	if r.file != nil {
 		r.file.Seek(0, io.SeekStart)
 		return r.file, nil
@@ -131,14 +134,21 @@ func (r *FileResource) open() (*os.File, *ResourceException) {
 	if err != nil {
 		return nil, OsErrorToException(err)
 	}
+	stat, err := f.Stat()
+	if err != nil {
+		return nil, Other(err)
+	}
+	if stat.IsDir() {
+		return nil, NotFound(errors.New("is a directory"))
+	}
 	r.file = f
 	return f, nil
 }
 
-func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceException) {
-	if end <= start {
+func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceError) {
+	if end < start {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
-		return nil, &err
+		return nil, err
 	}
 	f, ex := r.open()
 	if ex != nil {
@@ -148,49 +158,45 @@ func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceException)
 	if start == 0 && end == 0 {
 		data, err := io.ReadAll(f)
 		if err != nil {
-			ex := Other(err)
-			return nil, &ex
+			return nil, Other(err)
 		}
 		return data, nil
 	}
 	if start > 0 {
 		_, err := io.CopyN(io.Discard, f, start)
 		if err != nil {
-			ex := Other(err)
-			return nil, &ex
+			return nil, Other(err)
 		}
 	}
 	data := make([]byte, end-start+1)
-	_, err := f.Read(data)
+	n, err := f.Read(data)
 	if err != nil {
-		ex := Other(err)
-		return nil, &ex
+		return nil, Other(err)
 	}
-	return data, nil
+	return data[:n], nil
 }
 
-func (r *FileResource) Length() (int64, *ResourceException) {
+func (r *FileResource) Length() (int64, *ResourceError) {
 	f, ex := r.open()
 	if ex != nil {
 		return 0, ex
 	}
 	fi, err := f.Stat()
 	if err != nil {
-		ex := Other(err)
-		return 0, &ex
+		return 0, Other(err)
 	}
 	return fi.Size(), nil
 }
 
-func (r *FileResource) ReadAsString(charset encoding.Encoding) (string, *ResourceException) { // TODO determine how charset is needed
+func (r *FileResource) ReadAsString() (string, *ResourceError) {
 	return ReadResourceAsString(r)
 }
 
-func (r *FileResource) ReadAsJSON() (map[string]interface{}, *ResourceException) {
+func (r *FileResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return ReadResourceAsJSON(r)
 }
 
-/*func (r FileResource) ReadAsXML() (xml.Token, *ResourceException) {
+/*func (r FileResource) ReadAsXML() (xml.Token, *ResourceError) {
 	return ReadResourceAsXML(r)
 }*/
 

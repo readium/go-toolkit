@@ -41,7 +41,6 @@ type Metadata struct {
 	Contributors       []Contributor           `json:"contributor,omitempty"`
 	Publishers         []Contributor           `json:"publisher,omitempty"`
 	Imprints           []Contributor           `json:"imprint,omitempty"`
-	Presentation       *Properties             `json:"presentation,omitempty"`
 	ReadingProgression ReadingProgression      `json:"readingProgression,omitempty" validate:"readingProgression"` // TODO validator.
 	Description        string                  `json:"description,omitempty"`
 	Duration           *float64                `json:"duration,omitempty" validator:"positive"` // TODO validator
@@ -107,20 +106,6 @@ func (m Metadata) EffectiveReadingProgression() ReadingProgression {
 	}
 
 	return LTR
-}
-
-// Properties object use to link properties
-// Use also in Rendition for fxl
-type Properties struct {
-	Contains     []string    `json:"contains,omitempty"`
-	Layout       string      `json:"layout,omitempty"`
-	MediaOverlay string      `json:"media-overlay,omitempty"`
-	Orientation  string      `json:"orientation,omitempty"`
-	Overflow     string      `json:"overflow,omitempty"`
-	Page         string      `json:"page,omitempty"`
-	Spread       string      `json:"spread,omitempty"`
-	Encryption   *Encryption `json:"encryption,omitempty"`
-	Size         uint64      // Temporary
 }
 
 // Encryption contains metadata from encryption xml

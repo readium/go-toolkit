@@ -23,6 +23,10 @@ func (e DefaultArchiveFactory) Open(filepath string, password string) (Archive, 
 	}
 }
 
+func NewArchiveFactory() *DefaultArchiveFactory {
+	return &DefaultArchiveFactory{}
+}
+
 // Holds an archive entry's metadata.
 type Entry interface {
 	Path() string                                // Absolute path to the entry in the archive.

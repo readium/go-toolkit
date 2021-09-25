@@ -2,6 +2,7 @@ package fetcher
 
 import "github.com/readium/go-toolkit/pkg/pub"
 
+// Fetcher provides access to a Resource from a Link.
 type Fetcher interface {
 
 	/**
@@ -12,7 +13,7 @@ type Fetcher interface {
 	 * If the medium has an inherent resource order, it should be followed.
 	 * Otherwise, HREFs are sorted alphabetically.
 	 */
-	Links() []pub.Link
+	Links() ([]pub.Link, error)
 
 	/**
 	 * Returns the [Resource] at the given [link]'s HREF.
@@ -27,17 +28,11 @@ type Fetcher interface {
 	Close()
 }
 
-func Get(f Fetcher, href string) *Resource {
-	return f.Get(pub.Link{
-		Href: href,
-	})
-}
-
 // A [Fetcher] providing no resources at all.
 type EmptyFetcher struct{}
 
-func (f EmptyFetcher) Links() []pub.Link {
-	return []pub.Link{}
+func (f EmptyFetcher) Links() ([]pub.Link, error) {
+	return []pub.Link{}, nil
 }
 
 func (f EmptyFetcher) Get(link pub.Link) Resource {
