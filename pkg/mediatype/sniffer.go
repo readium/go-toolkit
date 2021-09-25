@@ -10,15 +10,31 @@ import (
 
 type Sniffer func(context SnifferContext) *MediaType
 
+// Sniffs an XHTML document.
+// Must precede the HTML sniffer.
+func SniffXHTML(context SnifferContext) *MediaType {
+	if context.HasFileExtension("xht", "xhtml") || context.HasMediaType("application/xhtml+xml") {
+		return &XHTML
+	}
+
+	if cxml := context.ContentAsXML(); cxml != nil {
+		if strings.ToLower(cxml.XMLName.Local) == "html" && strings.Contains(strings.ToLower(cxml.XMLName.Space), "xhtml") {
+			return &XHTML
+		}
+	}
+
+	return nil
+}
+
 // Sniffs an HTML document.
 func SniffHTML(context SnifferContext) *MediaType {
-	if context.HasFileExtension("htm", "html", "xht", "xhtml") || context.HasMediaType("text/html", "application/xhtml+xml") {
+	if context.HasFileExtension("htm", "html") || context.HasMediaType("text/html") {
 		return &HTML
 	}
 
 	// [contentAsXml] will fail if the HTML is not a proper XML document, hence the doctype check after this.
 	if cxml := context.ContentAsXML(); cxml != nil {
-		if cxml.XMLName.Local == "html" {
+		if strings.ToLower(cxml.XMLName.Local) == "html" {
 			return &HTML
 		}
 	}

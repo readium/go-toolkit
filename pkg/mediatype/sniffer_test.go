@@ -154,20 +154,23 @@ func TestSniffGIF(t *testing.T) {
 func TestSniffHTML(t *testing.T) {
 	assert.Equal(t, &HTML, MediaTypeOfExtension("htm"))
 	assert.Equal(t, &HTML, MediaTypeOfExtension("html"))
-	assert.Equal(t, &HTML, MediaTypeOfExtension("xht"))
-	assert.Equal(t, &HTML, MediaTypeOfExtension("xhtml"))
 	assert.Equal(t, &HTML, MediaTypeOfString("text/html"))
-	assert.Equal(t, &HTML, MediaTypeOfString("application/xhtml+xml"))
 
 	testHtml, err := os.Open(filepath.Join("testdata", "html.unknown"))
 	assert.NoError(t, err)
 	defer testHtml.Close()
 	assert.Equal(t, &HTML, MediaTypeOfFileOnly(testHtml))
+}
+
+func TestSniffXHTML(t *testing.T) {
+	assert.Equal(t, &XHTML, MediaTypeOfExtension("xht"))
+	assert.Equal(t, &XHTML, MediaTypeOfExtension("xhtml"))
+	assert.Equal(t, &XHTML, MediaTypeOfString("application/xhtml+xml"))
 
 	testXHtml, err := os.Open(filepath.Join("testdata", "xhtml.unknown"))
 	assert.NoError(t, err)
 	defer testXHtml.Close()
-	assert.Equal(t, &HTML, MediaTypeOfFileOnly(testXHtml))
+	assert.Equal(t, &XHTML, MediaTypeOfFileOnly(testXHtml))
 }
 
 func TestSniffJPEG(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 // You can register additional sniffers globally by modifying this list.
 // The sniffers order is important, because some formats are subsets of other formats.
 var Sniffers = []Sniffer{
-	SniffHTML, SniffOPDS, SniffLCPLicense, SniffBitmap,
+	SniffXHTML, SniffHTML, SniffOPDS, SniffLCPLicense, SniffBitmap,
 	SniffWebpub, SniffW3CWPUB, SniffEPUB, SniffLPF, SniffArchive, SniffPDF,
 	// Note SniffSystem isn't here!
 }
@@ -21,21 +21,36 @@ var Sniffers = []Sniffer{
 // - Heavy Sniffing reads the bytes to perform more advanced sniffing.
 func mediaTypeOf(content SnifferContent, mediaTypes []string, fileExtensions []string, sniffers []Sniffer) *MediaType {
 
-	// Light Sniffing
-	context := SnifferContext{
-		mediaTypes:     mediaTypes,
-		fileExtensions: fileExtensions,
+	// Light sniffing with only media type hints
+	if len(mediaTypes) > 0 {
+		context := SnifferContext{
+			mediaTypes: mediaTypes,
+		}
+		for _, sniffer := range sniffers {
+			mediaType := sniffer(context)
+			if mediaType != nil {
+				return mediaType
+			}
+		}
 	}
-	for _, sniffer := range sniffers {
-		mediaType := sniffer(context)
-		if mediaType != nil {
-			return mediaType
+
+	// Light sniffing with both media type hints and file extensions
+	if len(fileExtensions) > 0 {
+		context := SnifferContext{
+			mediaTypes:     mediaTypes,
+			fileExtensions: fileExtensions,
+		}
+		for _, sniffer := range sniffers {
+			mediaType := sniffer(context)
+			if mediaType != nil {
+				return mediaType
+			}
 		}
 	}
 
 	// Heavy sniffing
 	if content != nil {
-		context = SnifferContext{
+		context := SnifferContext{
 			content:        content,
 			mediaTypes:     mediaTypes,
 			fileExtensions: fileExtensions,
@@ -52,6 +67,11 @@ func mediaTypeOf(content SnifferContent, mediaTypes []string, fileExtensions []s
 	// Note: This is done after the heavy sniffing of the provided [sniffers], because
 	// otherwise it will detect JSON, XML or ZIP formats before we have a chance of sniffing
 	// their content (for example, for RWPM).
+	context := SnifferContext{
+		content:        content,
+		mediaTypes:     mediaTypes,
+		fileExtensions: fileExtensions,
+	}
 	if c := SniffSystem(context); c != nil {
 		return c
 	}
