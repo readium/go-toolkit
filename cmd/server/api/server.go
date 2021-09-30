@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/opds-community/libopds2-go/opds2"
-	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/parser"
 	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/urfave/negroni"
@@ -99,29 +99,33 @@ func (s *PublicationServer) getManifest(w http.ResponseWriter, req *http.Request
 }
 
 func (s *PublicationServer) getAsset(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	assetname := vars["asset"]
+	w.WriteHeader(501)
 
-	publication, err := s.getPublication(vars["filename"], req)
-	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
+	/*
+		vars := mux.Vars(req)
+		assetname := vars["asset"]
 
-	epubReader, mediaType, err := fetcher.Fetch(publication, assetname)
-	if err != nil {
-		if err.Error() == "missing or bad key" {
-			w.WriteHeader(401)
+		publication, err := s.getPublication(vars["filename"], req)
+		if err != nil {
+			w.WriteHeader(500)
 			return
 		}
-		w.WriteHeader(404)
-		return
-	}
 
-	w.Header().Set("Content-Type", mediaType)
-	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
-	w.Header().Set("Cache-Control", "public,max-age=86400")
-	http.ServeContent(w, req, assetname, time.Time{}, epubReader)
+		epubReader, mediaType, err := fetcher.Fetch(publication, assetname)
+		if err != nil {
+			if err.Error() == "missing or bad key" {
+				w.WriteHeader(401)
+				return
+			}
+			w.WriteHeader(404)
+			return
+		}
+
+		w.Header().Set("Content-Type", mediaType)
+		w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
+		w.Header().Set("Cache-Control", "public,max-age=86400")
+		http.ServeContent(w, req, assetname, time.Time{}, epubReader)
+	*/
 }
 
 /*
@@ -178,45 +182,49 @@ func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Reques
 }*/
 
 func (s *PublicationServer) getPublication(filename string, req *http.Request) (*pub.Manifest, error) {
-	var current currentBook
+	return nil, errors.New("not implemented")
 
-	for _, book := range s.currentBookList {
-		if filename == book.filename {
-			current = book
-		}
-	}
+	/*
+		var current currentBook
 
-	if current.filename == "" {
-		manifestURL := "http://" + req.Host + "/" + filename + "/manifest.json"
-		filenamePath, _ := base64.StdEncoding.DecodeString(filename)
-
-		publication, err := parser.Parse(string(filenamePath))
-		hasMediaOverlay := false
-		for _, l := range publication.ReadingOrder {
-			if l.Properties != nil && l.Properties.MediaOverlay != "" {
-				hasMediaOverlay = true
+		for _, book := range s.currentBookList {
+			if filename == book.filename {
+				current = book
 			}
 		}
 
-		if err != nil {
-			return &pub.Manifest{}, err
-		}
+		if current.filename == "" {
+			manifestURL := "http://" + req.Host + "/" + filename + "/manifest.json"
+			filenamePath, _ := base64.StdEncoding.DecodeString(filename)
 
-		publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
-		if hasMediaOverlay {
-			publication.AddLink("application/vnd.readium.mo+json", []string{"media-overlay"}, "http://"+req.Host+"/"+filename+"/media-overlay?resource={path}", true)
+			publication, err := parser.Parse(string(filenamePath))
+			hasMediaOverlay := false
+			for _, l := range publication.ReadingOrder {
+				if l.Properties != nil && l.Properties.MediaOverlay != "" {
+					hasMediaOverlay = true
+				}
+			}
+
+			if err != nil {
+				return &pub.Manifest{}, err
+			}
+
+			publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
+			if hasMediaOverlay {
+				publication.AddLink("application/vnd.readium.mo+json", []string{"media-overlay"}, "http://"+req.Host+"/"+filename+"/media-overlay?resource={path}", true)
+			}
+			// if searcher.CanBeSearch(publication) {
+			// 	publication.AddLink("", []string{"search"}, "http://"+req.Host+"/"+filename+"/search?query={searchTerms}", true)
+			// }
+			current = currentBook{filename: filename, publication: publication, timestamp: time.Now(), indexed: false}
+			s.currentBookList = append(s.currentBookList, current)
+			// if searcher.CanBeSearch(publication) {
+			// 	go indexBook(publication)
+			// }
+			return &publication, nil
 		}
-		/*if searcher.CanBeSearch(publication) {
-			publication.AddLink("", []string{"search"}, "http://"+req.Host+"/"+filename+"/search?query={searchTerms}", true)
-		}*/
-		current = currentBook{filename: filename, publication: publication, timestamp: time.Now(), indexed: false}
-		s.currentBookList = append(s.currentBookList, current)
-		// if searcher.CanBeSearch(publication) {
-		// 	go indexBook(publication)
-		// }
-		return &publication, nil
-	}
-	return &current.publication, nil
+		return &current.publication, nil
+	*/
 	// if searcher.CanBeSearch(publication) {
 	// 	go indexBook(publication)
 	// }

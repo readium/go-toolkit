@@ -1,9 +1,7 @@
 package main
 
-import "flag"
-
 func main() {
-	nFlag := flag.String("f", "", "path to publication")
+	/*nFlag := flag.String("f", "", "path to publication")
 
-	flag.Parse()
+	flag.Parse()*/
 }
