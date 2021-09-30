@@ -117,7 +117,7 @@ func (a *gozipArchive) Entry(p string) (Entry, error) {
 	return nil, fs.ErrNotExist
 }
 
-func NewGoZIPArchive(zip *zip.ReadCloser) *gozipArchive {
+func NewGoZIPArchive(zip *zip.ReadCloser) Archive {
 	return &gozipArchive{
 		zip: zip,
 	}

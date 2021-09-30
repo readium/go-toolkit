@@ -19,7 +19,7 @@ func TestArchiveFetcherLinks(t *testing.T) {
 			Href: href,
 			Type: typ,
 			Properties: pub.Properties{
-				"archive": pub.Properties{
+				"https://readium.org/webpub-manifest/properties#archive": pub.Properties{
 					"entryLength":       entryLength,
 					"isEntryCompressed": isCompressed,
 				},
@@ -111,7 +111,7 @@ func TestArchiveFetcherAddsProperties(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		resource := a.Get(pub.Link{Href: "/EPUB/css/epub.css"})
 		assert.Equal(t, pub.Properties{
-			"archive": pub.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": pub.Properties{
 				"entryLength":       uint64(595),
 				"isEntryCompressed": true,
 			},
@@ -126,7 +126,7 @@ func TestArchiveFetcherOriginalPropertiesKept(t *testing.T) {
 		}})
 		assert.Equal(t, pub.Properties{
 			"other": "property",
-			"archive": pub.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": pub.Properties{
 				"entryLength":       uint64(595),
 				"isEntryCompressed": true,
 			},

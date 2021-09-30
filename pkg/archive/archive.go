@@ -3,7 +3,7 @@ package archive
 import "os"
 
 type ArchiveFactory interface {
-	Open(filepath string, password string) (*Archive, error) // Opens an archive from a local [file].
+	Open(filepath string, password string) (Archive, error) // Opens an archive from a local [file].
 }
 
 type DefaultArchiveFactory struct {
@@ -23,8 +23,8 @@ func (e DefaultArchiveFactory) Open(filepath string, password string) (Archive, 
 	}
 }
 
-func NewArchiveFactory() *DefaultArchiveFactory {
-	return &DefaultArchiveFactory{}
+func NewArchiveFactory() DefaultArchiveFactory {
+	return DefaultArchiveFactory{}
 }
 
 // Holds an archive entry's metadata.

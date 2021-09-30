@@ -106,7 +106,7 @@ func (a explodedArchive) Entry(path string) (Entry, error) {
 	}, nil
 }
 
-func NewExplodedArchive(directory string) *explodedArchive {
+func NewExplodedArchive(directory string) Archive {
 	return &explodedArchive{
 		directory: filepath.Clean(directory),
 	}

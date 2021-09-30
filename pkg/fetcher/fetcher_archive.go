@@ -38,7 +38,7 @@ func (f *ArchiveFetcher) Links() ([]pub.Link, error) {
 			cl = af.Length()
 		}
 		link.Properties.Add(pub.Properties{
-			"archive": pub.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": pub.Properties{
 				"entryLength":       cl,
 				"isEntryCompressed": af.CompressedLength() > 0,
 			},
@@ -70,13 +70,7 @@ func NewArchiveFetcher(a archive.Archive) *ArchiveFetcher {
 }
 
 func NewArchiveFetcherFromPath(filepath string) (*ArchiveFetcher, error) {
-	archive, err := archive.NewArchiveFactory().Open(filepath, "")
-	if err != nil {
-		return nil, err
-	}
-	return &ArchiveFetcher{
-		archive: archive,
-	}, nil
+	return NewArchiveFetcherFromPathWithFactory(filepath, archive.NewArchiveFactory())
 }
 
 func NewArchiveFetcherFromPathWithFactory(path string, factory archive.ArchiveFactory) (*ArchiveFetcher, error) {
@@ -85,7 +79,7 @@ func NewArchiveFetcherFromPathWithFactory(path string, factory archive.ArchiveFa
 		return nil, err
 	}
 	return &ArchiveFetcher{
-		archive: *a,
+		archive: a,
 	}, nil
 }
 
@@ -109,7 +103,7 @@ func (r *entryResource) Link() pub.Link {
 		cl = r.entry.Length()
 	}
 	r.link.Properties.Add(pub.Properties{
-		"archive": pub.Properties{
+		"https://readium.org/webpub-manifest/properties#archive": pub.Properties{
 			"entryLength":       cl,
 			"isEntryCompressed": r.entry.CompressedLength() > 0,
 		},
