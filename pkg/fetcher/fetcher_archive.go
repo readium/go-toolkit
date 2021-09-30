@@ -28,7 +28,7 @@ func (f *ArchiveFetcher) Links() ([]pub.Link, error) {
 		}
 		ext := path.Ext(fp)
 		if ext != "" {
-			mt := mediatype.MediaTypeOfExtension(ext[1:]) // Remove leading "."
+			mt := mediatype.OfExtension(ext[1:]) // Remove leading "."
 			if mt != nil {
 				link.Type = mt.String()
 			}

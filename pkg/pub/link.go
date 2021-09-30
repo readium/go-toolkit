@@ -26,7 +26,7 @@ type Link struct {
 }
 
 func (l Link) MediaType() mediatype.MediaType {
-	mt := mediatype.MediaTypeOfString(l.Type)
+	mt := mediatype.OfString(l.Type)
 	if mt == nil {
 		return mediatype.BINARY
 	}

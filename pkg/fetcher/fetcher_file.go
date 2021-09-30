@@ -38,14 +38,14 @@ func (f *FileFetcher) Links() ([]pub.Link, error) {
 
 			f, err := os.Open(apath)
 			if err == nil {
-				mt := mediatype.MediaTypeOfFileOnly(f)
+				mt := mediatype.OfFileOnly(f)
 				if mt != nil {
 					link.Type = mt.String()
 				}
 			} else {
 				ext := filepath.Ext(apath)
 				if ext != "" {
-					mt := mediatype.MediaTypeOfExtension(ext[1:])
+					mt := mediatype.OfExtension(ext[1:])
 					if mt != nil {
 						link.Type = mt.String()
 					}
