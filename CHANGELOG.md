@@ -8,7 +8,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-* Tests for the shared models
+* Add the [Media Type API](https://readium.org/architecture/proposals/001-media-type.html).
+* Add the file and archive fetchers of the [Fetcher API](https://readium.org/architecture/proposals/002-composite-fetcher-api.html).
 
 ### Changed
 
