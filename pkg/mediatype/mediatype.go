@@ -33,7 +33,7 @@ type MediaType struct {
 
 // Create a new MediaType.
 // When an error is returned, do not use the resulting MediaType, as it will be incomplete/invalid
-func NewMediaType(str string, name string, extension string) (mt MediaType, err error) {
+func New(str string, name string, extension string) (mt MediaType, err error) {
 	if str == "" {
 		err = errors.New("invalid empty media type")
 		return
@@ -105,8 +105,8 @@ func NewMediaType(str string, name string, extension string) (mt MediaType, err 
 
 // Create a new MediaType solely from a mime string.
 // When an error is returned, do not use the resulting MediaType, as it will be incomplete/invalid
-func NewMediaTypeOfString(str string) (MediaType, error) {
-	return NewMediaType(str, "", "")
+func NewOfString(str string) (MediaType, error) {
+	return New(str, "", "")
 }
 
 // Structured syntax suffix, e.g. `+zip` in `application/epub+zip`.
@@ -138,7 +138,7 @@ func (mt MediaType) Charset() encoding.Encoding {
 //
 // Non-significant parameters are also discarded.
 func (mt MediaType) CanonicalMediaType() *MediaType {
-	return MediaTypeOfString(mt.String())
+	return OfString(mt.String())
 }
 
 /*
@@ -200,7 +200,7 @@ func (mt MediaType) Contains(other *MediaType) bool {
 
 // Returns whether the given [other] media type is included in this media type.
 func (mt MediaType) ContainsFromString(other string) bool {
-	omt, err := NewMediaTypeOfString(other)
+	omt, err := NewOfString(other)
 	if err != nil {
 		return false
 	}
@@ -225,7 +225,7 @@ func (mt MediaType) Matches(other ...*MediaType) bool {
 // Returns whether this media type and `other` are the same, ignoring parameters that are not in both media types.
 func (mt MediaType) MatchesFromString(other ...string) bool {
 	for _, o := range other {
-		omt, err := NewMediaTypeOfString(o)
+		omt, err := NewOfString(o)
 		if err != nil {
 			continue
 		}

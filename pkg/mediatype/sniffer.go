@@ -340,7 +340,7 @@ func SniffSystem(context SnifferContext) *MediaType {
 		if exr == ".htm" {
 			exr = ".html" // Fix for Go's first html extension being .htm
 		}
-		if nmt, err := NewMediaType(nm, "", exr[1:]); err == nil {
+		if nmt, err := New(nm, "", exr[1:]); err == nil {
 			return &nmt
 		}
 	}
@@ -359,7 +359,7 @@ func SniffSystem(context SnifferContext) *MediaType {
 			exr = ".html" // Fix for Go's first html extension being .htm
 		}
 		nm = strings.TrimSuffix(nm, "; charset=utf-8") // Fix for Go assuming file's content is UTF-8
-		if nmt, err := NewMediaType(nm, "", exr[1:]); err == nil {
+		if nmt, err := New(nm, "", exr[1:]); err == nil {
 			return &nmt
 		}
 	}
