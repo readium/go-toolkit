@@ -248,15 +248,15 @@ func SniffLPF(context SnifferContext) *MediaType {
 
 // Authorized extensions for resources in a CBZ archive.
 // Reference: https://wiki.mobileread.com/wiki/CBR_and_CBZ
-var cbz_extensions = []string{
-	"bmp", "dib", "gif", "jif", "jfi", "jfif", "jpg", "jpeg", "png", "tif", "tiff", "webp", // Bitmap. Note there's no AVIF or JXL
-	"acbf", "xml", // Metadata
+var cbz_extensions = map[string]struct{}{
+	"bmp": {}, "dib": {}, "gif": {}, "jif": {}, "jfi": {}, "jfif": {}, "jpg": {}, "jpeg": {}, "png": {}, "tif": {}, "tiff": {}, "webp": {}, // Bitmap. Note there's no AVIF or JXL
+	"acbf": {}, "xml": {}, // Metadata
 }
 
 // Authorized extensions for resources in a ZAB archive (Zipped Audio Book).
-var zab_extensions = []string{
-	"aac", "aiff", "alac", "flac", "m4a", "m4b", "mp3", "ogg", "oga", "mogg", "opus", "wav", "webm", // Audio
-	"asx", "bio", "m3u", "m3u8", "pla", "pls", "smil", "vlc", "wpl", "xspf", "zpl", // Playlist
+var zab_extensions = map[string]struct{}{
+	"aac": {}, "aiff": {}, "alac": {}, "flac": {}, "m4a": {}, "m4b": {}, "mp3": {}, "ogg": {}, "oga": {}, "mogg": {}, "opus": {}, "wav": {}, "webm": {}, // Audio
+	"asx": {}, "bio": {}, "m3u": {}, "m3u8": {}, "pla": {}, "pls": {}, "smil": {}, "vlc": {}, "wpl": {}, "xspf": {}, "zpl": {}, // Playlist
 }
 
 // Sniffs a simple Archive-based format, like Comic Book Archive or Zipped Audio Book.
@@ -276,22 +276,16 @@ func SniffArchive(context SnifferContext) *MediaType {
 			}
 			return false
 		}
-		archiveContainsOnlyExtensions := func(exts []string) bool {
+		archiveContainsOnlyExtensions := func(exts map[string]struct{}) bool {
 			for _, zf := range archive.File {
 				if isIgnored(zf) || zf.FileInfo().IsDir() {
 					continue
 				}
-				contains := false
 				fext := filepath.Ext(strings.ToLower(zf.Name))
 				if len(fext) > 1 {
 					fext = fext[1:] // Remove "." from extension
 				}
-				for _, v := range exts {
-					if v == fext {
-						contains = true
-						break
-					}
-				}
+				_, contains := exts[fext]
 				if !contains { // File extension not it allowed extensions
 					return false
 				}
