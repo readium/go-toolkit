@@ -1,51 +1,42 @@
 package fetcher
 
-import (
-	"errors"
-	"io"
-	"path"
+import "github.com/readium/go-toolkit/pkg/pub"
 
-	"github.com/readium/r2-streamer-go/pkg/pub"
-)
+// Fetcher provides access to a Resource from a Link.
+type Fetcher interface {
 
-// List TODO add doc
-type List struct {
-	publicationType string
-	fetcher         (func(*pub.Publication, string) (io.ReadSeeker, string, error))
+	/**
+	 * Known resources available in the medium, such as file paths on the file system
+	 * or entries in a ZIP archive. This list is not exhaustive, and additional
+	 * unknown resources might be reachable.
+	 *
+	 * If the medium has an inherent resource order, it should be followed.
+	 * Otherwise, HREFs are sorted alphabetically.
+	 */
+	Links() ([]pub.Link, error)
+
+	/**
+	 * Returns the [Resource] at the given [link]'s HREF.
+	 *
+	 * A [Resource] is always returned, since for some cases we can't know if it exists before
+	 * actually fetching it, such as HTTP. Therefore, errors are handled at the Resource level.
+	 */
+	Get(link pub.Link) *Resource
+
+	// Closes this object and releases any resources associated with it.
+	// If the object is already closed then invoking this method has no effect.
+	Close()
 }
 
-var fetcherList []List
+// A [Fetcher] providing no resources at all.
+type EmptyFetcher struct{}
 
-// Fetch TODO add doc
-func Fetch(publication *pub.Publication, publicationRessource string) (io.ReadSeeker, string, error) {
-	var typePublication string
-
-	for _, key := range publication.Internal {
-		if key.Name == "type" {
-			typePublication = key.Value.(string)
-		}
-	}
-
-	if typePublication != "" {
-		for _, fetcherFunc := range fetcherList {
-			if typePublication == fetcherFunc.publicationType {
-				return fetcherFunc.fetcher(publication, publicationRessource)
-			}
-		}
-	}
-
-	return nil, "", errors.New("can't find fetcher")
+func (f EmptyFetcher) Links() ([]pub.Link, error) {
+	return []pub.Link{}, nil
 }
 
-// FilePath return the complete path for the ressource
-func FilePath(publication *pub.Publication, publicationResource string) string {
-	var rootFile string
-
-	for _, data := range publication.Internal {
-		if data.Name == "rootfile" {
-			rootFile = data.Value.(string)
-		}
-	}
-
-	return path.Join(path.Dir(rootFile), publicationResource)
+func (f EmptyFetcher) Get(link pub.Link) Resource {
+	return NewFailureResource(link, NotFound(nil))
 }
+
+func (f EmptyFetcher) Close() {}

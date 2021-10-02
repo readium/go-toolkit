@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,11 +16,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/opds-community/libopds2-go/opds2"
-	"github.com/readium/r2-streamer-go/pkg/decoder/lcp"
-	"github.com/readium/r2-streamer-go/pkg/fetcher"
-	"github.com/readium/r2-streamer-go/pkg/parser"
-	"github.com/readium/r2-streamer-go/pkg/pub"
-	"github.com/readium/r2-streamer-go/pkg/searcher"
+	"github.com/readium/go-toolkit/pkg/parser"
+	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/urfave/negroni"
 )
 
@@ -50,10 +48,8 @@ func (s *PublicationServer) bookHandler(test bool) http.Handler {
 	serv := mux.NewRouter()
 
 	serv.HandleFunc("/{filename}/manifest.json", s.getManifest)
-	serv.HandleFunc("/{filename}/license-handler.json", s.pushPassphrase)
-	serv.HandleFunc("/{filename}/license.lcpl", s.getLCPLicense)
-	serv.HandleFunc("/{filename}/search", s.search)
-	serv.HandleFunc("/{filename}/media-overlay", s.mediaOverlay)
+	// serv.HandleFunc("/{filename}/search", s.search)
+	// serv.HandleFunc("/{filename}/media-overlay", s.mediaOverlay)
 	serv.HandleFunc("/{filename}/{asset:.*}", s.getAsset)
 	serv.HandleFunc("/publications.json", s.opdsFeedHandler)
 
@@ -103,31 +99,36 @@ func (s *PublicationServer) getManifest(w http.ResponseWriter, req *http.Request
 }
 
 func (s *PublicationServer) getAsset(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	assetname := vars["asset"]
+	w.WriteHeader(501)
 
-	publication, err := s.getPublication(vars["filename"], req)
-	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
+	/*
+		vars := mux.Vars(req)
+		assetname := vars["asset"]
 
-	epubReader, mediaType, err := fetcher.Fetch(publication, assetname)
-	if err != nil {
-		if err.Error() == "missing or bad key" {
-			w.WriteHeader(401)
+		publication, err := s.getPublication(vars["filename"], req)
+		if err != nil {
+			w.WriteHeader(500)
 			return
 		}
-		w.WriteHeader(404)
-		return
-	}
 
-	w.Header().Set("Content-Type", mediaType)
-	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
-	w.Header().Set("Cache-Control", "public,max-age=86400")
-	http.ServeContent(w, req, assetname, time.Time{}, epubReader)
+		epubReader, mediaType, err := fetcher.Fetch(publication, assetname)
+		if err != nil {
+			if err.Error() == "missing or bad key" {
+				w.WriteHeader(401)
+				return
+			}
+			w.WriteHeader(404)
+			return
+		}
+
+		w.Header().Set("Content-Type", mediaType)
+		w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
+		w.Header().Set("Cache-Control", "public,max-age=86400")
+		http.ServeContent(w, req, assetname, time.Time{}, epubReader)
+	*/
 }
 
+/*
 func (s *PublicationServer) search(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
 	vars := mux.Vars(req)
@@ -148,72 +149,6 @@ func (s *PublicationServer) search(w http.ResponseWriter, req *http.Request) {
 	j, _ := json.Marshal(searchReturn)
 	json.Indent(&returnJSON, j, "", "  ")
 	returnJSON.WriteTo(w)
-}
-
-func (s *PublicationServer) getLCPLicense(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-
-	publication, err := s.getPublication(vars["filename"], req)
-	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
-
-	data := publication.GetLCPJSON()
-	if string(data) == "" {
-		w.WriteHeader(404)
-		return
-	}
-	w.Header().Set("Content-Type", "application/vnd.readium.lcp.license-1.0+json")
-	w.Write(data)
-}
-
-func (s *PublicationServer) pushPassphrase(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-
-	publication, err := s.getPublication(vars["filename"], req)
-	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
-
-	data, err := publication.GetLCPHandlerInfo()
-	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
-
-	if req.Method == http.MethodPost {
-		var postInfo pub.LCPHandlerPost
-		buff, errRead := ioutil.ReadAll(req.Body)
-		if errRead != nil {
-			fmt.Println("can't read body")
-			w.WriteHeader(401)
-		} else {
-			errUnMarsh := json.Unmarshal(buff, &postInfo)
-			if errUnMarsh != nil {
-				fmt.Println("can't unmarshal " + errUnMarsh.Error())
-				w.WriteHeader(401)
-			} else {
-				key, _ := base64.StdEncoding.DecodeString(postInfo.Key.Hash)
-				publication.AddLCPHash(key)
-				if !lcp.HasGoodKey(publication) {
-					w.WriteHeader(401)
-				} else {
-					data.Key.Ready = true
-					s.updatePublication(*publication, vars["filename"])
-				}
-			}
-		}
-	}
-
-	j, _ := json.Marshal(data)
-
-	var identJSON bytes.Buffer
-	json.Indent(&identJSON, j, "", " ")
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
-	identJSON.WriteTo(w)
 }
 
 func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {
@@ -244,54 +179,58 @@ func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Reques
 	json.Indent(&returnJSON, j, "", "  ")
 	w.Header().Set("Content-Type", "application/vnd.readium.mo+json")
 	returnJSON.WriteTo(w)
-}
+}*/
 
-func (s *PublicationServer) getPublication(filename string, req *http.Request) (*pub.Publication, error) {
-	var current currentBook
+func (s *PublicationServer) getPublication(filename string, req *http.Request) (*pub.Manifest, error) {
+	return nil, errors.New("not implemented")
 
-	for _, book := range s.currentBookList {
-		if filename == book.filename {
-			current = book
-		}
-	}
+	/*
+		var current currentBook
 
-	if current.filename == "" {
-		manifestURL := "http://" + req.Host + "/" + filename + "/manifest.json"
-		filenamePath, _ := base64.StdEncoding.DecodeString(filename)
-
-		publication, err := parser.Parse(string(filenamePath))
-		hasMediaOverlay := false
-		for _, l := range publication.ReadingOrder {
-			if l.Properties != nil && l.Properties.MediaOverlay != "" {
-				hasMediaOverlay = true
+		for _, book := range s.currentBookList {
+			if filename == book.filename {
+				current = book
 			}
 		}
 
-		if err != nil {
-			return &pub.Publication{}, err
-		}
+		if current.filename == "" {
+			manifestURL := "http://" + req.Host + "/" + filename + "/manifest.json"
+			filenamePath, _ := base64.StdEncoding.DecodeString(filename)
 
-		publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
-		if hasMediaOverlay {
-			publication.AddLink("application/vnd.readium.mo+json", []string{"media-overlay"}, "http://"+req.Host+"/"+filename+"/media-overlay?resource={path}", true)
+			publication, err := parser.Parse(string(filenamePath))
+			hasMediaOverlay := false
+			for _, l := range publication.ReadingOrder {
+				if l.Properties != nil && l.Properties.MediaOverlay != "" {
+					hasMediaOverlay = true
+				}
+			}
+
+			if err != nil {
+				return &pub.Manifest{}, err
+			}
+
+			publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
+			if hasMediaOverlay {
+				publication.AddLink("application/vnd.readium.mo+json", []string{"media-overlay"}, "http://"+req.Host+"/"+filename+"/media-overlay?resource={path}", true)
+			}
+			// if searcher.CanBeSearch(publication) {
+			// 	publication.AddLink("", []string{"search"}, "http://"+req.Host+"/"+filename+"/search?query={searchTerms}", true)
+			// }
+			current = currentBook{filename: filename, publication: publication, timestamp: time.Now(), indexed: false}
+			s.currentBookList = append(s.currentBookList, current)
+			// if searcher.CanBeSearch(publication) {
+			// 	go indexBook(publication)
+			// }
+			return &publication, nil
 		}
-		if searcher.CanBeSearch(publication) {
-			publication.AddLink("", []string{"search"}, "http://"+req.Host+"/"+filename+"/search?query={searchTerms}", true)
-		}
-		current = currentBook{filename: filename, publication: publication, timestamp: time.Now(), indexed: false}
-		s.currentBookList = append(s.currentBookList, current)
-		// if searcher.CanBeSearch(publication) {
-		// 	go indexBook(publication)
-		// }
-		return &publication, nil
-	}
-	return &current.publication, nil
+		return &current.publication, nil
+	*/
 	// if searcher.CanBeSearch(publication) {
 	// 	go indexBook(publication)
 	// }
 }
 
-func (s *PublicationServer) updatePublication(publicaton pub.Publication, filename string) {
+func (s *PublicationServer) updatePublication(publicaton pub.Manifest, filename string) {
 	for i, book := range s.currentBookList {
 		if filename == book.filename {
 			s.currentBookList[i].publication = publicaton

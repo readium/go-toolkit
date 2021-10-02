@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/readium/r2-streamer-go/cmd/server/internal/consts"
+	"github.com/readium/go-toolkit/cmd/server/internal/consts"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -115,7 +115,7 @@ func (cnf *Config) BindFlags() {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			logrus.Errorf("Config file not found: %v", err)
 		} else {
-			logrus.Panic("Couldn't load config file: %v", err)
+			logrus.Panicf("Couldn't load config file: %v", err)
 		}
 	}
 
