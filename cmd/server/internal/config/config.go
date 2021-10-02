@@ -115,7 +115,7 @@ func (cnf *Config) BindFlags() {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			logrus.Errorf("Config file not found: %v", err)
 		} else {
-			logrus.Panic("Couldn't load config file: %v", err)
+			logrus.Panicf("Couldn't load config file: %v", err)
 		}
 	}
 
