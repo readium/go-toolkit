@@ -34,10 +34,10 @@ func TestArchiveFetcherLinks(t *testing.T) {
 		makeTestLink("/EPUB/css/nav.css", "text/css", 306, true),
 		makeTestLink("/EPUB/images/cover.png", "image/png", 35809, true),
 		makeTestLink("/EPUB/nav.xhtml", "application/xhtml+xml", 2293, true),
-		makeTestLink("/EPUB/package.opf", "", 773, true),
+		makeTestLink("/EPUB/package.opf", "application/oebps-package+xml", 773, true),
 		makeTestLink("/EPUB/s04.xhtml", "application/xhtml+xml", 118269, true),
-		makeTestLink("/EPUB/toc.ncx", "", 1697, true),
-		makeTestLink("/META-INF/container.xml", "text/xml", 176, true),
+		makeTestLink("/EPUB/toc.ncx", "application/x-dtbncx+xml", 1697, true),
+		makeTestLink("/META-INF/container.xml", "application/xml", 176, true),
 	}
 
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
