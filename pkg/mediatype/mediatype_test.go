@@ -180,6 +180,16 @@ func TestMediatypeEquality(t *testing.T) {
 	mt2, err = NewOfString("application/atom+xml")
 	assert.NoError(t, err)
 	assert.NotEqual(t, mt1, mt2)
+
+	// Using the [Equal] function
+	mt1, err = NewOfString("text/html;charset=utf-8")
+	assert.NoError(t, err)
+	mt2, err = NewOfString("text/html")
+	assert.NoError(t, err)
+	assert.False(t, mt1.Equal(&HTML))
+	assert.True(t, mt2.Equal(&HTML))
+	assert.False(t, mt1.Equal(&mt2))
+	assert.True(t, mt1.Equal(&mt1))
 }
 
 // More specifically, equality ignores case of type, subtype and parameter names (but not parameter values!)

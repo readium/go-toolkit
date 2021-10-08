@@ -3,6 +3,7 @@ package mediatype
 import (
 	"errors"
 	"mime"
+	"reflect"
 	"strings"
 
 	mapset "github.com/deckarep/golang-set"
@@ -205,6 +206,16 @@ func (mt MediaType) ContainsFromString(other string) bool {
 		return false
 	}
 	return mt.Contains(&omt)
+}
+
+func (mt MediaType) Equal(other *MediaType) bool {
+	if other == nil {
+		return false
+	}
+	if mt.Type == other.Type && mt.SubType == other.SubType && reflect.DeepEqual(mt.Parameters, other.Parameters) {
+		return true
+	}
+	return false
 }
 
 // Returns whether this media type and `other` are the same, ignoring parameters that are not in both media types.
