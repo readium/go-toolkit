@@ -1,11 +1,12 @@
 package mediatype
 
 import (
-	"archive/zip"
 	"encoding/json"
 	"mime"
 	"path/filepath"
 	"strings"
+
+	"github.com/readium/go-toolkit/pkg/internal/utils"
 )
 
 type Sniffer func(context SnifferContext) *MediaType
@@ -250,7 +251,7 @@ func SniffLPF(context SnifferContext) *MediaType {
 // Reference: https://wiki.mobileread.com/wiki/CBR_and_CBZ
 var cbz_extensions = map[string]struct{}{
 	"bmp": {}, "dib": {}, "gif": {}, "jif": {}, "jfi": {}, "jfif": {}, "jpg": {}, "jpeg": {}, "png": {}, "tif": {}, "tiff": {}, "webp": {}, // Bitmap. Note there's no AVIF or JXL
-	"acbf": {}, "xml": {}, // Metadata
+	"acbf": {}, "xml": {}, "txt": {}, // Metadata
 }
 
 // Authorized extensions for resources in a ZAB archive (Zipped Audio Book).
@@ -270,15 +271,9 @@ func SniffArchive(context SnifferContext) *MediaType {
 	}
 
 	if archive, err := context.ContentAsArchive(); err == nil && archive != nil {
-		isIgnored := func(file *zip.File) bool {
-			if strings.HasPrefix(file.Name, ".") || strings.HasPrefix(file.Name, "__MACOSX") || file.Name == "Thumbs.db" {
-				return true
-			}
-			return false
-		}
 		archiveContainsOnlyExtensions := func(exts map[string]struct{}) bool {
 			for _, zf := range archive.File {
-				if isIgnored(zf) || zf.FileInfo().IsDir() {
+				if utils.IsHiddenOrThumbs(zf.Name) || zf.FileInfo().IsDir() {
 					continue
 				}
 				fext := filepath.Ext(strings.ToLower(zf.Name))
