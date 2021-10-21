@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/readium/go-toolkit/pkg/internal/utils"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 )
 
 type Sniffer func(context SnifferContext) *MediaType
@@ -273,7 +273,7 @@ func SniffArchive(context SnifferContext) *MediaType {
 	if archive, err := context.ContentAsArchive(); err == nil && archive != nil {
 		archiveContainsOnlyExtensions := func(exts map[string]struct{}) bool {
 			for _, zf := range archive.File {
-				if utils.IsHiddenOrThumbs(zf.Name) || zf.FileInfo().IsDir() {
+				if extensions.IsHiddenOrThumbs(zf.Name) || zf.FileInfo().IsDir() {
 					continue
 				}
 				fext := filepath.Ext(strings.ToLower(zf.Name))

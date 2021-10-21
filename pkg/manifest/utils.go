@@ -18,20 +18,24 @@ func addToSet(s []string, e string) []string {
 	return s
 }
 
-func parseSetOrString(value interface{}) (result []string, err error) {
+func parseSliceOrString(value interface{}, deduplicate bool) (result []string, err error) {
 	switch v := value.(type) {
 	case string:
 		result = []string{v} // Just a single item
 	case []interface{}:
-		// Deduplicate the slice since it's a set (no unique items)
 		result = []string{}
 		for i, vv := range v {
-			role, ok := vv.(string)
+			str, ok := vv.(string)
 			if !ok {
 				err = fmt.Errorf("object at position %d is not a string", i)
 				return
 			}
-			result = addToSet(result, role)
+			if deduplicate {
+				// Deduplicate the slice since it's going to be a set (no unique items)
+				result = addToSet(result, str)
+			} else {
+				result = append(result, str)
+			}
 		}
 	}
 	return
@@ -40,4 +44,15 @@ func parseSetOrString(value interface{}) (result []string, err error) {
 func newTrue() *bool {
 	b := true
 	return &b
+}
+
+func firstLinkWithRel(links []Link, rel string) *Link {
+	for _, link := range links {
+		for _, linkRel := range link.Rels {
+			if linkRel == rel {
+				return &link
+			}
+		}
+	}
+	return nil
 }

@@ -2,7 +2,8 @@ package manifest
 
 import (
 	"encoding/json"
-	"errors"
+
+	"github.com/pkg/errors"
 )
 
 // Contributor
@@ -56,9 +57,9 @@ func (c *Contributor) UnmarshalJSON(data []byte) error {
 		}
 		roles, ok := dd["role"] // "role" is a special case, since it can be a single string or a set!
 		if ok {
-			dd["role"], err = parseSetOrString(roles)
+			dd["role"], err = parseSliceOrString(roles, true)
 			if err != nil {
-				return errors.New("couldn't unmarshal role: " + err.Error())
+				return errors.Wrap(err, "failed unmarshalling role")
 			}
 		}
 		// Turn back into bytes. TODO think about a more efficient way, maybe using the "mapstructure" package
