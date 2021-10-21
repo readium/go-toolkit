@@ -28,7 +28,7 @@ func parseSetOrString(value interface{}) (result []string, err error) {
 		for i, vv := range v {
 			role, ok := vv.(string)
 			if !ok {
-				err = fmt.Errorf("role at position %d is not a string", i)
+				err = fmt.Errorf("object at position %d is not a string", i)
 				return
 			}
 			result = addToSet(result, role)

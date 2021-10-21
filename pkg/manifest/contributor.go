@@ -58,7 +58,7 @@ func (c *Contributor) UnmarshalJSON(data []byte) error {
 		if ok {
 			dd["role"], err = parseSetOrString(roles)
 			if err != nil {
-				return err
+				return errors.New("couldn't unmarshal role: " + err.Error())
 			}
 		}
 		// Turn back into bytes. TODO think about a more efficient way, maybe using the "mapstructure" package
