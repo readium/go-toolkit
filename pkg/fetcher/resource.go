@@ -68,7 +68,7 @@ func ReadResourceAsJSON(r Resource) (map[string]interface{}, *ResourceError) {
 		return nil, ex
 	}
 	var object map[string]interface{}
-	err := json.Unmarshal([]byte(str), object)
+	err := json.Unmarshal([]byte(str), &object)
 	if err != nil {
 		return nil, Other(err)
 	}
