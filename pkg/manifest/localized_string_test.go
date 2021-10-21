@@ -1,4 +1,4 @@
-package pub
+package manifest
 
 import (
 	"encoding/json"

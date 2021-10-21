@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"golang.org/x/text/encoding/unicode"
 )
 
@@ -24,7 +24,7 @@ type Resource interface {
 
 	// Returns the link from which the resource was retrieved.
 	// It might be modified by the [Resource] to include additional metadata, e.g. the `Content-Type` HTTP header in [Link.Type].
-	Link() pub.Link
+	Link() manifest.Link
 
 	// Returns data length from metadata if available, or calculated from reading the bytes otherwise.
 	// This value must be treated as a hint, as it might not reflect the actual bytes length. To get the real length, you need to read the whole resource.
@@ -220,7 +220,7 @@ func OsErrorToException(err error) *ResourceError {
 
 // Creates a Resource that will always return the given [error].
 type FailureResource struct {
-	link pub.Link
+	link manifest.Link
 	ex   *ResourceError
 }
 
@@ -230,7 +230,7 @@ func (r FailureResource) File() string {
 
 func (r FailureResource) Close() {}
 
-func (r FailureResource) Link() pub.Link {
+func (r FailureResource) Link() manifest.Link {
 	return r.link
 }
 
@@ -254,7 +254,7 @@ func (r FailureResource) ReadAsXML() (xml.Token, *ResourceError) {
 	return nil, r.ex
 }
 
-func NewFailureResource(link pub.Link, ex *ResourceError) FailureResource {
+func NewFailureResource(link manifest.Link, ex *ResourceError) FailureResource {
 	return FailureResource{
 		link: link,
 		ex:   ex,

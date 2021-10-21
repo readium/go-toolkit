@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/kennygrant/sanitize"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
-	"github.com/readium/go-toolkit/pkg/pub"
 )
 
 // Provides access to resources on the local file system.
@@ -19,8 +19,8 @@ type FileFetcher struct {
 	resources []Resource // This is weak on mobile
 }
 
-func (f *FileFetcher) Links() ([]pub.Link, error) {
-	links := make([]pub.Link, 0)
+func (f *FileFetcher) Links() ([]manifest.Link, error) {
+	links := make([]manifest.Link, 0)
 	for href, xpath := range f.paths {
 		axpath, err := filepath.Abs(sanitize.Path(xpath))
 		if err == nil {
@@ -32,7 +32,7 @@ func (f *FileFetcher) Links() ([]pub.Link, error) {
 				return err
 			}
 
-			link := pub.Link{
+			link := manifest.Link{
 				Href: filepath.ToSlash(filepath.Join(href, strings.TrimPrefix(apath, xpath))),
 			}
 
@@ -61,7 +61,7 @@ func (f *FileFetcher) Links() ([]pub.Link, error) {
 	return links, nil
 }
 
-func (f *FileFetcher) Get(link pub.Link) Resource {
+func (f *FileFetcher) Get(link manifest.Link) Resource {
 	linkHref := link.Href
 	if !strings.HasPrefix(linkHref, "/") {
 		linkHref = "/" + linkHref
@@ -105,13 +105,13 @@ func NewFileFetcher(href string, fpath string) *FileFetcher {
 }
 
 type FileResource struct {
-	link pub.Link
+	link manifest.Link
 	path string
 	file *os.File
 	read bool
 }
 
-func (r *FileResource) Link() pub.Link {
+func (r *FileResource) Link() manifest.Link {
 	return r.link
 }
 
@@ -200,7 +200,7 @@ func (r *FileResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return ReadResourceAsXML(r)
 }*/
 
-func NewFileResource(link pub.Link, abspath string) *FileResource {
+func NewFileResource(link manifest.Link, abspath string) *FileResource {
 	return &FileResource{
 		link: link,
 		path: abspath,

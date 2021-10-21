@@ -3,11 +3,11 @@ package api
 import (
 	"github.com/jinzhu/copier"
 	"github.com/opds-community/libopds2-go/opds2"
-	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/manifest"
 )
 
 // AddPublicationToFeed filter publication fields and add it to the feed
-func AddPublicationToFeed(feed *opds2.Feed, publication pub.Manifest, baseURL string) {
+func AddPublicationToFeed(feed *opds2.Feed, publication manifest.Manifest, baseURL string) {
 	var pub opds2.Publication
 	var coverLink opds2.Link
 

@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/blevesearch/bleve"
-	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/manifest"
 )
 
 type ServerConfig struct {
@@ -19,7 +19,7 @@ type ServerConfig struct {
 
 type currentBook struct {
 	filename    string
-	publication pub.Manifest
+	publication manifest.Manifest
 	timestamp   time.Time
 	bleveIndex  bleve.Index
 	indexed     bool

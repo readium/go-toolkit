@@ -16,8 +16,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/opds-community/libopds2-go/opds2"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/parser"
-	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/urfave/negroni"
 )
 
@@ -153,11 +153,11 @@ func (s *PublicationServer) search(w http.ResponseWriter, req *http.Request) {
 
 func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Request) {
 	var returnJSON bytes.Buffer
-	var media []pub.MediaOverlayNode
+	var media []manifest.MediaOverlayNode
 
 	vars := mux.Vars(req)
 	var mediaOverlay struct {
-		MediaOverlay []pub.MediaOverlayNode `json:"media-overlay"`
+		MediaOverlay []manifest.MediaOverlayNode `json:"media-overlay"`
 	}
 
 	publication, err := s.getPublication(vars["filename"], req)
@@ -181,7 +181,7 @@ func (s *PublicationServer) mediaOverlay(w http.ResponseWriter, req *http.Reques
 	returnJSON.WriteTo(w)
 }*/
 
-func (s *PublicationServer) getPublication(filename string, req *http.Request) (*pub.Manifest, error) {
+func (s *PublicationServer) getPublication(filename string, req *http.Request) (*manifest.Manifest, error) {
 	return nil, errors.New("not implemented")
 
 	/*
@@ -206,7 +206,7 @@ func (s *PublicationServer) getPublication(filename string, req *http.Request) (
 			}
 
 			if err != nil {
-				return &pub.Manifest{}, err
+				return &manifest.Manifest{}, err
 			}
 
 			publication.AddLink("application/webpub+json", []string{"self"}, manifestURL, false)
@@ -230,7 +230,7 @@ func (s *PublicationServer) getPublication(filename string, req *http.Request) (
 	// }
 }
 
-func (s *PublicationServer) updatePublication(publicaton pub.Manifest, filename string) {
+func (s *PublicationServer) updatePublication(publicaton manifest.Manifest, filename string) {
 	for i, book := range s.currentBookList {
 		if filename == book.filename {
 			s.currentBookList[i].publication = publicaton

@@ -1,4 +1,4 @@
-package pub
+package manifest
 
 // Subject
 // https://github.com/readium/webpub-manifest/tree/master/contexts/default#subjects

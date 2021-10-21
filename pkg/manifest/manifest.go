@@ -1,9 +1,4 @@
-package pub
-
-import (
-	"errors"
-	"strings"
-)
+package manifest
 
 // Manifest Main structure for a publication
 type Manifest struct {
@@ -15,10 +10,42 @@ type Manifest struct {
 	TableOfContents []Link   `json:"toc,omitempty"`
 
 	Subcollections map[string][]PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
-	Internal       []Internal                         `json:"-"` // TODO remove
+	// Internal       []Internal                         `json:"-"` // TODO remove
 }
 
-// Internal TODO
+// Finds the first [Link] with the given relation in the manifest's links.
+func (m Manifest) LinkWithRel(rel string) *Link {
+	for _, resource := range m.Resources {
+		for _, resRel := range resource.Rels {
+			if resRel == rel {
+				return &resource
+			}
+		}
+	}
+
+	for _, item := range m.ReadingOrder {
+		for _, spineRel := range item.Rels {
+			if spineRel == rel {
+				return &item
+			}
+		}
+	}
+
+	for _, link := range m.Links {
+		for _, linkRel := range link.Rels {
+			if linkRel == rel {
+				return &link
+			}
+		}
+	}
+
+	return nil
+}
+
+// TODO linksWithRel: Finds all [Link]s having the given [rel] in the manifest's links.
+
+/*
+
 type Internal struct {
 	Name  string
 	Value interface{}
@@ -32,34 +59,6 @@ func (publication *Manifest) GetCover() (Link, error) {
 // GetNavDoc return the link for the navigation document
 func (publication *Manifest) GetNavDoc() (Link, error) {
 	return publication.searchLinkByRel("contents")
-}
-
-func (publication *Manifest) searchLinkByRel(rel string) (Link, error) {
-	for _, resource := range publication.Resources {
-		for _, resRel := range resource.Rels {
-			if resRel == rel {
-				return resource, nil
-			}
-		}
-	}
-
-	for _, item := range publication.ReadingOrder {
-		for _, spineRel := range item.Rels {
-			if spineRel == rel {
-				return item, nil
-			}
-		}
-	}
-
-	for _, link := range publication.Links {
-		for _, linkRel := range link.Rels {
-			if linkRel == rel {
-				return link, nil
-			}
-		}
-	}
-
-	return Link{}, errors.New("Can't find " + rel + " in publication")
 }
 
 // AddLink Add link in publication link self or search
@@ -170,3 +169,5 @@ func (publication *Manifest) TransformLinkToFullURL(baseURL string) {
 		}
 	}
 }
+
+*/
