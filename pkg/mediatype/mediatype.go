@@ -223,9 +223,6 @@ func (mt MediaType) Equal(other *MediaType) bool {
 func (mt MediaType) Matches(other ...*MediaType) bool {
 	for _, o := range other {
 		co := mt.Contains(o)
-		if other == nil && co {
-			return true
-		}
 		if co || o.Contains(&mt) {
 			return true
 		}
