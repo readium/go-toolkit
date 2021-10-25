@@ -19,6 +19,17 @@ func NewLocalizedStringFromString(value string) LocalizedString {
 	return ls
 }
 
+// Shortcut to create a [LocalizedString] using a map of translations indexed by the BCP 47 language tag.
+func NewLocalizedStringFromStrings(strings map[string]string) LocalizedString {
+	ls := LocalizedString{
+		translations: make(map[string]string),
+	}
+	for k, v := range strings {
+		ls.translations[k] = v
+	}
+	return ls
+}
+
 func (l *LocalizedString) String() string {
 	return l.DefaultTranslation()
 }
