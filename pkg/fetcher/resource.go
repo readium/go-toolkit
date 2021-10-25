@@ -2,11 +2,12 @@ package fetcher
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
+	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"golang.org/x/text/encoding/unicode"
 )
@@ -41,9 +42,8 @@ type Resource interface {
 	// Reads the full content as a JSON object.
 	ReadAsJSON() (map[string]interface{}, *ResourceError)
 
-	// Reads the full content as an XML document.
-	// TODO decide on the way to represent the XML
-	// ReadAsXML() (xml.Token, *ResourceError)
+	// Reads the full content as a generic XML document.
+	ReadAsXML() (*xmlquery.Node, *ResourceError)
 }
 
 func ReadResourceAsString(r Resource) (string, *ResourceError) {
@@ -75,13 +75,17 @@ func ReadResourceAsJSON(r Resource) (map[string]interface{}, *ResourceError) {
 	return object, nil
 }
 
-/*func ReadResourceAsXML(r Resource) (xml.Token, *ResourceError) {
+func ReadResourceAsXML(r Resource) (*xmlquery.Node, *ResourceError) {
 	bytes, ex := r.Read(0, 0)
 	if ex != nil {
-		return "", ex
+		return nil, ex
 	}
-	xml.NewDecoder().
-}*/
+	node, err := xmlquery.Parse(strings.NewReader(string(bytes)))
+	if err != nil {
+		return nil, Other(err)
+	}
+	return node, nil
+}
 
 type ResourceErrorCode uint16
 
@@ -250,7 +254,7 @@ func (r FailureResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return nil, r.ex
 }
 
-func (r FailureResource) ReadAsXML() (xml.Token, *ResourceError) {
+func (r FailureResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
 	return nil, r.ex
 }
 

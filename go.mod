@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/PuerkitoBio/goquery v1.5.1
 	github.com/RoaringBitmap/roaring v0.4.21 // indirect
+	github.com/antchfx/xmlquery v1.3.8 // indirect
 	github.com/blevesearch/bleve v0.8.1
 	github.com/blevesearch/blevex v0.0.0-20190916190636-152f0fe5c040 // indirect
 	github.com/blevesearch/go-porterstemmer v1.0.2 // indirect
