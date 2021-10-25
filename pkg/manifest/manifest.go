@@ -1,13 +1,22 @@
 package manifest
 
+import (
+	"encoding/json"
+	"path"
+
+	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
+	"github.com/readium/go-toolkit/pkg/util"
+)
+
 // Manifest Main structure for a publication
 type Manifest struct {
 	Context         []string `json:"@context,omitempty"`
 	Metadata        Metadata `json:"metadata"`
-	Links           []Link   `json:"links"`
-	ReadingOrder    []Link   `json:"readingOrder,omitempty"`
-	Resources       []Link   `json:"resources,omitempty"` //Replaces the manifest but less redundant
-	TableOfContents []Link   `json:"toc,omitempty"`
+	Links           LinkList `json:"links"`
+	ReadingOrder    LinkList `json:"readingOrder,omitempty"`
+	Resources       LinkList `json:"resources,omitempty"` //Replaces the manifest but less redundant
+	TableOfContents LinkList `json:"toc,omitempty"`
 
 	Subcollections map[string][]PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
 	// Internal       []Internal                         `json:"-"` // TODO remove
@@ -43,6 +52,160 @@ func (m Manifest) LinkWithRel(rel string) *Link {
 }
 
 // TODO linksWithRel: Finds all [Link]s having the given [rel] in the manifest's links.
+
+// Parses a [Manifest] from its RWPM JSON representation.
+//
+// TODO log [warnings] ?
+// https://readium.org/webpub-manifest/
+// https://readium.org/webpub-manifest/schema/publication.schema.json
+func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest, error) {
+	if rawJson == nil {
+		return nil, nil
+	}
+
+	// Parse links
+	rawLinks, ok := rawJson["links"].([]interface{})
+	var links []Link
+	var err error
+	if ok {
+		links, err = LinksFromJSONArray(rawLinks, LinkHrefNormalizerIdentity)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling 'links'")
+		}
+	}
+
+	baseURL := ""
+	if !packaged {
+		self := firstLinkWithRel(links, "self")
+		if self != nil {
+			url := extensions.ToUrlOrNull(self.Href)
+			if url != nil {
+				url.Path = path.Dir(url.Path)
+				baseURL = url.String()
+			}
+		}
+	}
+
+	normalizeHref := func(href string) (string, error) {
+		return util.NewHREF(href, baseURL).String()
+	}
+
+	manifest := new(Manifest)
+
+	// Context
+	rawContext, ok := rawJson["@context"].([]interface{})
+	if ok {
+		context, err := parseSliceOrString(rawContext, false)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling '@context'")
+		}
+		manifest.Context = context
+	}
+
+	// Metadata
+	rmt, ok := rawJson["metadata"].(map[string]interface{})
+	if !ok {
+		errors.New("'metadata' JSON object is required")
+	}
+	if rmt == nil {
+		return nil, errors.New("'metadata' is required")
+	}
+	metadata, err := MetadataFromJSON(rmt, normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling 'metadata'")
+	}
+	manifest.Metadata = *metadata
+
+	// Links
+	links, err = LinksFromJSONArray(rawLinks, normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling 'links'")
+	}
+	for _, link := range links {
+		if packaged && contains(link.Rels, "self") {
+			newRels := make([]string, 0, len(link.Rels)) // Same total length as original
+			newRels = append(newRels, "alternate")
+			for _, rel := range link.Rels {
+				if rel == "self" {
+					continue
+				}
+				newRels = append(newRels, rel)
+			}
+			link.Rels = newRels
+		}
+	}
+	manifest.Links = links
+
+	// ReadingOrder
+	readingOrderRaw, ok := rawJson["readingOrder"].([]interface{})
+	if !ok {
+		// [readingOrder] used to be [spine], so we parse [spine] as a fallback.
+		readingOrderRaw, ok = rawJson["spine"].([]interface{})
+		if !ok {
+			return nil, errors.New("Manifest has no valid 'readingOrder' or 'spine'")
+		}
+	}
+	readingOrder, err := LinksFromJSONArray(readingOrderRaw, normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling reading order")
+	}
+	manifest.ReadingOrder = make(LinkList, 0, len(readingOrder)) // More links with than without mimetypes
+	for _, link := range readingOrder {
+		if link.Type == "" {
+			continue
+		}
+		manifest.ReadingOrder = append(manifest.ReadingOrder, link)
+	}
+
+	// Resources
+	resourcesRaw, ok := rawJson["resources"].([]interface{})
+	if ok {
+		resources, err := LinksFromJSONArray(resourcesRaw, normalizeHref)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling 'resources'")
+		}
+		manifest.Resources = make(LinkList, 0, len(resources)) // More resources with than without mimetypes
+		for _, link := range resources {
+			if link.Type == "" {
+				continue
+			}
+			manifest.Resources = append(manifest.Resources, link)
+		}
+	}
+
+	// TOC
+	tocRaw, ok := rawJson["toc"].([]interface{})
+	if ok {
+		toc, err := LinksFromJSONArray(tocRaw, normalizeHref)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling 'toc'")
+		}
+		manifest.TableOfContents = toc
+	}
+
+	// Parses subcollections from the remaining JSON properties.
+	// TODO!
+
+	return manifest, nil
+}
+
+func (m *Manifest) UnmarshalJSON(b []byte) error {
+	var object map[string]interface{}
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+	fm, err := ManifestFromJSON(object, false)
+	if err != nil {
+		return err
+	}
+	m = fm
+	return nil
+}
+
+/*func (m Manifest) MarshalJSON() ([]byte, error) {
+
+}*/
 
 /*
 

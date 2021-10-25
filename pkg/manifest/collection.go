@@ -7,3 +7,5 @@ type PublicationCollection struct {
 	Links    []Link
 	Children []PublicationCollection
 }
+
+type Collection = Contributor

@@ -1,8 +1,11 @@
 package manifest
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // ReadingProgression
@@ -33,7 +36,7 @@ type Metadata struct {
 	Editors            []Contributor           `json:"editor,omitempty"`
 	Artists            []Contributor           `json:"artist,omitempty"`
 	Illustrators       []Contributor           `json:"illustrator,omitempty"`
-	Letterer           []Contributor           `json:"letterer,omitempty"`
+	Letterers          []Contributor           `json:"letterer,omitempty"`
 	Pencilers          []Contributor           `json:"penciler,omitempty"`
 	Colorists          []Contributor           `json:"colorist,omitempty"`
 	Inkers             []Contributor           `json:"inker,omitempty"`
@@ -46,9 +49,8 @@ type Metadata struct {
 	Duration           *float64                `json:"duration,omitempty" validator:"positive"` // TODO validator
 	NumberOfPages      *uint                   `json:"numberOfPages,omitempty"`
 	BelongsTo          map[string][]Collection `json:"belongsTo,omitempty"`
-	// TODO think of a way to replicate https://github.com/readium/r2-shared-kotlin/blob/develop/r2-shared/src/main/java/org/readium/r2/shared/publication/Metadata.kt#L125
 
-	OtherMetadata map[string]interface{} `json:"-"` //Extension point for other metadata
+	OtherMetadata map[string]interface{} `json:"-"` // Extension point for other metadata. TODO implement
 }
 
 func (m Metadata) Title() string {
@@ -108,19 +110,211 @@ func (m Metadata) EffectiveReadingProgression() ReadingProgression {
 	return LTR
 }
 
-// Encryption contains metadata from encryption xml
-type Encryption struct {
-	Scheme         string `json:"scheme,omitempty"`
-	Profile        string `json:"profile,omitempty"`
-	Algorithm      string `json:"algorithm,omitempty"`
-	Compression    string `json:"compression,omitempty"`
-	OriginalLength int    `json:"original-length,omitempty"`
+func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormalizer) (*Metadata, error) {
+	if rawJson == nil {
+		return nil, nil
+	}
+
+	title, err := LocalizedStringFromJSON(rawJson["title"])
+	if err != nil || title == nil {
+		// Warning: [title] is required
+		return nil, errors.Wrap(err, "failed parsing 'title'")
+	}
+
+	metadata := &Metadata{
+		Identifier:         parseOptString(rawJson["identifier"]),
+		Type:               parseOptString(rawJson["@type"]),
+		LocalizedTitle:     *title,
+		Modified:           parseOptTime(rawJson["modified"]),
+		Published:          parseOptTime(rawJson["published"]),
+		ReadingProgression: ReadingProgression(parseOptString(rawJson["readingProgression"])),
+		Description:        parseOptString(rawJson["description"]),
+	}
+
+	// LocalizedSubtitle
+	ls, ok := rawJson["subtitle"]
+	if ok {
+		localizedSubtitle, err := LocalizedStringFromJSON(ls)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed parsing Metadata 'subtitle' as LocalizedString")
+		}
+		metadata.LocalizedSubtitle = localizedSubtitle
+	}
+
+	// LocalizedSortAs
+	lsr, ok := rawJson["sortAs"]
+	if ok {
+		localizedSortAs, err := LocalizedStringFromJSON(lsr)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed parsing Metadata 'sortAs' as LocalizedString")
+		}
+		metadata.LocalizedSortAs = localizedSortAs
+	}
+
+	// Languages
+	languages, err := parseSliceOrString(rawJson["language"], true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'language'")
+	}
+	metadata.Languages = languages
+
+	// Subjects
+	subjects, err := SubjectFromJSONArray(rawJson["subjects"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'subjects'")
+	}
+	metadata.Subjects = subjects
+
+	// Contributors
+	contributors, err := ContributorFromJSONArray(rawJson["contributor"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'contributor'")
+	}
+	metadata.Contributors = contributors
+
+	// Publishers
+	contributors, err = ContributorFromJSONArray(rawJson["publisher"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'publisher'")
+	}
+	metadata.Publishers = contributors
+
+	// Imprints
+	contributors, err = ContributorFromJSONArray(rawJson["imprint"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'imprint'")
+	}
+	metadata.Imprints = contributors
+
+	// Authors
+	contributors, err = ContributorFromJSONArray(rawJson["author"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'author'")
+	}
+	metadata.Authors = contributors
+
+	// Translators
+	contributors, err = ContributorFromJSONArray(rawJson["translator"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'translator'")
+	}
+	metadata.Translators = contributors
+
+	// Editors
+	contributors, err = ContributorFromJSONArray(rawJson["editor"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'editor'")
+	}
+	metadata.Editors = contributors
+
+	// Artists
+	contributors, err = ContributorFromJSONArray(rawJson["artist"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'artist'")
+	}
+	metadata.Artists = contributors
+
+	// Illustrators
+	contributors, err = ContributorFromJSONArray(rawJson["illustrator"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'illustrator'")
+	}
+	metadata.Illustrators = contributors
+
+	// Letterers
+	contributors, err = ContributorFromJSONArray(rawJson["letterer"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'letterer'")
+	}
+	metadata.Letterers = contributors
+
+	// Pencilers
+	contributors, err = ContributorFromJSONArray(rawJson["penciler"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'penciler'")
+	}
+	metadata.Pencilers = contributors
+
+	// Colorists
+	contributors, err = ContributorFromJSONArray(rawJson["colorist"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'colorist'")
+	}
+	metadata.Colorists = contributors
+
+	// Inkers
+	contributors, err = ContributorFromJSONArray(rawJson["inker"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'inker'")
+	}
+	metadata.Inkers = contributors
+
+	// Narrators
+	contributors, err = ContributorFromJSONArray(rawJson["narrator"], normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'narrator'")
+	}
+	metadata.Narrators = contributors
+
+	// Duration
+	duration, ok := rawJson["duration"].(float64)
+	if ok {
+		metadata.Duration = &duration
+	}
+
+	// NumberOfPages
+	numberOfPages, ok := rawJson["numberOfPages"].(uint)
+	if ok {
+		metadata.NumberOfPages = &numberOfPages
+	}
+
+	// BelongsTo
+	belongsToRaw, ok := rawJson["belongsTo"].(map[string]interface{})
+	if !ok {
+		belongsToRaw, _ = rawJson["belongs_to"].(map[string]interface{})
+	}
+	if belongsToRaw != nil {
+		belongsTo := make(map[string][]Collection)
+		for k, v := range belongsToRaw {
+			if v == nil {
+				continue
+			}
+			cl, err := ContributorFromJSONArray(v, normalizeHref)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed parsing 'belongsTo.%s'", k)
+			}
+			belongsTo[k] = cl
+		}
+		metadata.BelongsTo = belongsTo
+	}
+
+	// Delete above vals so that we can put everything else in OtherMetadata
+	for _, v := range []string{
+		"title", "subtitle", "sortAs", "identifier", "@type", "modified", "published", "readingProgression", "description", "subjects", "language",
+		"contributor", "publisher", "imprint", "author", "translator", "editor", "artist", "illustrator", "letterer", "penciler", "colorist", "inker", "narrator",
+		"duration", "numberOfPages", "belongsTo", "belongs_to",
+	} {
+		delete(rawJson, v)
+	}
+
+	// Now all we have left is everything else!
+	metadata.OtherMetadata = rawJson
+
+	return metadata, nil
 }
 
-// Collection construct used for collection/serie metadata
-type Collection struct {
-	Name       string  `json:"name"`
-	SortAs     string  `json:"sortAs,omitempty"`
-	Identifier string  `json:"identifier,omitempty"`
-	Position   float32 `json:"position,omitempty"`
+func (m *Metadata) UnmarshalJSON(b []byte) error {
+	var object map[string]interface{}
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+	fm, err := MetadataFromJSON(object, LinkHrefNormalizerIdentity)
+	if err != nil {
+		return err
+	}
+	m = fm
+	return nil
 }
+
+// TODO Metadata MarshalJSON to handle OtherMetadata

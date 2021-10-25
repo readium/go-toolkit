@@ -77,25 +77,38 @@ func (l LocalizedString) MarshalJSON() ([]byte, error) {
 	return json.Marshal(l.DefaultTranslation())
 }
 
+func LocalizedStringFromJSON(d interface{}) (*LocalizedString, error) {
+	if d == nil {
+		return nil, errors.New("LocalizedString is nil")
+	}
+	l := new(LocalizedString)
+	switch lsx := d.(type) {
+	case string:
+		l.SetDefaultTranslation(lsx)
+	case map[string]interface{}:
+		for k, v := range lsx {
+			val, ok := v.(string)
+			if !ok {
+				return nil, errors.New("LocalizedString value at index " + k + " is not a string")
+			}
+			l.SetTranslation(k, val)
+		}
+	default:
+		return nil, errors.New("LocalizedString has invalid JSON object")
+	}
+	return l, nil
+}
+
 func (l *LocalizedString) UnmarshalJSON(data []byte) error {
 	var d interface{}
 	err := json.Unmarshal(data, &d)
 	if err != nil {
 		return err
 	}
-	switch d.(type) {
-	case string:
-		l.SetDefaultTranslation(d.(string))
-	case map[string]interface{}:
-		for k, v := range d.(map[string]interface{}) {
-			val, ok := v.(string)
-			if !ok {
-				return errors.New("LocalizedString value for " + k + " is not a string")
-			}
-			l.SetTranslation(k, val)
-		}
-	default:
-		return errors.New("LocalizedString has invalid JSON object")
+	lr, err := LocalizedStringFromJSON(d)
+	if err != nil {
+		return err
 	}
+	l = lr
 	return nil
 }

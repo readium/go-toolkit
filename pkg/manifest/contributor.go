@@ -29,6 +29,99 @@ func (c Contributor) SortAs() string {
 	return c.LocalizedSortAs.String()
 }
 
+// Parses a [Contributor] from its RWPM JSON representation.
+// A contributor can be parsed from a single string, or a full-fledged object.
+// The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
+func ContributorFromJSON(rawJson interface{}, normalizeHref LinkHrefNormalizer) (*Contributor, error) {
+	if rawJson == nil {
+		return nil, nil
+	}
+
+	c := new(Contributor)
+	switch dd := rawJson.(type) {
+	case string: // Just a single string Contributor
+		c.LocalizedName = NewLocalizedStringFromString(dd)
+	case map[string]interface{}: // Actual object Contributor
+		// LocalizedName
+		nr, ok := dd["name"]
+		if !ok {
+			// No name means the Contributor is invalid
+			return nil, errors.New("Contributor has no 'name'")
+		}
+		localizedName, err := LocalizedStringFromJSON(nr)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed parsing Contributor 'name' as LocalizedString")
+		}
+		c.LocalizedName = *localizedName
+
+		// LocalizedSortAs
+		lsr, ok := dd["sortAs"]
+		if ok {
+			localizedSortAs, err := LocalizedStringFromJSON(lsr)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed parsing Contributor 'sortAs' as LocalizedString")
+			}
+			c.LocalizedSortAs = localizedSortAs
+		}
+
+		// Roles
+		roles, err := parseSliceOrString(dd["role"], true)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed parsing Contributor 'sortAs' as LocalizedString")
+		}
+		c.Roles = roles
+
+		// Links
+		rawLinks, ok := dd["links"].([]interface{})
+		if ok {
+			links, err := LinksFromJSONArray(rawLinks, normalizeHref)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed unmarshalling 'links'")
+			}
+			c.Links = links
+		}
+
+		// Identifier
+		c.Identifier = parseOptString(dd["identifier"])
+
+		// Position
+		position, ok := dd["position"].(float64)
+		if ok { // Need to do this because default is not 0, but nil
+			c.Position = &position
+		}
+
+	default:
+		return nil, errors.New("Contributor has invalid JSON object")
+	}
+	return c, nil
+}
+
+func ContributorFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNormalizer) ([]Contributor, error) {
+	contributors := make([]Contributor, 0)
+	switch rjx := rawJsonArray.(type) {
+	case string:
+		c, err := ContributorFromJSON(rjx, normalizeHref)
+		if err != nil {
+			return nil, err
+		}
+		if c != nil {
+			contributors = append(contributors, *c)
+		}
+	case []interface{}:
+		for i, entry := range rjx {
+			rc, err := ContributorFromJSON(entry, normalizeHref)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed unmarshalling Contributor at position %d", i)
+			}
+			if rc == nil {
+				continue
+			}
+			contributors = append(contributors, *rc)
+		}
+	}
+	return contributors, nil
+}
+
 func (c Contributor) MarshalJSON() ([]byte, error) {
 	if c.LocalizedSortAs == nil && c.Identifier == "" && len(c.Roles) == 0 && c.Position == nil && c.Links == nil && len(c.LocalizedName.translations) == 1 {
 		// If everything but name is empty, and there's just one name, contributor can be just a name
@@ -45,31 +138,10 @@ func (c *Contributor) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	switch dd := d.(type) {
-	case string: // Just a single string Contributor
-		c.LocalizedName = NewLocalizedStringFromString(d.(string))
-	case map[string]interface{}: // Actual object Contributor
-		_, ok := dd["name"]
-		if !ok {
-			// No name means the contributor is invalid
-			c = nil
-			return nil
-		}
-		roles, ok := dd["role"] // "role" is a special case, since it can be a single string or a set!
-		if ok {
-			dd["role"], err = parseSliceOrString(roles, true)
-			if err != nil {
-				return errors.Wrap(err, "failed unmarshalling role")
-			}
-		}
-		// Turn back into bytes. TODO think about a more efficient way, maybe using the "mapstructure" package
-		// Another possibility would be just manually decoding the rest of the Contributor fields
-		newdata, _ := json.Marshal(dd)
-		type CNT *Contributor // Prevent infinite recursion
-		cnt := CNT(c)
-		return json.Unmarshal(newdata, cnt) // Decode final representation
-	default:
-		return errors.New("Contributor has invalid JSON object")
+	fc, err := ContributorFromJSON(d, LinkHrefNormalizerIdentity)
+	if err != nil {
+		return err
 	}
+	c = fc
 	return nil
 }

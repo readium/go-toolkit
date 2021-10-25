@@ -1,6 +1,9 @@
 package manifest
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 func contains(s []string, e string) bool {
 	for _, a := range s {
@@ -55,4 +58,37 @@ func firstLinkWithRel(links []Link, rel string) *Link {
 		}
 	}
 	return nil
+}
+
+// Utilities for convenient JSON unmarshalling
+// TODO replace a lot of these with generics!
+
+func parseOptTime(raw interface{}) *time.Time {
+	rt, ok := raw.(string)
+	if !ok {
+		return nil
+	}
+	t := &time.Time{}
+	t.UnmarshalText([]byte(rt)) // Ignores errors!
+	return t
+}
+
+func parseOptString(raw interface{}) string {
+	rs, _ := raw.(string)
+	return rs
+}
+
+func parseOptUInt(raw interface{}) uint {
+	ri, _ := raw.(uint)
+	return ri
+}
+
+func parseOptBool(raw interface{}) bool {
+	rb, _ := raw.(bool)
+	return rb
+}
+
+func parseOptFloat64(raw interface{}) float64 {
+	rb, _ := raw.(float64)
+	return rb
 }
