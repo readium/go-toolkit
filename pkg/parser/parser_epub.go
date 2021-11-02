@@ -14,14 +14,14 @@ import (
 type EPUBParser struct {
 }
 
-func (p EPUBParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
+func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Builder, error) {
 	fallbackTitle := asset.Name()
 
 	if !asset.MediaType().Equal(&mediatype.EPUB) {
 		return nil, nil
 	}
 
-	opfPath, err := epub.GetRootFilePath(fetcher)
+	opfPath, err := epub.GetRootFilePath(f)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func (p EPUBParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher)
 		opfPath = "/" + opfPath
 	}
 
-	opfXmlDocument, err := fetcher.Get(manifest.Link{Href: opfPath}).ReadAsXML()
+	opfXmlDocument, err := f.Get(manifest.Link{Href: opfPath}).ReadAsXML()
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +42,17 @@ func (p EPUBParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher)
 	manifest := epub.PublicationFactory{
 		FallbackTitle:   fallbackTitle,
 		PackageDocument: *packageDocument,
-		NavigationData:  parseNavigationData(*packageDocument, fetcher),
-		EncryptionData:  parseEncryptionData(fetcher),
-		DisplayOptions:  parseDisplayOptions(fetcher),
+		NavigationData:  parseNavigationData(*packageDocument, f),
+		EncryptionData:  parseEncryptionData(f),
+		DisplayOptions:  parseDisplayOptions(f),
+	}.Create()
+
+	ffetcher := f
+	if manifest.Metadata.Identifier != "" {
+		ffetcher = f // TODO TransformingFetcher(fetcher, EpubDeobfuscator(it)::transform)
 	}
 
+	return pub.NewBuilder(manifest, ffetcher), nil // TODO services!
 }
 
 func parseEncryptionData(fetcher fetcher.Fetcher) (ret map[string]manifest.Encryption) {

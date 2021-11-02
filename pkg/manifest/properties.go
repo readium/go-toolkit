@@ -4,18 +4,18 @@ package manifest
 
 type Properties map[string]interface{}
 
-func (p *Properties) Add(newProperties map[string]interface{}) {
-	if *p == nil {
-		*p = make(Properties)
+func (p Properties) Add(newProperties map[string]interface{}) {
+	if p == nil {
+		p = make(Properties)
 	}
 	for k, v := range newProperties {
-		(*p)[k] = v
+		p[k] = v
 	}
 }
 
-func (p *Properties) Get(key string) interface{} {
+func (p Properties) Get(key string) interface{} {
 	if p != nil {
-		return (*p)[key]
+		return p[key]
 	}
 	return nil
 }

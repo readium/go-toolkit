@@ -12,7 +12,7 @@ import (
 type PackageDocument struct {
 	Path               string
 	EPUBVersion        float64
-	uniqueIdenfifierId string
+	uniqueIdenfifierID string
 	metadata           EPUBMetadata
 	Manifest           []Item
 	Spine              Spine
@@ -65,7 +65,7 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 	return &PackageDocument{
 		Path:               filePath,
 		EPUBVersion:        epubVersion,
-		uniqueIdenfifierId: document.SelectAttr("unique-identifier"),
+		uniqueIdenfifierID: document.SelectAttr("unique-identifier"),
 		metadata:           *metadata,
 		Manifest:           manifest,
 		Spine:              ParseSpine(spineElement, prefixMap, epubVersion),

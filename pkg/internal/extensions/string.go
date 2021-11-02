@@ -28,3 +28,12 @@ func ParseDate(raw string) *time.Time {
 	}
 	return &t
 }
+
+func Contains(strings []string, s string) bool {
+	for _, v := range strings {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
