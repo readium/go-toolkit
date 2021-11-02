@@ -49,6 +49,7 @@ type Metadata struct {
 	Duration           *float64                `json:"duration,omitempty" validator:"positive"` // TODO validator
 	NumberOfPages      *uint                   `json:"numberOfPages,omitempty"`
 	BelongsTo          map[string][]Collection `json:"belongsTo,omitempty"`
+	Presentation       *Presentation           `json:"presentation,omitempty"`
 
 	OtherMetadata map[string]interface{} `json:"-"` // Extension point for other metadata. TODO implement
 }

@@ -6,5 +6,5 @@ type Encryption struct {
 	Profile        string `json:"profile,omitempty"`
 	Algorithm      string `json:"algorithm,omitempty"`
 	Compression    string `json:"compression,omitempty"`
-	OriginalLength int    `json:"original-length,omitempty"`
+	OriginalLength int64  `json:"original-length,omitempty"`
 }

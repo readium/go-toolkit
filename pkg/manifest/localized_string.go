@@ -8,24 +8,24 @@ import (
 const UNDEFINED_LANGUAGE = "und"
 
 type LocalizedString struct {
-	translations map[string]string
+	Translations map[string]string
 }
 
 func NewLocalizedStringFromString(value string) LocalizedString {
 	ls := LocalizedString{
-		translations: make(map[string]string),
+		Translations: make(map[string]string),
 	}
-	ls.translations[UNDEFINED_LANGUAGE] = value
+	ls.Translations[UNDEFINED_LANGUAGE] = value
 	return ls
 }
 
 // Shortcut to create a [LocalizedString] using a map of translations indexed by the BCP 47 language tag.
 func NewLocalizedStringFromStrings(strings map[string]string) LocalizedString {
 	ls := LocalizedString{
-		translations: make(map[string]string),
+		Translations: make(map[string]string),
 	}
 	for k, v := range strings {
-		ls.translations[k] = v
+		ls.Translations[k] = v
 	}
 	return ls
 }
@@ -34,31 +34,35 @@ func (l *LocalizedString) String() string {
 	return l.DefaultTranslation()
 }
 
+func (l *LocalizedString) Length() int {
+	return len(l.Translations)
+}
+
 func (l *LocalizedString) DefaultTranslation() string {
 	return l.GetOrFallback("")
 }
 
 func (l *LocalizedString) SetDefaultTranslation(value string) {
-	if l.translations == nil {
-		l.translations = make(map[string]string)
+	if l.Translations == nil {
+		l.Translations = make(map[string]string)
 	}
-	l.translations[UNDEFINED_LANGUAGE] = value
+	l.Translations[UNDEFINED_LANGUAGE] = value
 }
 
 func (l *LocalizedString) SetTranslation(language string, value string) {
-	if l.translations == nil {
-		l.translations = make(map[string]string)
+	if l.Translations == nil {
+		l.Translations = make(map[string]string)
 	}
-	l.translations[language] = value
+	l.Translations[language] = value
 }
 
 // GetOrFallback Returns the first translation for the given [language] BCP–47 tag.
 func (l *LocalizedString) GetOrFallback(language string) string {
-	if l.translations == nil {
+	if l.Translations == nil {
 		return ""
 	}
 
-	t, ok := l.translations[language]
+	t, ok := l.Translations[language]
 	if ok {
 		return t // Value for the language
 	}
@@ -67,23 +71,23 @@ func (l *LocalizedString) GetOrFallback(language string) string {
 	if ok {
 		return t
 	}*/
-	t, ok = l.translations[UNDEFINED_LANGUAGE]
+	t, ok = l.Translations[UNDEFINED_LANGUAGE]
 	if ok {
 		return t // "und" value
 	}
-	t, ok = l.translations["en"]
+	t, ok = l.Translations["en"]
 	if ok {
 		return t // English value
 	}
-	for _, value := range l.translations {
+	for _, value := range l.Translations {
 		return value // Return first value
 	}
 	return "" // Should only get here if the map of languages is empty
 }
 
 func (l LocalizedString) MarshalJSON() ([]byte, error) {
-	if len(l.translations) > 1 {
-		return json.Marshal(l.translations)
+	if len(l.Translations) > 1 {
+		return json.Marshal(l.Translations)
 	}
 	return json.Marshal(l.DefaultTranslation())
 }

@@ -19,6 +19,9 @@ type HREF struct {
 }
 
 func NewHREF(href string, base string) HREF {
+	if base == "" {
+		base = "/" // TODO check if works
+	}
 	return HREF{href: href, baseHref: base}
 }
 
@@ -55,7 +58,7 @@ func (h HREF) String() (string, error) {
 	// TODO determine if the rest is necessary https://github.com/readium/kotlin-toolkit/blob/6f9f5914090625cfc4f46637970bb94992d9f692/readium/shared/src/main/java/org/readium/r2/shared/util/Href.kt#L56
 
 	baseuri, err := url.Parse(baseHref)
-	if err == nil {
+	if err != nil {
 		return "", err
 	}
 

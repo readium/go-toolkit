@@ -24,7 +24,8 @@ var CONTENT_RESERVED_PREFIXES = map[string]string{
 type DefaultVocab int
 
 const (
-	META DefaultVocab = iota + 1
+	NO_VOCAB DefaultVocab = iota
+	META
 	LINK
 	ITEM
 	ITEMREF
