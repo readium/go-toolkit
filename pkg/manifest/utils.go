@@ -3,19 +3,12 @@ package manifest
 import (
 	"fmt"
 	"time"
+
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 )
 
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-
 func addToSet(s []string, e string) []string {
-	if !contains(s, e) {
+	if !extensions.Contains(s, e) {
 		s = append(s, e)
 	}
 	return s

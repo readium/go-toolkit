@@ -15,7 +15,7 @@ type Publication struct {
 	_manifest manifest.Manifest
 }
 
-func InitPublication() *Publication {
+func New() *Publication {
 	return &Publication{}
 }
 
@@ -33,8 +33,8 @@ type Builder struct {
 	// TODO servicesBuilder
 }
 
-func (b Builder) Build() Publication {
-	return Publication{
+func (b Builder) Build() *Publication {
+	return &Publication{
 		manifest: b.manifest,
 		fetcher:  b.fetcher,
 	}

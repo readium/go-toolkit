@@ -23,7 +23,7 @@ func hrefCommonFirstComponent(links []manifest.Link) string {
 	return latest
 }
 
-func guessFetcherTitle(fetcher fetcher.Fetcher) string { // TODO test for this
+func guessPublicationTitleFromFileStructure(fetcher fetcher.Fetcher) string { // TODO test for this
 	links, err := fetcher.Links()
 	if err != nil || len(links) == 0 {
 		return ""

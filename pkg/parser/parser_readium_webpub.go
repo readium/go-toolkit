@@ -13,7 +13,7 @@ import (
 
 type WebPubParser struct {
 	client *http.Client
-	// TODO pdfFactory
+	// pdfFactory may never be needed
 }
 
 func NewWebPubParser(client *http.Client) WebPubParser {

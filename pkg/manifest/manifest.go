@@ -122,7 +122,7 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 		return nil, errors.Wrap(err, "failed unmarshalling 'links'")
 	}
 	for _, link := range links {
-		if packaged && contains(link.Rels, "self") {
+		if packaged && extensions.Contains(link.Rels, "self") {
 			newRels := make([]string, 0, len(link.Rels)) // Same total length as original
 			newRels = append(newRels, "alternate")
 			for _, rel := range link.Rels {

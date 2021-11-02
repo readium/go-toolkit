@@ -46,7 +46,7 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	})
 
 	// Try to figure out the publication's title
-	title := guessFetcherTitle(fetcher)
+	title := guessPublicationTitleFromFileStructure(fetcher)
 	if title == "" {
 		title = asset.Name()
 	}
