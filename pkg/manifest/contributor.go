@@ -123,7 +123,7 @@ func ContributorFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNo
 }
 
 func (c Contributor) MarshalJSON() ([]byte, error) {
-	if c.LocalizedSortAs == nil && c.Identifier == "" && len(c.Roles) == 0 && c.Position == nil && c.Links == nil && len(c.LocalizedName.translations) == 1 {
+	if c.LocalizedSortAs == nil && c.Identifier == "" && len(c.Roles) == 0 && c.Position == nil && c.Links == nil && len(c.LocalizedName.Translations) == 1 {
 		// If everything but name is empty, and there's just one name, contributor can be just a name
 		return json.Marshal(c.LocalizedName)
 	}

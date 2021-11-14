@@ -8,7 +8,7 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/fetcher"
-	"github.com/readium/go-toolkit/pkg/internal/utils"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
@@ -35,7 +35,7 @@ func (p AudioParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 			fext = fext[1:] // Remove "." from extension
 		}
 		_, contains := allowed_extensions_audio[fext]
-		if utils.IsHiddenOrThumbs(link.Href) || !contains {
+		if extensions.IsHiddenOrThumbs(link.Href) || !contains {
 			continue
 		}
 		links = append(links, link)
@@ -83,7 +83,7 @@ func (p AudioParser) accepts(asset asset.PublicationAsset, fetcher fetcher.Fetch
 		return false
 	}
 	for _, link := range links {
-		if utils.IsHiddenOrThumbs(link.Href) {
+		if extensions.IsHiddenOrThumbs(link.Href) {
 			continue
 		}
 		if link.MediaType().IsBitmap() {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/fetcher"
-	"github.com/readium/go-toolkit/pkg/internal/utils"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
@@ -30,10 +30,10 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	readingOrder := make([]manifest.Link, 0)
 	for _, link := range links {
 		// Filter out all irrelevant files
-		if utils.IsHiddenOrThumbs(link.Href) || !link.MediaType().IsBitmap() {
+		if extensions.IsHiddenOrThumbs(link.Href) || !link.MediaType().IsBitmap() {
 			continue
 		}
-		links = append(links, link)
+		readingOrder = append(readingOrder, link)
 	}
 
 	if len(readingOrder) == 0 {
@@ -74,7 +74,7 @@ func (p ImageParser) accepts(asset asset.PublicationAsset, fetcher fetcher.Fetch
 		return false
 	}
 	for _, link := range links {
-		if utils.IsHiddenOrThumbs(link.Href) {
+		if extensions.IsHiddenOrThumbs(link.Href) {
 			continue
 		}
 		if link.MediaType().IsBitmap() {

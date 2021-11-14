@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/antchfx/xmlquery"
-	"github.com/kennygrant/sanitize"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 )
@@ -23,12 +22,20 @@ type FileFetcher struct {
 func (f *FileFetcher) Links() ([]manifest.Link, error) {
 	links := make([]manifest.Link, 0)
 	for href, xpath := range f.paths {
-		axpath, err := filepath.Abs(sanitize.Path(xpath))
+		axpath, err := filepath.Abs(xpath)
 		if err == nil {
 			xpath = axpath
 		}
 
 		err = filepath.WalkDir(xpath, func(apath string, d fs.DirEntry, err error) error {
+			if d == nil { // xpath is afile
+				fi, err := os.Stat(xpath)
+				if err != nil {
+					return err
+				}
+				d = fs.FileInfoToDirEntry(fi)
+			}
+
 			if d.IsDir() || err != nil {
 				return err
 			}
@@ -74,11 +81,11 @@ func (f *FileFetcher) Get(link manifest.Link) Resource {
 		if strings.HasPrefix(linkHref, itemHref) {
 			resourceFile := filepath.Join(itemFile, strings.TrimPrefix(linkHref, itemHref))
 			// Make sure that the requested resource is [path] or one of its descendant.
-			rapath, err := filepath.Abs(sanitize.Path(filepath.ToSlash(resourceFile)))
+			rapath, err := filepath.Abs(filepath.ToSlash(resourceFile))
 			if err != nil {
 				continue // TODO somehow get this error out?
 			}
-			iapath, err := filepath.Abs(sanitize.Path(filepath.ToSlash(itemFile)))
+			iapath, err := filepath.Abs(filepath.ToSlash(itemFile))
 			if err != nil {
 				continue // TODO somehow get this error out?
 			}

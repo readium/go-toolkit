@@ -16,6 +16,12 @@ type FileAsset struct {
 	mediaTypeHint  string
 }
 
+func File(filepath string) *FileAsset {
+	return &FileAsset{
+		filepath: filepath,
+	}
+}
+
 // Creates a [FileAsset] from a [File] and an optional media type, when known.
 func FileWithMediaType(filepath string, mediatype *mediatype.MediaType) *FileAsset {
 	return &FileAsset{

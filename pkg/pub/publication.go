@@ -7,8 +7,8 @@ import (
 
 // The Publication shared model is the entrypoint for all the metadata and services related to a Readium publication.
 type Publication struct {
-	manifest manifest.Manifest // The manifest holding the publication metadata extracted from the publication file.
-	fetcher  fetcher.Fetcher   // The underlying fetcher used to read publication resources.
+	Manifest manifest.Manifest // The manifest holding the publication metadata extracted from the publication file.
+	Fetcher  fetcher.Fetcher   // The underlying fetcher used to read publication resources.
 	// TODO servicesBuilder
 	// TODO positionsFactory
 	// TODO services []Service
@@ -35,7 +35,7 @@ type Builder struct {
 
 func (b Builder) Build() *Publication {
 	return &Publication{
-		manifest: b.manifest,
-		fetcher:  b.fetcher,
+		Manifest: b.manifest,
+		Fetcher:  b.fetcher,
 	}
 }
