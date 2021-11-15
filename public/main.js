@@ -17,7 +17,10 @@ const Index = {
     view: () => {
         if(list === undefined)
             return m("div", "Loading file list...");
-        return m("ul", list.map(item => m("li", m(m.route.Link, {href: "/read/" + item.path}, item.filename))));
+        return [
+            m("h1", "Navigator demo for go-toolkit"),
+            m("ul", list.map(item => m("li", m(m.route.Link, {href: "/read/" + item.path}, item.filename))))
+        ];
     }
 }
 
