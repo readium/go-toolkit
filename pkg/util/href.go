@@ -37,7 +37,7 @@ func (h HREF) String() (string, error) {
 
 	// HREF is already absolute.
 	uri, err := url.Parse(href)
-	if err == nil {
+	if err != nil {
 		return "", err
 	}
 	if uri.IsAbs() {
