@@ -859,8 +859,11 @@ func (m MetadataItem) ToTitle() (*Title, error) {
 	}
 
 	fileAsK, fileAsV := m.FileAs()
-	localizedSortAs := &manifest.LocalizedString{}
-	localizedSortAs.SetTranslation(fileAsK, fileAsV)
+	var localizedSortAs *manifest.LocalizedString
+	if fileAsK != "" && fileAsV != "" {
+		localizedSortAs = &manifest.LocalizedString{}
+		localizedSortAs.SetTranslation(fileAsK, fileAsV)
+	}
 
 	return &Title{
 		value:      m.LocalizedString(),
