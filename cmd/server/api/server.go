@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -43,6 +44,7 @@ func (s *PublicationServer) Init() http.Handler {
 func (s *PublicationServer) bookHandler(test bool) http.Handler {
 	r := mux.NewRouter()
 
+	r.HandleFunc("/list.json", s.demoList)
 	r.HandleFunc("/{filename}/manifest.json", s.getManifest)
 	// r.HandleFunc("/{filename}/search", s.search)
 	// r.HandleFunc("/{filename}/media-overlay", s.mediaOverlay)
@@ -57,6 +59,28 @@ func makeRelative(link manifest.Link) manifest.Link {
 		alt.Href = strings.TrimPrefix(alt.Href, "/")
 	}
 	return link
+}
+
+type demoListItem struct {
+	Filename string `json:"filename"`
+	Path     string `json:"path"`
+}
+
+func (s *PublicationServer) demoList(w http.ResponseWriter, req *http.Request) {
+	fi, err := ioutil.ReadDir(s.config.PublicationPath)
+	if err != nil {
+		logrus.Error(err)
+		w.WriteHeader(500)
+		return
+	}
+	files := make([]demoListItem, len(fi))
+	for i, f := range fi {
+		files[i] = demoListItem{
+			Filename: f.Name(),
+			Path:     base64.RawURLEncoding.EncodeToString([]byte(f.Name())),
+		}
+	}
+	json.NewEncoder(w).Encode(files)
 }
 
 func (s *PublicationServer) getPublication(filename string, r *http.Request) (*pub.Publication, error) {
@@ -146,6 +170,7 @@ func (s *PublicationServer) getAsset(w http.ResponseWriter, r *http.Request) {
 	link.Href = "/" + link.Href
 
 	res := publication.Fetcher.Get(*link)
+	defer res.Close()
 	/*if res.File() != "" {
 		// Shortcut to serve the file in an optimal way
 		http.ServeFile(w, r, res.File())
