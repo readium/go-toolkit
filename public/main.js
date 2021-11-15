@@ -38,8 +38,11 @@ const Reader = {
 
         const item = manifest.readingOrder[index];
         return [
-            m("div.flex", [
+            m("div.flex.three", [
                 m(m.route.Link, {href: "/"}, "⇚Back to index"),
+                m("select", {onchange: (e) => {
+                    index = manifest.readingOrder.findIndex(item => item.href === e.target[e.target.selectedIndex].value);
+                }}, manifest.toc?.map(item => m("option", {value: item.href}, item.title))),
                 m("", {style: "text-align: right;"}, `${manifest.metadata.title}`)
             ]),
             m("div.flex", m("iframe", {
