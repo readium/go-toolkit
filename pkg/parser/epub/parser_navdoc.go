@@ -8,7 +8,8 @@ import (
 	"github.com/readium/go-toolkit/pkg/util"
 )
 
-func ParseNavDoc(document *xmlquery.Node, filePath string) (ret map[string][]manifest.Link) {
+func ParseNavDoc(document *xmlquery.Node, filePath string) map[string][]manifest.Link {
+	ret := make(map[string][]manifest.Link)
 	docPrefixes := parsePrefixes(document.SelectAttr(NAMESPACE_OPS + ":prefix"))
 	for k, v := range CONTENT_RESERVED_PREFIXES {
 		if _, ok := docPrefixes[k]; !ok { // prefix element overrides reserved prefixes
@@ -16,9 +17,9 @@ func ParseNavDoc(document *xmlquery.Node, filePath string) (ret map[string][]man
 		}
 	}
 
-	body := document.SelectElement("body[namespace-uri()='" + NAMESPACE_XHTML + "']")
+	body := document.SelectElement("//body[namespace-uri()='" + NAMESPACE_XHTML + "']")
 	if body == nil {
-		return
+		return ret
 	}
 
 	for _, nav := range body.SelectElements("nav[namespace-uri()='" + NAMESPACE_XHTML + "']") {
@@ -37,11 +38,17 @@ func ParseNavDoc(document *xmlquery.Node, filePath string) (ret map[string][]man
 		}
 	}
 
-	return
+	return ret
 }
 
 func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]string) ([]string, []manifest.Link) {
-	typeAttr := nav.SelectAttr(NAMESPACE_OPS + ":type")
+	typeAttr := ""
+	for _, na := range nav.Attr {
+		if na.NamespaceURI == NAMESPACE_OPS && na.Name.Local == "type" {
+			typeAttr = na.Value
+			break
+		}
+	}
 	if typeAttr == "" {
 		return nil, nil
 	}
@@ -53,7 +60,7 @@ func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]s
 
 	links := parseOlElement(nav.SelectElement("ol[namespace-uri()='"+NAMESPACE_XHTML+"']"), filePath)
 	if len(links) > 0 && len(types) > 0 {
-
+		return types, links
 	}
 	return nil, nil
 }
@@ -87,7 +94,7 @@ func parseLiElement(li *xmlquery.Node, filePath string) (link *manifest.Link) {
 	href := "#"
 	if first.Data == "a" && rawHref != "" {
 		s, err := util.NewHREF(rawHref, filePath).String()
-		if err != nil {
+		if err == nil {
 			href = s
 		}
 	}

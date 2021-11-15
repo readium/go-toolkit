@@ -135,7 +135,7 @@ func ParseSpine(element *xmlquery.Node, prefixMap map[string]string, epubVersion
 	}
 
 	ncx := ""
-	if epubVersion > 3.0 {
+	if epubVersion < 3.0 {
 		ncx = element.SelectAttr("toc")
 	}
 

@@ -101,6 +101,9 @@ func (s *PublicationServer) getPublication(filename string, r *http.Request) (*p
 	for i, link := range pub.Manifest.ReadingOrder {
 		pub.Manifest.ReadingOrder[i] = makeRelative(link)
 	}
+	for i, link := range pub.Manifest.TableOfContents {
+		pub.Manifest.TableOfContents[i] = makeRelative(link)
+	}
 
 	return pub, nil
 }

@@ -103,6 +103,9 @@ func parseNavigationData(packageDocument epub.PackageDocument, fetcher fetcher.F
 					break
 				}
 			}
+			if navItem != nil {
+				break
+			}
 		}
 		if navItem == nil {
 			return
@@ -111,8 +114,8 @@ func parseNavigationData(packageDocument epub.PackageDocument, fetcher fetcher.F
 		if err != nil {
 			return
 		}
-		n, err := fetcher.Get(manifest.Link{Href: navPath}).ReadAsXML()
-		if err != nil {
+		n, errx := fetcher.Get(manifest.Link{Href: navPath}).ReadAsXML()
+		if errx != nil {
 			return
 		}
 		ret = epub.ParseNavDoc(n, navPath)
