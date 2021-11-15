@@ -50,6 +50,7 @@ func (a *FileAsset) MediaType() mediatype.MediaType {
 		} else {
 			fil, err := os.Open(a.filepath)
 			if err == nil { // No problem opening the file
+				defer fil.Close()
 				a.mediatype = mediatype.OfFile(fil, []string{a.mediaTypeHint}, nil, mediatype.Sniffers)
 			}
 			if a.mediatype == nil { // Still nothing found

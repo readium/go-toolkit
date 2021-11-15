@@ -50,6 +50,7 @@ func (f *FileFetcher) Links() ([]manifest.Link, error) {
 				if mt != nil {
 					link.Type = mt.String()
 				}
+				f.Close()
 			} else {
 				ext := filepath.Ext(apath)
 				if ext != "" {
