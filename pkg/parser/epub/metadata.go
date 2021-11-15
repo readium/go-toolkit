@@ -51,7 +51,11 @@ func NewMetadataParser(epubVersion float64, prefixMap map[string]string) Metadat
 func (m MetadataParser) Parse(document *xmlquery.Node, filePath string) *EPUBMetadata {
 	// Init lang
 	if l := document.SelectElement("/package[namespace-uri()='" + NAMESPACE_OPF + "']"); l != nil {
-		m.packageLanguage = l.SelectAttr("lang")
+		for _, attr := range l.Attr {
+			if attr.Name.Local == "lang" {
+				m.packageLanguage = attr.Value
+			}
+		}
 	}
 	if l := document.SelectElement("//metadata/language[namespace-uri()='" + NAMESPACE_DC + "']"); l != nil {
 		m.metaLanguage = l.Data
@@ -249,7 +253,7 @@ func (m MetadataParser) contributorWithLegacyAttr(element *xmlquery.Node, name s
 	fileAs := element.SelectAttr(NAMESPACE_OPF + ":file-as")
 	if fileAs != "" {
 		mi.children[VOCABULARY_META+"file-as"] = []MetadataItem{
-			MetadataItem{
+			{
 				property: VOCABULARY_META + "file-as",
 				value:    fileAs,
 				lang:     m.language(element),
@@ -261,7 +265,7 @@ func (m MetadataParser) contributorWithLegacyAttr(element *xmlquery.Node, name s
 	role := element.SelectAttr(NAMESPACE_OPF + ":role")
 	if role != "" {
 		mi.children[VOCABULARY_META+"role"] = []MetadataItem{
-			MetadataItem{
+			{
 				property: VOCABULARY_META + "role",
 				value:    role,
 				lang:     m.language(element),
@@ -451,7 +455,7 @@ func (m PubMetadataAdapter) Languages() []string {
 	return languages
 }
 
-func (m PubMetadataAdapter) Identifier() string {
+func (m *PubMetadataAdapter) Identifier() string {
 	if m._identifier != "" {
 		return m._identifier
 	}
@@ -488,13 +492,13 @@ func (m PubMetadataAdapter) Cover() string {
 	return m.FirstValue("cover")
 }
 
-func (m PubMetadataAdapter) seedTitleData() {
+func (m *PubMetadataAdapter) seedTitleData() {
 	if m._titlesSeeded {
 		return
 	}
 	var titles []Title
 	for _, v := range m.items[VOCABULARY_DCTERMS+"title"] {
-		if v, err := v.ToTitle(); err != nil {
+		if v, err := v.ToTitle(); err == nil {
 			titles = append(titles, *v)
 		}
 	}
@@ -535,7 +539,7 @@ func (m PubMetadataAdapter) seedTitleData() {
 	}
 
 	// SortAs
-	if mainTitle.fileAs != nil {
+	if mainTitle != nil && mainTitle.fileAs != nil {
 		m._localizedSortAs = mainTitle.fileAs
 	} else {
 		s := m.FirstValue("calibre:title_sort")
@@ -563,7 +567,7 @@ func (m PubMetadataAdapter) LocalizedSortAs() *manifest.LocalizedString {
 	return m._localizedSortAs
 }
 
-func (m PubMetadataAdapter) seedBelongsToData() {
+func (m *PubMetadataAdapter) seedBelongsToData() {
 	if m._belongsToSeeded {
 		return
 	}
@@ -575,7 +579,7 @@ func (m PubMetadataAdapter) seedBelongsToData() {
 
 	var allCollections []collectionHolder
 	for _, v := range m.items[VOCABULARY_DCTERMS+"belongs-to-collection"] {
-		if typ, col, err := v.ToCollection(); err != nil {
+		if typ, col, err := v.ToCollection(); err == nil {
 			allCollections = append(allCollections, collectionHolder{typ: typ, collection: *col})
 		}
 	}
@@ -653,7 +657,7 @@ func (m PubMetadataAdapter) splitSubject(subject manifest.Subject) []manifest.Su
 	return subjects
 }
 
-func (m PubMetadataAdapter) Subjects() []manifest.Subject {
+func (m *PubMetadataAdapter) Subjects() []manifest.Subject {
 	if len(m._subjects) > 0 {
 		return m._subjects
 	}
@@ -664,7 +668,7 @@ func (m PubMetadataAdapter) Subjects() []manifest.Subject {
 
 	var parsedSubjects []manifest.Subject
 	for _, v := range subjectItems {
-		if v, err := v.ToSubject(); err != nil {
+		if v, err := v.ToSubject(); err == nil {
 			parsedSubjects = append(parsedSubjects, *v)
 		}
 	}
@@ -686,7 +690,7 @@ func (m PubMetadataAdapter) Subjects() []manifest.Subject {
 	return m._subjects
 }
 
-func (m PubMetadataAdapter) seedContributors() {
+func (m *PubMetadataAdapter) seedContributors() {
 	contributors := append(append(append(
 		m.items[VOCABULARY_DCTERMS+"creator"],
 		m.items[VOCABULARY_DCTERMS+"contributor"]...,
@@ -714,7 +718,7 @@ func (m PubMetadataAdapter) ReadingProgression() manifest.ReadingProgression {
 	return m.readingProgression
 }
 
-func (m PubMetadataAdapter) Presentation() manifest.Presentation {
+func (m *PubMetadataAdapter) Presentation() manifest.Presentation {
 	if m._presentation == nil {
 		m._presentation = &manifest.Presentation{}
 
@@ -778,7 +782,7 @@ func (m PubMetadataAdapter) Presentation() manifest.Presentation {
 	return *m._presentation
 }
 
-func (m PubMetadataAdapter) OtherMetadata() map[string]interface{} {
+func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 	if m._otherMetadata == nil {
 		usedProperties := map[string]struct{}{
 			VOCABULARY_DCTERMS + "identifier":    {},
@@ -850,7 +854,7 @@ func (m MetadataItem) ToSubject() (*manifest.Subject, error) {
 }
 
 func (m MetadataItem) ToTitle() (*Title, error) {
-	if m.property != VOCABULARY_DCTERMS+"subject" {
+	if m.property != VOCABULARY_DCTERMS+"title" {
 		return nil, errors.New("wrong property for title")
 	}
 
