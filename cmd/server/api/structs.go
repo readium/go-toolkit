@@ -1,12 +1,5 @@
 package api
 
-import (
-	"time"
-
-	"github.com/blevesearch/bleve"
-	"github.com/readium/go-toolkit/pkg/manifest"
-)
-
 type ServerConfig struct {
 	Bind      string   // The address to listen on
 	Origins   []string // The CORS origins allowed (not yet implemented)
@@ -15,12 +8,4 @@ type ServerConfig struct {
 	// TODO replace PublicationPath with storage interface DSNs
 	PublicationPath string // Filesystem path leading to stored publications
 	StaticPath      string // Filesystem path leading to static assets to be served
-}
-
-type currentBook struct {
-	filename    string
-	publication manifest.Manifest
-	timestamp   time.Time
-	bleveIndex  bleve.Index
-	indexed     bool
 }

@@ -19,7 +19,8 @@ type PackageDocument struct {
 }
 
 func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDocument, error) {
-	packagePrefixes := parsePrefixes(document.SelectAttr("prefix"))
+	pkg := document.SelectElement("/package")
+	packagePrefixes := parsePrefixes(pkg.SelectAttr("prefix"))
 	prefixMap := make(map[string]string)
 	for k, v := range PACKAGE_RESERVED_PREFIXES {
 		prefixMap[k] = v
@@ -30,7 +31,7 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 
 	// Version
 	epubVersion := 1.2
-	rv := document.SelectAttr("version")
+	rv := pkg.SelectAttr("version")
 	if rv != "" {
 		ev, err := strconv.ParseFloat(rv, 64)
 		if err != nil {
@@ -43,11 +44,11 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 	if metadata == nil {
 		return nil, errors.New("failed parsing package metadata")
 	}
-	manifestElement := document.SelectElement("/manifest[namespace-uri()='" + NAMESPACE_OPF + "']")
+	manifestElement := pkg.SelectElement("/manifest[namespace-uri()='" + NAMESPACE_OPF + "']")
 	if manifestElement == nil {
 		return nil, errors.New("package manifest not found")
 	}
-	spineElement := document.SelectElement("/spine[namespace-uri()='" + NAMESPACE_OPF + "']")
+	spineElement := pkg.SelectElement("/spine[namespace-uri()='" + NAMESPACE_OPF + "']")
 	if spineElement == nil {
 		return nil, errors.New("package spine not found")
 	}
@@ -65,7 +66,7 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 	return &PackageDocument{
 		Path:               filePath,
 		EPUBVersion:        epubVersion,
-		uniqueIdenfifierID: document.SelectAttr("unique-identifier"),
+		uniqueIdenfifierID: pkg.SelectAttr("unique-identifier"),
 		metadata:           *metadata,
 		Manifest:           manifest,
 		Spine:              ParseSpine(spineElement, prefixMap, epubVersion),
