@@ -119,7 +119,12 @@ func (s *PublicationServer) getManifest(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	j, _ := json.Marshal(publication.Manifest)
+	j, err := json.Marshal(publication.Manifest)
+	if err != nil {
+		logrus.Error(err)
+		w.WriteHeader(500)
+		return
+	}
 
 	var identJSON bytes.Buffer
 
