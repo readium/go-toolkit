@@ -97,7 +97,7 @@ func (f *FileFetcher) Get(link manifest.Link) Resource {
 			}
 		}
 	}
-	return NewFailureResource(link, NotFound(errors.New("couldn't find "+linkHref+" in paths")))
+	return NewFailureResource(link, NotFound(errors.New("couldn't find "+linkHref+" in FileFetcher paths")))
 }
 
 func (f *FileFetcher) Close() {

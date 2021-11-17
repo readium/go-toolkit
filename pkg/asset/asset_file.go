@@ -6,6 +6,7 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/sirupsen/logrus"
 )
 
 // Represents a publication stored as a file on the local file system.
@@ -73,6 +74,7 @@ func (a *FileAsset) CreateFetcher(dependencies Dependencies, credentials string)
 		if err == nil {
 			return af, nil
 		}
+		logrus.Warnf("couldn't open %s as archive: %v", a.filepath, err)
 		return fetcher.NewFileFetcher("/"+a.Name(), a.filepath), nil
 	}
 }
