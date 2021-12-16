@@ -1,21 +1,28 @@
 package manifest
 
+import (
+	"encoding/json"
+
+	"github.com/pkg/errors"
+)
+
 // TODO JSON marshal/unmarshal logic
 
 type Properties map[string]interface{}
 
-func (p Properties) Add(newProperties map[string]interface{}) {
-	if p == nil {
-		p = make(Properties)
+func (p *Properties) Add(newProperties Properties) Properties {
+	if *p == nil {
+		*p = make(Properties)
 	}
 	for k, v := range newProperties {
-		p[k] = v
+		(*p)[k] = v
 	}
+	return *p
 }
 
-func (p Properties) Get(key string) interface{} {
+func (p *Properties) Get(key string) interface{} {
 	if p != nil {
-		return p[key]
+		return (*p)[key]
 	}
 	return nil
 }
@@ -85,6 +92,19 @@ func (p Properties) Layout() EpubLayout {
 	return EpubLayout(p.GetString("layout"))
 }
 
+func (p Properties) Encryption() *Encryption {
+	mp, ok := p.Get("encryption").(map[string]interface{})
+	if mp == nil || !ok {
+		return nil
+	}
+
+	enc, err := EncryptionFromJSON(mp)
+	if err != nil {
+		return nil
+	}
+	return enc
+}
+
 func (p Properties) Contains() []string {
 	if p == nil {
 		return nil
@@ -98,4 +118,30 @@ func (p Properties) Contains() []string {
 		return nil
 	}
 	return cv // Maybe TODO: it's a set
+}
+
+func PropertiesFromJSON(rawJson interface{}) (Properties, error) {
+	if rawJson == nil {
+		return make(Properties), nil
+	}
+
+	properties, ok := rawJson.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("Properties has invalid JSON object")
+	}
+	return properties, nil
+}
+
+func (p *Properties) UnmarshalJSON(data []byte) error {
+	var d interface{}
+	err := json.Unmarshal(data, &d)
+	if err != nil {
+		return err
+	}
+	pr, err := PropertiesFromJSON(d)
+	if err != nil {
+		return err
+	}
+	*p = pr
+	return nil
 }
