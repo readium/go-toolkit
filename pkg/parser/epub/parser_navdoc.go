@@ -22,7 +22,7 @@ func ParseNavDoc(document *xmlquery.Node, filePath string) map[string][]manifest
 		return ret
 	}
 
-	for _, nav := range body.SelectElements("nav[namespace-uri()='" + NAMESPACE_XHTML + "']") {
+	for _, nav := range body.SelectElements("//nav[namespace-uri()='" + NAMESPACE_XHTML + "']") {
 		types, links := parseNavElement(nav, filePath, docPrefixes)
 		if types == nil && links == nil {
 			continue
