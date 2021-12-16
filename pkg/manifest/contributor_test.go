@@ -73,14 +73,17 @@ func TestContributorParseJSONWithDuplicateRoles(t *testing.T) {
 
 func TestContributorParseRequiresName(t *testing.T) {
 	var c Contributor
-	assert.NoError(t, json.Unmarshal([]byte(`{"identifier": "loremipsonium"}`), &c))
-	assert.Equal(t, c, Contributor{}, "parsed JSON object should be empty Contributor")
+	assert.Error(t, json.Unmarshal([]byte(`{"identifier": "loremipsonium"}`), &c), "contributor is invalid because it has no name")
+	/*
+		assert.NoError(t, json.Unmarshal([]byte(`{"identifier": "loremipsonium"}`), &c))
+		assert.Equal(t, c, Contributor{}, "parsed JSON object should be empty Contributor")
+	*/
 }
 
 func TestContributorNameFromDefaultTranslation(t *testing.T) {
 	c := Contributor{
 		LocalizedName: LocalizedString{
-			translations: map[string]string{
+			Translations: map[string]string{
 				"en": "Jonny Greenwood",
 				"fr": "Jean Boisvert",
 			},
