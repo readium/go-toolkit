@@ -142,6 +142,6 @@ func (c *Contributor) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	c = fc
+	*c = *fc
 	return nil
 }

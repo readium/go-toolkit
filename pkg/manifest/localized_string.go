@@ -124,6 +124,6 @@ func (l *LocalizedString) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	l = lr
+	*l = *lr
 	return nil
 }
