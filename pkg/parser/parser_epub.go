@@ -49,7 +49,7 @@ func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub
 
 	ffetcher := f
 	if manifest.Metadata.Identifier != "" {
-		ffetcher = f // TODO TransformingFetcher(fetcher, EpubDeobfuscator(it)::transform)
+		ffetcher = fetcher.NewTransformingFetcher(f, epub.NewDeobfuscator(manifest.Metadata.Identifier).Transform)
 	}
 
 	return pub.NewBuilder(manifest, ffetcher), nil // TODO services!

@@ -12,6 +12,15 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
+/**
+ * Implements the transformation of a Resource. It can be used, for example, to decrypt,
+ * deobfuscate, inject CSS or JavaScript, correct content – e.g. adding a missing dir="rtl" in an
+ * HTML document, pre-process – e.g. before indexing a publication's content, etc.
+ *
+ * If the transformation doesn't apply, simply return resource unchanged.
+ */
+type ResourceTransformer func(Resource) Resource
+
 // Acts as a proxy to an actual resource by handling read access.
 type Resource interface {
 
@@ -265,7 +274,56 @@ func NewFailureResource(link manifest.Link, ex *ResourceError) FailureResource {
 	}
 }
 
-// TODO ProxyResource?
+// A base class for a [Resource] which acts as a proxy to another one.
+// Every function is delegating to the proxied resource, and subclasses should override some of them.
+type ProxyResource struct {
+	Res Resource
+}
+
+func (r ProxyResource) File() string {
+	return r.Res.File()
+}
+
+func (r ProxyResource) Close() {
+	r.Res.Close()
+}
+
+func (r ProxyResource) Link() manifest.Link {
+	return r.Res.Link()
+}
+
+func (r ProxyResource) Length() (int64, *ResourceError) {
+	return r.Res.Length()
+}
+
+func (r ProxyResource) Read(start int64, end int64) ([]byte, *ResourceError) {
+	return r.Res.Read(start, end)
+}
+
+func (r ProxyResource) ReadAsString() (string, *ResourceError) {
+	return r.Res.ReadAsString()
+}
+
+func (r ProxyResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
+	return r.Res.ReadAsJSON()
+}
+
+func (r ProxyResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
+	return r.Res.ReadAsXML()
+}
+
+/**
+ * Transforms the bytes of [resource] on-the-fly.
+ *
+ * Warning: The transformation runs on the full content of [resource], so it's not appropriate for
+ * large resources which can't be held in memory. Pass [cacheBytes] = true to cache the result of
+ * the transformation. This may be useful if multiple ranges will be read.
+ */
+type TransformingResource struct {
+	resource   Resource
+	cacheBytes bool
+	_bytes     []byte
+}
 
 // TODO TransformingResource
 
