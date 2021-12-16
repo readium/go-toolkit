@@ -54,7 +54,7 @@ func TestEncryptionMarshalMinimalJSON(t *testing.T) {
 	}
 	data, err := json.Marshal(m)
 	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"algorithm":"http://algo"}`), data)
+	assert.Equal(t, data, []byte(`{"algorithm":"http://algo"}`))
 }
 
 func TestEncryptionMarshalFullJSON(t *testing.T) {
@@ -67,5 +67,5 @@ func TestEncryptionMarshalFullJSON(t *testing.T) {
 	}
 	data, err := json.Marshal(m)
 	assert.NoError(t, err)
-	assert.Equal(t, []byte(`{"scheme":"http://scheme","profile":"http://profile","algorithm":"http://algo","compression":"gzip","originalLength":42099}`), data)
+	assert.Equal(t, data, []byte(`{"scheme":"http://scheme","profile":"http://profile","algorithm":"http://algo","compression":"gzip","originalLength":42099}`))
 }
