@@ -116,6 +116,12 @@ func (f PublicationFactory) Create() manifest.Manifest {
 
 // Compute a Publication [Link] from an EPUB metadata link
 func mapEPUBLink(link EPUBLink) manifest.Link {
+	l := manifest.Link{
+		Href: link.href,
+		Type: link.mediaType,
+		Rels: link.rels,
+	}
+
 	var contains []string
 	if extensions.Contains(link.rels, VOCABULARY_LINK+"record") {
 		if extensions.Contains(link.properties, VOCABULARY_LINK+"onix") {
@@ -125,14 +131,14 @@ func mapEPUBLink(link EPUBLink) manifest.Link {
 			contains = append(contains, "xmp")
 		}
 	}
-	return manifest.Link{
-		Href: link.href,
-		Type: link.mediaType,
-		Rels: link.rels,
-		Properties: manifest.Properties{
+
+	if len(contains) > 0 {
+		l.Properties = manifest.Properties{
 			"contains": contains,
-		},
+		}
 	}
+
+	return l
 }
 
 // Recursively find the ids of the fallback items in [items]

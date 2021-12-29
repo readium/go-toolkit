@@ -9,6 +9,7 @@ import (
 	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/util"
 )
 
 type Title struct {
@@ -57,9 +58,12 @@ func (m MetadataParser) Parse(document *xmlquery.Node, filePath string) *EPUBMet
 			}
 		}
 	}
+	// println(document.OutputXML(true))
 	if l := document.SelectElement("//metadata/language[namespace-uri()='" + NAMESPACE_DC + "']"); l != nil {
 		m.metaLanguage = l.Data
 	}
+
+	// println("DOC", document.SelectElement("//metadata"))
 
 	metadata := document.SelectElement("//metadata[namespace-uri()='" + NAMESPACE_OPF + "']")
 	if metadata == nil {
@@ -147,7 +151,13 @@ func (m MetadataParser) parseLinkElement(element *xmlquery.Node, filePath string
 		return nil
 	}
 
+	hr, err := util.NewHREF(href, filePath).String()
+	if err != nil {
+		return nil
+	}
+
 	link := &EPUBLink{
+		href:      hr,
 		mediaType: element.SelectAttr("media-type"),
 		refines:   strings.TrimPrefix(element.SelectAttr("refines"), "#"),
 	}
@@ -707,14 +717,14 @@ func (m *PubMetadataAdapter) seedContributors() {
 	}
 }
 
-func (m PubMetadataAdapter) Contributors(role string) []manifest.Contributor {
+func (m *PubMetadataAdapter) Contributors(role string) []manifest.Contributor {
 	if m._allContributors == nil {
 		m.seedContributors()
 	}
 	return m._allContributors[role]
 }
 
-func (m PubMetadataAdapter) ReadingProgression() manifest.ReadingProgression {
+func (m *PubMetadataAdapter) ReadingProgression() manifest.ReadingProgression {
 	return m.readingProgression
 }
 
@@ -890,8 +900,11 @@ func (m MetadataItem) ToContributor() (string, *manifest.Contributor, error) {
 	names := m.LocalizedString()
 
 	fileAsK, fileAsV := m.FileAs()
-	localizedSortAs := &manifest.LocalizedString{}
-	localizedSortAs.SetTranslation(fileAsK, fileAsV)
+	var localizedSortAs *manifest.LocalizedString
+	if fileAsV != "" {
+		localizedSortAs = &manifest.LocalizedString{}
+		localizedSortAs.SetTranslation(fileAsK, fileAsV)
+	}
 
 	role := m.Role()
 	roles := []string{}
