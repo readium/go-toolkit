@@ -37,8 +37,9 @@ func parseSliceOrString(value interface{}, deduplicate bool) (result []string, e
 	return
 }
 
-func newTrue() *bool {
-	b := true
+// TODO replace with generic
+func newBool(val bool) *bool {
+	b := val
 	return &b
 }
 

@@ -8,18 +8,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ReadingProgression
-// This is not a proper enum replacement! Use the validator to enforce the values
-type ReadingProgression string
-
-const (
-	AUTO ReadingProgression = "auto"
-	LTR                     = "ltr"
-	RTL                     = "rtl"
-	TTB                     = "ttb"
-	BTT                     = "btt"
-)
-
 // TODO replace with generic
 type Strings []string
 
@@ -114,7 +102,7 @@ func (m Metadata) EffectiveReadingProgression() ReadingProgression {
 	}
 
 	language = strings.SplitN(language, "-", 2)[0]
-	if "ar" == language || "fa" == language || "he" == language {
+	if language == "ar" || language == "fa" || language == "he" {
 		return RTL
 	}
 
