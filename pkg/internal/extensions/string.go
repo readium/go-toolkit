@@ -14,11 +14,15 @@ func ToUrlOrNull(raw string) *url.URL { // TODO context URL
 }
 
 func RemovePercentEncoding(raw string) string {
-	dec, err := url.QueryUnescape(raw)
+	dec, err := unescape(raw, encodeCUSTOM)
 	if err != nil {
 		return raw
 	}
 	return dec
+}
+
+func AddPercentEncodingPath(raw string) string {
+	return escape(raw, encodeCUSTOM)
 }
 
 func ParseDate(raw string) *time.Time {

@@ -20,7 +20,7 @@ type HREF struct {
 
 func NewHREF(href string, base string) HREF {
 	if base == "" {
-		base = "/" // TODO check if works
+		base = "/"
 	}
 	return HREF{href: href, baseHref: base}
 }
@@ -36,7 +36,7 @@ func (h HREF) String() (string, error) {
 	}
 
 	// HREF is already absolute.
-	uri, err := url.Parse(href)
+	uri, err := url.Parse(extensions.AddPercentEncodingPath(href))
 	if err != nil {
 		return "", err
 	}
@@ -44,20 +44,7 @@ func (h HREF) String() (string, error) {
 		return href, nil
 	}
 
-	// Isolates the path from the anchor/query portion, which would be lost otherwise.
-	splitIndex := strings.Index(href, "?")
-	if splitIndex == -1 {
-		splitIndex = strings.Index(href, "#")
-		if splitIndex == -1 {
-			splitIndex = len(href)
-		}
-	}
-	suffix := href[splitIndex:]
-
-	// path := href[0:splitIndex]
-	// TODO determine if the rest is necessary https://github.com/readium/kotlin-toolkit/blob/6f9f5914090625cfc4f46637970bb94992d9f692/readium/shared/src/main/java/org/readium/r2/shared/util/Href.kt#L56
-
-	baseuri, err := url.Parse(baseHref)
+	baseuri, err := url.Parse(extensions.AddPercentEncodingPath(baseHref))
 	if err != nil {
 		return "", err
 	}
@@ -67,7 +54,7 @@ func (h HREF) String() (string, error) {
 	if uri.Scheme == "https" || uri.Scheme == "http" {
 		url = uri.String()
 	} else {
-		url = uri.Path + suffix
+		url = uri.String()
 		if !strings.HasPrefix(url, "/") {
 			url = "/" + url
 		}
@@ -75,11 +62,13 @@ func (h HREF) String() (string, error) {
 	return extensions.RemovePercentEncoding(url), nil
 }
 
+// Returns the normalized string representation for this HREF, encoded for URL uses.
 func (h HREF) PercentEncodedString() (string, error) {
 	str, err := h.String()
 	if err != nil {
 		return "", err
 	}
+	str = extensions.AddPercentEncodingPath(str)
 	if strings.HasPrefix(str, "/") {
 		str = "file://" + str
 	}
@@ -106,7 +95,18 @@ func (h HREF) PercentEncodedString() (string, error) {
 		Fragment: ul.Fragment,
 		RawQuery: ul.RawQuery,
 	}
-	return strings.TrimPrefix(ui.String(), "file://"), nil // TODO: does this need forced ASCII?
+	return strings.TrimPrefix(ui.String(), "file://"), nil // TODO: why (or why not) does this need forced ASCII?
 }
 
-// TODO queryParameters
+// Returns the query parameters present in this HREF, in the order they appear.
+func (h HREF) QueryParameters() (url.Values, error) {
+	ul, err := h.PercentEncodedString()
+	if err != nil {
+		return nil, err
+	}
+	ulx, err := url.Parse(ul)
+	if err != nil {
+		return nil, err
+	}
+	return ulx.Query(), nil
+}
