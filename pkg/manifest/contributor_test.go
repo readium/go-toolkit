@@ -7,25 +7,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestContributorParseJSONString(t *testing.T) {
+func TestContributorUnmarshalJSONString(t *testing.T) {
 	c1 := Contributor{
 		LocalizedName: NewLocalizedStringFromString("John Smith"),
 	}
 	var c2 Contributor
 	assert.NoError(t, json.Unmarshal([]byte(`"John Smith"`), &c2))
-	assert.Equal(t, c1, c2, "parsed JSON string should be equal to string")
+	assert.Equal(t, c1, c2, "unmarshalled JSON string should be equal to string")
 }
 
-func TestContributorParseMinimalJSON(t *testing.T) {
+func TestContributorUnmarshalMinimalJSON(t *testing.T) {
 	c1 := Contributor{
 		LocalizedName: NewLocalizedStringFromString("John Smith"),
 	}
 	var c2 Contributor
 	assert.NoError(t, json.Unmarshal([]byte(`{"name": "John Smith"}`), &c2))
-	assert.Equal(t, c1, c2, "parsed JSON object should be equal to contributor object")
+	assert.Equal(t, c1, c2, "unmarshalled JSON object should be equal to contributor object")
 }
 
-func TestContributorParseFullJSON(t *testing.T) {
+func TestContributorUnmarshalFullJSON(t *testing.T) {
 	sortAs := NewLocalizedStringFromString("greenwood")
 	position := float64(4.0)
 	c1 := Contributor{
@@ -55,10 +55,10 @@ func TestContributorParseFullJSON(t *testing.T) {
 			{"href": "http://link2"}
 		]
 	}`), &c2))
-	assert.Equal(t, c1, c2, "parsed JSON object should be equal to contributor object")
+	assert.Equal(t, c1, c2, "unmarshalled JSON object should be equal to contributor object")
 }
 
-func TestContributorParseJSONWithDuplicateRoles(t *testing.T) {
+func TestContributorUnmarshalJSONWithDuplicateRoles(t *testing.T) {
 	c1 := Contributor{
 		LocalizedName: NewLocalizedStringFromString("Thom Yorke"),
 		Roles:         []string{"singer", "guitarist"},
@@ -68,15 +68,15 @@ func TestContributorParseJSONWithDuplicateRoles(t *testing.T) {
 		"name": "Thom Yorke",
 		"role": ["singer", "guitarist", "guitarist"]
 	}`), &c2))
-	assert.Equal(t, c1, c2, "parsed JSON object should be equal to contributor object")
+	assert.Equal(t, c1, c2, "unmarshalled JSON object should be equal to contributor object")
 }
 
-func TestContributorParseRequiresName(t *testing.T) {
+func TestContributorUnmarshalRequiresName(t *testing.T) {
 	var c Contributor
 	assert.Error(t, json.Unmarshal([]byte(`{"identifier": "loremipsonium"}`), &c), "contributor is invalid because it has no name")
 	/*
 		assert.NoError(t, json.Unmarshal([]byte(`{"identifier": "loremipsonium"}`), &c))
-		assert.Equal(t, c, Contributor{}, "parsed JSON object should be empty Contributor")
+		assert.Equal(t, c, Contributor{}, "unmarshalled JSON object should be empty Contributor")
 	*/
 }
 

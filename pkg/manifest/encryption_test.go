@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEncryptionParseMinimalJSON(t *testing.T) {
+func TestEncryptionUnmarshalMinimalJSON(t *testing.T) {
 	var m Encryption
 	assert.NoError(t, json.Unmarshal([]byte(`{"algorithm": "http://algo"}`), &m))
 	assert.Equal(
@@ -16,10 +16,11 @@ func TestEncryptionParseMinimalJSON(t *testing.T) {
 			Algorithm: "http://algo",
 		},
 		m,
+		"unmarshalled JSON object should be equal to encryption object",
 	)
 }
 
-func TestEncryptionParseFullJSON(t *testing.T) {
+func TestEncryptionUnmarshalFullJSON(t *testing.T) {
 	var m Encryption
 	assert.NoError(t, json.Unmarshal([]byte(`{
 		"algorithm": "http://algo",
@@ -34,10 +35,10 @@ func TestEncryptionParseFullJSON(t *testing.T) {
 		OriginalLength: 42099,
 		Profile:        "http://profile",
 		Scheme:         "http://scheme",
-	}, m)
+	}, m, "unmarshalled JSON object should be equal to encryption object")
 }
 
-func TestEncryptionParseNullJSON(t *testing.T) {
+func TestEncryptionUnmarshalNullJSON(t *testing.T) {
 	enc, err := EncryptionFromJSON(nil)
 	assert.NoError(t, err)
 	assert.Nil(t, enc)
@@ -45,7 +46,7 @@ func TestEncryptionParseNullJSON(t *testing.T) {
 
 func TestEncryptionRequiresAlgorithm(t *testing.T) {
 	var m Encryption
-	assert.Error(t, json.Unmarshal([]byte(`{"compression": "gzip"}`), &m))
+	assert.Error(t, json.Unmarshal([]byte(`{"compression": "gzip"}`), &m), "algorithm is required for encryption objects")
 }
 
 func TestEncryptionMarshalMinimalJSON(t *testing.T) {
@@ -54,7 +55,7 @@ func TestEncryptionMarshalMinimalJSON(t *testing.T) {
 	}
 	data, err := json.Marshal(m)
 	assert.NoError(t, err)
-	assert.Equal(t, data, []byte(`{"algorithm":"http://algo"}`))
+	assert.Equal(t, data, []byte(`{"algorithm":"http://algo"}`), "unmarshalled JSON object should be equal to encryption object")
 }
 
 func TestEncryptionMarshalFullJSON(t *testing.T) {
@@ -67,5 +68,10 @@ func TestEncryptionMarshalFullJSON(t *testing.T) {
 	}
 	data, err := json.Marshal(m)
 	assert.NoError(t, err)
-	assert.Equal(t, data, []byte(`{"scheme":"http://scheme","profile":"http://profile","algorithm":"http://algo","compression":"gzip","originalLength":42099}`))
+	assert.Equal(
+		t,
+		data,
+		[]byte(`{"scheme":"http://scheme","profile":"http://profile","algorithm":"http://algo","compression":"gzip","originalLength":42099}`),
+		"unmarshalled JSON object should be equal to encryption object",
+	)
 }

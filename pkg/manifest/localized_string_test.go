@@ -7,13 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLocalizedStringParseJSONString(t *testing.T) {
+func TestLocalizedStringUnmarshalJSONString(t *testing.T) {
 	var l LocalizedString
 	assert.NoError(t, json.Unmarshal([]byte("\"a string\""), &l))
 	assert.Equal(t, l, NewLocalizedStringFromString("a string"), "parsed JSON string should be equal to string")
 }
 
-func TestLocalizedStringParseJSONLocalizedStrings(t *testing.T) {
+func TestLocalizedStringUnmarshalJSONLocalizedStrings(t *testing.T) {
 	var l1 LocalizedString
 	var l2 LocalizedString
 	assert.NoError(t, json.Unmarshal([]byte(`{
@@ -25,12 +25,12 @@ func TestLocalizedStringParseJSONLocalizedStrings(t *testing.T) {
 	assert.Equal(t, l1, l2, "parsed JSON object should be equal to manually created LocalizedString")
 }
 
-func TestLocalizedStringParseInvalidJSON(t *testing.T) {
+func TestLocalizedStringUnmarshalInvalidJSON(t *testing.T) {
 	var l LocalizedString
 	assert.Error(t, json.Unmarshal([]byte(`[1,2]`), &l), "parsing should fail")
 }
 
-func TestLocalizedStringParseNullJSON(t *testing.T) {
+func TestLocalizedStringUnmarshalNullJSON(t *testing.T) {
 	var l LocalizedString
 	assert.Error(t, json.Unmarshal(nil, &l), "parsing should fail")
 }

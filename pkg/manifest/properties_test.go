@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPropertiesParseNilJSON(t *testing.T) {
+func TestPropertiesUnmarshalNilJSON(t *testing.T) {
 	props, err := PropertiesFromJSON(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, Properties{}, props)
