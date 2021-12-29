@@ -20,6 +20,16 @@ const (
 	BTT                     = "btt"
 )
 
+// TODO replace with generic
+type Strings []string
+
+func (s Strings) MarshalJSON() ([]byte, error) {
+	if len(s) == 1 {
+		return json.Marshal(s[0])
+	}
+	return json.Marshal(s)
+}
+
 // Metadata for the default context in WebPub
 type Metadata struct {
 	Identifier         string                  `json:"identifier"` // Could be omitempty since it's optional
@@ -29,21 +39,21 @@ type Metadata struct {
 	LocalizedSortAs    *LocalizedString        `json:"sortAs,omitempty"`
 	Modified           *time.Time              `json:"modified,omitempty"`
 	Published          *time.Time              `json:"published,omitempty"`
-	Languages          []string                `json:"language,omitempty" validate:"BCP47"` // TODO validator
+	Languages          Strings                 `json:"language,omitempty" validate:"BCP47"` // TODO validator
 	Subjects           []Subject               `json:"subject,omitempty"`
-	Authors            []Contributor           `json:"author,omitempty"`
-	Translators        []Contributor           `json:"translator,omitempty"`
-	Editors            []Contributor           `json:"editor,omitempty"`
-	Artists            []Contributor           `json:"artist,omitempty"`
-	Illustrators       []Contributor           `json:"illustrator,omitempty"`
-	Letterers          []Contributor           `json:"letterer,omitempty"`
-	Pencilers          []Contributor           `json:"penciler,omitempty"`
-	Colorists          []Contributor           `json:"colorist,omitempty"`
-	Inkers             []Contributor           `json:"inker,omitempty"`
-	Narrators          []Contributor           `json:"narrator,omitempty"`
-	Contributors       []Contributor           `json:"contributor,omitempty"`
-	Publishers         []Contributor           `json:"publisher,omitempty"`
-	Imprints           []Contributor           `json:"imprint,omitempty"`
+	Authors            Contributors            `json:"author,omitempty"`
+	Translators        Contributors            `json:"translator,omitempty"`
+	Editors            Contributors            `json:"editor,omitempty"`
+	Artists            Contributors            `json:"artist,omitempty"`
+	Illustrators       Contributors            `json:"illustrator,omitempty"`
+	Letterers          Contributors            `json:"letterer,omitempty"`
+	Pencilers          Contributors            `json:"penciler,omitempty"`
+	Colorists          Contributors            `json:"colorist,omitempty"`
+	Inkers             Contributors            `json:"inker,omitempty"`
+	Narrators          Contributors            `json:"narrator,omitempty"`
+	Contributors       Contributors            `json:"contributor,omitempty"`
+	Publishers         Contributors            `json:"publisher,omitempty"`
+	Imprints           Contributors            `json:"imprint,omitempty"`
 	ReadingProgression ReadingProgression      `json:"readingProgression,omitempty" validate:"readingProgression"` // TODO validator.
 	Description        string                  `json:"description,omitempty"`
 	Duration           *float64                `json:"duration,omitempty" validator:"positive"` // TODO validator

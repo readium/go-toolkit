@@ -23,13 +23,13 @@ type Link struct {
 	Type       string     `json:"type,omitempty"`       // MIME type of the linked resource.
 	Templated  bool       `json:"templated,omitempty"`  // Indicates that a URI template is used in href.
 	Title      string     `json:"title,omitempty"`      // Title of the linked resource.
-	Rels       []string   `json:"rel,omitempty"`        // Relation between the linked resource and its containing collection.
+	Rels       Strings    `json:"rel,omitempty"`        // Relation between the linked resource and its containing collection.
 	Properties Properties `json:"properties,omitempty"` // Properties associated to the linked resource.
 	Height     uint       `json:"height,omitempty"`     // Height of the linked resource in pixels.
 	Width      uint       `json:"width,omitempty"`      // Width of the linked resource in pixels.
 	Bitrate    float64    `json:"bitrate,omitempty"`    // Bitrate of the linked resource in kbps.
 	Duration   float64    `json:"duration,omitempty"`   // Length of the linked resource in seconds.
-	Languages  []string   `json:"language,omitempty"`   // Expected language of the linked resource (BCP 47 tag).
+	Languages  Strings    `json:"language,omitempty"`   // Expected language of the linked resource (BCP 47 tag).
 	Alternates LinkList   `json:"alternate,omitempty"`  // Alternate resources for the linked resource.
 	Children   LinkList   `json:"children,omitempty"`   // Resources that are children of the linked resource, in the context of a given collection role.
 }

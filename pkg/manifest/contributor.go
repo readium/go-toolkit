@@ -145,3 +145,13 @@ func (c *Contributor) UnmarshalJSON(data []byte) error {
 	*c = *fc
 	return nil
 }
+
+// TODO replace with generic
+type Contributors []Contributor
+
+func (c Contributors) MarshalJSON() ([]byte, error) {
+	if len(c) == 1 {
+		return json.Marshal(c[0])
+	}
+	return json.Marshal([]Contributor(c))
+}
