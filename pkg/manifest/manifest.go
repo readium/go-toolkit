@@ -199,7 +199,7 @@ func (m *Manifest) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	m = fm
+	*m = *fm
 	return nil
 }
 

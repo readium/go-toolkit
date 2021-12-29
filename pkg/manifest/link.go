@@ -146,7 +146,7 @@ func (l *Link) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	l = fl
+	*l = *fl
 	return nil
 }
 

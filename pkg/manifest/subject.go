@@ -118,6 +118,6 @@ func (s *Subject) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	s = fs
+	*s = *fs
 	return nil
 }
