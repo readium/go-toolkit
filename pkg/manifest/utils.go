@@ -7,13 +7,6 @@ import (
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 )
 
-func addToSet(s []string, e string) []string {
-	if !extensions.Contains(s, e) {
-		s = append(s, e)
-	}
-	return s
-}
-
 func parseSliceOrString(value interface{}, deduplicate bool) (result []string, err error) {
 	switch v := value.(type) {
 	case string:
@@ -28,7 +21,7 @@ func parseSliceOrString(value interface{}, deduplicate bool) (result []string, e
 			}
 			if deduplicate {
 				// Deduplicate the slice since it's going to be a set (no unique items)
-				result = addToSet(result, str)
+				result = extensions.AddToSet(result, str)
 			} else {
 				result = append(result, str)
 			}

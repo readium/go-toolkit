@@ -41,3 +41,10 @@ func Contains(strings []string, s string) bool {
 	}
 	return false
 }
+
+func AddToSet(s []string, e string) []string {
+	if !Contains(s, e) {
+		s = append(s, e)
+	}
+	return s
+}
