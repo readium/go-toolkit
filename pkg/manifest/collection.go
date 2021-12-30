@@ -4,7 +4,7 @@ package manifest
 type PublicationCollection struct {
 	Metadata map[string]interface{}
 	Links    []Link
-	Children map[string][]PublicationCollection
+	Children []PublicationCollection
 }
 
 type Collection = Contributor
