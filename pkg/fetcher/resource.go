@@ -237,32 +237,40 @@ type FailureResource struct {
 	ex   *ResourceError
 }
 
+// File implements Resource
 func (r FailureResource) File() string {
 	return ""
 }
 
+// Close implements Resource
 func (r FailureResource) Close() {}
 
+// Link implements Resource
 func (r FailureResource) Link() manifest.Link {
 	return r.link
 }
 
+// Length implements Resource
 func (r FailureResource) Length() (int64, *ResourceError) {
 	return 0, r.ex
 }
 
+// Read implements Resource
 func (r FailureResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	return nil, r.ex
 }
 
+// ReadAsString implements Resource
 func (r FailureResource) ReadAsString() (string, *ResourceError) {
 	return "", r.ex
 }
 
+// ReadAsJSON implements Resource
 func (r FailureResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return nil, r.ex
 }
 
+// ReadAsXML implements Resource
 func (r FailureResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
 	return nil, r.ex
 }
@@ -280,34 +288,42 @@ type ProxyResource struct {
 	Res Resource
 }
 
+// File implements Resource
 func (r ProxyResource) File() string {
 	return r.Res.File()
 }
 
+// Close implements Resource
 func (r ProxyResource) Close() {
 	r.Res.Close()
 }
 
+// Link implements Resource
 func (r ProxyResource) Link() manifest.Link {
 	return r.Res.Link()
 }
 
+// Length implements Resource
 func (r ProxyResource) Length() (int64, *ResourceError) {
 	return r.Res.Length()
 }
 
+// Read implements Resource
 func (r ProxyResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	return r.Res.Read(start, end)
 }
 
+// ReadAsString implements Resource
 func (r ProxyResource) ReadAsString() (string, *ResourceError) {
 	return r.Res.ReadAsString()
 }
 
+// ReadAsJSON implements Resource
 func (r ProxyResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return r.Res.ReadAsJSON()
 }
 
+// ReadAsXML implements Resource
 func (r ProxyResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
 	return r.Res.ReadAsXML()
 }

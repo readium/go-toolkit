@@ -16,6 +16,7 @@ type ArchiveFetcher struct {
 	archive archive.Archive
 }
 
+// Links implements Fetcher
 func (f *ArchiveFetcher) Links() ([]manifest.Link, error) {
 	entries := f.archive.Entries()
 	links := make([]manifest.Link, 0, len(entries))
@@ -49,6 +50,7 @@ func (f *ArchiveFetcher) Links() ([]manifest.Link, error) {
 	return links, nil
 }
 
+// Get implements Fetcher
 func (f *ArchiveFetcher) Get(link manifest.Link) Resource {
 	entry, err := f.archive.Entry(strings.TrimPrefix(link.Href, "/"))
 	if err != nil {
@@ -60,6 +62,7 @@ func (f *ArchiveFetcher) Get(link manifest.Link) Resource {
 	}
 }
 
+// Close implements Fetcher
 func (f *ArchiveFetcher) Close() {
 	f.archive.Close()
 }

@@ -8,10 +8,12 @@ type TransformingFetcher struct {
 	transformers []ResourceTransformer
 }
 
+// Links implements Fetcher
 func (f *TransformingFetcher) Links() ([]manifest.Link, error) {
 	return f.fetcher.Links()
 }
 
+// Get implements Fetcher
 func (f *TransformingFetcher) Get(link manifest.Link) Resource {
 	resource := f.fetcher.Get(link)
 	for _, transformer := range f.transformers {
@@ -20,6 +22,7 @@ func (f *TransformingFetcher) Get(link manifest.Link) Resource {
 	return resource
 }
 
+// Close implements Fetcher
 func (f *TransformingFetcher) Close() {
 	f.fetcher.Close()
 }

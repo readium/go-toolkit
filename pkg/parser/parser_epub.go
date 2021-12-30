@@ -14,6 +14,7 @@ import (
 type EPUBParser struct {
 }
 
+// Parse implements PublicationParser
 func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Builder, error) {
 	fallbackTitle := asset.Name()
 

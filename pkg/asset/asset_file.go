@@ -39,10 +39,12 @@ func FileWithMediaTypeHint(filepath string, mediatypeHint string) *FileAsset {
 	}
 }
 
+// Name implements PublicationAsset
 func (a *FileAsset) Name() string {
 	return filepath.Base(a.filepath)
 }
 
+// MediaType implements PublicationAsset
 func (a *FileAsset) MediaType() mediatype.MediaType {
 	if a.mediatype == nil {
 		if a.knownMediaType != nil {
@@ -61,6 +63,7 @@ func (a *FileAsset) MediaType() mediatype.MediaType {
 	return *a.mediatype
 }
 
+// CreateFetcher implements PublicationAsset
 func (a *FileAsset) CreateFetcher(dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
 	stat, err := os.Stat(a.filepath)
 	if err != nil {

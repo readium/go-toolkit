@@ -18,6 +18,7 @@ import (
 // It can also work for a standalone audio file.
 type AudioParser struct{}
 
+// Parse implements PublicationParser
 func (p AudioParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
 	if !p.accepts(asset, fetcher) {
 		return nil, nil

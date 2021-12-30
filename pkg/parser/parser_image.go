@@ -18,6 +18,7 @@ import (
 // It can also work for a standalone bitmap file.
 type ImageParser struct{}
 
+// Parse implements PublicationParser
 func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
 	if !p.accepts(asset, fetcher) {
 		return nil, nil

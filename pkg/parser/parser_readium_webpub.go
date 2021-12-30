@@ -22,6 +22,7 @@ func NewWebPubParser(client *http.Client) WebPubParser {
 	}
 }
 
+// Parse implements PublicationParser
 func (p WebPubParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
 	lFetcher := fetcher
 	mediaType := asset.MediaType()

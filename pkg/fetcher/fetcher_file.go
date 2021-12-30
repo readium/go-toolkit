@@ -19,6 +19,7 @@ type FileFetcher struct {
 	resources []Resource // This is weak on mobile
 }
 
+// Links implements Fetcher
 func (f *FileFetcher) Links() ([]manifest.Link, error) {
 	links := make([]manifest.Link, 0)
 	for href, xpath := range f.paths {
@@ -70,6 +71,7 @@ func (f *FileFetcher) Links() ([]manifest.Link, error) {
 	return links, nil
 }
 
+// Get implements Fetcher
 func (f *FileFetcher) Get(link manifest.Link) Resource {
 	linkHref := link.Href
 	if !strings.HasPrefix(linkHref, "/") {
@@ -100,6 +102,7 @@ func (f *FileFetcher) Get(link manifest.Link) Resource {
 	return NewFailureResource(link, NotFound(errors.New("couldn't find "+linkHref+" in FileFetcher paths")))
 }
 
+// Close implements Fetcher
 func (f *FileFetcher) Close() {
 	for _, res := range f.resources {
 		res.Close()
@@ -120,16 +123,19 @@ type FileResource struct {
 	read bool
 }
 
+// Link implements Resource
 func (r *FileResource) Link() manifest.Link {
 	return r.link
 }
 
+// Close implements Resource
 func (r *FileResource) Close() {
 	if r.file != nil {
 		r.file.Close()
 	}
 }
 
+// File implements Resource
 func (r *FileResource) File() string {
 	return r.path
 }
@@ -154,6 +160,7 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 	return f, nil
 }
 
+// Read implements Resource
 func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	if end < start {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
@@ -185,6 +192,7 @@ func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	return data[:n], nil
 }
 
+// Length implements Resource
 func (r *FileResource) Length() (int64, *ResourceError) {
 	f, ex := r.open()
 	if ex != nil {
@@ -197,14 +205,17 @@ func (r *FileResource) Length() (int64, *ResourceError) {
 	return fi.Size(), nil
 }
 
+// ReadAsString implements Resource
 func (r *FileResource) ReadAsString() (string, *ResourceError) {
 	return ReadResourceAsString(r)
 }
 
+// ReadAsJSON implements Resource
 func (r *FileResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return ReadResourceAsJSON(r)
 }
 
+// ReadAsXML implements Resource
 func (r *FileResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
 	return ReadResourceAsXML(r)
 }
