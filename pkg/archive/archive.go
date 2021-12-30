@@ -11,6 +11,7 @@ type DefaultArchiveFactory struct {
 	explodedFactory explodedArchiveFactory
 }
 
+// Open implements ArchiveFactory
 func (e DefaultArchiveFactory) Open(filepath string, password string) (Archive, error) {
 	st, err := os.Stat(filepath)
 	if err != nil {
