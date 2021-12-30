@@ -43,6 +43,26 @@ func newBool(val bool) *bool {
 	return &b
 }
 
+// TODO replace with generic
+func newString(val string) *string {
+	s := val
+	return &s
+}
+
+func nilstrEq(source *string, val string) bool {
+	if source == nil {
+		return val == ""
+	}
+	return *source == val
+}
+
+func nilboolEq(source *bool, val bool) bool {
+	if source == nil {
+		return val == false
+	}
+	return *source == val
+}
+
 func firstLinkWithRel(links []Link, rel string) *Link {
 	for _, link := range links {
 		for _, linkRel := range link.Rels {

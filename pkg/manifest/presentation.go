@@ -1,6 +1,8 @@
 package manifest
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 /**
  * The Presentation Hints extension defines a number of hints for User Agents about the way content
@@ -72,12 +74,7 @@ const (
 	EPUBLayoutReflowable EPUBLayout = "reflowable"
 )
 
-func (p *Presentation) UnmarshalJSON(data []byte) error {
-	type PT Presentation
-	if err := json.Unmarshal(data, (*PT)(p)); err != nil {
-		return err
-	}
-
+func (p *Presentation) setDefaults() {
 	if p.Fit == nil {
 		def := FitContain // Default value for [Fit], if not specified.
 		p.Fit = &def
@@ -107,8 +104,52 @@ func (p *Presentation) UnmarshalJSON(data []byte) error {
 		def := PresentationDefaultContinuous
 		p.Continuous = &def
 	}
+}
+
+func NewPresentation() *Presentation {
+	p := &Presentation{}
+	p.setDefaults()
+	return p
+}
+
+func (p *Presentation) UnmarshalJSON(data []byte) error {
+	type PT Presentation
+	if err := json.Unmarshal(data, (*PT)(p)); err != nil {
+		return err
+	}
+
+	p.setDefaults()
 
 	return nil
+}
+
+func (p Presentation) MarshalJSON() ([]byte, error) {
+	if nilstrEq((*string)(p.Fit), string(FitContain)) {
+		p.Fit = nil
+	}
+
+	if nilstrEq((*string)(p.Orientation), string(OrientationAuto)) {
+		p.Orientation = nil
+	}
+
+	if nilstrEq((*string)(p.Overflow), string(OverflowAuto)) {
+		p.Overflow = nil
+	}
+
+	if nilstrEq((*string)(p.Spread), string(SpreadAuto)) {
+		p.Spread = nil
+	}
+
+	if nilboolEq(p.Clipped, PresentationDefaultClipped) {
+		p.Clipped = nil
+	}
+
+	if nilboolEq(p.Continuous, PresentationDefaultContinuous) {
+		p.Continuous = nil
+	}
+
+	type PT Presentation
+	return json.Marshal(PT(p))
 }
 
 // Get the layout of the given resource in this publication. Falls back on REFLOWABLE.
