@@ -18,6 +18,7 @@ require (
 )
 
 require (
+	github.com/agext/regexp v1.3.0 // indirect
 	github.com/antchfx/xpath v1.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
