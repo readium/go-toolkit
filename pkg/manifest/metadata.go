@@ -20,7 +20,7 @@ func (s Strings) MarshalJSON() ([]byte, error) {
 
 // Metadata for the default context in WebPub
 type Metadata struct {
-	Identifier         string                  `json:"identifier"` // Could be omitempty since it's optional
+	Identifier         string                  `json:"identifier,omitempty"`
 	Type               string                  `json:"@type,omitempty"`
 	LocalizedTitle     LocalizedString         `json:"title" validate:"required"`
 	LocalizedSubtitle  *LocalizedString        `json:"subtitle,omitempty"`
