@@ -9,9 +9,9 @@ import (
 
 func TestMediatypeErrorForInvalidTypes(t *testing.T) {
 	_, err := NewOfString("application")
-	assert.Error(t, err, "parser should return error because mediatype doesn't have 2 components")
+	assert.Error(t, err, "parser should return error because MediaType doesn't have 2 components")
 	_, err = NewOfString("application/atom+xml/extra")
-	assert.Error(t, err, "parser should return error because mediatype doesn't have 2 components")
+	assert.Error(t, err, "parser should return error because MediaType doesn't have 2 components")
 }
 
 func TestMediatypeToString(t *testing.T) {
@@ -19,69 +19,69 @@ func TestMediatypeToString(t *testing.T) {
 	assert.NoError(t, err)
 	// Note there is a space between the mediatype semicolon and params. This is the behavior
 	// of Go's mime formatter, and differs from the Kotlin implementation
-	assert.Equal(t, "application/atom+xml; profile=opds-catalog", mt.String(), "mediatype should render to this string")
+	assert.Equal(t, "application/atom+xml; profile=opds-catalog", mt.String(), "MediaType should render to this string")
 }
 
 func TestMediatypeToStringIsNormalized(t *testing.T) {
 	mt, err := NewOfString("APPLICATION/ATOM+XML;PROFILE=OPDS-CATALOG   ;   a=0")
 	assert.NoError(t, err)
-	assert.Equal(t, "application/atom+xml; a=0; profile=OPDS-CATALOG", mt.String(), "mediatype should have the correct final casing")
+	assert.Equal(t, "application/atom+xml; a=0; profile=OPDS-CATALOG", mt.String(), "MediaType should have the correct final casing")
 
 	mt, err = NewOfString("application/atom+xml;a=0;b=1")
 	assert.NoError(t, err)
-	assert.Equal(t, "application/atom+xml; a=0; b=1", mt.String(), "mediatype should output as it was input")
+	assert.Equal(t, "application/atom+xml; a=0; b=1", mt.String(), "MediaType should output as it was input")
 
 	mt, err = NewOfString("application/atom+xml;b=1;a=0")
 	assert.NoError(t, err)
-	assert.Equal(t, "application/atom+xml; a=0; b=1", mt.String(), "mediatype should have alphabetically sorted parameters")
+	assert.Equal(t, "application/atom+xml; a=0; b=1", mt.String(), "MediaType should have alphabetically sorted parameters")
 }
 
 func TestMediatypeGetType(t *testing.T) {
 	mt, err := NewOfString("application/atom+xml;profile=opds-catalog")
 	assert.NoError(t, err)
-	assert.Equal(t, "application", mt.Type, "mediatype type should be equal to \"application\"")
+	assert.Equal(t, "application", mt.Type, "MediaType type should be equal to \"application\"")
 
 	mt, err = NewOfString("*/jpeg")
 	assert.NoError(t, err)
-	assert.Equal(t, "*", mt.Type, "mediatype type should be equal to \"*\"")
+	assert.Equal(t, "*", mt.Type, "MediaType type should be equal to \"*\"")
 }
 
 func TestMediatypeGetSubtype(t *testing.T) {
 	mt, err := NewOfString("application/atom+xml;profile=opds-catalog")
 	assert.NoError(t, err)
-	assert.Equal(t, "atom+xml", mt.SubType, "mediatype subtype should be equal to \"atom+xml\"")
+	assert.Equal(t, "atom+xml", mt.SubType, "MediaType subtype should be equal to \"atom+xml\"")
 
 	mt, err = NewOfString("image/*")
 	assert.NoError(t, err)
-	assert.Equal(t, "*", mt.SubType, "mediatype subtype should be equal to \"*\"")
+	assert.Equal(t, "*", mt.SubType, "MediaType subtype should be equal to \"*\"")
 }
 
 func TestMediatypeGetParameters(t *testing.T) {
 	mt, err := NewOfString("application/atom+xml;type=entry;profile=opds-catalog")
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"type": "entry", "profile": "opds-catalog"}, mt.Parameters, "mediatype parameters should match the given map")
+	assert.Equal(t, map[string]string{"type": "entry", "profile": "opds-catalog"}, mt.Parameters, "MediaType parameters should match the given map")
 }
 
 func TestMediatypeGetEmptyParameters(t *testing.T) {
 	mt, err := NewOfString("application/atom+xml")
 	assert.NoError(t, err)
-	assert.True(t, len(mt.Parameters) == 0, "mediatype should have no parameters in its map")
+	assert.True(t, len(mt.Parameters) == 0, "MediaType should have no parameters in its map")
 }
 
 func TestMediatypeGetParametersWithWhitespaces(t *testing.T) {
 	mt, err := NewOfString("application/atom+xml    ;    type=entry   ;    profile=opds-catalog   ")
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"type": "entry", "profile": "opds-catalog"}, mt.Parameters, "mediatype parameters should match the given map")
+	assert.Equal(t, map[string]string{"type": "entry", "profile": "opds-catalog"}, mt.Parameters, "MediaType parameters should match the given map")
 }
 
 func TestMediatypeGetStructuredSyntaxSuffix(t *testing.T) {
 	mt, err := NewOfString("foo/bar")
 	assert.NoError(t, err)
-	assert.Empty(t, mt.StructuredSyntaxSuffix(), "mediatype should have no structured syntax suffix")
+	assert.Empty(t, mt.StructuredSyntaxSuffix(), "MediaType should have no structured syntax suffix")
 
 	mt, err = NewOfString("application/zip")
 	assert.NoError(t, err)
-	assert.Empty(t, mt.StructuredSyntaxSuffix(), "mediatype should have no structured syntax suffix")
+	assert.Empty(t, mt.StructuredSyntaxSuffix(), "MediaType should have no structured syntax suffix")
 
 	mt, err = NewOfString("application/epub+zip")
 	assert.NoError(t, err)
@@ -95,7 +95,7 @@ func TestMediatypeGetStructuredSyntaxSuffix(t *testing.T) {
 func TestMediatypeGetCharset(t *testing.T) {
 	mt, err := NewOfString("text/html")
 	assert.NoError(t, err)
-	assert.Nil(t, mt.Charset(), "mediatype should have no charset")
+	assert.Nil(t, mt.Charset(), "MediaType should have no charset")
 
 	mt, err = NewOfString("text/html;charset=utf-8")
 	assert.NoError(t, err)
@@ -236,11 +236,11 @@ func TestMediatypeContainsParametersMatching(t *testing.T) {
 	assert.NoError(t, err)
 	mt2, err := NewOfString("text/html;charset=ascii")
 	assert.NoError(t, err)
-	assert.False(t, mt1.Contains(&mt2), "mediatypes with different charsets should not be equal")
+	assert.False(t, mt1.Contains(&mt2), "MediaTypes with different charsets should not be equal")
 
 	mt2, err = NewOfString("text/html")
 	assert.NoError(t, err)
-	assert.False(t, mt1.Contains(&mt2), "mediatype with/without charset should not be interchangeable")
+	assert.False(t, mt1.Contains(&mt2), "MediaType with/without charset should not be interchangeable")
 }
 
 func TestMediatypeContainsIgnoresParameterOrder(t *testing.T) {
@@ -248,7 +248,7 @@ func TestMediatypeContainsIgnoresParameterOrder(t *testing.T) {
 	assert.NoError(t, err)
 	mt2, err := NewOfString("text/html;type=entry;charset=utf-8")
 	assert.NoError(t, err)
-	assert.True(t, mt1.Contains(&mt2), "mediatypes should ignore parameter order")
+	assert.True(t, mt1.Contains(&mt2), "MediaTypes should ignore parameter order")
 }
 
 func TestMediatypeContainsIgnoresExtraParameters(t *testing.T) {
@@ -256,7 +256,7 @@ func TestMediatypeContainsIgnoresExtraParameters(t *testing.T) {
 	assert.NoError(t, err)
 	mt2, err := NewOfString("text/html;charset=utf-8")
 	assert.NoError(t, err)
-	assert.True(t, mt1.Contains(&mt2), "mediatype contains should ignore extra parameters")
+	assert.True(t, mt1.Contains(&mt2), "MediaType contains should ignore extra parameters")
 }
 
 func TestMediatypeContainsSupportsWildcards(t *testing.T) {
@@ -286,7 +286,7 @@ func TestMediatypeMatchesEqual(t *testing.T) {
 	assert.NoError(t, err)
 	mt2, err := NewOfString("text/html;charset=utf-8")
 	assert.NoError(t, err)
-	assert.True(t, mt1.Matches(&mt2), "two identical mediatypes should match")
+	assert.True(t, mt1.Matches(&mt2), "two identical MediaTypes should match")
 }
 
 func TestMediatypeMatchesParametersMatching(t *testing.T) {
@@ -294,7 +294,7 @@ func TestMediatypeMatchesParametersMatching(t *testing.T) {
 	assert.NoError(t, err)
 	mt2, err := NewOfString("text/html;charset=ascii")
 	assert.NoError(t, err)
-	assert.False(t, mt1.Matches(&mt2), "mediatypes with different charsets should not match")
+	assert.False(t, mt1.Matches(&mt2), "MediaTypes with different charsets should not match")
 }
 
 func TestMediatypeMatchesIgnoresParameterOrder(t *testing.T) {
@@ -302,7 +302,7 @@ func TestMediatypeMatchesIgnoresParameterOrder(t *testing.T) {
 	assert.NoError(t, err)
 	mt2, err := NewOfString("text/html;type=entry;charset=utf-8")
 	assert.NoError(t, err)
-	assert.True(t, mt1.Matches(&mt2), "mediatype matches should ignore parameter order")
+	assert.True(t, mt1.Matches(&mt2), "MediaType matches should ignore parameter order")
 }
 
 func TestMediatypeMatchesIgnoresExtraParameters(t *testing.T) {
@@ -310,8 +310,8 @@ func TestMediatypeMatchesIgnoresExtraParameters(t *testing.T) {
 	assert.NoError(t, err)
 	mt2, err := NewOfString("text/html;charset=utf-8;extra=param")
 	assert.NoError(t, err)
-	assert.True(t, mt1.Matches(&mt2), "mediatype matches should ignore extra parameters")
-	assert.True(t, mt2.Matches(&mt1), "mediatype matches should ignore extra parameters")
+	assert.True(t, mt1.Matches(&mt2), "MediaType matches should ignore extra parameters")
+	assert.True(t, mt2.Matches(&mt1), "MediaType matches should ignore extra parameters")
 }
 
 func TestMediatypeMatchesSupportsWildcards(t *testing.T) {
@@ -319,8 +319,8 @@ func TestMediatypeMatchesSupportsWildcards(t *testing.T) {
 	assert.NoError(t, err)
 	mt2, err := NewOfString("text/html;charset=utf-8")
 	assert.NoError(t, err)
-	assert.True(t, mt2.Matches(&mt1), "anything should match with a wildcard mediatype")
-	assert.True(t, mt1.Matches(&mt2), "anything should match with a wildcard mediatype")
+	assert.True(t, mt2.Matches(&mt1), "anything should match with a wildcard MediaType")
+	assert.True(t, mt1.Matches(&mt2), "anything should match with a wildcard MediaType")
 
 	mt1, err = NewOfString("text/*")
 	assert.NoError(t, err)

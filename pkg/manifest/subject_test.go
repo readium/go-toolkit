@@ -22,7 +22,7 @@ func TestSubjectUnmarshalMinimalJSON(t *testing.T) {
 
 	assert.Equal(t, &Subject{
 		LocalizedName: NewLocalizedStringFromString("Science Fiction"),
-	}, &s, "parsed JSON object should be equal to subject object")
+	}, &s, "parsed JSON object should be equal to Subject object")
 }
 
 func TestSubjectUnmarshalFullJSON(t *testing.T) {
@@ -48,7 +48,7 @@ func TestSubjectUnmarshalFullJSON(t *testing.T) {
 			{Href: "pub1"},
 			{Href: "pub2"},
 		},
-	}, &s, "parsed JSON object should be equal to subject object")
+	}, &s, "parsed JSON object should be equal to Subject object")
 }
 
 func TestSubjectUnmarshalNilJSON(t *testing.T) {
@@ -59,7 +59,7 @@ func TestSubjectUnmarshalNilJSON(t *testing.T) {
 
 func TestSubjectUnmarshalRequiresName(t *testing.T) {
 	var s Subject
-	assert.Error(t, json.Unmarshal([]byte(`{"sortAs": "science-fiction"}`), &s), "name is required for subject objects")
+	assert.Error(t, json.Unmarshal([]byte(`{"sortAs": "science-fiction"}`), &s), "name is required for Subject objects")
 }
 
 func TestSubjectUnmarshalJSONArray(t *testing.T) {
@@ -78,7 +78,7 @@ func TestSubjectUnmarshalJSONArray(t *testing.T) {
 			LocalizedName: NewLocalizedStringFromString("Science Fiction"),
 			Scheme:        "http://scheme",
 		},
-	}, ss, "parsed JSON array should be equal to subject slice")
+	}, ss, "parsed JSON array should be equal to Subject slice")
 }
 
 func TestSubjectUnmarshalNilJSONArray(t *testing.T) {
@@ -92,7 +92,7 @@ func TestSubjectUnmarshalJSONArrayString(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []Subject{
 		{LocalizedName: NewLocalizedStringFromString("Fantasy")},
-	}, ss, "parsed JSON object should be equal to subject object")
+	}, ss, "parsed JSON object should be equal to Subject object")
 }
 
 // func TestSubjectUnmarshalJSONArraySingle(t *testing.T)
@@ -103,7 +103,7 @@ func TestSubjectNameFromDefaultTranslation(t *testing.T) {
 			"en": "Hello world",
 			"fr": "Salut le monde",
 		}),
-	}.Name(), "'Hello World' should be the default translation of the subject")
+	}.Name(), "'Hello World' should be the default translation of the Subject")
 }
 
 func TestSubjectMinimalJSON(t *testing.T) {

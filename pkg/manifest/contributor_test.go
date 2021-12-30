@@ -22,7 +22,7 @@ func TestContributorUnmarshalMinimalJSON(t *testing.T) {
 	}
 	var c2 Contributor
 	assert.NoError(t, json.Unmarshal([]byte(`{"name": "John Smith"}`), &c2))
-	assert.Equal(t, c1, c2, "unmarshalled JSON object should be equal to contributor object")
+	assert.Equal(t, c1, c2, "unmarshalled JSON object should be equal to Contributor object")
 }
 
 func TestContributorUnmarshalFullJSON(t *testing.T) {
@@ -55,7 +55,7 @@ func TestContributorUnmarshalFullJSON(t *testing.T) {
 			{"href": "http://link2"}
 		]
 	}`), &c2))
-	assert.Equal(t, c1, c2, "unmarshalled JSON object should be equal to contributor object")
+	assert.Equal(t, c1, c2, "unmarshalled JSON object should be equal to Contributor object")
 }
 
 func TestContributorUnmarshalJSONWithDuplicateRoles(t *testing.T) {
@@ -68,12 +68,12 @@ func TestContributorUnmarshalJSONWithDuplicateRoles(t *testing.T) {
 		"name": "Thom Yorke",
 		"role": ["singer", "guitarist", "guitarist"]
 	}`), &c2))
-	assert.Equal(t, c1, c2, "unmarshalled JSON object should be equal to contributor object")
+	assert.Equal(t, c1, c2, "unmarshalled JSON object should be equal to Contributor object")
 }
 
 func TestContributorUnmarshalRequiresName(t *testing.T) {
 	var c Contributor
-	assert.Error(t, json.Unmarshal([]byte(`{"identifier": "loremipsonium"}`), &c), "contributor is invalid because it has no name")
+	assert.Error(t, json.Unmarshal([]byte(`{"identifier": "loremipsonium"}`), &c), "Contributor is invalid because it has no name")
 	/*
 		assert.NoError(t, json.Unmarshal([]byte(`{"identifier": "loremipsonium"}`), &c))
 		assert.Equal(t, c, Contributor{}, "unmarshalled JSON object should be empty Contributor")

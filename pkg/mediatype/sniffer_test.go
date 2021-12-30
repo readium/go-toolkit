@@ -11,15 +11,15 @@ import (
 )
 
 func TestSnifferIgnoresExtensionCase(t *testing.T) {
-	assert.Equal(t, &EPUB, OfExtension("EPUB"), "sniffer should ignore \"EPUB\" case")
+	assert.Equal(t, &EPUB, OfExtension("EPUB"), "Sniffer should ignore \"EPUB\" case")
 }
 
 func TestSnifferIgnoresMediaTypeCase(t *testing.T) {
-	assert.Equal(t, &EPUB, OfString("APPLICATION/EPUB+ZIP"), "sniffer should ignore \"APPLICATION/EPUB+ZIP\" case")
+	assert.Equal(t, &EPUB, OfString("APPLICATION/EPUB+ZIP"), "Sniffer should ignore \"APPLICATION/EPUB+ZIP\" case")
 }
 
 func TestSnifferIgnoresMediaTypeExtraParams(t *testing.T) {
-	assert.Equal(t, &EPUB, OfString("application/epub+zip;param=value"), "sniffer should ignore extra dummy parameter when comparing mediatypes")
+	assert.Equal(t, &EPUB, OfString("application/epub+zip;param=value"), "Sniffer should ignore extra dummy parameter when comparing MediaTypes")
 }
 
 func TestSnifferFromMetadata(t *testing.T) {
@@ -56,7 +56,7 @@ func TestSnifferFromFile(t *testing.T) {
 	testCbz, err := os.Open(filepath.Join("testdata", "cbz.unknown"))
 	assert.NoError(t, err)
 	defer testCbz.Close()
-	assert.Equal(t, &CBZ, OfFileOnly(testCbz), "test CBZ should be identified by heavy sniffer")
+	assert.Equal(t, &CBZ, OfFileOnly(testCbz), "test CBZ should be identified by heavy Sniffer")
 }
 
 func TestSnifferFromBytes(t *testing.T) {
@@ -65,22 +65,22 @@ func TestSnifferFromBytes(t *testing.T) {
 	testCbzBytes, err := ioutil.ReadAll(testCbz)
 	testCbz.Close()
 	assert.NoError(t, err)
-	assert.Equal(t, &CBZ, OfBytesOnly(testCbzBytes), "test CBZ's bytes should be identified by heavy sniffer")
+	assert.Equal(t, &CBZ, OfBytesOnly(testCbzBytes), "test CBZ's bytes should be identified by heavy Sniffer")
 }
 
 func TestSnifferUnknownFormat(t *testing.T) {
-	assert.Nil(t, OfString("invalid"), "\"invalid\" mediatype should be unsniffable")
+	assert.Nil(t, OfString("invalid"), "\"invalid\" MediaType should be unsniffable")
 	unknownFile, err := os.Open(filepath.Join("testdata", "unknown"))
 	assert.NoError(t, err)
-	assert.Nil(t, OfFileOnly(unknownFile), "mediatype of unknown file should be unsniffable")
+	assert.Nil(t, OfFileOnly(unknownFile), "MediaType of unknown file should be unsniffable")
 }
 
 func TestSnifferValidMediaTypeFallback(t *testing.T) {
 	expected, err := NewOfString("fruit/grapes")
 	assert.NoError(t, err)
-	assert.Equal(t, &expected, OfString("fruit/grapes"), "valid mediatype should be sniffable")
-	assert.Equal(t, &expected, Of([]string{"invalid", "fruit/grapes"}, nil, Sniffers), "valid mediatype should be discoverable from provided list")
-	assert.Equal(t, &expected, Of([]string{"fruit/grapes", "vegetable/brocoli"}, nil, Sniffers), "valid mediatype should be discoverable from provided list")
+	assert.Equal(t, &expected, OfString("fruit/grapes"), "valid MediaType should be sniffable")
+	assert.Equal(t, &expected, Of([]string{"invalid", "fruit/grapes"}, nil, Sniffers), "valid MediaType should be discoverable from provided list")
+	assert.Equal(t, &expected, Of([]string{"fruit/grapes", "vegetable/brocoli"}, nil, Sniffers), "valid MediaType should be discoverable from provided list")
 }
 
 // Filetype-specific sniffing tests

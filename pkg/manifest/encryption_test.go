@@ -16,7 +16,7 @@ func TestEncryptionUnmarshalMinimalJSON(t *testing.T) {
 			Algorithm: "http://algo",
 		},
 		m,
-		"unmarshalled JSON object should be equal to encryption object",
+		"unmarshalled JSON object should be equal to Encryption object",
 	)
 }
 
@@ -35,7 +35,7 @@ func TestEncryptionUnmarshalFullJSON(t *testing.T) {
 		OriginalLength: 42099,
 		Profile:        "http://profile",
 		Scheme:         "http://scheme",
-	}, m, "unmarshalled JSON object should be equal to encryption object")
+	}, m, "unmarshalled JSON object should be equal to Encryption object")
 }
 
 func TestEncryptionUnmarshalNullJSON(t *testing.T) {
@@ -46,7 +46,7 @@ func TestEncryptionUnmarshalNullJSON(t *testing.T) {
 
 func TestEncryptionRequiresAlgorithm(t *testing.T) {
 	var m Encryption
-	assert.Error(t, json.Unmarshal([]byte(`{"compression": "gzip"}`), &m), "algorithm is required for encryption objects")
+	assert.Error(t, json.Unmarshal([]byte(`{"compression": "gzip"}`), &m), "algorithm is required for Encryption objects")
 }
 
 func TestEncryptionMarshalMinimalJSON(t *testing.T) {
@@ -55,7 +55,7 @@ func TestEncryptionMarshalMinimalJSON(t *testing.T) {
 	}
 	data, err := json.Marshal(m)
 	assert.NoError(t, err)
-	assert.Equal(t, data, []byte(`{"algorithm":"http://algo"}`), "unmarshalled JSON object should be equal to encryption object")
+	assert.Equal(t, data, []byte(`{"algorithm":"http://algo"}`), "unmarshalled JSON object should be equal to Encryption object")
 }
 
 func TestEncryptionMarshalFullJSON(t *testing.T) {
@@ -72,6 +72,6 @@ func TestEncryptionMarshalFullJSON(t *testing.T) {
 		t,
 		data,
 		[]byte(`{"scheme":"http://scheme","profile":"http://profile","algorithm":"http://algo","compression":"gzip","originalLength":42099}`),
-		"unmarshalled JSON object should be equal to encryption object",
+		"unmarshalled JSON object should be equal to Encryption object",
 	)
 }
