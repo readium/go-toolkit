@@ -41,8 +41,8 @@ func guessPublicationTitleFromFileStructure(fetcher fetcher.Fetcher) string { //
 
 func isMediatypeReadiumWebPubProfile(mt mediatype.MediaType) bool {
 	return mt.Matches(
-		&mediatype.READIUM_WEBPUB, &mediatype.READIUM_WEBPUB_MANIFEST,
-		&mediatype.READIUM_AUDIOBOOK, &mediatype.READIUM_AUDIOBOOK_MANIFEST, &mediatype.LCP_PROTECTED_AUDIOBOOK,
-		&mediatype.DIVINA, &mediatype.DIVINA_MANIFEST, &mediatype.LCP_PROTECTED_PDF,
+		&mediatype.ReadiumWebpub, &mediatype.ReadiumWebpubManifest,
+		&mediatype.ReadiumAudiobook, &mediatype.ReadiumAudiobookManifest, &mediatype.LCPProtectedAudiobook,
+		&mediatype.Divina, &mediatype.DivinaManifest, &mediatype.LCPProtectedPDF,
 	)
 }

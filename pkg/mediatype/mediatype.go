@@ -246,7 +246,7 @@ func (mt MediaType) MatchesFromString(other ...string) bool {
 
 // Returns whether this media type is structured as a ZIP archive.
 func (mt MediaType) IsZIP() bool {
-	return mt.Matches(&ZIP, &LCP_PROTECTED_AUDIOBOOK, &LCP_PROTECTED_PDF) ||
+	return mt.Matches(&ZIP, &LCPProtectedAudiobook, &LCPProtectedPDF) ||
 		mt.StructuredSyntaxSuffix() == "+zip"
 }
 
@@ -257,7 +257,7 @@ func (mt MediaType) IsJSON() bool {
 
 // Returns whether this media type is of an OPDS feed.
 func (mt MediaType) IsOPDS() bool {
-	return mt.Matches(&OPDS1, &OPDS1_ENTRY, &OPDS2, &OPDS2_PUBLICATION, &OPDS_AUTHENTICATION)
+	return mt.Matches(&OPDS1, &OPDS1Entry, &OPDS2, &OPDS2Publication, &OPDSAuthentication)
 }
 
 // Returns whether this media type is of an HTML document.
@@ -287,13 +287,13 @@ func (mt MediaType) IsVideo() bool {
 
 // Returns whether this media type is of a Readium Web Publication Manifest.
 func (mt MediaType) IsRwpm() bool {
-	return mt.Matches(&READIUM_AUDIOBOOK_MANIFEST, &DIVINA_MANIFEST, &READIUM_WEBPUB_MANIFEST)
+	return mt.Matches(&ReadiumAudiobookManifest, &DivinaManifest, &ReadiumWebpubManifest)
 }
 
 // Returns whether this media type is of a publication file.
 func (mt MediaType) IsPublication() bool {
 	return mt.Matches(
-		&READIUM_AUDIOBOOK, &READIUM_AUDIOBOOK_MANIFEST, &CBZ, &DIVINA, &DIVINA_MANIFEST, &EPUB, &LCP_PROTECTED_AUDIOBOOK,
-		&LCP_PROTECTED_PDF, &LPF, &PDF, &W3C_WPUB_MANIFEST, &READIUM_WEBPUB, &READIUM_WEBPUB_MANIFEST, &ZAB,
+		&ReadiumAudiobook, &ReadiumAudiobookManifest, &CBZ, &Divina, &DivinaManifest, &EPUB, &LCPProtectedAudiobook,
+		&LCPProtectedPDF, &LPF, &PDF, &W3CWPUBManifest, &ReadiumWebpub, &ReadiumWebpubManifest, &ZAB,
 	)
 }

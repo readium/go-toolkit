@@ -81,7 +81,7 @@ func (m Metadata) BelongsToSeries() []Collection {
 }
 
 func (m Metadata) EffectiveReadingProgression() ReadingProgression {
-	if m.ReadingProgression != "" && m.ReadingProgression != AUTO {
+	if m.ReadingProgression != "" && m.ReadingProgression != Auto {
 		return m.ReadingProgression
 	}
 

@@ -44,16 +44,16 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 	if metadata == nil {
 		return nil, errors.New("failed parsing package metadata")
 	}
-	manifestElement := pkg.SelectElement("/manifest[namespace-uri()='" + NAMESPACE_OPF + "']")
+	manifestElement := pkg.SelectElement("/manifest[namespace-uri()='" + NamespaceOPF + "']")
 	if manifestElement == nil {
 		return nil, errors.New("package manifest not found")
 	}
-	spineElement := pkg.SelectElement("/spine[namespace-uri()='" + NAMESPACE_OPF + "']")
+	spineElement := pkg.SelectElement("/spine[namespace-uri()='" + NamespaceOPF + "']")
 	if spineElement == nil {
 		return nil, errors.New("package spine not found")
 	}
 
-	mels := manifestElement.SelectElements("/item[namespace-uri()='" + NAMESPACE_OPF + "']")
+	mels := manifestElement.SelectElements("/item[namespace-uri()='" + NamespaceOPF + "']")
 	manifest := make([]Item, 0, len(mels))
 	for i, mel := range mels {
 		item := ParseItem(mel, filePath, prefixMap)
@@ -98,7 +98,7 @@ func ParseItem(element *xmlquery.Node, filePath string, prefixMap map[string]str
 		if prop == "" {
 			continue
 		}
-		properties = append(properties, resolveProperty(prop, prefixMap, ITEM))
+		properties = append(properties, resolveProperty(prop, prefixMap, VocabItem))
 	}
 	return &Item{
 		Href:         href,
@@ -126,7 +126,7 @@ func ParseSpine(element *xmlquery.Node, prefixMap map[string]string, epubVersion
 		itemrefs = append(itemrefs, *itemref)
 	}
 
-	pageProgressionDiretion := manifest.AUTO
+	pageProgressionDiretion := manifest.Auto
 	switch element.SelectAttr("page-progression-direction") {
 	case "ltr":
 		pageProgressionDiretion = manifest.LTR
@@ -164,7 +164,7 @@ func ParseItemRef(element *xmlquery.Node, prefixMap map[string]string) *ItemRef 
 		if prop == "" {
 			continue
 		}
-		properties = append(properties, resolveProperty(prop, prefixMap, ITEMREF))
+		properties = append(properties, resolveProperty(prop, prefixMap, VocabItemref))
 	}
 
 	return &ItemRef{

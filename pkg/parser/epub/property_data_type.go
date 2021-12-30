@@ -6,38 +6,38 @@ import (
 )
 
 var PACKAGE_RESERVED_PREFIXES = map[string]string{
-	"dcterms":   VOCABULARY_DCTERMS,
-	"media":     VOCABULARY_MEDIA,
-	"rendition": VOCABULARY_RENDITION,
-	"a11y":      VOCABULARY_A11Y,
-	"marc":      VOCABULARY_MARC,
-	"onix":      VOCABULARY_ONIX,
-	"schema":    VOCABULARY_SCHEMA,
-	"xsd":       VOCABULARY_XSD,
+	"dcterms":   VocabularyDCTerms,
+	"media":     VocabularyMedia,
+	"rendition": VocabularyRendition,
+	"a11y":      VocabularyA11Y,
+	"marc":      VocabularyMARC,
+	"onix":      VocabularyONIX,
+	"schema":    VocabularySchema,
+	"xsd":       VocabularyXSD,
 }
 
 var CONTENT_RESERVED_PREFIXES = map[string]string{
-	"msv":   VOCABULARY_MSV,
-	"prism": VOCABULARY_PRISM,
+	"msv":   VocabularyMSV,
+	"prism": VocabularyPRISM,
 }
 
 type DefaultVocab int
 
 const (
-	NO_VOCAB DefaultVocab = iota
-	META
-	LINK
-	ITEM
-	ITEMREF
-	TYPE
+	NoVocab DefaultVocab = iota
+	VocabMeta
+	VocabLink
+	VocabItem
+	VocabItemref
+	VocabType
 )
 
 var DEFAULT_VOCAB = map[DefaultVocab]string{
-	META:    VOCABULARY_META,
-	LINK:    VOCABULARY_LINK,
-	ITEM:    VOCABULARY_ITEM,
-	ITEMREF: VOCABULARY_ITEMREF,
-	TYPE:    VOCABULARY_TYPE,
+	VocabMeta:    VocabularyMeta,
+	VocabLink:    VocabularyLink,
+	VocabItem:    VocabularyItem,
+	VocabItemref: VocabularyItemref,
+	VocabType:    VocabularyType,
 }
 
 func resolveProperty(property string, prefixMap map[string]string, defaultVocab DefaultVocab) string {

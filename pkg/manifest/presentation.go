@@ -20,56 +20,56 @@ type Presentation struct {
 	Orientation *Orientation `json:"orientation,omitempty"` // Suggested orientation for the device when displaying the linked resource.
 	Overflow    *Overflow    `json:"overflow,omitempty"`    // Suggested method for handling overflow while displaying the linked resource.
 	Spread      *Spread      `json:"spread,omitempty"`      // Indicates the condition to be met for the linked resource to be rendered within a synthetic spread.
-	Layout      *EpubLayout  `json:"layout,omitempty"`      // Hints how the layout of the resource should be presented (EPUB extension).
+	Layout      *EPUBLayout  `json:"layout,omitempty"`      // Hints how the layout of the resource should be presented (EPUB extension).
 }
 
-const PRESENTATION_DEFAULT_CLIPPED = false    // Default value for Presentation.Clipped
-const PRESENTATION_DEFAULT_CONTINUOUS = false // Default value for Presentation.Continuous
+const PresentationDefaultClipped = false    // Default value for Presentation.Clipped
+const PresentationDefaultContinuous = false // Default value for Presentation.Continuous
 
 type Fit string // Suggested method for constraining a resource inside the viewport.
 const (
-	FIT_WIDTH   Fit = "width"
-	FIT_HEIGTH  Fit = "height"
-	FIT_CONTAIN Fit = "contain"
-	FIT_COVER   Fit = "cover"
+	FitWidth   Fit = "width"
+	FitHeight  Fit = "height"
+	FitContain Fit = "contain"
+	FitCover   Fit = "cover"
 )
 
 type Orientation string // Suggested orientation for the device when displaying the linked resource.
 const (
-	ORIENTATION_AUTO      Orientation = "auto"
-	ORIENTATION_LANDSCAPE Orientation = "landscape"
-	ORIENTATION_PORTRAIT  Orientation = "portrait"
+	OrientationAuto      Orientation = "auto"
+	OrientationLandscape Orientation = "landscape"
+	OrientationPortrait  Orientation = "portrait"
 )
 
 type Overflow string // Suggested method for handling overflow while displaying the linked resource.
 const (
-	OVERFLOW_AUTO      Overflow = "auto"
-	OVERFLOW_PAGINATED Overflow = "paginated"
-	OVERFLOW_SCROLLED  Overflow = "scrolled"
+	OverflowAuto      Overflow = "auto"
+	OverflowPaginated Overflow = "paginated"
+	OverflowScrolled  Overflow = "scrolled"
 )
 
 type Page string // Indicates how the linked resource should be displayed in a reading environment that displays synthetic spreads.
 const (
-	PAGE_LEFT   Page = "left"
-	PAGE_RIGHT  Page = "right"
-	PAGE_CENTER Page = "center"
+	PageLeft   Page = "left"
+	PageRight  Page = "right"
+	PageCenter Page = "center"
 )
 
 type Spread string // Indicates the condition to be met for the linked resource to be rendered within a synthetic spread.
 const (
-	SPREAD_AUTO      Spread = "auto"
-	SPREAD_BOTH      Spread = "both"
-	SPREAD_NONE      Spread = "none"
-	SPREAD_LANDSCAPE Spread = "landscape"
+	SpreadAuto      Spread = "auto"
+	SpreadBoth      Spread = "both"
+	SpreadNone      Spread = "none"
+	SpreadLandscape Spread = "landscape"
 )
 
 // Hints how the layout of the resource should be presented.
 // https://readium.org/webpub-manifest/schema/extensions/epub/metadata.schema.json
-type EpubLayout string
+type EPUBLayout string
 
 const (
-	EPUB_LAYOUT_FIXED      EpubLayout = "fixed"
-	EPUB_LAYOUT_REFLOWABLE EpubLayout = "reflowable"
+	EPUBLayoutFixed      EPUBLayout = "fixed"
+	EPUBLayoutReflowable EPUBLayout = "reflowable"
 )
 
 func (p *Presentation) UnmarshalJSON(data []byte) error {
@@ -79,32 +79,32 @@ func (p *Presentation) UnmarshalJSON(data []byte) error {
 	}
 
 	if p.Fit == nil {
-		def := FIT_CONTAIN // Default value for [Fit], if not specified.
+		def := FitContain // Default value for [Fit], if not specified.
 		p.Fit = &def
 	}
 
 	if p.Orientation == nil {
-		def := ORIENTATION_AUTO
+		def := OrientationAuto
 		p.Orientation = &def
 	}
 
 	if p.Overflow == nil {
-		def := OVERFLOW_AUTO
+		def := OverflowAuto
 		p.Overflow = &def
 	}
 
 	if p.Spread == nil {
-		def := SPREAD_AUTO
+		def := SpreadAuto
 		p.Spread = &def
 	}
 
 	if p.Clipped == nil {
-		def := PRESENTATION_DEFAULT_CLIPPED
+		def := PresentationDefaultClipped
 		p.Clipped = &def
 	}
 
 	if p.Continuous == nil {
-		def := PRESENTATION_DEFAULT_CONTINUOUS
+		def := PresentationDefaultContinuous
 		p.Continuous = &def
 	}
 
@@ -112,9 +112,9 @@ func (p *Presentation) UnmarshalJSON(data []byte) error {
 }
 
 // Get the layout of the given resource in this publication. Falls back on REFLOWABLE.
-func LayoutOf(link Link) EpubLayout {
+func LayoutOf(link Link) EPUBLayout {
 	if l := link.Properties.Layout(); l != "" {
 		return l
 	}
-	return EPUB_LAYOUT_REFLOWABLE
+	return EPUBLayoutReflowable
 }

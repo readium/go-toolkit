@@ -10,7 +10,7 @@ import (
 )
 
 func ParseEncryption(document *xmlquery.Node) (ret map[string]manifest.Encryption) {
-	for _, node := range document.SelectElements("//EncryptedData[namespace-uri()='" + NAMESPACE_ENC + "']") {
+	for _, node := range document.SelectElements("//EncryptedData[namespace-uri()='" + NamespaceENC + "']") {
 		u, e := parseEncryptedData(node)
 		if e != nil {
 			ret[u] = *e
@@ -20,19 +20,19 @@ func ParseEncryption(document *xmlquery.Node) (ret map[string]manifest.Encryptio
 }
 
 func parseEncryptedData(node *xmlquery.Node) (string, *manifest.Encryption) {
-	cdat := node.SelectElement("CipherData[namespace-uri()='" + NAMESPACE_ENC + "']")
+	cdat := node.SelectElement("CipherData[namespace-uri()='" + NamespaceENC + "']")
 	if cdat == nil {
 		return "", nil
 	}
-	cipherref := cdat.SelectElement("CipherReference[namespace-uri()='" + NAMESPACE_ENC + "']")
+	cipherref := cdat.SelectElement("CipherReference[namespace-uri()='" + NamespaceENC + "']")
 	if cipherref == nil {
 		return "", nil
 	}
 	resourceURI := cipherref.SelectAttr("URI")
 
 	retrievalMethod := ""
-	if keyinfo := node.SelectElement("KeyInfo[namespace-uri()='" + NAMESPACE_SIG + "']"); keyinfo != nil {
-		if retrivalmethod := keyinfo.SelectElement("RetrievalMethod[namespace-uri()='" + NAMESPACE_SIG + "']"); retrivalmethod != nil {
+	if keyinfo := node.SelectElement("KeyInfo[namespace-uri()='" + NamespaceSIG + "']"); keyinfo != nil {
+		if retrivalmethod := keyinfo.SelectElement("RetrievalMethod[namespace-uri()='" + NamespaceSIG + "']"); retrivalmethod != nil {
 			retrievalMethod = retrivalmethod.SelectAttr("URI")
 		}
 	}
@@ -42,14 +42,14 @@ func parseEncryptedData(node *xmlquery.Node) (string, *manifest.Encryption) {
 	}
 
 	if retrievalMethod == "license.lcpl#/encryption/content_key" {
-		ret.Scheme = drm.SCHEME_LCP
+		ret.Scheme = drm.SchemeLCP
 	}
 
-	if encryptionmethod := node.SelectElement("EncryptionMethod[namespace-uri()='" + NAMESPACE_ENC + "']"); encryptionmethod != nil {
+	if encryptionmethod := node.SelectElement("EncryptionMethod[namespace-uri()='" + NamespaceENC + "']"); encryptionmethod != nil {
 		ret.Algorithm = encryptionmethod.SelectAttr("Algorithm")
 	}
 
-	if encryptionproperties := node.SelectElement("EncryptionProperties[namespace-uri()='" + NAMESPACE_ENC + "']"); encryptionproperties != nil {
+	if encryptionproperties := node.SelectElement("EncryptionProperties[namespace-uri()='" + NamespaceENC + "']"); encryptionproperties != nil {
 		originalLength, method := parseEncryptionProperties(encryptionproperties)
 		if method != "" {
 			ret.Compression = method
@@ -62,8 +62,8 @@ func parseEncryptedData(node *xmlquery.Node) (string, *manifest.Encryption) {
 }
 
 func parseEncryptionProperties(encryptionProperties *xmlquery.Node) (int64, string) {
-	for _, encryptionProperty := range encryptionProperties.SelectElements("EncryptionProperty[namespace-uri()='" + NAMESPACE_ENC + "']") {
-		if compressionElement := encryptionProperty.SelectElement("Compression[namespace-uri()='" + NAMESPACE_COMP + "']"); compressionElement != nil {
+	for _, encryptionProperty := range encryptionProperties.SelectElements("EncryptionProperty[namespace-uri()='" + NamespaceENC + "']") {
+		if compressionElement := encryptionProperty.SelectElement("Compression[namespace-uri()='" + NamespaceCOMP + "']"); compressionElement != nil {
 			if originalLength, method := parseCompressionElement(compressionElement); method != "" {
 				return originalLength, method
 			}

@@ -21,7 +21,7 @@ func NewSnifferFileContent(file *os.File) SnifferFileContent {
 	return SnifferFileContent{file: file}
 }
 
-const MAX_READ_SIZE = 5 * 1024 * 1024 // 5MB
+const MaxReadSize = 5 * 1024 * 1024 // 5MB
 
 func (s SnifferFileContent) Read() []byte {
 	s.file.Seek(0, io.SeekStart)
@@ -29,7 +29,7 @@ func (s SnifferFileContent) Read() []byte {
 	if err != nil {
 		return nil
 	}
-	if info.Size() > MAX_READ_SIZE {
+	if info.Size() > MaxReadSize {
 		return nil
 	}
 	data := make([]byte, info.Size())

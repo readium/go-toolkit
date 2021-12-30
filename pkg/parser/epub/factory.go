@@ -123,11 +123,11 @@ func mapEPUBLink(link EPUBLink) manifest.Link {
 	}
 
 	var contains []string
-	if extensions.Contains(link.rels, VOCABULARY_LINK+"record") {
-		if extensions.Contains(link.properties, VOCABULARY_LINK+"onix") {
+	if extensions.Contains(link.rels, VocabularyLink+"record") {
+		if extensions.Contains(link.properties, VocabularyLink+"onix") {
 			contains = append(contains, "onix")
 		}
-		if extensions.Contains(link.properties, VOCABULARY_LINK+"xmp") {
+		if extensions.Contains(link.properties, VocabularyLink+"xmp") {
 			contains = append(contains, "xmp")
 		}
 	}
@@ -257,19 +257,19 @@ func (f PublicationFactory) computeAlternates(item Item, fallbackChain []string)
 func parseItemProperties(properties []string) (rels []string, contains []string, others []string) {
 	for _, property := range properties {
 		switch property {
-		case VOCABULARY_ITEM + "scripted":
+		case VocabularyItem + "scripted":
 			contains = append(contains, "js")
-		case VOCABULARY_ITEM + "mathml":
+		case VocabularyItem + "mathml":
 			contains = append(contains, "mathml")
-		case VOCABULARY_ITEM + "svg":
+		case VocabularyItem + "svg":
 			contains = append(contains, "svg")
-		case VOCABULARY_ITEM + "xmp-record":
+		case VocabularyItem + "xmp-record":
 			contains = append(contains, "xmp")
-		case VOCABULARY_ITEM + "remote-resources":
+		case VocabularyItem + "remote-resources":
 			contains = append(contains, "remote-resources")
-		case VOCABULARY_ITEM + "nav":
+		case VocabularyItem + "nav":
 			rels = append(rels, "contents")
-		case VOCABULARY_ITEM + "cover-image":
+		case VocabularyItem + "cover-image":
 			rels = append(rels, "cover")
 		default:
 			others = append(others, property)
@@ -283,47 +283,47 @@ func parseItemrefProperties(properties []string) map[string]string {
 	for _, property := range properties {
 		switch property {
 		// Page
-		case VOCABULARY_RENDITION + "page-spread-center":
+		case VocabularyRendition + "page-spread-center":
 			linkProperties["page"] = "center"
-		case VOCABULARY_RENDITION + "page-spread-left":
+		case VocabularyRendition + "page-spread-left":
 			fallthrough
-		case VOCABULARY_ITEMREF + "page-spread-left":
+		case VocabularyItemref + "page-spread-left":
 			linkProperties["page"] = "left"
-		case VOCABULARY_RENDITION + "page-spread-right":
+		case VocabularyRendition + "page-spread-right":
 			fallthrough
-		case VOCABULARY_ITEMREF + "page-spread-right":
+		case VocabularyItemref + "page-spread-right":
 			linkProperties["page"] = "right"
 		// Spread
-		case VOCABULARY_RENDITION + "spread-node":
+		case VocabularyRendition + "spread-node":
 			linkProperties["spread"] = "none"
-		case VOCABULARY_RENDITION + "spread-auto":
+		case VocabularyRendition + "spread-auto":
 			linkProperties["spread"] = "auto"
-		case VOCABULARY_RENDITION + "spread-landscape":
+		case VocabularyRendition + "spread-landscape":
 			linkProperties["spread"] = "landscape"
-		case VOCABULARY_RENDITION + "spread-portrait":
+		case VocabularyRendition + "spread-portrait":
 			fallthrough
-		case VOCABULARY_RENDITION + "spread-both":
+		case VocabularyRendition + "spread-both":
 			linkProperties["spread"] = "both"
 		// Layout
-		case VOCABULARY_RENDITION + "layout-reflowable":
+		case VocabularyRendition + "layout-reflowable":
 			linkProperties["layout"] = "reflowable"
-		case VOCABULARY_RENDITION + "layout-pre-paginated":
+		case VocabularyRendition + "layout-pre-paginated":
 			linkProperties["layout"] = "fixed"
 		// Orientation
-		case VOCABULARY_RENDITION + "orientation-auto":
+		case VocabularyRendition + "orientation-auto":
 			linkProperties["orientation"] = "auto"
-		case VOCABULARY_RENDITION + "orientation-landscape":
+		case VocabularyRendition + "orientation-landscape":
 			linkProperties["orientation"] = "landscape"
-		case VOCABULARY_RENDITION + "orientation-portrait":
+		case VocabularyRendition + "orientation-portrait":
 			linkProperties["orientation"] = "portrait"
 		// Overflow
-		case VOCABULARY_RENDITION + "flow-auto":
+		case VocabularyRendition + "flow-auto":
 			linkProperties["overflow"] = "auto"
-		case VOCABULARY_RENDITION + "flow-paginated":
+		case VocabularyRendition + "flow-paginated":
 			linkProperties["overflow"] = "paginated"
-		case VOCABULARY_RENDITION + "flow-scrolled-continuous":
+		case VocabularyRendition + "flow-scrolled-continuous":
 			fallthrough
-		case VOCABULARY_RENDITION + "flow-scrolled-doc":
+		case VocabularyRendition + "flow-scrolled-doc":
 			linkProperties["overflow"] = "scrolled"
 		}
 	}

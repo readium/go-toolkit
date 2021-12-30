@@ -76,7 +76,7 @@ func (p WebPubParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetche
 	// Checks the requirements from the LCPDF specification.
 	// https://readium.org/lcp-specs/notes/lcp-for-pdf.html
 	readingOrder := manifest.ReadingOrder
-	if mediaType.Equal(&mediatype.LCP_PROTECTED_PDF) && (len(readingOrder) == 0 || !readingOrder.AllMatchMediaType(&mediatype.PDF)) {
+	if mediaType.Equal(&mediatype.LCPProtectedPDF) && (len(readingOrder) == 0 || !readingOrder.AllMatchMediaType(&mediatype.PDF)) {
 		return nil, errors.New("invalid LCP protected PDF")
 	}
 

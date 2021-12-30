@@ -88,8 +88,8 @@ func (p Properties) Spread() Spread {
 }
 
 // Hints how the layout of the resource should be presented.
-func (p Properties) Layout() EpubLayout {
-	return EpubLayout(p.GetString("layout"))
+func (p Properties) Layout() EPUBLayout {
+	return EPUBLayout(p.GetString("layout"))
 }
 
 func (p Properties) Encryption() *Encryption {

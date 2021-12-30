@@ -54,7 +54,7 @@ func (a *FileAsset) MediaType() mediatype.MediaType {
 				a.mediatype = mediatype.OfFile(fil, []string{a.mediaTypeHint}, nil, mediatype.Sniffers)
 			}
 			if a.mediatype == nil { // Still nothing found
-				a.mediatype = &mediatype.BINARY
+				a.mediatype = &mediatype.Binary
 			}
 		}
 	}

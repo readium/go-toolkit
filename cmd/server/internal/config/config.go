@@ -98,7 +98,7 @@ func (cnf *Config) BindFlags() {
 	pflag.CommandLine.SetNormalizeFunc(wordSepNormalizeFunc)
 	pflag.Parse()
 
-	viper.SetEnvPrefix(consts.APP_ACRONYM)
+	viper.SetEnvPrefix(consts.AppAcronym)
 	replacer := strings.NewReplacer("-", "_")
 	viper.SetEnvKeyReplacer(replacer)
 	viper.AutomaticEnv()
@@ -109,7 +109,7 @@ func (cnf *Config) BindFlags() {
 	viper.AddConfigPath("./configs")
 	viper.AddConfigPath("./cmd/server/configs")
 	viper.AddConfigPath("/configs")
-	viper.AddConfigPath("/etc/" + consts.APP_ACRONYM)
+	viper.AddConfigPath("/etc/" + consts.AppAcronym)
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {

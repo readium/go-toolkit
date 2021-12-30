@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-const UNDEFINED_LANGUAGE = "und"
+const UndefinedLanguage = "und"
 
 type LocalizedString struct {
 	Translations map[string]string
@@ -15,7 +15,7 @@ func NewLocalizedStringFromString(value string) LocalizedString {
 	ls := LocalizedString{
 		Translations: make(map[string]string),
 	}
-	ls.Translations[UNDEFINED_LANGUAGE] = value
+	ls.Translations[UndefinedLanguage] = value
 	return ls
 }
 
@@ -46,7 +46,7 @@ func (l *LocalizedString) SetDefaultTranslation(value string) {
 	if l.Translations == nil {
 		l.Translations = make(map[string]string)
 	}
-	l.Translations[UNDEFINED_LANGUAGE] = value
+	l.Translations[UndefinedLanguage] = value
 }
 
 func (l *LocalizedString) SetTranslation(language string, value string) {
@@ -71,7 +71,7 @@ func (l *LocalizedString) GetOrFallback(language string) string {
 	if ok {
 		return t
 	}*/
-	t, ok = l.Translations[UNDEFINED_LANGUAGE]
+	t, ok = l.Translations[UndefinedLanguage]
 	if ok {
 		return t // "und" value
 	}

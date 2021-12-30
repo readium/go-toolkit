@@ -5,7 +5,7 @@ package manifest
 type ReadingProgression string
 
 const (
-	AUTO ReadingProgression = "auto"
+	Auto ReadingProgression = "auto"
 	LTR  ReadingProgression = "ltr"
 	RTL  ReadingProgression = "rtl"
 	TTB  ReadingProgression = "ttb"

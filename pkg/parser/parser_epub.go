@@ -98,7 +98,7 @@ func parseNavigationData(packageDocument epub.PackageDocument, fetcher fetcher.F
 		var navItem *epub.Item
 		for _, v := range packageDocument.Manifest {
 			for _, st := range v.Properties {
-				if st == epub.VOCABULARY_ITEM+"nav" {
+				if st == epub.VocabularyItem+"nav" {
 					navItem = &v
 					break
 				}

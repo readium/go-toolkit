@@ -46,7 +46,7 @@ func TestLocalizedStringJSON(t *testing.T) {
 	var l LocalizedString
 	l.SetTranslation("en", "a string")
 	l.SetTranslation("fr", "une chaîne")
-	l.SetTranslation(UNDEFINED_LANGUAGE, "Surgh")
+	l.SetTranslation(UndefinedLanguage, "Surgh")
 	s, err := json.Marshal(&l)
 	assert.NoError(t, err)
 	assert.JSONEq(t, `{
@@ -74,7 +74,7 @@ func TestLocalizedStringFindTranslationByLanguageDefaultsUndefined(t *testing.T)
 	var l LocalizedString
 	l.SetTranslation("foo", "a string")
 	l.SetTranslation("bar", "une chaîne")
-	l.SetTranslation(UNDEFINED_LANGUAGE, "Surgh")
+	l.SetTranslation(UndefinedLanguage, "Surgh")
 	assert.Equal(t, "Surgh", l.DefaultTranslation())
 }
 
