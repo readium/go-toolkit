@@ -45,3 +45,65 @@ func TestPropertiesAddGiven(t *testing.T) {
 		"additional": "property",
 	}))
 }
+
+// Presentation-specific properties
+
+func TestPropertiesClippedAvailable(t *testing.T) {
+	assert.Equal(t, true, *Properties{
+		"clipped": true,
+	}.Clipped(), "Clipped true when set to true")
+}
+
+func TestPropertiesClippedMissing(t *testing.T) {
+	assert.Nil(t, Properties{}.Clipped(), "Clipped nil when missing")
+}
+
+func TestPropertiesFitAvailable(t *testing.T) {
+	assert.Equal(t, FitCover, Properties{
+		"fit": "cover",
+	}.Fit(), "Fit cover when set to cover")
+}
+
+func TestPropertiesFitMissing(t *testing.T) {
+	assert.Empty(t, Properties{}.Clipped(), "Fit empty when missing")
+}
+
+func TestPropertiesOrientationAvailable(t *testing.T) {
+	assert.Equal(t, OrientationLandscape, Properties{
+		"orientation": "landscape",
+	}.Orientation(), "Orientation landscape when set to landscape")
+}
+
+func TestPropertiesOrientationMissing(t *testing.T) {
+	assert.Empty(t, Properties{}.Orientation(), "Orientation empty when missing")
+}
+
+func TestPropertiesOverflowAvailable(t *testing.T) {
+	assert.Equal(t, OverflowScrolled, Properties{
+		"overflow": "scrolled",
+	}.Overflow(), "Overflow scrolled when set to scrolled")
+}
+
+func TestPropertiesOverflowMissing(t *testing.T) {
+	assert.Empty(t, Properties{}.Overflow(), "Overflow empty when missing")
+}
+
+func TestPropertiesPageAvailable(t *testing.T) {
+	assert.Equal(t, PageRight, Properties{
+		"page": "right",
+	}.Page(), "Page right when set to right")
+}
+
+func TestPropertiesPageMissing(t *testing.T) {
+	assert.Empty(t, Properties{}.Page(), "Page empty when missing")
+}
+
+func TestPropertiesSpreadAvailable(t *testing.T) {
+	assert.Equal(t, SpreadBoth, Properties{
+		"spread": "both",
+	}.Spread(), "Spread both when set to both")
+}
+
+func TestPropertiesSpreadMissing(t *testing.T) {
+	assert.Empty(t, Properties{}.Spread(), "Spread empty when missing")
+}
