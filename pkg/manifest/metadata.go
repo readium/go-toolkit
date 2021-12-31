@@ -15,7 +15,8 @@ func (s Strings) MarshalJSON() ([]byte, error) {
 	if len(s) == 1 {
 		return json.Marshal(s[0])
 	}
-	return json.Marshal(s)
+	type alias Strings
+	return json.Marshal(alias(s))
 }
 
 // Metadata for the default context in WebPub

@@ -2,9 +2,11 @@ package manifest
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util"
 )
 
 // Function used to recursively transform the href of a [Link] when parsing its JSON representation.
@@ -42,6 +44,35 @@ func (l Link) MediaType() mediatype.MediaType {
 	return *mt
 }
 
+// List of URI template parameter keys, if the [Link] is templated.
+func (l Link) TemplateParameters() []string {
+	if !l.Templated {
+		return nil
+	}
+	return util.NewURITemplate(l.Href).Parameters()
+}
+
+// Expands the HREF by replacing URI template variables by the given parameters.
+func (l Link) ExpandTemplate(parameters map[string]string) Link {
+	l.Href = util.NewURITemplate(l.Href).Expand(parameters)
+	l.Templated = false
+	return l
+}
+
+// Computes an absolute URL to the link, relative to the given [baseUrl].
+// If the link's [href] is already absolute, the [baseUrl] is ignored.
+func (l Link) ToURL(baseURL string) string {
+	href := strings.TrimPrefix(l.Href, "/")
+	if href == "" {
+		return ""
+	}
+	if baseURL == "" {
+		baseURL = "/"
+	}
+	h, _ := util.NewHREF(href, baseURL).PercentEncodedString()
+	return h
+}
+
 // Creates an [Link] from its RWPM JSON representation.
 func LinkFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormalizer) (*Link, error) {
 	if rawJson == nil {
@@ -67,14 +98,14 @@ func LinkFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormaliz
 		Type:      parseOptString(rawJson["type"]),
 		Templated: parseOptBool(rawJson["templated"]),
 		Title:     parseOptString(rawJson["title"]),
-		Height:    parseOptUInt(rawJson["height"]),
-		Width:     parseOptUInt(rawJson["width"]),
-		Bitrate:   parseOptFloat64(rawJson["type"]),
-		Duration:  parseOptFloat64(rawJson["type"]),
+		Height:    float64ToUint(parseOptFloat64(rawJson["height"])),
+		Width:     float64ToUint(parseOptFloat64(rawJson["width"])),
+		Bitrate:   float64Positive(parseOptFloat64(rawJson["bitrate"])),
+		Duration:  float64Positive(parseOptFloat64(rawJson["duration"])),
 	}
 
 	// Properties
-	properties, ok := rawJson["properties"].(Properties)
+	properties, ok := rawJson["properties"].(map[string]interface{})
 	if ok {
 		link.Properties = properties
 	}
@@ -87,18 +118,18 @@ func LinkFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormaliz
 	link.Rels = rels
 
 	// Languages
-	languages, err := parseSliceOrString(rawJson["languages"], false)
+	languages, err := parseSliceOrString(rawJson["language"], false)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed unmarshalling 'languages'")
+		return nil, errors.Wrap(err, "failed unmarshalling 'language'")
 	}
 	link.Languages = languages
 
 	// Alternates
-	rawAlternates, ok := rawJson["alternates"].([]interface{})
+	rawAlternates, ok := rawJson["alternate"].([]interface{})
 	if ok {
 		alternates, err := LinksFromJSONArray(rawAlternates, normalizeHref)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed unmarshalling 'alternates'")
+			return nil, errors.Wrap(err, "failed unmarshalling 'alternate'")
 		}
 		link.Alternates = alternates
 	}

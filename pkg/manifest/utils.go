@@ -85,9 +85,23 @@ func parseOptString(raw interface{}) string {
 	return rs
 }
 
-func parseOptUInt(raw interface{}) uint {
+func parseOptUint(raw interface{}) uint {
 	ri, _ := raw.(uint)
 	return ri
+}
+
+func float64ToUint(f float64) uint {
+	if f < 0 {
+		return 0
+	}
+	return uint(f)
+}
+
+func float64Positive(f float64) float64 {
+	if f < 0 {
+		return 0
+	}
+	return f
 }
 
 func parseOptBool(raw interface{}) bool {
