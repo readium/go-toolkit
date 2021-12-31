@@ -83,7 +83,7 @@ func SubjectFromJSON(rawJson interface{}, normalizeHref LinkHrefNormalizer) (*Su
 // Creates a list of [Subject] from its RWPM JSON representation.
 // The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
 func SubjectFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNormalizer) ([]Subject, error) {
-	subjects := make([]Subject, 0)
+	var subjects []Subject
 	switch rjx := rawJsonArray.(type) {
 	case []interface{}:
 		for i, entry := range rjx {

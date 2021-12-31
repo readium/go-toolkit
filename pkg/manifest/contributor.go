@@ -97,7 +97,7 @@ func ContributorFromJSON(rawJson interface{}, normalizeHref LinkHrefNormalizer) 
 }
 
 func ContributorFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNormalizer) ([]Contributor, error) {
-	contributors := make([]Contributor, 0)
+	var contributors []Contributor
 	switch rjx := rawJsonArray.(type) {
 	case []interface{}:
 		for i, entry := range rjx {
