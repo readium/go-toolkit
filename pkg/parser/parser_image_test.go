@@ -6,6 +6,7 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/asset"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,6 +31,16 @@ func TestImageCBZAccepted(t *testing.T) {
 func TestImageJPGAccepted(t *testing.T) {
 	withImageParser(t, "./testdata/image/futuristic_tales.jpg", func(p *pub.Builder) {
 		assert.NotNil(t, p)
+	})
+}
+
+func TestImageConformsTo(t *testing.T) {
+	withImageParser(t, "./testdata/image/futuristic_tales.cbz", func(p *pub.Builder) {
+		assert.NotNil(t, p)
+		pub := p.Build()
+		assert.NotNil(t, pub)
+
+		assert.Equal(t, pub.Manifest.Metadata.ConformsTo, manifest.Profiles{manifest.ProfileDivina})
 	})
 }
 

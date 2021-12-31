@@ -56,7 +56,10 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	readingOrder[0].Rels = []string{"cover"}
 
 	manifest := manifest.Manifest{
-		Metadata:     manifest.Metadata{LocalizedTitle: manifest.NewLocalizedStringFromString(title)},
+		Metadata: manifest.Metadata{
+			LocalizedTitle: manifest.NewLocalizedStringFromString(title),
+			ConformsTo:     manifest.Profiles{manifest.ProfileDivina},
+		},
 		ReadingOrder: readingOrder,
 	}
 

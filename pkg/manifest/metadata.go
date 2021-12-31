@@ -23,6 +23,7 @@ func (s Strings) MarshalJSON() ([]byte, error) {
 type Metadata struct {
 	Identifier         string                  `json:"identifier,omitempty"`
 	Type               string                  `json:"@type,omitempty"`
+	ConformsTo         Profiles                `json:"conformsTo,omitempty"`
 	LocalizedTitle     LocalizedString         `json:"title" validate:"required"`
 	LocalizedSubtitle  *LocalizedString        `json:"subtitle,omitempty"`
 	LocalizedSortAs    *LocalizedString        `json:"sortAs,omitempty"`
@@ -130,6 +131,13 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 		ReadingProgression: ReadingProgression(parseOptString(rawJson["readingProgression"])),
 		Description:        parseOptString(rawJson["description"]),
 	}
+
+	// ConformsTo
+	conformsTo, err := parseSliceOrString(rawJson["conformsTo"], true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing 'conformsTo'")
+	}
+	metadata.ConformsTo = Profiles(interface{}(conformsTo).(Profiles))
 
 	// LocalizedSubtitle
 	ls, ok := rawJson["subtitle"]
@@ -298,7 +306,9 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 	}
 
 	// Now all we have left is everything else!
-	metadata.OtherMetadata = rawJson
+	if len(rawJson) > 0 {
+		metadata.OtherMetadata = rawJson
+	}
 
 	return metadata, nil
 }

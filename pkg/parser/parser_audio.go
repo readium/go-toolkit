@@ -58,7 +58,10 @@ func (p AudioParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	}
 
 	manifest := manifest.Manifest{
-		Metadata:     manifest.Metadata{LocalizedTitle: manifest.NewLocalizedStringFromString(title)},
+		Metadata: manifest.Metadata{
+			LocalizedTitle: manifest.NewLocalizedStringFromString(title),
+			ConformsTo:     manifest.Profiles{manifest.ProfileAudiobook},
+		},
 		ReadingOrder: readingOrder,
 	}
 

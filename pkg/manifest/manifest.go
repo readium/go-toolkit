@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
+	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util"
 )
 
@@ -52,6 +53,32 @@ func (m Manifest) LinkWithRel(rel string) *Link {
 }
 
 // TODO linksWithRel: Finds all [Link]s having the given [rel] in the manifest's links.
+
+// Returns whether this manifest conforms to the given Readium Web Publication Profile.
+func (m Manifest) ConformsTo(profile Profile) bool {
+	if len(m.ReadingOrder) == 0 {
+		return false
+	}
+
+	switch profile {
+	case ProfileAudiobook:
+		return m.Links.AllAreAudio()
+	case ProfileDivina:
+		return m.Links.AllAreBitmap()
+	case ProfileEPUB:
+		// EPUB needs to be explicitly indicated in `conformsTo`, otherwise it could be a regular Web Publication.
+		for _, v := range m.Metadata.ConformsTo {
+			if v == ProfileEPUB && m.ReadingOrder.AllAreHTML() {
+				return true
+			}
+		}
+		return m.ReadingOrder.AllAreHTML() && extensions.Contains(m.Metadata.ConformsTo.toss(), string(ProfileEPUB))
+	case ProfilePDF:
+		return m.Links.AllMatchMediaType(&mediatype.PDF)
+	default:
+		return extensions.Contains(m.Metadata.ConformsTo.toss(), string(profile))
+	}
+}
 
 // Parses a [Manifest] from its RWPM JSON representation.
 //

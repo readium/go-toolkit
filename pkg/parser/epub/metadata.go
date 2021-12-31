@@ -417,6 +417,7 @@ type PubMetadataAdapter struct {
 func (m PubMetadataAdapter) Metadata() manifest.Metadata {
 	metadata := manifest.Metadata{
 		Identifier:         m.Identifier(),
+		ConformsTo:         manifest.Profiles{manifest.ProfileEPUB},
 		Modified:           m.Modified(),
 		Published:          m.Published(),
 		Languages:          m.Languages(),

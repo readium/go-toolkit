@@ -15,6 +15,11 @@ type Publication struct {
 	_manifest manifest.Manifest
 }
 
+// Returns whether this publication conforms to the given Readium Web Publication Profile.
+func (p Publication) ConformsTo(profile manifest.Profile) bool {
+	return p.Manifest.ConformsTo(profile)
+}
+
 func New() *Publication {
 	return &Publication{}
 }
