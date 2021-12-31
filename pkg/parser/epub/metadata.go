@@ -428,7 +428,7 @@ func (m PubMetadataAdapter) Metadata() manifest.Metadata {
 		Subjects:           m.Subjects(),
 		Description:        m.Description(),
 		ReadingProgression: m.ReadingProgression(),
-		BelongsTo:          make(map[string][]manifest.Contributor),
+		BelongsTo:          make(map[string]manifest.Contributors),
 		OtherMetadata:      m.OtherMetadata(),
 
 		Authors:      m.Contributors("aut"),
