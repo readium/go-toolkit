@@ -8,3 +8,4 @@ type PublicationCollection struct {
 }
 
 type Collection = Contributor
+type Collections = Contributors

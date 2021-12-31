@@ -72,12 +72,16 @@ func (m Manifest) ConformsTo(profile Profile) bool {
 				return true
 			}
 		}
-		return m.ReadingOrder.AllAreHTML() && extensions.Contains(m.Metadata.ConformsTo.toss(), string(ProfileEPUB))
 	case ProfilePDF:
 		return m.Links.AllMatchMediaType(&mediatype.PDF)
 	default:
-		return extensions.Contains(m.Metadata.ConformsTo.toss(), string(profile))
+		for _, v := range m.Metadata.ConformsTo {
+			if v == profile {
+				return true
+			}
+		}
 	}
+	return false
 }
 
 // Parses a [Manifest] from its RWPM JSON representation.

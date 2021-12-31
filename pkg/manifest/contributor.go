@@ -124,12 +124,11 @@ func ContributorFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNo
 
 func (c Contributor) MarshalJSON() ([]byte, error) {
 	if c.LocalizedSortAs == nil && c.Identifier == "" && len(c.Roles) == 0 && c.Position == nil && c.Links == nil && len(c.LocalizedName.Translations) == 1 {
-		// If everything but name is empty, and there's just one name, contributor can be just a name
+		// If everything but name is empty, and there's just one name, Contributor can be just a name
 		return json.Marshal(c.LocalizedName)
 	}
-	type CNT Contributor // Prevent infinite recursion
-	cnt := CNT(c)
-	return json.Marshal(cnt)
+	type alias Contributor // Prevent infinite recursion
+	return json.Marshal(alias(c))
 }
 
 func (c *Contributor) UnmarshalJSON(data []byte) error {
@@ -150,6 +149,9 @@ func (c *Contributor) UnmarshalJSON(data []byte) error {
 type Contributors []Contributor
 
 func (c Contributors) MarshalJSON() ([]byte, error) {
+	if len(c) == 0 {
+		return []byte("null"), nil
+	}
 	if len(c) == 1 {
 		return json.Marshal(c[0])
 	}

@@ -21,35 +21,35 @@ func (s Strings) MarshalJSON() ([]byte, error) {
 
 // Metadata for the default context in WebPub
 type Metadata struct {
-	Identifier         string                  `json:"identifier,omitempty"`
-	Type               string                  `json:"@type,omitempty"`
-	ConformsTo         Profiles                `json:"conformsTo,omitempty"`
-	LocalizedTitle     LocalizedString         `json:"title" validate:"required"`
-	LocalizedSubtitle  *LocalizedString        `json:"subtitle,omitempty"`
-	LocalizedSortAs    *LocalizedString        `json:"sortAs,omitempty"`
-	Modified           *time.Time              `json:"modified,omitempty"`
-	Published          *time.Time              `json:"published,omitempty"`
-	Languages          Strings                 `json:"language,omitempty" validate:"BCP47"` // TODO validator
-	Subjects           []Subject               `json:"subject,omitempty"`
-	Authors            Contributors            `json:"author,omitempty"`
-	Translators        Contributors            `json:"translator,omitempty"`
-	Editors            Contributors            `json:"editor,omitempty"`
-	Artists            Contributors            `json:"artist,omitempty"`
-	Illustrators       Contributors            `json:"illustrator,omitempty"`
-	Letterers          Contributors            `json:"letterer,omitempty"`
-	Pencilers          Contributors            `json:"penciler,omitempty"`
-	Colorists          Contributors            `json:"colorist,omitempty"`
-	Inkers             Contributors            `json:"inker,omitempty"`
-	Narrators          Contributors            `json:"narrator,omitempty"`
-	Contributors       Contributors            `json:"contributor,omitempty"`
-	Publishers         Contributors            `json:"publisher,omitempty"`
-	Imprints           Contributors            `json:"imprint,omitempty"`
-	ReadingProgression ReadingProgression      `json:"readingProgression,omitempty" validate:"readingProgression"` // TODO validator.
-	Description        string                  `json:"description,omitempty"`
-	Duration           *float64                `json:"duration,omitempty" validator:"positive"` // TODO validator
-	NumberOfPages      *uint                   `json:"numberOfPages,omitempty"`
-	BelongsTo          map[string][]Collection `json:"belongsTo,omitempty"`
-	Presentation       *Presentation           `json:"presentation,omitempty"`
+	Identifier         string                 `json:"identifier,omitempty"`
+	Type               string                 `json:"@type,omitempty"`
+	ConformsTo         Profiles               `json:"conformsTo,omitempty"`
+	LocalizedTitle     LocalizedString        `json:"title" validate:"required"`
+	LocalizedSubtitle  *LocalizedString       `json:"subtitle,omitempty"`
+	LocalizedSortAs    *LocalizedString       `json:"sortAs,omitempty"`
+	Modified           *time.Time             `json:"modified,omitempty"`
+	Published          *time.Time             `json:"published,omitempty"`
+	Languages          Strings                `json:"language,omitempty" validate:"BCP47"` // TODO validator
+	Subjects           []Subject              `json:"subject,omitempty"`
+	Authors            Contributors           `json:"author,omitempty"`
+	Translators        Contributors           `json:"translator,omitempty"`
+	Editors            Contributors           `json:"editor,omitempty"`
+	Artists            Contributors           `json:"artist,omitempty"`
+	Illustrators       Contributors           `json:"illustrator,omitempty"`
+	Letterers          Contributors           `json:"letterer,omitempty"`
+	Pencilers          Contributors           `json:"penciler,omitempty"`
+	Colorists          Contributors           `json:"colorist,omitempty"`
+	Inkers             Contributors           `json:"inker,omitempty"`
+	Narrators          Contributors           `json:"narrator,omitempty"`
+	Contributors       Contributors           `json:"contributor,omitempty"`
+	Publishers         Contributors           `json:"publisher,omitempty"`
+	Imprints           Contributors           `json:"imprint,omitempty"`
+	ReadingProgression ReadingProgression     `json:"readingProgression,omitempty" validate:"readingProgression"` // TODO validator.
+	Description        string                 `json:"description,omitempty"`
+	Duration           *float64               `json:"duration,omitempty" validator:"positive"` // TODO validator
+	NumberOfPages      *uint                  `json:"numberOfPages,omitempty"`
+	BelongsTo          map[string]Collections `json:"belongsTo,omitempty"`
+	Presentation       *Presentation          `json:"presentation,omitempty"`
 
 	OtherMetadata map[string]interface{} `json:"-"` // Extension point for other metadata. TODO implement
 }
@@ -137,7 +137,9 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'conformsTo'")
 	}
-	metadata.ConformsTo = Profiles(interface{}(conformsTo).(Profiles))
+	if len(conformsTo) > 0 {
+		metadata.ConformsTo = Profiles(profilesFromStrings(conformsTo))
+	}
 
 	// LocalizedSubtitle
 	ls, ok := rawJson["subtitle"]
@@ -167,9 +169,9 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 	metadata.Languages = languages
 
 	// Subjects
-	subjects, err := SubjectFromJSONArray(rawJson["subjects"], normalizeHref)
+	subjects, err := SubjectFromJSONArray(rawJson["subject"], normalizeHref)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed parsing 'subjects'")
+		return nil, errors.Wrap(err, "failed parsing 'subject'")
 	}
 	metadata.Subjects = subjects
 
@@ -266,14 +268,15 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 
 	// Duration
 	duration, ok := rawJson["duration"].(float64)
-	if ok {
+	if ok && duration >= 0 {
 		metadata.Duration = &duration
 	}
 
 	// NumberOfPages
-	numberOfPages, ok := rawJson["numberOfPages"].(uint)
-	if ok {
-		metadata.NumberOfPages = &numberOfPages
+	numberOfPages, ok := rawJson["numberOfPages"].(float64)
+	if ok && numberOfPages >= 0 {
+		nop := uint(numberOfPages)
+		metadata.NumberOfPages = &nop
 	}
 
 	// BelongsTo
@@ -282,7 +285,7 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 		belongsToRaw, _ = rawJson["belongs_to"].(map[string]interface{})
 	}
 	if belongsToRaw != nil {
-		belongsTo := make(map[string][]Collection)
+		belongsTo := make(map[string]Collections)
 		for k, v := range belongsToRaw {
 			if v == nil {
 				continue
@@ -298,7 +301,7 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 
 	// Delete above vals so that we can put everything else in OtherMetadata
 	for _, v := range []string{
-		"title", "subtitle", "sortAs", "identifier", "@type", "modified", "published", "readingProgression", "description", "subjects", "language",
+		"title", "subtitle", "sortAs", "identifier", "@type", "conformsTo", "modified", "published", "readingProgression", "description", "subject", "language",
 		"contributor", "publisher", "imprint", "author", "translator", "editor", "artist", "illustrator", "letterer", "penciler", "colorist", "inker", "narrator",
 		"duration", "numberOfPages", "belongsTo", "belongs_to",
 	} {
@@ -327,4 +330,94 @@ func (m *Metadata) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// TODO Metadata MarshalJSON to handle OtherMetadata
+func (m Metadata) MarshalJSON() ([]byte, error) {
+	j := m.OtherMetadata
+	if j == nil {
+		j = make(map[string]interface{})
+	}
+
+	if m.Identifier != "" {
+		j["identifier"] = m.Identifier
+	}
+	if m.Type != "" {
+		j["@type"] = m.Type
+	}
+	if len(m.ConformsTo) > 0 {
+		j["conformsTo"] = m.ConformsTo
+	}
+	j["title"] = m.LocalizedTitle
+	if m.LocalizedSubtitle != nil {
+		j["subtitle"] = *m.LocalizedSubtitle
+	}
+	if m.Modified != nil {
+		j["modified"] = *m.Modified
+	}
+	if m.Published != nil {
+		j["published"] = *m.Published
+	}
+	if len(m.Languages) > 0 {
+		j["language"] = m.Languages
+	}
+	if m.LocalizedSortAs != nil {
+		j["sortAs"] = m.LocalizedSortAs
+	}
+	if len(m.Subjects) > 0 {
+		j["subject"] = m.Subjects
+	}
+	if len(m.Authors) > 0 {
+		j["author"] = m.Authors
+	}
+	if len(m.Translators) > 0 {
+		j["translator"] = m.Translators
+	}
+	if len(m.Editors) > 0 {
+		j["editor"] = m.Editors
+	}
+	if len(m.Artists) > 0 {
+		j["artist"] = m.Artists
+	}
+	if len(m.Artists) > 0 {
+		j["illustrator"] = m.Illustrators
+	}
+	if len(m.Artists) > 0 {
+		j["letterer"] = m.Letterers
+	}
+	if len(m.Artists) > 0 {
+		j["penciler"] = m.Pencilers
+	}
+	if len(m.Artists) > 0 {
+		j["colorist"] = m.Colorists
+	}
+	if len(m.Artists) > 0 {
+		j["inker"] = m.Inkers
+	}
+	if len(m.Artists) > 0 {
+		j["narrator"] = m.Narrators
+	}
+	if len(m.Artists) > 0 {
+		j["contributor"] = m.Contributors
+	}
+	if len(m.Artists) > 0 {
+		j["publisher"] = m.Publishers
+	}
+	if len(m.Artists) > 0 {
+		j["imprint"] = m.Imprints
+	}
+	if m.ReadingProgression != "" && m.ReadingProgression != Auto {
+		j["readingProgression"] = m.ReadingProgression
+	}
+	if m.Description != "" {
+		j["description"] = m.Description
+	}
+	if m.Duration != nil {
+		j["duration"] = m.Duration
+	}
+	if m.NumberOfPages != nil {
+		j["numberOfPages"] = m.NumberOfPages
+	}
+	if len(m.BelongsTo) > 0 {
+		j["belongsTo"] = m.BelongsTo
+	}
+
+	return json.Marshal(j)
+}

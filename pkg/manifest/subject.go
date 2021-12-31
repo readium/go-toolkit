@@ -121,3 +121,12 @@ func (s *Subject) UnmarshalJSON(data []byte) error {
 	*s = *fs
 	return nil
 }
+
+func (s Subject) MarshalJSON() ([]byte, error) {
+	if s.LocalizedSortAs == nil && s.Scheme == "" && s.Code == "" && len(s.Links) == 0 {
+		// If everything but name is empty, Subject can be just a name
+		return json.Marshal(s.LocalizedName)
+	}
+	type alias Subject // Prevent infinite recursion
+	return json.Marshal(alias(s))
+}

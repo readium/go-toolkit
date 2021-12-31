@@ -30,10 +30,19 @@ func (p Profiles) toss() []string {
 	return interface{}(p).([]string) // Ugly...
 }
 
-func (s Profiles) MarshalJSON() ([]byte, error) {
-	if len(s) == 1 {
-		return json.Marshal(s[0])
+func (p Profiles) MarshalJSON() ([]byte, error) {
+	if len(p) == 1 {
+		return json.Marshal(p[0])
 	}
 	type alias Profiles
-	return json.Marshal(alias(s))
+	return json.Marshal(alias(p))
+}
+
+// Ugly workaround
+func profilesFromStrings(raw []string) []Profile {
+	profiles := make([]Profile, len(raw))
+	for i, p := range raw {
+		profiles[i] = Profile(p)
+	}
+	return profiles
 }

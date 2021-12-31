@@ -148,8 +148,8 @@ func (p Presentation) MarshalJSON() ([]byte, error) {
 		p.Continuous = nil
 	}
 
-	type PT Presentation
-	return json.Marshal(PT(p))
+	type alias Presentation
+	return json.Marshal(alias(p))
 }
 
 // Get the layout of the given resource in this publication. Falls back on REFLOWABLE.

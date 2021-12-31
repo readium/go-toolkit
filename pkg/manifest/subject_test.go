@@ -111,7 +111,7 @@ func TestSubjectMinimalJSON(t *testing.T) {
 		LocalizedName: NewLocalizedStringFromString("Science Fiction"),
 	})
 	assert.NoError(t, err)
-	assert.JSONEq(t, string(bin), `{"name": "Science Fiction"}`)
+	assert.JSONEq(t, string(bin), `"Science Fiction"`)
 }
 
 func TestSubjectFullJSON(t *testing.T) {
@@ -148,9 +148,7 @@ func TestSubjectJSONArray(t *testing.T) {
 	}})
 	assert.NoError(t, err)
 	assert.JSONEq(t, string(bin), `[
-		{
-			"name": "Fantasy"
-		},
+		"Fantasy",
 		{
 			"name": "Science Fiction",
 			"scheme": "http://scheme"
