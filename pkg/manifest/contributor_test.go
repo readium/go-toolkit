@@ -135,7 +135,7 @@ func TestContributorFullJSON(t *testing.T) {
 		"name": "Colin Greenwood",
 		"identifier": "colin",
 		"sortAs": "greenwood",
-		"role": ["bassist"],
+		"role": "bassist",
 		"position": 4.0,
 		"links": [
 			{"href": "http://link1", "templated": true},

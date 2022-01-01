@@ -13,7 +13,7 @@ type Contributor struct {
 	LocalizedName   LocalizedString  `json:"name" validate:"required"` // The name of the contributor.
 	LocalizedSortAs *LocalizedString `json:"sortAs,omitempty"`         // The string used to sort the name of the contributor.
 	Identifier      string           `json:"identifier,omitempty"`     // An unambiguous reference to this contributor.
-	Roles           []string         `json:"role,omitempty"`           // The roles of the contributor in the making of the publication.
+	Roles           Strings          `json:"role,omitempty"`           // The roles of the contributor in the making of the publication.
 	Position        *float64         `json:"position,omitempty"`       // The position of the publication in this collection/series, when the contributor represents a collection. TODO validator
 	Links           []Link           `json:"links,omitempty"`          // Used to retrieve similar publications for the given contributor.
 }
