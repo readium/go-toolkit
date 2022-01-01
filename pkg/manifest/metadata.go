@@ -376,31 +376,31 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	if len(m.Artists) > 0 {
 		j["artist"] = m.Artists
 	}
-	if len(m.Artists) > 0 {
+	if len(m.Illustrators) > 0 {
 		j["illustrator"] = m.Illustrators
 	}
-	if len(m.Artists) > 0 {
+	if len(m.Letterers) > 0 {
 		j["letterer"] = m.Letterers
 	}
-	if len(m.Artists) > 0 {
+	if len(m.Pencilers) > 0 {
 		j["penciler"] = m.Pencilers
 	}
-	if len(m.Artists) > 0 {
+	if len(m.Colorists) > 0 {
 		j["colorist"] = m.Colorists
 	}
-	if len(m.Artists) > 0 {
+	if len(m.Inkers) > 0 {
 		j["inker"] = m.Inkers
 	}
-	if len(m.Artists) > 0 {
+	if len(m.Narrators) > 0 {
 		j["narrator"] = m.Narrators
 	}
-	if len(m.Artists) > 0 {
+	if len(m.Contributors) > 0 {
 		j["contributor"] = m.Contributors
 	}
-	if len(m.Artists) > 0 {
+	if len(m.Publishers) > 0 {
 		j["publisher"] = m.Publishers
 	}
-	if len(m.Artists) > 0 {
+	if len(m.Imprints) > 0 {
 		j["imprint"] = m.Imprints
 	}
 	if m.ReadingProgression != "" && m.ReadingProgression != Auto {
