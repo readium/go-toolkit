@@ -12,47 +12,16 @@ import (
 
 // Manifest Main structure for a publication
 type Manifest struct {
-	Context         []string `json:"@context,omitempty"`
+	Context         Strings  `json:"@context,omitempty"`
 	Metadata        Metadata `json:"metadata"`
 	Links           LinkList `json:"links"`
 	ReadingOrder    LinkList `json:"readingOrder,omitempty"`
 	Resources       LinkList `json:"resources,omitempty"` //Replaces the manifest but less redundant
 	TableOfContents LinkList `json:"toc,omitempty"`
 
-	Subcollections map[string][]PublicationCollection `json:"-"` //Extension point for collections that shouldn't show up in the manifest
+	Subcollections PublicationCollectionMap `json:"-"` //Extension point for collections that shouldn't show up in the manifest
 	// Internal       []Internal                         `json:"-"` // TODO remove
 }
-
-// Finds the first [Link] with the given relation in the manifest's links.
-func (m Manifest) LinkWithRel(rel string) *Link {
-	for _, resource := range m.Resources {
-		for _, resRel := range resource.Rels {
-			if resRel == rel {
-				return &resource
-			}
-		}
-	}
-
-	for _, item := range m.ReadingOrder {
-		for _, spineRel := range item.Rels {
-			if spineRel == rel {
-				return &item
-			}
-		}
-	}
-
-	for _, link := range m.Links {
-		for _, linkRel := range link.Rels {
-			if linkRel == rel {
-				return &link
-			}
-		}
-	}
-
-	return nil
-}
-
-// TODO linksWithRel: Finds all [Link]s having the given [rel] in the manifest's links.
 
 // Returns whether this manifest conforms to the given Readium Web Publication Profile.
 func (m Manifest) ConformsTo(profile Profile) bool {
@@ -84,6 +53,66 @@ func (m Manifest) ConformsTo(profile Profile) bool {
 	return false
 }
 
+// Finds the first [Link] with the given relation in the manifest's links.
+func (m Manifest) LinkWithRel(rel string) *Link {
+	for _, resource := range m.Resources {
+		for _, resRel := range resource.Rels {
+			if resRel == rel {
+				return &resource
+			}
+		}
+	}
+
+	for _, item := range m.ReadingOrder {
+		for _, spineRel := range item.Rels {
+			if spineRel == rel {
+				return &item
+			}
+		}
+	}
+
+	for _, link := range m.Links {
+		for _, linkRel := range link.Rels {
+			if linkRel == rel {
+				return &link
+			}
+		}
+	}
+
+	return nil
+}
+
+// Finds all [Link]s having the given [rel] in the manifest's links.
+func (m Manifest) LinksWithRel(rel string) []Link {
+	var res []Link
+
+	for _, resource := range m.Resources {
+		for _, resRel := range resource.Rels {
+			if resRel == rel {
+				res = append(res, resource)
+			}
+		}
+	}
+
+	for _, item := range m.ReadingOrder {
+		for _, spineRel := range item.Rels {
+			if spineRel == rel {
+				res = append(res, item)
+			}
+		}
+	}
+
+	for _, link := range m.Links {
+		for _, linkRel := range link.Rels {
+			if linkRel == rel {
+				res = append(res, link)
+			}
+		}
+	}
+
+	return res
+}
+
 // Parses a [Manifest] from its RWPM JSON representation.
 //
 // TODO log [warnings] ?
@@ -105,14 +134,14 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 		}
 	}
 
-	baseURL := ""
+	baseURL := "/"
 	if !packaged {
 		self := firstLinkWithRel(links, "self")
 		if self != nil {
 			url := extensions.ToUrlOrNull(self.Href)
 			if url != nil {
 				url.Path = path.Dir(url.Path)
-				baseURL = url.String()
+				baseURL = url.String() + "/"
 			}
 		}
 	}
@@ -124,13 +153,12 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	manifest := new(Manifest)
 
 	// Context
-	rawContext, ok := rawJson["@context"].([]interface{})
-	if ok {
-		context, err := parseSliceOrString(rawContext, false)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed unmarshalling '@context'")
-		}
-		manifest.Context = context
+	contexts, err := parseSliceOrString(rawJson["@context"], true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling '@context'")
+	}
+	if len(contexts) > 0 {
+		manifest.Context = contexts
 	}
 
 	// Metadata
@@ -152,7 +180,7 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	if err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling 'links'")
 	}
-	for _, link := range links {
+	for i, link := range links {
 		if packaged && extensions.Contains(link.Rels, "self") {
 			newRels := make([]string, 0, len(link.Rels)) // Same total length as original
 			newRels = append(newRels, "alternate")
@@ -162,7 +190,7 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 				}
 				newRels = append(newRels, rel)
 			}
-			link.Rels = newRels
+			links[i].Rels = newRels
 		}
 	}
 	manifest.Links = links
@@ -214,8 +242,21 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 		manifest.TableOfContents = toc
 	}
 
+	// Delete above vals so that we can put everything else in subcollections
+	for _, v := range []string{
+		"@context", "metadata", "links", "readingOrder", "spine", "resources", "toc",
+	} {
+		delete(rawJson, v)
+	}
+
 	// Parses subcollections from the remaining JSON properties.
-	// TODO!
+	pcm, err := PublicationCollectionsFromJSON(rawJson, normalizeHref)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling remaining manifest data as subcollections of type PublicationCollectionMap")
+	}
+	if pcm != nil {
+		manifest.Subcollections = pcm
+	}
 
 	return manifest, nil
 }
@@ -234,9 +275,24 @@ func (m *Manifest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-/*func (m Manifest) MarshalJSON() ([]byte, error) {
+func (m Manifest) MarshalJSON() ([]byte, error) {
+	res := make(map[string]interface{})
+	if len(m.Context) > 0 {
+		res["@context"] = m.Context
+	}
+	res["metadata"] = m.Metadata
+	res["links"] = m.Links
+	res["readingOrder"] = m.ReadingOrder
+	if len(m.Resources) > 0 {
+		res["resources"] = m.Resources
+	}
+	if len(m.TableOfContents) > 0 {
+		res["toc"] = m.TableOfContents
+	}
+	appendPublicationCollectionToJSON(m.Subcollections, res)
 
-}*/
+	return json.Marshal(res)
+}
 
 /*
 

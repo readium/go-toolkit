@@ -95,7 +95,7 @@ func parseLiElement(li *xmlquery.Node, filePath string) (link *manifest.Link) {
 	if first.Data == "a" && rawHref != "" {
 		s, err := util.NewHREF(rawHref, filePath).String()
 		if err == nil {
-			href = s
+			href = strings.TrimPrefix(s, "/")
 		}
 	}
 

@@ -80,7 +80,7 @@ func TestPubCollectionUnmarshalNilJSON(t *testing.T) {
 	assert.Nil(t, pc)
 }
 
-func TestPubCollectionUnmarshalMultipleCollectionsJSON(t *testing.T) {
+func TestPubCollectionUnmarshalJSONMultipleCollections(t *testing.T) {
 	var pcsr map[string]interface{}
 	assert.NoError(t, json.Unmarshal([]byte(`{
 		"sub1": {
