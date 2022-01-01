@@ -236,7 +236,6 @@ func TestMetadataFullJSON(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
-	println("OUT", string(b))
 
 	assert.JSONEq(t, `{
 		"identifier": "1234",
