@@ -126,12 +126,28 @@ func (s *PublicationServer) getManifest(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	var identJSON bytes.Buffer
+	mime := "application/webpub+json; charset=utf-8"
+	for _, profile := range publication.Manifest.Metadata.ConformsTo {
+		if profile == "https://readium.org/webpub-manifest/profiles/divina" {
+			mime = "application/divina+json; charset=utf-8"
+		} else if profile == "https://readium.org/webpub-manifest/profiles/audiobook" {
+			mime = "application/audiobook+json; charset=utf-8"
+		} else {
+			continue
+		}
+		break
+	}
+	w.Header().Set("Content-Type", mime)
 
-	json.Indent(&identJSON, j, "", "  ")
-	w.Header().Set("Content-Type", "application/webpub+json; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
 
+	var identJSON bytes.Buffer
+	json.Indent(&identJSON, j, "", "  ")
+	if err != nil {
+		logrus.Error(err)
+		w.WriteHeader(500)
+		return
+	}
 	hashJSONRaw := sha256.Sum256(identJSON.Bytes())
 	hashJSON := base64.RawURLEncoding.EncodeToString(hashJSONRaw[:])
 
