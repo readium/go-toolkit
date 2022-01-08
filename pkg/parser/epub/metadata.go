@@ -164,12 +164,12 @@ func (m MetadataParser) parseLinkElement(element *xmlquery.Node, filePath string
 
 	relAttr := element.SelectAttr("rel")
 	for _, v := range parseProperties(relAttr) {
-		link.rels = append(link.rels, resolveProperty(v, m.prefixMap, VocabLink))
+		link.rels = append(link.rels, resolveProperty(v, m.prefixMap, DefaultVocabLink))
 	}
 
 	propAttrs := element.SelectAttr("properties")
 	for _, v := range parseProperties(propAttrs) {
-		link.properties = append(link.properties, resolveProperty(v, m.prefixMap, VocabLink))
+		link.properties = append(link.properties, resolveProperty(v, m.prefixMap, DefaultVocabLink))
 	}
 
 	return link
@@ -210,7 +210,7 @@ func (m MetadataParser) parseMetaElement(element *xmlquery.Node) *MetadataItem {
 			resolvedScheme = resolveProperty(resolvedScheme, m.prefixMap, NoVocab)
 		}
 		return &MetadataItem{
-			property: resolveProperty(propName, m.prefixMap, VocabMeta),
+			property: resolveProperty(propName, m.prefixMap, DefaultVocabMeta),
 			value:    propValue,
 			lang:     m.language(element),
 			refines:  strings.TrimPrefix(element.SelectAttr("refines"), "#"),

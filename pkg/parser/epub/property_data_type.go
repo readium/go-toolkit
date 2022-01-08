@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var PACKAGE_RESERVED_PREFIXES = map[string]string{
+var PackageReservedPrefixes = map[string]string{
 	"dcterms":   VocabularyDCTerms,
 	"media":     VocabularyMedia,
 	"rendition": VocabularyRendition,
@@ -16,7 +16,7 @@ var PACKAGE_RESERVED_PREFIXES = map[string]string{
 	"xsd":       VocabularyXSD,
 }
 
-var CONTENT_RESERVED_PREFIXES = map[string]string{
+var ContentReservedPrefixes = map[string]string{
 	"msv":   VocabularyMSV,
 	"prism": VocabularyPRISM,
 }
@@ -25,19 +25,19 @@ type DefaultVocab int
 
 const (
 	NoVocab DefaultVocab = iota
-	VocabMeta
-	VocabLink
-	VocabItem
-	VocabItemref
-	VocabType
+	DefaultVocabMeta
+	DefaultVocabLink
+	DefaultVocabItem
+	DefaultVocabItemref
+	DefaultVocabType
 )
 
-var DEFAULT_VOCAB = map[DefaultVocab]string{
-	VocabMeta:    VocabularyMeta,
-	VocabLink:    VocabularyLink,
-	VocabItem:    VocabularyItem,
-	VocabItemref: VocabularyItemref,
-	VocabType:    VocabularyType,
+var DefaultVocabMap = map[DefaultVocab]string{
+	DefaultVocabMeta:    VocabularyMeta,
+	DefaultVocabLink:    VocabularyLink,
+	DefaultVocabItem:    VocabularyItem,
+	DefaultVocabItemref: VocabularyItemref,
+	DefaultVocabType:    VocabularyType,
 }
 
 func resolveProperty(property string, prefixMap map[string]string, defaultVocab DefaultVocab) string {
@@ -49,7 +49,7 @@ func resolveProperty(property string, prefixMap map[string]string, defaultVocab 
 		}
 	}
 	if len(s) == 1 && defaultVocab != 0 {
-		return DEFAULT_VOCAB[defaultVocab] + s[0]
+		return DefaultVocabMap[defaultVocab] + s[0]
 	} else {
 		pmm, ok := prefixMap[s[0]]
 		if ok && len(s) == 2 {

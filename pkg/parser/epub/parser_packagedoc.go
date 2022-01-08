@@ -22,7 +22,7 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 	pkg := document.SelectElement("/package")
 	packagePrefixes := parsePrefixes(pkg.SelectAttr("prefix"))
 	prefixMap := make(map[string]string)
-	for k, v := range PACKAGE_RESERVED_PREFIXES {
+	for k, v := range PackageReservedPrefixes {
 		prefixMap[k] = v
 	}
 	for k, v := range packagePrefixes {
@@ -98,7 +98,7 @@ func ParseItem(element *xmlquery.Node, filePath string, prefixMap map[string]str
 		if prop == "" {
 			continue
 		}
-		properties = append(properties, resolveProperty(prop, prefixMap, VocabItem))
+		properties = append(properties, resolveProperty(prop, prefixMap, DefaultVocabItem))
 	}
 	return &Item{
 		Href:         href,
@@ -164,7 +164,7 @@ func ParseItemRef(element *xmlquery.Node, prefixMap map[string]string) *ItemRef 
 		if prop == "" {
 			continue
 		}
-		properties = append(properties, resolveProperty(prop, prefixMap, VocabItemref))
+		properties = append(properties, resolveProperty(prop, prefixMap, DefaultVocabItemref))
 	}
 
 	return &ItemRef{

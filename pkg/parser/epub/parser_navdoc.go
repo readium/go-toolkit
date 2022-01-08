@@ -11,7 +11,7 @@ import (
 func ParseNavDoc(document *xmlquery.Node, filePath string) map[string][]manifest.Link {
 	ret := make(map[string][]manifest.Link)
 	docPrefixes := parsePrefixes(document.SelectAttr(NamespaceOPS + ":prefix"))
-	for k, v := range CONTENT_RESERVED_PREFIXES {
+	for k, v := range ContentReservedPrefixes {
 		if _, ok := docPrefixes[k]; !ok { // prefix element overrides reserved prefixes
 			docPrefixes[k] = v
 		}
@@ -55,7 +55,7 @@ func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]s
 
 	var types []string
 	for _, prop := range parseProperties(typeAttr) {
-		types = append(types, resolveProperty(prop, prefixMap, VocabType))
+		types = append(types, resolveProperty(prop, prefixMap, DefaultVocabType))
 	}
 
 	links := parseOlElement(nav.SelectElement("ol[namespace-uri()='"+NamespaceXHTML+"']"), filePath)
