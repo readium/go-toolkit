@@ -53,6 +53,10 @@ func resolveProperty(property string, prefixMap map[string]string, defaultVocab 
 	} else {
 		pmm, ok := prefixMap[s[0]]
 		if ok && len(s) == 2 {
+			lc := pmm[len(pmm)-1]
+			if lc != '#' && lc != '/' { // Namespace URI doesn't end with '/' or '#'
+				pmm += "#"
+			}
 			return pmm + s[1]
 		} else {
 			return property
