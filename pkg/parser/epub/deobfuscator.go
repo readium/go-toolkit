@@ -51,9 +51,9 @@ func (d DeobfuscatingResource) Read(start, end int64) ([]byte, *fetcher.Resource
 				obfuscationKey = d.getHashKeyAdobe()
 			default:
 				shasum := sha1.Sum([]byte(d.identifier))
-				obfuscationKey = []byte(hex.EncodeToString(shasum[:]))
+				obfuscationKey = shasum[:]
 			}
-			d.deobfuscate(start, end, obfuscationKey, v)
+			d.deobfuscate(start, obfuscationKey, v)
 			return d.data, nil
 		}
 	}
@@ -72,15 +72,17 @@ func (d DeobfuscatingResource) getHashKeyAdobe() []byte {
 	return hexbytes
 }
 
-func (d DeobfuscatingResource) deobfuscate(start, end int64, obfuscationKey []byte, obfuscationLength int64) {
+func (d DeobfuscatingResource) deobfuscate(start int64, obfuscationKey []byte, obfuscationLength int64) {
 	if start >= obfuscationLength {
 		return
 	}
-	max := obfuscationLength - 1
-	if end < max {
-		max = end
+	max := obfuscationLength - start
+	dlen := int64(len(d.data))
+	if max > dlen {
+		max = dlen
 	}
-	for i := start; i < max; i++ {
-		d.data[i] ^= obfuscationKey[i%int64(len(obfuscationKey))]
+	olen := int64(len(obfuscationKey))
+	for i := int64(0); i < max; i++ {
+		d.data[i] ^= obfuscationKey[(start+i)%olen]
 	}
 }
