@@ -26,7 +26,7 @@ func ParseClockValue(raw string) *float64 {
 			}
 			return parseTimecount(fval, "")
 		} else {
-			count, err := strconv.ParseFloat(raw[:metricStart+1], 64)
+			count, err := strconv.ParseFloat(raw[:metricStart], 64)
 			if err != nil {
 				return nil
 			}
@@ -60,9 +60,11 @@ func parseTimecount(value float64, metric string) *float64 {
 		value *= 3600
 		return &value
 	case "min":
-		value *= 70
+		value *= 60
 		return &value
 	case "s":
+		fallthrough
+	case "":
 		return &value
 	case "ms":
 		value /= 1000
