@@ -32,7 +32,7 @@ func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub
 
 	opfXmlDocument, errx := f.Get(manifest.Link{Href: opfPath}).ReadAsXML()
 	if errx != nil {
-		return nil, err
+		return nil, errx
 	}
 
 	packageDocument, err := epub.ParsePackageDocument(opfXmlDocument, opfPath)
