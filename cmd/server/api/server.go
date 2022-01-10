@@ -14,6 +14,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/opds-community/libopds2-go/opds2"
+	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/pub"
@@ -89,9 +90,10 @@ func (s *PublicationServer) getPublication(filename string, r *http.Request) (*p
 		return nil, err
 	}
 
-	pub, err := streamer.New(nil, false, nil, nil).Open(asset.File(filepath.Join(s.config.PublicationPath, filepath.Clean(string(fpath)))), "")
+	cp := filepath.Clean(string(fpath))
+	pub, err := streamer.New(nil, false, nil, nil).Open(asset.File(filepath.Join(s.config.PublicationPath, cp)), "")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed opening "+cp)
 	}
 
 	// TODO standardize this!
