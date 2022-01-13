@@ -106,6 +106,9 @@ func (pc *PublicationCollection) UnmarshalJSON(b []byte) error {
 }
 
 func (pc PublicationCollection) MarshalJSON() ([]byte, error) {
+	if pc.Metadata == nil && pc.Subcollections == nil {
+		return json.Marshal(pc.Links)
+	}
 	res := make(map[string]interface{})
 	res["metadata"] = pc.Metadata
 	res["links"] = pc.Links
