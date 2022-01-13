@@ -106,6 +106,18 @@ func (s *PublicationServer) getPublication(filename string, r *http.Request) (*p
 	for i, link := range pub.Manifest.TableOfContents {
 		pub.Manifest.TableOfContents[i] = makeRelative(link)
 	}
+	var makeCollectionRelative func(mp manifest.PublicationCollectionMap)
+	makeCollectionRelative = func(mp manifest.PublicationCollectionMap) {
+		for i := range mp {
+			for j := range mp[i] {
+				for k := range mp[i][j].Links {
+					mp[i][j].Links[k] = makeRelative(mp[i][j].Links[k])
+				}
+				makeCollectionRelative(mp[i][j].Subcollections)
+			}
+		}
+	}
+	makeCollectionRelative(pub.Manifest.Subcollections)
 
 	return pub, nil
 }
