@@ -44,16 +44,18 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 	if metadata == nil {
 		return nil, errors.New("failed parsing package metadata")
 	}
-	manifestElement := pkg.SelectElement("/manifest[namespace-uri()='" + NamespaceOPF + "']")
+	manifestElement := pkg.SelectElement(
+		"/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='manifest']",
+	)
 	if manifestElement == nil {
 		return nil, errors.New("package manifest not found")
 	}
-	spineElement := pkg.SelectElement("/spine[namespace-uri()='" + NamespaceOPF + "']")
+	spineElement := pkg.SelectElement("/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='spine']")
 	if spineElement == nil {
 		return nil, errors.New("package spine not found")
 	}
 
-	mels := manifestElement.SelectElements("/item[namespace-uri()='" + NamespaceOPF + "']")
+	mels := manifestElement.SelectElements("/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='item']")
 	manifest := make([]Item, 0, len(mels))
 	for i, mel := range mels {
 		item := ParseItem(mel, filePath, prefixMap)

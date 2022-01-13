@@ -58,14 +58,15 @@ func (m MetadataParser) Parse(document *xmlquery.Node, filePath string) *EPUBMet
 			}
 		}
 	}
-	// println(document.OutputXML(true))
-	if l := document.SelectElement("//metadata/language[namespace-uri()='" + NamespaceDC + "']"); l != nil {
+	if l := document.SelectElement(
+		"//*[namespace-uri()='" + NamespaceOPF + "' and local-name()='metadata']/language[namespace-uri()='" + NamespaceDC + "']",
+	); l != nil {
 		m.metaLanguage = l.Data
 	}
 
-	// println("DOC", document.SelectElement("//metadata"))
-
-	metadata := document.SelectElement("//metadata[namespace-uri()='" + NamespaceOPF + "']")
+	metadata := document.SelectElement(
+		"//*[namespace-uri()='" + NamespaceOPF + "' and local-name()='metadata']",
+	)
 	if metadata == nil {
 		return nil
 	}
