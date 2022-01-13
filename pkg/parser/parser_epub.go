@@ -90,8 +90,8 @@ func parseNavigationData(packageDocument epub.PackageDocument, fetcher fetcher.F
 		if err != nil {
 			return
 		}
-		n, err := fetcher.Get(manifest.Link{Href: ncxPath}).ReadAsXML()
-		if err != nil {
+		n, nerr := fetcher.Get(manifest.Link{Href: ncxPath}).ReadAsXML()
+		if nerr != nil {
 			return
 		}
 		ret = epub.ParseNCX(n, ncxPath)
