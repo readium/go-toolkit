@@ -202,9 +202,7 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 	var rels []string
 	manifestRels, contains, others := parseItemProperties(item.Properties)
 	for _, v := range manifestRels {
-		if !extensions.Contains(rels, v) {
-			rels = append(rels, v)
-		}
+		rels = extensions.AddToSet(rels, v)
 	}
 	if len(contains) > 0 {
 		properties["contains"] = contains
@@ -220,7 +218,7 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 
 	coverId := f.pubMetadata.Cover()
 	if coverId == item.ID {
-		rels = append(rels, "cover")
+		rels = extensions.AddToSet(rels, "cover")
 	}
 
 	if edat, ok := f.EncryptionData[item.ID]; ok {
