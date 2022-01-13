@@ -56,8 +56,8 @@ func (s *PublicationServer) bookHandler(test bool) http.Handler {
 
 func makeRelative(link manifest.Link) manifest.Link {
 	link.Href = strings.TrimPrefix(link.Href, "/")
-	for _, alt := range link.Alternates {
-		alt.Href = strings.TrimPrefix(alt.Href, "/")
+	for i, alt := range link.Alternates {
+		link.Alternates[i].Href = strings.TrimPrefix(alt.Href, "/")
 	}
 	return link
 }
