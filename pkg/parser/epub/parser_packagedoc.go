@@ -120,7 +120,9 @@ type Spine struct {
 
 func ParseSpine(element *xmlquery.Node, prefixMap map[string]string, epubVersion float64) Spine {
 	itemrefs := make([]ItemRef, 0)
-	for _, itemref := range element.SelectElements("itemref") {
+	for _, itemref := range element.SelectElements(
+		"/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='itemref']",
+	) {
 		itemref := ParseItemRef(itemref, prefixMap)
 		if itemref == nil {
 			continue
