@@ -61,6 +61,7 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 	for _, parser := range s.parsers {
 		pb, err := parser.Parse(a, fetcher)
 		if err != nil {
+			fetcher.Close()
 			return nil, errors.Wrap(err, "failed parsing asset")
 		}
 		if pb != nil {
@@ -69,6 +70,7 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 		}
 	}
 	if builder == nil {
+		fetcher.Close()
 		return nil, errors.New("cannot find a parser for this asset")
 	}
 

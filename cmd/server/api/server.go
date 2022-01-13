@@ -132,6 +132,7 @@ func (s *PublicationServer) getManifest(w http.ResponseWriter, req *http.Request
 		w.WriteHeader(500)
 		return
 	}
+	defer publication.Close()
 
 	j, err := json.Marshal(publication.Manifest)
 	if err != nil {
@@ -195,6 +196,7 @@ func (s *PublicationServer) getAsset(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
+	defer publication.Close()
 
 	href := path.Clean(vars["asset"])
 	link := publication.Manifest.Resources.FirstWithHref(href)
@@ -208,7 +210,6 @@ func (s *PublicationServer) getAsset(w http.ResponseWriter, r *http.Request) {
 	link.Href = "/" + link.Href
 
 	res := publication.Fetcher.Get(*link)
-	defer res.Close()
 	/*if res.File() != "" {
 		// Shortcut to serve the file in an optimal way
 		http.ServeFile(w, r, res.File())

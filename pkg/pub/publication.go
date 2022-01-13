@@ -20,6 +20,10 @@ func (p Publication) ConformsTo(profile manifest.Profile) bool {
 	return p.Manifest.ConformsTo(profile)
 }
 
+func (p Publication) Close() {
+	p.Fetcher.Close()
+}
+
 func New() *Publication {
 	return &Publication{}
 }

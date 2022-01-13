@@ -47,11 +47,11 @@ func (f *FileFetcher) Links() ([]manifest.Link, error) {
 
 			f, err := os.Open(apath)
 			if err == nil {
+				defer f.Close()
 				mt := mediatype.OfFileOnly(f)
 				if mt != nil {
 					link.Type = mt.String()
 				}
-				f.Close()
 			} else {
 				ext := filepath.Ext(apath)
 				if ext != "" {
@@ -94,7 +94,7 @@ func (f *FileFetcher) Get(link manifest.Link) Resource {
 			}
 			if strings.HasPrefix(rapath, iapath) {
 				resource := NewFileResource(link, resourceFile)
-				f.resources = append(f.resources, nil)
+				f.resources = append(f.resources, resource)
 				return resource
 			}
 		}
