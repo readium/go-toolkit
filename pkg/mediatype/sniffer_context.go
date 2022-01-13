@@ -1,14 +1,13 @@
 package mediatype
 
 import (
-	"archive/zip"
-	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"io"
 	"strings"
 
+	"github.com/readium/go-toolkit/pkg/archive"
 	"golang.org/x/text/encoding"
 )
 
@@ -26,7 +25,7 @@ type SnifferContext struct {
 	_loadedContentAsXML     bool
 	_contentAsJSON          map[string]interface{}
 	_loadedContentAsJSON    bool
-	_contentAsArchive       *zip.Reader
+	_contentAsArchive       archive.Archive
 	_loadedContentAsArchive bool
 }
 
@@ -144,31 +143,27 @@ func (s SnifferContext) ContentAsXML() *XMLNode {
 
 // Content as an Archive instance.
 // Warning: Archive is only supported for a local file, for now.
-func (s SnifferContext) ContentAsArchive() (*zip.Reader, error) {
+func (s *SnifferContext) ContentAsArchive() (archive.Archive, error) {
 	if !s._loadedContentAsArchive {
 		s._loadedContentAsArchive = true
 		switch s.content.(type) {
 		case SnifferFileContent:
 			{
 				fileSniffer := s.content.(SnifferFileContent)
-				info, err := fileSniffer.file.Stat()
-				if err != nil {
-					return nil, err // Maybe should have error?
-				}
-				zr, err := zip.NewReader(fileSniffer.file, info.Size())
+				a, err := archive.NewArchiveFactory().Open(fileSniffer.file.Name(), "")
 				if err != nil {
 					return nil, err
 				}
-				s._contentAsArchive = zr
+				s._contentAsArchive = a
 			}
 		case SnifferBytesContent:
 			{
 				fileSniffer := s.content.(SnifferBytesContent)
-				zr, err := zip.NewReader(bytes.NewReader(fileSniffer.bytes), int64(len(fileSniffer.bytes)))
+				a, err := archive.NewArchiveFactory().OpenBytes(fileSniffer.bytes, "")
 				if err != nil {
 					return nil, err
 				}
-				s._contentAsArchive = zr
+				s._contentAsArchive = a
 			}
 		default:
 			{
@@ -270,11 +265,10 @@ func (s SnifferContext) ContainsArchiveEntryAt(path string) bool {
 	if err != nil {
 		return false
 	}
-	f, err := a.Open(path)
+	_, err = a.Entry(path)
 	if err != nil {
 		return false
 	}
-	f.Close()
 	return true
 }
 
@@ -284,12 +278,11 @@ func (s SnifferContext) ReadArchiveEntryAt(path string) []byte {
 	if err != nil {
 		return nil
 	}
-	f, err := a.Open(path)
+	f, err := a.Entry(path)
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
-	data, err := io.ReadAll(f)
+	data, err := f.Read(0, 0)
 	if err != nil {
 		return nil
 	}

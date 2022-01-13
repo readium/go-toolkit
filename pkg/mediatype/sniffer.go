@@ -272,11 +272,11 @@ func SniffArchive(context SnifferContext) *MediaType {
 
 	if archive, err := context.ContentAsArchive(); err == nil && archive != nil {
 		archiveContainsOnlyExtensions := func(exts map[string]struct{}) bool {
-			for _, zf := range archive.File {
-				if extensions.IsHiddenOrThumbs(zf.Name) || zf.FileInfo().IsDir() {
+			for _, zf := range archive.Entries() {
+				if extensions.IsHiddenOrThumbs(zf.Path()) {
 					continue
 				}
-				fext := filepath.Ext(strings.ToLower(zf.Name))
+				fext := filepath.Ext(strings.ToLower(zf.Path()))
 				if len(fext) > 1 {
 					fext = fext[1:] // Remove "." from extension
 				}
