@@ -237,7 +237,7 @@ func (f PublicationFactory) computeAlternates(item Item, fallbackChain []string)
 			if item.ID != "" {
 				updatedChain := make([]string, len(fallbackChain)+1)
 				copy(updatedChain, fallbackChain)
-				updatedChain[len(fallbackChain)-1] = item.ID
+				updatedChain[len(updatedChain)-1] = item.ID
 				ret = append(ret, f.computeLink(item, updatedChain))
 			} else {
 				cloneChain := make([]string, len(fallbackChain))
