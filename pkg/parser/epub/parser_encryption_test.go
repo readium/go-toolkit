@@ -1,0 +1,66 @@
+package epub
+
+import (
+	"os"
+	"testing"
+
+	"github.com/antchfx/xmlquery"
+	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/stretchr/testify/assert"
+)
+
+func loadEncryption(name string) (map[string]manifest.Encryption, error) {
+	r, err := os.Open("./testdata/encryption/encryption-" + name + ".xml")
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	n, err := xmlquery.Parse(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseEncryption(n), nil
+}
+
+var testEncMap = map[string]manifest.Encryption{
+	"/OEBPS/xhtml/chapter01.xhtml": {
+		Scheme:         "http://readium.org/2014/01/lcp",
+		OriginalLength: 13291,
+		Algorithm:      "http://www.w3.org/2001/04/xmlenc#aes256-cbc",
+		Compression:    "deflate",
+	},
+	"/OEBPS/xhtml/chapter02.xhtml": {
+		Scheme:         "http://readium.org/2014/01/lcp",
+		OriginalLength: 12914,
+		Algorithm:      "http://www.w3.org/2001/04/xmlenc#aes256-cbc",
+		Compression:    "none",
+	},
+}
+
+func TestEncryptionParserNamespacePrefixes(t *testing.T) {
+	e, err := loadEncryption("lcp-prefixes")
+	assert.NoError(t, err)
+	assert.Equal(t, testEncMap, e)
+}
+
+func TestEncryptionParserDefaultNamespaces(t *testing.T) {
+	e, err := loadEncryption("lcp-xmlns")
+	assert.NoError(t, err)
+	assert.Equal(t, testEncMap, e)
+}
+
+func TestEncryptionParserUnknownRetrievalMethod(t *testing.T) {
+	e, err := loadEncryption("unknown-method")
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]manifest.Encryption{
+		"/OEBPS/xhtml/chapter.xhtml": {
+			Algorithm:      "http://www.w3.org/2001/04/xmlenc#kw-aes128",
+			Compression:    "deflate",
+			OriginalLength: 12914,
+		},
+		"/OEBPS/images/image.jpeg": {
+			Algorithm: "http://www.w3.org/2001/04/xmlenc#kw-aes128",
+		},
+	}, e)
+}
