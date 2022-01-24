@@ -58,6 +58,7 @@ func (p AudioParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	}
 
 	manifest := manifest.Manifest{
+		Context: manifest.Strings{manifest.WebpubManifestContext},
 		Metadata: manifest.Metadata{
 			LocalizedTitle: manifest.NewLocalizedStringFromString(title),
 			ConformsTo:     manifest.Profiles{manifest.ProfileAudiobook},

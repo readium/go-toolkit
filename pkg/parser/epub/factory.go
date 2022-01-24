@@ -84,6 +84,7 @@ func (f PublicationFactory) Create() manifest.Manifest {
 	}
 
 	ret := manifest.Manifest{
+		Context:        manifest.Strings{manifest.WebpubManifestContext},
 		Metadata:       metadata,
 		Links:          metadataLinks,
 		ReadingOrder:   readingOrder,

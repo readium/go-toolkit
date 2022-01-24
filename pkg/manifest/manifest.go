@@ -10,6 +10,8 @@ import (
 	"github.com/readium/go-toolkit/pkg/util"
 )
 
+const WebpubManifestContext = "https://readium.org/webpub-manifest/context.jsonld"
+
 // Manifest Main structure for a publication
 type Manifest struct {
 	Context         Strings  `json:"@context,omitempty"`
@@ -277,8 +279,12 @@ func (m *Manifest) UnmarshalJSON(b []byte) error {
 
 func (m Manifest) MarshalJSON() ([]byte, error) {
 	res := make(map[string]interface{})
-	if len(m.Context) > 0 {
+	if len(m.Context) > 1 {
 		res["@context"] = m.Context
+	} else if len(m.Context) == 1 {
+		res["@context"] = m.Context[0]
+	} else {
+		res["@context"] = WebpubManifestContext
 	}
 	res["metadata"] = m.Metadata
 	res["links"] = m.Links
