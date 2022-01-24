@@ -30,7 +30,7 @@ func (f PublicationFactory) Create() manifest.Manifest {
 			items:       f.PackageDocument.metadata.global,
 		},
 		fallbackTitle:      f.FallbackTitle,
-		uniqueIdentifierID: f.PackageDocument.uniqueIdenfifierID,
+		uniqueIdentifierID: f.PackageDocument.uniqueIdentifierID,
 		readingProgression: spine.direction,
 		displayOptions:     f.DisplayOptions,
 	}
@@ -184,8 +184,11 @@ func (f PublicationFactory) computeLink(item Item, fallbackChain []string) manif
 		Href:       item.Href,
 		Type:       item.MediaType,
 		Rels:       rels,
-		Properties: properties,
 		Alternates: f.computeAlternates(item, fallbackChain),
+	}
+
+	if len(properties) > 0 {
+		ret.Properties = properties
 	}
 
 	if itm, ok := f.itemMetadata[item.ID]; ok {

@@ -51,7 +51,7 @@ func NewMetadataParser(epubVersion float64, prefixMap map[string]string) Metadat
 
 func (m MetadataParser) Parse(document *xmlquery.Node, filePath string) *EPUBMetadata {
 	// Init lang
-	if l := document.SelectElement("/package[namespace-uri()='" + NamespaceOPF + "']"); l != nil {
+	if l := document.SelectElement("/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='package']"); l != nil {
 		for _, attr := range l.Attr {
 			if attr.Name.Local == "lang" {
 				m.packageLanguage = attr.Value
@@ -59,9 +59,9 @@ func (m MetadataParser) Parse(document *xmlquery.Node, filePath string) *EPUBMet
 		}
 	}
 	if l := document.SelectElement(
-		"//*[namespace-uri()='" + NamespaceOPF + "' and local-name()='metadata']/language[namespace-uri()='" + NamespaceDC + "']",
+		"//*[namespace-uri()='" + NamespaceOPF + "' and local-name()='metadata']/*[namespace-uri()='" + NamespaceDC + "' and local-name()='language']",
 	); l != nil {
-		m.metaLanguage = l.Data
+		m.metaLanguage = strings.TrimSpace(l.InnerText())
 	}
 
 	metadata := document.SelectElement(
@@ -107,7 +107,13 @@ func (m MetadataParser) Parse(document *xmlquery.Node, filePath string) *EPUBMet
 // 2. the package's xml:lang attribute
 // 3. the primary language for the publication
 func (m MetadataParser) language(element *xmlquery.Node) string {
-	lang := element.SelectAttr("lang")
+	lang := ""
+	for _, attr := range element.Attr {
+		if attr.Name.Local == "lang" {
+			lang = attr.Value
+		}
+	}
+
 	if lang != "" {
 		return lang
 	}
@@ -230,8 +236,9 @@ func (m MetadataParser) parseDcElement(element *xmlquery.Node) *MetadataItem {
 		return nil
 	}
 
-	propName := VocabularyDCTerms + element.Data
-	switch element.Data {
+	data := strings.ToLower(element.Data)
+	propName := VocabularyDCTerms + data
+	switch data {
 	case "creator":
 		fallthrough
 	case "contributor":
@@ -261,7 +268,7 @@ func (m MetadataParser) contributorWithLegacyAttr(element *xmlquery.Node, name s
 		children: make(map[string][]MetadataItem),
 	}
 
-	fileAs := element.SelectAttr(NamespaceOPF + ":file-as")
+	fileAs := SelectNodeAttrNs(element, NamespaceOPF, "file-as")
 	if fileAs != "" {
 		mi.children[VocabularyMeta+"file-as"] = []MetadataItem{
 			{
@@ -273,7 +280,7 @@ func (m MetadataParser) contributorWithLegacyAttr(element *xmlquery.Node, name s
 		}
 	}
 
-	role := element.SelectAttr(NamespaceOPF + ":role")
+	role := SelectNodeAttrNs(element, NamespaceOPF, "role")
 	if role != "" {
 		mi.children[VocabularyMeta+"role"] = []MetadataItem{
 			{
@@ -289,7 +296,7 @@ func (m MetadataParser) contributorWithLegacyAttr(element *xmlquery.Node, name s
 }
 
 func (m MetadataParser) dateWithLegacyAttr(element *xmlquery.Node, name string, value string) MetadataItem {
-	eventAttr := element.SelectAttr(NamespaceOPF + ":event")
+	eventAttr := SelectNodeAttrNs(element, NamespaceOPF, "event")
 	propName := name
 	if eventAttr == "modification" {
 		propName = VocabularyDCTerms + "modified"
@@ -416,6 +423,7 @@ type PubMetadataAdapter struct {
 }
 
 func (m PubMetadataAdapter) Metadata() manifest.Metadata {
+	presentation := m.Presentation() // Presentation is always defined for EPUB
 	metadata := manifest.Metadata{
 		Identifier:         m.Identifier(),
 		ConformsTo:         manifest.Profiles{manifest.ProfileEPUB},
@@ -429,6 +437,7 @@ func (m PubMetadataAdapter) Metadata() manifest.Metadata {
 		Subjects:           m.Subjects(),
 		Description:        m.Description(),
 		ReadingProgression: m.ReadingProgression(),
+		Presentation:       &presentation,
 		BelongsTo:          make(map[string]manifest.Contributors),
 		OtherMetadata:      m.OtherMetadata(),
 
@@ -479,7 +488,7 @@ func (m *PubMetadataAdapter) Identifier() string {
 		return ""
 	}
 	for _, v := range identifiers {
-		if v.property == m.uniqueIdentifierID {
+		if v.id == m.uniqueIdentifierID {
 			m._identifier = v.value
 			return m._identifier
 		}
@@ -590,7 +599,7 @@ func (m *PubMetadataAdapter) seedBelongsToData() {
 	}
 
 	var allCollections []collectionHolder
-	for _, v := range m.items[VocabularyDCTerms+"belongs-to-collection"] {
+	for _, v := range m.items[VocabularyMeta+"belongs-to-collection"] {
 		if typ, col, err := v.ToCollection(); err == nil {
 			allCollections = append(allCollections, collectionHolder{typ: typ, collection: *col})
 		}
@@ -830,7 +839,7 @@ func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 				m._otherMetadata[k] = values
 			}
 		}
-		m._otherMetadata["presentation"] = m.Presentation()
+		// m._otherMetadata["presentation"] = m.Presentation()
 	}
 	return m._otherMetadata
 }
@@ -854,12 +863,15 @@ func (m MetadataItem) ToSubject() (*manifest.Subject, error) {
 	}
 
 	fileAsK, fileAsV := m.FileAs()
-	fileAs := &manifest.LocalizedString{}
-	fileAs.SetTranslation(fileAsK, fileAsV)
+	var localizedSortAs *manifest.LocalizedString
+	if fileAsK != "" && fileAsV != "" {
+		localizedSortAs = &manifest.LocalizedString{}
+		localizedSortAs.SetTranslation(fileAsK, fileAsV)
+	}
 
 	return &manifest.Subject{
 		LocalizedName:   m.LocalizedString(),
-		LocalizedSortAs: fileAs,
+		LocalizedSortAs: localizedSortAs,
 		Scheme:          m.Authority(),
 		Code:            m.Term(),
 	}, nil
@@ -909,9 +921,11 @@ func (m MetadataItem) ToContributor() (string, *manifest.Contributor, error) {
 	}
 
 	role := m.Role()
-	roles := []string{}
-	if _, ok := knownRoles[role]; ok {
-		roles = append(roles, role)
+	var roles []string
+	if role != "" {
+		if _, ok := knownRoles[role]; !ok {
+			roles = append(roles, role)
+		}
 	}
 
 	typ := ""
@@ -1016,9 +1030,7 @@ func (m MetadataItem) Role() string {
 
 func (m MetadataItem) LocalizedString() manifest.LocalizedString {
 	values := make(map[string]string)
-	if m.lang != "" {
-		values[m.lang] = m.value
-	}
+	values[m.lang] = m.value
 	if as := m.AlternateScript(); as != nil {
 		for k, v := range as {
 			values[k] = v

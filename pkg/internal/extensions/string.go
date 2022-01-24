@@ -3,6 +3,8 @@ package extensions
 import (
 	"net/url"
 	"time"
+
+	"github.com/relvacode/iso8601"
 )
 
 func ToUrlOrNull(raw string) *url.URL { // TODO context URL
@@ -26,7 +28,10 @@ func AddPercentEncodingPath(raw string) string {
 }
 
 func ParseDate(raw string) *time.Time {
-	t, err := time.Parse(time.RFC3339, raw)
+	if raw == "" {
+		return nil
+	}
+	t, err := iso8601.ParseString(raw)
 	if err != nil {
 		return nil
 	}

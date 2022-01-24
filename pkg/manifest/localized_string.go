@@ -25,6 +25,9 @@ func NewLocalizedStringFromStrings(strings map[string]string) LocalizedString {
 		Translations: make(map[string]string),
 	}
 	for k, v := range strings {
+		if k == "" {
+			k = UndefinedLanguage
+		}
 		ls.Translations[k] = v
 	}
 	return ls
@@ -52,6 +55,9 @@ func (l *LocalizedString) SetDefaultTranslation(value string) {
 func (l *LocalizedString) SetTranslation(language string, value string) {
 	if l.Translations == nil {
 		l.Translations = make(map[string]string)
+	}
+	if language == "" {
+		language = UndefinedLanguage
 	}
 	l.Translations[language] = value
 }

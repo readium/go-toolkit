@@ -12,7 +12,7 @@ import (
 type PackageDocument struct {
 	Path               string
 	EPUBVersion        float64
-	uniqueIdenfifierID string
+	uniqueIdentifierID string
 	metadata           EPUBMetadata
 	Manifest           []Item
 	Spine              Spine
@@ -57,10 +57,11 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 
 	mels := manifestElement.SelectElements("/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='item']")
 	manifest := make([]Item, 0, len(mels))
-	for i, mel := range mels {
+	for _, mel := range mels {
 		item := ParseItem(mel, filePath, prefixMap)
 		if item == nil {
-			return nil, errors.New("failed parsing package manifest item " + strconv.Itoa(i))
+			// return nil, errors.New("failed parsing package manifest item at index " + strconv.Itoa(i))
+			continue
 		}
 		manifest = append(manifest, *item)
 	}
@@ -68,7 +69,7 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 	return &PackageDocument{
 		Path:               filePath,
 		EPUBVersion:        epubVersion,
-		uniqueIdenfifierID: pkg.SelectAttr("unique-identifier"),
+		uniqueIdentifierID: pkg.SelectAttr("unique-identifier"),
 		metadata:           *metadata,
 		Manifest:           manifest,
 		Spine:              ParseSpine(spineElement, prefixMap, epubVersion),
@@ -94,22 +95,24 @@ func ParseItem(element *xmlquery.Node, filePath string, prefixMap map[string]str
 	if err != nil {
 		return nil
 	}
-	pp := parseProperties(element.SelectAttr("properties"))
-	properties := make([]string, 0, len(pp))
-	for _, prop := range parseProperties(element.SelectAttr("properties")) {
-		if prop == "" {
-			continue
-		}
-		properties = append(properties, resolveProperty(prop, prefixMap, DefaultVocabItem))
-	}
-	return &Item{
+	item := &Item{
 		Href:         href,
 		ID:           element.SelectAttr("id"),
 		fallback:     element.SelectAttr("fallback"),
 		mediaOverlay: element.SelectAttr("media-overlay"),
 		MediaType:    element.SelectAttr("media-type"),
-		Properties:   properties,
 	}
+	pp := parseProperties(element.SelectAttr("properties"))
+	if len(pp) > 0 {
+		item.Properties = make([]string, 0, len(pp))
+		for _, prop := range parseProperties(element.SelectAttr("properties")) {
+			if prop == "" {
+				continue
+			}
+			item.Properties = append(item.Properties, resolveProperty(prop, prefixMap, DefaultVocabItem))
+		}
+	}
+	return item
 }
 
 type Spine struct {

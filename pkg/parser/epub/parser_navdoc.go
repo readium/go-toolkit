@@ -10,19 +10,19 @@ import (
 
 func ParseNavDoc(document *xmlquery.Node, filePath string) map[string][]manifest.Link {
 	ret := make(map[string][]manifest.Link)
-	docPrefixes := parsePrefixes(document.SelectAttr(NamespaceOPS + ":prefix"))
+	docPrefixes := parsePrefixes(SelectNodeAttrNs(document, NamespaceOPS, "prefix"))
 	for k, v := range ContentReservedPrefixes {
 		if _, ok := docPrefixes[k]; !ok { // prefix element overrides reserved prefixes
 			docPrefixes[k] = v
 		}
 	}
 
-	body := document.SelectElement("//body[namespace-uri()='" + NamespaceXHTML + "']")
+	body := document.SelectElement("//*[namespace-uri()='" + NamespaceXHTML + "' and local-name()='body']")
 	if body == nil {
 		return ret
 	}
 
-	for _, nav := range body.SelectElements("//nav[namespace-uri()='" + NamespaceXHTML + "']") {
+	for _, nav := range body.SelectElements("//*[namespace-uri()='" + NamespaceXHTML + "' and local-name()='nav']") {
 		types, links := parseNavElement(nav, filePath, docPrefixes)
 		if types == nil && links == nil {
 			continue
@@ -58,7 +58,7 @@ func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]s
 		types = append(types, resolveProperty(prop, prefixMap, DefaultVocabType))
 	}
 
-	links := parseOlElement(nav.SelectElement("ol[namespace-uri()='"+NamespaceXHTML+"']"), filePath)
+	links := parseOlElement(nav.SelectElement("*[namespace-uri()='"+NamespaceXHTML+"' and local-name()='ol']"), filePath)
 	if len(links) > 0 && len(types) > 0 {
 		return types, links
 	}
@@ -69,7 +69,7 @@ func parseOlElement(ol *xmlquery.Node, filePath string) (links []manifest.Link) 
 	if ol == nil {
 		return nil
 	}
-	for _, li := range ol.SelectElements("li[namespace-uri()='" + NamespaceXHTML + "']") {
+	for _, li := range ol.SelectElements("*[namespace-uri()='" + NamespaceXHTML + "' and local-name()='li']") {
 		l := parseLiElement(li, filePath)
 		if l != nil {
 			links = append(links, *l)
@@ -99,7 +99,7 @@ func parseLiElement(li *xmlquery.Node, filePath string) (link *manifest.Link) {
 		}
 	}
 
-	children := parseOlElement(li.SelectElement("ol[namespace-uri()='"+NamespaceXHTML+"']"), filePath)
+	children := parseOlElement(li.SelectElement("*[namespace-uri()='"+NamespaceXHTML+"' and local-name()='ol']"), filePath)
 	if len(children) == 0 && (href == "#" || title == "") {
 		return nil
 	}

@@ -190,6 +190,11 @@ func (ll LinkList) IndexOfFirstWithHref(href string) int {
 		if link.Href == href {
 			return i
 		}
+		for _, alt := range link.Alternates {
+			if alt.Href == href {
+				return i
+			}
+		}
 	}
 	return -1
 }
@@ -199,6 +204,11 @@ func (ll LinkList) FirstWithHref(href string) *Link {
 	for _, link := range ll {
 		if link.Href == href {
 			return &link
+		}
+		for _, alt := range link.Alternates {
+			if alt.Href == href {
+				return &alt
+			}
 		}
 	}
 	return nil
@@ -220,6 +230,7 @@ func (ll LinkList) FirstWithRel(rel string) *Link {
 func (ll LinkList) FilterByRel(rel string) LinkList {
 	flinks := make([]Link, 0)
 	for _, link := range ll {
+		// TODO should we check alternates?
 		for _, r := range link.Rels {
 			if r == rel {
 				flinks = append(flinks, link)
@@ -235,6 +246,7 @@ func (ll LinkList) FirstWithMediaType(mt *mediatype.MediaType) *Link {
 		if link.MediaType().Matches(mt) {
 			return &link
 		}
+		// TODO should we check alternates?
 	}
 	return nil
 }
@@ -246,6 +258,7 @@ func (ll LinkList) FilterByMediaType(mt ...*mediatype.MediaType) LinkList {
 		if link.MediaType().Matches(mt...) {
 			flinks = append(flinks, link)
 		}
+		// TODO should we check alternates?
 	}
 	return flinks
 }
@@ -256,6 +269,7 @@ func (ll LinkList) AllAreBitmap() bool {
 		if !link.MediaType().IsBitmap() {
 			return false
 		}
+		// TODO should we check alternates?
 	}
 	return true
 }
@@ -266,6 +280,7 @@ func (ll LinkList) AllAreAudio() bool {
 		if !link.MediaType().IsAudio() {
 			return false
 		}
+		// TODO should we check alternates?
 	}
 	return true
 }
@@ -276,6 +291,7 @@ func (ll LinkList) AllAreVideo() bool {
 		if !link.MediaType().IsVideo() {
 			return false
 		}
+		// TODO should we check alternates?
 	}
 	return true
 }
@@ -286,6 +302,7 @@ func (ll LinkList) AllAreHTML() bool {
 		if !link.MediaType().IsHTML() {
 			return false
 		}
+		// TODO should we check alternates?
 	}
 	return true
 }
@@ -296,6 +313,7 @@ func (ll LinkList) AllMatchMediaType(mt ...*mediatype.MediaType) bool {
 		if !link.MediaType().Matches(mt...) {
 			return false
 		}
+		// TODO should we check alternates?
 	}
 	return true
 }
