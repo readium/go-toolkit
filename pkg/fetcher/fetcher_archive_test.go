@@ -3,7 +3,7 @@ package fetcher
 import (
 	"testing"
 
-	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,12 +14,12 @@ func withArchiveFetcher(t *testing.T, callback func(a *ArchiveFetcher)) {
 }
 
 func TestArchiveFetcherLinks(t *testing.T) {
-	makeTestLink := func(href string, typ string, entryLength uint64, isCompressed bool) pub.Link {
-		return pub.Link{
+	makeTestLink := func(href string, typ string, entryLength uint64, isCompressed bool) manifest.Link {
+		return manifest.Link{
 			Href: href,
 			Type: typ,
-			Properties: pub.Properties{
-				"https://readium.org/webpub-manifest/properties#archive": pub.Properties{
+			Properties: manifest.Properties{
+				"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
 					"entryLength":       entryLength,
 					"isEntryCompressed": isCompressed,
 				},
@@ -27,7 +27,7 @@ func TestArchiveFetcherLinks(t *testing.T) {
 		}
 	}
 
-	mustContain := []pub.Link{
+	mustContain := []manifest.Link{
 		makeTestLink("/mimetype", "", 20, false),
 		makeTestLink("/EPUB/cover.xhtml", "application/xhtml+xml", 259, true),
 		makeTestLink("/EPUB/css/epub.css", "text/css", 595, true),
@@ -50,7 +50,7 @@ func TestArchiveFetcherLinks(t *testing.T) {
 
 func TestArchiveFetcherLengthNotFound(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(pub.Link{Href: "/unknown"})
+		resource := a.Get(manifest.Link{Href: "/unknown"})
 		_, err := resource.Length()
 		assert.Equal(t, NotFound(err.Cause), err)
 	})
@@ -58,7 +58,7 @@ func TestArchiveFetcherLengthNotFound(t *testing.T) {
 
 func TestArchiveFetcherReadNotFound(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(pub.Link{Href: "/unknown"})
+		resource := a.Get(manifest.Link{Href: "/unknown"})
 		_, err := resource.Read(0, 0)
 		assert.Equal(t, NotFound(err.Cause), err)
 	})
@@ -66,7 +66,7 @@ func TestArchiveFetcherReadNotFound(t *testing.T) {
 
 func TestArchiveFetcherRead(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(pub.Link{Href: "/mimetype"})
+		resource := a.Get(manifest.Link{Href: "/mimetype"})
 		bin, err := resource.Read(0, 0)
 		assert.Nil(t, err)
 		assert.Equal(t, "application/epub+zip", string(bin))
@@ -75,7 +75,7 @@ func TestArchiveFetcherRead(t *testing.T) {
 
 func TestArchiveFetcherReadRange(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(pub.Link{Href: "/mimetype"})
+		resource := a.Get(manifest.Link{Href: "/mimetype"})
 		bin, err := resource.Read(0, 10)
 		assert.Nil(t, err)
 		assert.Equal(t, "application", string(bin))
@@ -84,7 +84,7 @@ func TestArchiveFetcherReadRange(t *testing.T) {
 
 func TestArchiveFetcherComputingLength(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(pub.Link{Href: "/mimetype"})
+		resource := a.Get(manifest.Link{Href: "/mimetype"})
 		length, err := resource.Length()
 		assert.Nil(t, err)
 		assert.EqualValues(t, 20, length)
@@ -93,7 +93,7 @@ func TestArchiveFetcherComputingLength(t *testing.T) {
 
 func TestArchiveFetcherDirectoryLengthNotFound(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(pub.Link{Href: "/EPUB"})
+		resource := a.Get(manifest.Link{Href: "/EPUB"})
 		_, err := resource.Length()
 		assert.Equal(t, NotFound(err.Cause), err)
 	})
@@ -101,7 +101,7 @@ func TestArchiveFetcherDirectoryLengthNotFound(t *testing.T) {
 
 func TestArchiveFetcherFileNotFoundLength(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(pub.Link{Href: "/unknown"})
+		resource := a.Get(manifest.Link{Href: "/unknown"})
 		_, err := resource.Length()
 		assert.Equal(t, NotFound(err.Cause), err)
 	})
@@ -109,9 +109,9 @@ func TestArchiveFetcherFileNotFoundLength(t *testing.T) {
 
 func TestArchiveFetcherAddsProperties(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(pub.Link{Href: "/EPUB/css/epub.css"})
-		assert.Equal(t, pub.Properties{
-			"https://readium.org/webpub-manifest/properties#archive": pub.Properties{
+		resource := a.Get(manifest.Link{Href: "/EPUB/css/epub.css"})
+		assert.Equal(t, manifest.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
 				"entryLength":       uint64(595),
 				"isEntryCompressed": true,
 			},
@@ -121,12 +121,12 @@ func TestArchiveFetcherAddsProperties(t *testing.T) {
 
 func TestArchiveFetcherOriginalPropertiesKept(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(pub.Link{Href: "/EPUB/css/epub.css", Properties: pub.Properties{
+		resource := a.Get(manifest.Link{Href: "/EPUB/css/epub.css", Properties: manifest.Properties{
 			"other": "property",
 		}})
-		assert.Equal(t, pub.Properties{
+		assert.Equal(t, manifest.Properties{
 			"other": "property",
-			"https://readium.org/webpub-manifest/properties#archive": pub.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
 				"entryLength":       uint64(595),
 				"isEntryCompressed": true,
 			},

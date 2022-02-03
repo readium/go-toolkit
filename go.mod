@@ -1,42 +1,41 @@
 module github.com/readium/go-toolkit
 
-go 1.16
+go 1.17
 
 require (
-	github.com/PuerkitoBio/goquery v1.5.1
-	github.com/RoaringBitmap/roaring v0.4.21 // indirect
-	github.com/blevesearch/bleve v0.8.1
-	github.com/blevesearch/blevex v0.0.0-20190916190636-152f0fe5c040 // indirect
-	github.com/blevesearch/go-porterstemmer v1.0.2 // indirect
-	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f // indirect
-	github.com/couchbase/vellum v0.0.0-20190829182332-ef2e028c01fd // indirect
-	github.com/cznic/b v0.0.0-20181122101859-a26611c4d92d // indirect
-	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548 // indirect
-	github.com/cznic/strutil v0.0.0-20181122101858-275e90344537 // indirect
-	github.com/deckarep/golang-set v1.7.1 // indirect
-	github.com/etcd-io/bbolt v1.3.3 // indirect
-	github.com/facebookgo/ensure v0.0.0-20200202191622-63f1cf65ac4c // indirect
-	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
-	github.com/facebookgo/subset v0.0.0-20200203212716-c811ad88dec4 // indirect
-	github.com/glycerine/go-unsnap-stream v0.0.0-20190901134440-81cf024a9e0a // indirect
-	github.com/go-playground/validator/v10 v10.8.0 // indirect
+	github.com/antchfx/xmlquery v1.3.8
+	github.com/deckarep/golang-set v1.7.1
 	github.com/gorilla/mux v1.7.4
-	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
-	github.com/jmhodges/levigo v1.0.0 // indirect
-	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/opds-community/libopds2-go v0.0.0-20170628075933-9c163cf60f6e
-	github.com/remyoudompheng/bigfft v0.0.0-20190728182440-6a916e37a237 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/smartystreets/goconvey v1.6.4
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.8.1
+	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
-	github.com/steveyen/gtreap v0.0.0-20150807155958-0abe01ef9be2 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
-	github.com/syndtr/goleveldb v1.0.0 // indirect
-	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
-	github.com/tinylib/msgp v1.1.2 // indirect
+	github.com/stretchr/testify v1.7.0
 	github.com/urfave/negroni v1.0.0
-	go.etcd.io/bbolt v1.3.3 // indirect
-	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
-	golang.org/x/text v0.3.6 // indirect
+	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985
+	golang.org/x/text v0.3.6
+)
+
+require (
+	github.com/agext/regexp v1.3.0 // indirect
+	github.com/antchfx/xpath v1.2.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
+	github.com/gopherjs/gopherjs v0.0.0-20190910122728-9d188e94fb99 // indirect
+	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/magiconair/properties v1.8.5 // indirect
+	github.com/mitchellh/mapstructure v1.4.1 // indirect
+	github.com/pelletier/go-toml v1.9.3 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/relvacode/iso8601 v1.1.0 // indirect
+	github.com/spf13/afero v1.6.0 // indirect
+	github.com/spf13/cast v1.3.1 // indirect
+	github.com/spf13/jwalterweatherman v1.1.0 // indirect
+	github.com/subosito/gotenv v1.2.0 // indirect
+	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
+	gopkg.in/ini.v1 v1.62.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

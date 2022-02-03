@@ -1,6 +1,6 @@
 package fetcher
 
-import "github.com/readium/go-toolkit/pkg/pub"
+import "github.com/readium/go-toolkit/pkg/manifest"
 
 // Fetcher provides access to a Resource from a Link.
 type Fetcher interface {
@@ -13,7 +13,7 @@ type Fetcher interface {
 	 * If the medium has an inherent resource order, it should be followed.
 	 * Otherwise, HREFs are sorted alphabetically.
 	 */
-	Links() ([]pub.Link, error)
+	Links() ([]manifest.Link, error)
 
 	/**
 	 * Returns the [Resource] at the given [link]'s HREF.
@@ -21,7 +21,7 @@ type Fetcher interface {
 	 * A [Resource] is always returned, since for some cases we can't know if it exists before
 	 * actually fetching it, such as HTTP. Therefore, errors are handled at the Resource level.
 	 */
-	Get(link pub.Link) *Resource
+	Get(link manifest.Link) Resource
 
 	// Closes this object and releases any resources associated with it.
 	// If the object is already closed then invoking this method has no effect.
@@ -31,11 +31,11 @@ type Fetcher interface {
 // A [Fetcher] providing no resources at all.
 type EmptyFetcher struct{}
 
-func (f EmptyFetcher) Links() ([]pub.Link, error) {
-	return []pub.Link{}, nil
+func (f EmptyFetcher) Links() ([]manifest.Link, error) {
+	return []manifest.Link{}, nil
 }
 
-func (f EmptyFetcher) Get(link pub.Link) Resource {
+func (f EmptyFetcher) Get(link manifest.Link) Resource {
 	return NewFailureResource(link, NotFound(nil))
 }
 

@@ -5,9 +5,10 @@ import (
 	"path"
 	"strings"
 
+	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/archive"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
-	"github.com/readium/go-toolkit/pkg/pub"
 )
 
 // Provides access to entries of an archive.
@@ -15,15 +16,16 @@ type ArchiveFetcher struct {
 	archive archive.Archive
 }
 
-func (f *ArchiveFetcher) Links() ([]pub.Link, error) {
+// Links implements Fetcher
+func (f *ArchiveFetcher) Links() ([]manifest.Link, error) {
 	entries := f.archive.Entries()
-	links := make([]pub.Link, 0, len(entries))
+	links := make([]manifest.Link, 0, len(entries))
 	for _, af := range entries {
 		fp := path.Clean(af.Path())
 		if !strings.HasPrefix(fp, "/") {
 			fp = "/" + fp
 		}
-		link := pub.Link{
+		link := manifest.Link{
 			Href: fp,
 		}
 		ext := path.Ext(fp)
@@ -37,8 +39,8 @@ func (f *ArchiveFetcher) Links() ([]pub.Link, error) {
 		if cl == 0 {
 			cl = af.Length()
 		}
-		link.Properties.Add(pub.Properties{
-			"https://readium.org/webpub-manifest/properties#archive": pub.Properties{
+		link.Properties.Add(manifest.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
 				"entryLength":       cl,
 				"isEntryCompressed": af.CompressedLength() > 0,
 			},
@@ -48,7 +50,8 @@ func (f *ArchiveFetcher) Links() ([]pub.Link, error) {
 	return links, nil
 }
 
-func (f *ArchiveFetcher) Get(link pub.Link) Resource {
+// Get implements Fetcher
+func (f *ArchiveFetcher) Get(link manifest.Link) Resource {
 	entry, err := f.archive.Entry(strings.TrimPrefix(link.Href, "/"))
 	if err != nil {
 		return NewFailureResource(link, NotFound(err))
@@ -59,6 +62,7 @@ func (f *ArchiveFetcher) Get(link pub.Link) Resource {
 	}
 }
 
+// Close implements Fetcher
 func (f *ArchiveFetcher) Close() {
 	f.archive.Close()
 }
@@ -85,7 +89,7 @@ func NewArchiveFetcherFromPathWithFactory(path string, factory archive.ArchiveFa
 
 // Resource from archive entry
 type entryResource struct {
-	link  pub.Link
+	link  manifest.Link
 	entry archive.Entry
 }
 
@@ -97,13 +101,13 @@ func (r *entryResource) Close() {
 	// Nothing needs to be done at the moment
 }
 
-func (r *entryResource) Link() pub.Link {
+func (r *entryResource) Link() manifest.Link {
 	cl := r.entry.CompressedLength()
 	if cl == 0 {
 		cl = r.entry.Length()
 	}
-	r.link.Properties.Add(pub.Properties{
-		"https://readium.org/webpub-manifest/properties#archive": pub.Properties{
+	r.link.Properties.Add(manifest.Properties{
+		"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
 			"entryLength":       cl,
 			"isEntryCompressed": r.entry.CompressedLength() > 0,
 		},
@@ -139,6 +143,6 @@ func (r *entryResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return ReadResourceAsJSON(r)
 }
 
-/*func (r entryResource) ReadAsXML() (xml.Token, *ResourceError) {
+func (r *entryResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
 	return ReadResourceAsXML(r)
-}*/
+}

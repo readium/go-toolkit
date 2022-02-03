@@ -2,14 +2,24 @@ package fetcher
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
-	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/antchfx/xmlquery"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"golang.org/x/text/encoding/unicode"
 )
+
+/**
+ * Implements the transformation of a Resource. It can be used, for example, to decrypt,
+ * deobfuscate, inject CSS or JavaScript, correct content – e.g. adding a missing dir="rtl" in an
+ * HTML document, pre-process – e.g. before indexing a publication's content, etc.
+ *
+ * If the transformation doesn't apply, simply return resource unchanged.
+ */
+type ResourceTransformer func(Resource) Resource
 
 // Acts as a proxy to an actual resource by handling read access.
 type Resource interface {
@@ -24,7 +34,7 @@ type Resource interface {
 
 	// Returns the link from which the resource was retrieved.
 	// It might be modified by the [Resource] to include additional metadata, e.g. the `Content-Type` HTTP header in [Link.Type].
-	Link() pub.Link
+	Link() manifest.Link
 
 	// Returns data length from metadata if available, or calculated from reading the bytes otherwise.
 	// This value must be treated as a hint, as it might not reflect the actual bytes length. To get the real length, you need to read the whole resource.
@@ -41,9 +51,8 @@ type Resource interface {
 	// Reads the full content as a JSON object.
 	ReadAsJSON() (map[string]interface{}, *ResourceError)
 
-	// Reads the full content as an XML document.
-	// TODO decide on the way to represent the XML
-	// ReadAsXML() (xml.Token, *ResourceError)
+	// Reads the full content as a generic XML document.
+	ReadAsXML() (*xmlquery.Node, *ResourceError)
 }
 
 func ReadResourceAsString(r Resource) (string, *ResourceError) {
@@ -68,20 +77,24 @@ func ReadResourceAsJSON(r Resource) (map[string]interface{}, *ResourceError) {
 		return nil, ex
 	}
 	var object map[string]interface{}
-	err := json.Unmarshal([]byte(str), object)
+	err := json.Unmarshal([]byte(str), &object)
 	if err != nil {
 		return nil, Other(err)
 	}
 	return object, nil
 }
 
-/*func ReadResourceAsXML(r Resource) (xml.Token, *ResourceError) {
+func ReadResourceAsXML(r Resource) (*xmlquery.Node, *ResourceError) {
 	bytes, ex := r.Read(0, 0)
 	if ex != nil {
-		return "", ex
+		return nil, ex
 	}
-	xml.NewDecoder().
-}*/
+	node, err := xmlquery.Parse(strings.NewReader(string(bytes)))
+	if err != nil {
+		return nil, Other(err)
+	}
+	return node, nil
+}
 
 type ResourceErrorCode uint16
 
@@ -220,48 +233,113 @@ func OsErrorToException(err error) *ResourceError {
 
 // Creates a Resource that will always return the given [error].
 type FailureResource struct {
-	link pub.Link
+	link manifest.Link
 	ex   *ResourceError
 }
 
+// File implements Resource
 func (r FailureResource) File() string {
 	return ""
 }
 
+// Close implements Resource
 func (r FailureResource) Close() {}
 
-func (r FailureResource) Link() pub.Link {
+// Link implements Resource
+func (r FailureResource) Link() manifest.Link {
 	return r.link
 }
 
+// Length implements Resource
 func (r FailureResource) Length() (int64, *ResourceError) {
 	return 0, r.ex
 }
 
+// Read implements Resource
 func (r FailureResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	return nil, r.ex
 }
 
+// ReadAsString implements Resource
 func (r FailureResource) ReadAsString() (string, *ResourceError) {
 	return "", r.ex
 }
 
+// ReadAsJSON implements Resource
 func (r FailureResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return nil, r.ex
 }
 
-func (r FailureResource) ReadAsXML() (xml.Token, *ResourceError) {
+// ReadAsXML implements Resource
+func (r FailureResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
 	return nil, r.ex
 }
 
-func NewFailureResource(link pub.Link, ex *ResourceError) FailureResource {
+func NewFailureResource(link manifest.Link, ex *ResourceError) FailureResource {
 	return FailureResource{
 		link: link,
 		ex:   ex,
 	}
 }
 
-// TODO ProxyResource?
+// A base class for a [Resource] which acts as a proxy to another one.
+// Every function is delegating to the proxied resource, and subclasses should override some of them.
+type ProxyResource struct {
+	Res Resource
+}
+
+// File implements Resource
+func (r ProxyResource) File() string {
+	return r.Res.File()
+}
+
+// Close implements Resource
+func (r ProxyResource) Close() {
+	r.Res.Close()
+}
+
+// Link implements Resource
+func (r ProxyResource) Link() manifest.Link {
+	return r.Res.Link()
+}
+
+// Length implements Resource
+func (r ProxyResource) Length() (int64, *ResourceError) {
+	return r.Res.Length()
+}
+
+// Read implements Resource
+func (r ProxyResource) Read(start int64, end int64) ([]byte, *ResourceError) {
+	return r.Res.Read(start, end)
+}
+
+// ReadAsString implements Resource
+func (r ProxyResource) ReadAsString() (string, *ResourceError) {
+	return r.Res.ReadAsString()
+}
+
+// ReadAsJSON implements Resource
+func (r ProxyResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
+	return r.Res.ReadAsJSON()
+}
+
+// ReadAsXML implements Resource
+func (r ProxyResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
+	return r.Res.ReadAsXML()
+}
+
+/**
+ * Transforms the bytes of [resource] on-the-fly.
+ *
+ * Warning: The transformation runs on the full content of [resource], so it's not appropriate for
+ * large resources which can't be held in memory. Pass [cacheBytes] = true to cache the result of
+ * the transformation. This may be useful if multiple ranges will be read.
+ */
+type TransformingResource struct {
+	resource   Resource
+	cacheBytes bool
+	_bytes     []byte
+}
 
 // TODO TransformingResource
 

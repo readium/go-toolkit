@@ -1,11 +1,12 @@
 package mediatype
 
 import (
-	"archive/zip"
 	"encoding/json"
 	"mime"
 	"path/filepath"
 	"strings"
+
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 )
 
 type Sniffer func(context SnifferContext) *MediaType
@@ -57,7 +58,7 @@ func SniffHTML(context SnifferContext) *MediaType {
 func SniffOPDS(context SnifferContext) *MediaType {
 	// OPDS 1 (Light)
 	if context.HasMediaType("application/atom+xml;type=entry;profile=opds-catalog") {
-		return &OPDS1_ENTRY
+		return &OPDS1Entry
 	}
 	if context.HasMediaType("application/atom+xml;profile=opds-catalog") {
 		return &OPDS1
@@ -68,12 +69,12 @@ func SniffOPDS(context SnifferContext) *MediaType {
 		return &OPDS2
 	}
 	if context.HasMediaType("application/opds-publication+json") {
-		return &OPDS2_PUBLICATION
+		return &OPDS2Publication
 	}
 
 	// OPDS Authentication Document (Light)
 	if context.HasMediaType("application/opds-authentication+json") || context.HasMediaType("application/vnd.opds.authentication.v1.0+json") {
-		return &OPDS_AUTHENTICATION
+		return &OPDSAuthentication
 	}
 
 	// OPDS 1 (Heavy)
@@ -82,7 +83,7 @@ func SniffOPDS(context SnifferContext) *MediaType {
 			if cxml.XMLName.Local == "feed" {
 				return &OPDS1
 			} else if cxml.XMLName.Local == "entry" {
-				return &OPDS1_ENTRY
+				return &OPDS1Entry
 			}
 		}
 	}
@@ -92,7 +93,7 @@ func SniffOPDS(context SnifferContext) *MediaType {
 
 	// OPDS Authentication Document (Heavy)
 	if context.ContainsJSONKeys("id", "title", "authentication") {
-		return &OPDS_AUTHENTICATION
+		return &OPDSAuthentication
 	}
 
 	return nil
@@ -101,10 +102,10 @@ func SniffOPDS(context SnifferContext) *MediaType {
 // Sniffs an LCP License Document.
 func SniffLCPLicense(context SnifferContext) *MediaType {
 	if context.HasFileExtension("lcpl") || context.HasMediaType("application/vnd.readium.lcp.license.v1.0+json") {
-		return &LCP_LICENSE_DOCUMENT
+		return &LCPLicenseDocument
 	}
 	if context.ContainsJSONKeys("id", "issued", "provider", "encryption") {
-		return &LCP_LICENSE_DOCUMENT
+		return &LCPLicenseDocument
 	}
 
 	return nil
@@ -145,31 +146,31 @@ func SniffBitmap(context SnifferContext) *MediaType {
 // Sniffs a Readium Web Publication, protected or not by LCP.
 func SniffWebpub(context SnifferContext) *MediaType {
 	if context.HasFileExtension("audiobook") || context.HasMediaType("application/audiobook+zip") {
-		return &READIUM_AUDIOBOOK
+		return &ReadiumAudiobook
 	}
 	if context.HasMediaType("application/audiobook+json") {
-		return &READIUM_AUDIOBOOK_MANIFEST
+		return &ReadiumAudiobookManifest
 	}
 
 	if context.HasFileExtension("divina") || context.HasMediaType("application/divina+zip") {
-		return &DIVINA
+		return &Divina
 	}
 	if context.HasMediaType("application/divina+json") {
-		return &DIVINA_MANIFEST
+		return &DivinaManifest
 	}
 
 	if context.HasFileExtension("webpub") || context.HasMediaType("application/webpub+zip") {
-		return &READIUM_WEBPUB
+		return &ReadiumWebpub
 	}
 	if context.HasMediaType("application/webpub+json") {
-		return &READIUM_WEBPUB_MANIFEST
+		return &ReadiumWebpubManifest
 	}
 
 	if context.HasFileExtension("lcpa") || context.HasMediaType("application/audiobook+lcp") {
-		return &LCP_PROTECTED_AUDIOBOOK
+		return &LCPProtectedAudiobook
 	}
 	if context.HasFileExtension("lcpdf") || context.HasMediaType("application/pdf+lcp") {
-		return &LCP_PROTECTED_PDF
+		return &LCPProtectedPDF
 	}
 
 	// isManifest := true
@@ -187,7 +188,7 @@ func SniffW3CWPUB(context SnifferContext) *MediaType {
 				for _, v := range context {
 					if val, ok := v.(string); ok {
 						if val == "https://www.w3.org/ns/wp-context" {
-							return &W3C_WPUB_MANIFEST
+							return &W3CWPUBManifest
 						}
 					}
 				}
@@ -250,7 +251,7 @@ func SniffLPF(context SnifferContext) *MediaType {
 // Reference: https://wiki.mobileread.com/wiki/CBR_and_CBZ
 var cbz_extensions = map[string]struct{}{
 	"bmp": {}, "dib": {}, "gif": {}, "jif": {}, "jfi": {}, "jfif": {}, "jpg": {}, "jpeg": {}, "png": {}, "tif": {}, "tiff": {}, "webp": {}, // Bitmap. Note there's no AVIF or JXL
-	"acbf": {}, "xml": {}, // Metadata
+	"acbf": {}, "xml": {}, "txt": {}, // Metadata
 }
 
 // Authorized extensions for resources in a ZAB archive (Zipped Audio Book).
@@ -270,18 +271,12 @@ func SniffArchive(context SnifferContext) *MediaType {
 	}
 
 	if archive, err := context.ContentAsArchive(); err == nil && archive != nil {
-		isIgnored := func(file *zip.File) bool {
-			if strings.HasPrefix(file.Name, ".") || strings.HasPrefix(file.Name, "__MACOSX") || file.Name == "Thumbs.db" {
-				return true
-			}
-			return false
-		}
 		archiveContainsOnlyExtensions := func(exts map[string]struct{}) bool {
-			for _, zf := range archive.File {
-				if isIgnored(zf) || zf.FileInfo().IsDir() {
+			for _, zf := range archive.Entries() {
+				if extensions.IsHiddenOrThumbs(zf.Path()) {
 					continue
 				}
-				fext := filepath.Ext(strings.ToLower(zf.Name))
+				fext := filepath.Ext(strings.ToLower(zf.Path()))
 				if len(fext) > 1 {
 					fext = fext[1:] // Remove "." from extension
 				}

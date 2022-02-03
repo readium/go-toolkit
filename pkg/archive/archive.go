@@ -1,9 +1,13 @@
 package archive
 
-import "os"
+import (
+	"errors"
+	"os"
+)
 
 type ArchiveFactory interface {
-	Open(filepath string, password string) (Archive, error) // Opens an archive from a local [file].
+	Open(filepath string, password string) (Archive, error)  // Opens an archive from a local [file].
+	OpenBytes(data []byte, password string) (Archive, error) // Opens an archive from a [data] slice.
 }
 
 type DefaultArchiveFactory struct {
@@ -11,6 +15,7 @@ type DefaultArchiveFactory struct {
 	explodedFactory explodedArchiveFactory
 }
 
+// Open implements ArchiveFactory
 func (e DefaultArchiveFactory) Open(filepath string, password string) (Archive, error) {
 	st, err := os.Stat(filepath)
 	if err != nil {
@@ -21,6 +26,14 @@ func (e DefaultArchiveFactory) Open(filepath string, password string) (Archive, 
 	} else {
 		return e.gozipFactory.Open(filepath, password)
 	}
+}
+
+// OpenBytes implements ArchiveFactory
+func (e DefaultArchiveFactory) OpenBytes(data []byte, password string) (Archive, error) {
+	if data == nil {
+		return nil, errors.New("archive is nil")
+	}
+	return e.gozipFactory.OpenBytes(data, password)
 }
 
 func NewArchiveFactory() DefaultArchiveFactory {
