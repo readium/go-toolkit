@@ -209,6 +209,7 @@ func (s *PublicationServer) getAsset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := publication.Get(*link)
+	defer res.Close()
 	/*if res.File() != "" {
 		// Shortcut to serve the file in an optimal way
 		http.ServeFile(w, r, res.File())
@@ -223,6 +224,6 @@ func (s *PublicationServer) getAsset(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
 	w.Header().Set("Content-Type", link.MediaType().String())
-	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
 	http.ServeContent(w, r, link.Href, time.Time{}, bytes.NewReader(b))
 }
