@@ -6,8 +6,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO JSON marshal/unmarshal logic
-
 type Properties map[string]interface{}
 
 func (p *Properties) Add(newProperties Properties) Properties {

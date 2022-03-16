@@ -12,6 +12,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/service"
 )
 
 // Parses an image–based Publication from an unstructured archive format containing bitmap files, such as CBZ or a simple ZIP.
@@ -64,7 +65,15 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 		ReadingOrder: readingOrder,
 	}
 
-	return pub.NewBuilder(manifest, fetcher), nil // TODO services!
+	prpsf := service.PerResourcePositionsServiceFactory("image/*")
+	builder := service.NewBuilder(
+		nil,
+		nil,
+		nil,
+		prpsf,
+		nil,
+	)
+	return pub.NewBuilder(manifest, fetcher, builder), nil
 }
 
 var allowed_extensions_image = map[string]struct{}{"acbf": {}, "xml": {}, "txt": {}}

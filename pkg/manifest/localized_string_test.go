@@ -10,7 +10,7 @@ import (
 func TestLocalizedStringUnmarshalJSONString(t *testing.T) {
 	var l LocalizedString
 	assert.NoError(t, json.Unmarshal([]byte("\"a string\""), &l))
-	assert.Equal(t, l, NewLocalizedStringFromString("a string"), "parsed JSON string should be equal to string")
+	assert.Equal(t, NewLocalizedStringFromString("a string"), l, "parsed JSON string should be equal to string")
 }
 
 func TestLocalizedStringUnmarshalJSONLocalizedStrings(t *testing.T) {
@@ -22,7 +22,7 @@ func TestLocalizedStringUnmarshalJSONLocalizedStrings(t *testing.T) {
 	}`), &l1))
 	l2.SetTranslation("en", "a string")
 	l2.SetTranslation("fr", "une chaîne")
-	assert.Equal(t, l1, l2, "parsed JSON object should be equal to manually created LocalizedString")
+	assert.Equal(t, l2, l1, "parsed JSON object should be equal to manually created LocalizedString")
 }
 
 func TestLocalizedStringUnmarshalInvalidJSON(t *testing.T) {

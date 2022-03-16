@@ -29,7 +29,7 @@ func New(parsers []parser.PublicationParser, ignoreDefaultParsers bool, archiveF
 	}
 
 	defaultParsers := []parser.PublicationParser{
-		parser.EPUBParser{},
+		parser.NewEPUBParser(nil),
 		// TODO PDF parser
 		parser.NewWebPubParser(cli),
 		parser.ImageParser{},

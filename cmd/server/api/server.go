@@ -106,6 +106,9 @@ func (s *PublicationServer) getPublication(filename string, r *http.Request) (*p
 	for i, link := range pub.Manifest.TableOfContents {
 		pub.Manifest.TableOfContents[i] = makeRelative(link)
 	}
+	for i, link := range pub.Manifest.Links {
+		pub.Manifest.Links[i] = makeRelative(link)
+	}
 	var makeCollectionRelative func(mp manifest.PublicationCollectionMap)
 	makeCollectionRelative = func(mp manifest.PublicationCollectionMap) {
 		for i := range mp {
@@ -199,17 +202,13 @@ func (s *PublicationServer) getAsset(w http.ResponseWriter, r *http.Request) {
 	defer publication.Close()
 
 	href := path.Clean(vars["asset"])
-	link := publication.Manifest.Resources.FirstWithHref(href)
+	link := publication.Find(href)
 	if link == nil {
-		link = publication.Manifest.ReadingOrder.FirstWithHref(href)
-		if link == nil {
-			w.WriteHeader(404)
-			return
-		}
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
-	link.Href = "/" + link.Href
 
-	res := publication.Fetcher.Get(*link)
+	res := publication.Get(*link)
 	/*if res.File() != "" {
 		// Shortcut to serve the file in an optimal way
 		http.ServeFile(w, r, res.File())

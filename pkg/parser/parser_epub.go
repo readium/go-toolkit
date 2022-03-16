@@ -8,10 +8,21 @@ import (
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/parser/epub"
 	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/service"
 	"github.com/readium/go-toolkit/pkg/util"
 )
 
 type EPUBParser struct {
+	reflowablePositionsStrategy epub.ReflowableStrategy
+}
+
+func NewEPUBParser(strategy epub.ReflowableStrategy) EPUBParser {
+	if strategy == nil {
+		strategy = epub.RecommendedReflowableStrategy
+	}
+	return EPUBParser{
+		reflowablePositionsStrategy: strategy,
+	}
 }
 
 // Parse implements PublicationParser
@@ -53,7 +64,14 @@ func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub
 		ffetcher = fetcher.NewTransformingFetcher(f, epub.NewDeobfuscator(manifest.Metadata.Identifier).Transform)
 	}
 
-	return pub.NewBuilder(manifest, ffetcher), nil // TODO services!
+	builder := service.NewBuilder(
+		nil,
+		nil,
+		nil,
+		epub.EPUBPositionsServiceFactory(p.reflowablePositionsStrategy),
+		nil,
+	)
+	return pub.NewBuilder(manifest, ffetcher, builder), nil
 }
 
 func parseEncryptionData(fetcher fetcher.Fetcher) (ret map[string]manifest.Encryption) {
