@@ -23,18 +23,18 @@ type PositionsService struct {
 	positions          [][]manifest.Locator
 }
 
-func (s *EPUBPositionsService) Close() {}
+func (s *PositionsService) Close() {}
 
-func (s *EPUBPositionsService) Links() []manifest.Link {
+func (s *PositionsService) Links() []manifest.Link {
 	return []manifest.Link{service.PositionsLink}
 }
 
-func (s *EPUBPositionsService) Get(link manifest.Link) (fetcher.Resource, bool) {
+func (s *PositionsService) Get(link manifest.Link) (fetcher.Resource, bool) {
 	return service.GetForPositionsService(s, link)
 }
 
 // Positions implements pub.PositionsService
-func (s *EPUBPositionsService) Positions() []manifest.Locator {
+func (s *PositionsService) Positions() []manifest.Locator {
 	poss := s.PositionsByReadingOrder()
 	var positions []manifest.Locator
 	for _, v := range poss {
@@ -44,14 +44,14 @@ func (s *EPUBPositionsService) Positions() []manifest.Locator {
 }
 
 // PositionsByReadingOrder implements PositionsService
-func (s *EPUBPositionsService) PositionsByReadingOrder() [][]manifest.Locator {
+func (s *PositionsService) PositionsByReadingOrder() [][]manifest.Locator {
 	if len(s.positions) == 0 {
 		s.positions = s.computePositions()
 	}
 	return s.positions
 }
 
-func (s *EPUBPositionsService) computePositions() [][]manifest.Locator {
+func (s *PositionsService) computePositions() [][]manifest.Locator {
 	var lastPositionOfPreviousResource uint
 	positions := make([][]manifest.Locator, len(s.readingOrder))
 	for i, link := range s.readingOrder {
@@ -87,11 +87,11 @@ func (s *EPUBPositionsService) computePositions() [][]manifest.Locator {
 	return positions
 }
 
-func (s *EPUBPositionsService) createFixed(link manifest.Link, startPosition uint) []manifest.Locator {
+func (s *PositionsService) createFixed(link manifest.Link, startPosition uint) []manifest.Locator {
 	return []manifest.Locator{s.createLocator(link, 0, startPosition+1)}
 }
 
-func (s *EPUBPositionsService) createReflowable(link manifest.Link, startPosition uint, fetcher fetcher.Fetcher) []manifest.Locator {
+func (s *PositionsService) createReflowable(link manifest.Link, startPosition uint, fetcher fetcher.Fetcher) []manifest.Locator {
 	resource := fetcher.Get(link)
 	defer resource.Close()
 	positionCount := s.reflowableStrategy.PositionCount(resource)
@@ -107,7 +107,7 @@ func (s *EPUBPositionsService) createReflowable(link manifest.Link, startPositio
 	return positions
 }
 
-func (s *EPUBPositionsService) createLocator(link manifest.Link, progression float64, position uint) manifest.Locator {
+func (s *PositionsService) createLocator(link manifest.Link, progression float64, position uint) manifest.Locator {
 	loc := manifest.Locator{
 		Href:  link.Href,
 		Type:  link.Type,
@@ -123,12 +123,12 @@ func (s *EPUBPositionsService) createLocator(link manifest.Link, progression flo
 	return loc
 }
 
-func EPUBPositionsServiceFactory(reflowableStrategy ReflowableStrategy) service.ServiceFactory {
+func PositionsServiceFactory(reflowableStrategy ReflowableStrategy) service.ServiceFactory {
 	return func(context service.Context) service.Service {
 		if reflowableStrategy == nil {
 			reflowableStrategy = RecommendedReflowableStrategy
 		}
-		return &EPUBPositionsService{
+		return &PositionsService{
 			readingOrder:       context.Manifest.ReadingOrder,
 			presentation:       context.Manifest.Metadata.Presentation,
 			fetcher:            context.Fetcher,

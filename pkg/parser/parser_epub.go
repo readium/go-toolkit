@@ -68,7 +68,7 @@ func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub
 		nil,
 		nil,
 		nil,
-		epub.EPUBPositionsServiceFactory(p.reflowablePositionsStrategy),
+		epub.PositionsServiceFactory(p.reflowablePositionsStrategy),
 		nil,
 	)
 	return pub.NewBuilder(manifest, ffetcher, builder), nil
