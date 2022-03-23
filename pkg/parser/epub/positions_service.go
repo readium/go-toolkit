@@ -8,16 +8,14 @@ import (
 	"github.com/readium/go-toolkit/pkg/service"
 )
 
-/**
- * Positions Service for an EPUB from its [readingOrder] and [fetcher].
- *
- * The [presentation] is used to apply different calculation strategy if the resource has a
- * reflowable or fixed layout.
- *
- * https://github.com/readium/architecture/blob/master/models/locators/best-practices/format.md#epub
- * https://github.com/readium/architecture/issues/101
- */
-type EPUBPositionsService struct {
+// Positions Service for an EPUB from its [readingOrder] and [fetcher].
+//
+// The [presentation] is used to apply different calculation strategy if the resource has a
+// reflowable or fixed layout.
+//
+// https://github.com/readium/architecture/blob/master/models/locators/best-practices/format.md#epub
+// https://github.com/readium/architecture/issues/101
+type PositionsService struct {
 	readingOrder       []manifest.Link
 	presentation       *manifest.Presentation
 	fetcher            fetcher.Fetcher
@@ -35,7 +33,7 @@ func (s *EPUBPositionsService) Get(link manifest.Link) (fetcher.Resource, bool) 
 	return service.GetForPositionsService(s, link)
 }
 
-// Positions implements PositionsService
+// Positions implements pub.PositionsService
 func (s *EPUBPositionsService) Positions() []manifest.Locator {
 	poss := s.PositionsByReadingOrder()
 	var positions []manifest.Locator
@@ -139,11 +137,9 @@ func EPUBPositionsServiceFactory(reflowableStrategy ReflowableStrategy) service.
 	}
 }
 
-/**
- * Strategy used to calculate the number of positions in a reflowable resource.
- *
- * Note that a fixed-layout resource always has a single position.
- */
+// Strategy used to calculate the number of positions in a reflowable resource.
+//
+// Note that a fixed-layout resource always has a single position.
 type ReflowableStrategy interface {
 	PositionCount(resource fetcher.Resource) uint // Returns the number of positions in the given [resource] according to the strategy.
 }
@@ -186,10 +182,8 @@ func (l ArchiveEntryLength) PositionCount(resource fetcher.Resource) uint {
 	return uint(math.Max(math.Ceil(float64(length)/float64(l.PageLength)), 1))
 }
 
-/**
- * Recommended historical strategy: archive entry length split by 1024 bytes pages.
- *
- * This strategy is used by Adobe RMSDK as well.
- * See https://github.com/readium/architecture/issues/123
- */
+// Recommended historical strategy: archive entry length split by 1024 bytes pages.
+//
+// This strategy is used by Adobe RMSDK as well.
+// See https://github.com/readium/architecture/issues/123
 var RecommendedReflowableStrategy = ArchiveEntryLength{PageLength: 1024}

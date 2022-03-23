@@ -126,18 +126,16 @@ func TextFromJSON(rawJson map[string]interface{}) *Text {
 	}
 }
 
-/**
- * Provides a precise location in a publication in a format that can be stored and shared.
- *
- * There are many different use cases for locators:
- *  - getting back to the last position in a publication
- *  - bookmarks
- *  - highlights & annotations
- *  - search results
- *  - human-readable (and shareable) reference in a publication
- *
- * https://github.com/readium/architecture/tree/master/locators
- */
+// Locator provides a precise location in a publication in a format that can be stored and shared.
+//
+// There are many different use cases for locators:
+//  - getting back to the last position in a publication
+//  - bookmarks
+//  - highlights & annotations
+//  - search results
+//  - human-readable (and shareable) reference in a publication
+//
+// https://github.com/readium/architecture/tree/master/locators
 type Locator struct {
 	Href      string     `json:"href"`
 	Type      string     `json:"type"`

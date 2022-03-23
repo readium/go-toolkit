@@ -7,6 +7,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 )
 
+// BytesResource is a Resource serving a lazy-loaded bytes buffer.
 type BytesResource struct {
 	link   manifest.Link
 	loader func() []byte
@@ -65,6 +66,7 @@ func (r *BytesResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
 	return ReadResourceAsXML(r)
 }
 
+// NewBytesResource creates a new BytesResources from a lazy loader callback.
 func NewBytesResource(link manifest.Link, loader func() []byte) *BytesResource {
 	return &BytesResource{link: link, loader: loader}
 }
