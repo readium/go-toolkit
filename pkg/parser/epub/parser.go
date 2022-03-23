@@ -1,4 +1,4 @@
-package parser
+package epub
 
 import (
 	"github.com/pkg/errors"
@@ -6,34 +6,33 @@ import (
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
-	"github.com/readium/go-toolkit/pkg/parser/epub"
 	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/readium/go-toolkit/pkg/service"
 	"github.com/readium/go-toolkit/pkg/util"
 )
 
-type EPUBParser struct {
-	reflowablePositionsStrategy epub.ReflowableStrategy
+type Parser struct {
+	reflowablePositionsStrategy ReflowableStrategy
 }
 
-func NewEPUBParser(strategy epub.ReflowableStrategy) EPUBParser {
+func NewParser(strategy ReflowableStrategy) Parser {
 	if strategy == nil {
-		strategy = epub.RecommendedReflowableStrategy
+		strategy = RecommendedReflowableStrategy
 	}
-	return EPUBParser{
+	return Parser{
 		reflowablePositionsStrategy: strategy,
 	}
 }
 
 // Parse implements PublicationParser
-func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Builder, error) {
+func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Builder, error) {
 	fallbackTitle := asset.Name()
 
 	if !asset.MediaType().Equal(&mediatype.EPUB) {
 		return nil, nil
 	}
 
-	opfPath, err := epub.GetRootFilePath(f)
+	opfPath, err := GetRootFilePath(f)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +45,12 @@ func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub
 		return nil, errx
 	}
 
-	packageDocument, err := epub.ParsePackageDocument(opfXmlDocument, opfPath)
+	packageDocument, err := ParsePackageDocument(opfXmlDocument, opfPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid OPF file")
 	}
 
-	manifest := epub.PublicationFactory{
+	manifest := PublicationFactory{
 		FallbackTitle:   fallbackTitle,
 		PackageDocument: *packageDocument,
 		NavigationData:  parseNavigationData(*packageDocument, f),
@@ -61,14 +60,14 @@ func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub
 
 	ffetcher := f
 	if manifest.Metadata.Identifier != "" {
-		ffetcher = fetcher.NewTransformingFetcher(f, epub.NewDeobfuscator(manifest.Metadata.Identifier).Transform)
+		ffetcher = fetcher.NewTransformingFetcher(f, NewDeobfuscator(manifest.Metadata.Identifier).Transform)
 	}
 
 	builder := service.NewBuilder(
 		nil,
 		nil,
 		nil,
-		epub.PositionsServiceFactory(p.reflowablePositionsStrategy),
+		PositionsServiceFactory(p.reflowablePositionsStrategy),
 		nil,
 	)
 	return pub.NewBuilder(manifest, ffetcher, builder), nil
@@ -79,13 +78,13 @@ func parseEncryptionData(fetcher fetcher.Fetcher) (ret map[string]manifest.Encry
 	if err != nil {
 		return
 	}
-	return epub.ParseEncryption(n)
+	return ParseEncryption(n)
 }
 
-func parseNavigationData(packageDocument epub.PackageDocument, fetcher fetcher.Fetcher) (ret map[string][]manifest.Link) {
+func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetcher) (ret map[string][]manifest.Link) {
 	ret = make(map[string][]manifest.Link)
 	if packageDocument.EPUBVersion < 3.0 {
-		var ncxItem *epub.Item
+		var ncxItem *Item
 		if packageDocument.Spine.TOC != "" {
 			for _, v := range packageDocument.Manifest {
 				if v.ID == packageDocument.Spine.TOC {
@@ -112,12 +111,12 @@ func parseNavigationData(packageDocument epub.PackageDocument, fetcher fetcher.F
 		if nerr != nil {
 			return
 		}
-		ret = epub.ParseNCX(n, ncxPath)
+		ret = ParseNCX(n, ncxPath)
 	} else {
-		var navItem *epub.Item
+		var navItem *Item
 		for _, v := range packageDocument.Manifest {
 			for _, st := range v.Properties {
-				if st == epub.VocabularyItem+"nav" {
+				if st == VocabularyItem+"nav" {
 					navItem = &v
 					break
 				}
@@ -137,7 +136,7 @@ func parseNavigationData(packageDocument epub.PackageDocument, fetcher fetcher.F
 		if errx != nil {
 			return
 		}
-		ret = epub.ParseNavDoc(n, navPath)
+		ret = ParseNavDoc(n, navPath)
 	}
 	return
 }
