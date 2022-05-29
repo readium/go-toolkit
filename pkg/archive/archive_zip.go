@@ -147,7 +147,7 @@ func (e gozipArchiveFactory) OpenBytes(data []byte, password string) (Archive, e
 }
 
 type ReaderAtCloser interface {
-	io.ReadCloser
+	io.Closer
 	io.ReaderAt
 }
 
