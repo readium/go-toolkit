@@ -157,5 +157,5 @@ func (e gozipArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, passw
 	if err != nil {
 		return nil, err
 	}
-	return NewGoZIPArchive(r, func() error { return reader.Close() }), nil
+	return NewGoZIPArchive(r, reader.Close), nil
 }
