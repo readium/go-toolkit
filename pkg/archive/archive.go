@@ -6,9 +6,9 @@ import (
 )
 
 type ArchiveFactory interface {
-	Open(filepath string, password string) (Archive, error)             // Opens an archive from a local [file].
-	OpenBytes(data []byte, password string) (Archive, error)            // Opens an archive from a [data] slice.
-	OpenReader(reader ReaderAtCloser, password string) (Archive, error) // Opens an archive from a reader.
+	Open(filepath string, password string) (Archive, error)                         // Opens an archive from a local [file].
+	OpenBytes(data []byte, password string) (Archive, error)                        // Opens an archive from a [data] slice.
+	OpenReader(reader ReaderAtCloser, size int64, password string) (Archive, error) // Opens an archive from a reader.
 }
 
 type DefaultArchiveFactory struct {
