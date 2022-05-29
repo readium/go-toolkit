@@ -2,7 +2,6 @@ package archive
 
 import (
 	"errors"
-	"io"
 	"os"
 )
 
@@ -39,11 +38,11 @@ func (e DefaultArchiveFactory) OpenBytes(data []byte, password string) (Archive,
 }
 
 // OpenBytes implements ArchiveFactory
-func (e DefaultArchiveFactory) OpenReader(reader io.Reader, password string) (Archive, error) {
+func (e DefaultArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string) (Archive, error) {
 	if reader == nil {
 		return nil, errors.New("archive is nil")
 	}
-	return e.gozipFactory.OpenReader(reader, password)
+	return e.gozipFactory.OpenReader(reader, size, password)
 }
 
 func NewArchiveFactory() DefaultArchiveFactory {
