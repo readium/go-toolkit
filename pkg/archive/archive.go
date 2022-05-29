@@ -2,12 +2,14 @@ package archive
 
 import (
 	"errors"
+	"io"
 	"os"
 )
 
 type ArchiveFactory interface {
-	Open(filepath string, password string) (Archive, error)  // Opens an archive from a local [file].
-	OpenBytes(data []byte, password string) (Archive, error) // Opens an archive from a [data] slice.
+	Open(filepath string, password string) (Archive, error)             // Opens an archive from a local [file].
+	OpenBytes(data []byte, password string) (Archive, error)            // Opens an archive from a [data] slice.
+	OpenReader(reader ReaderAtCloser, password string) (Archive, error) // Opens an archive from a reader.
 }
 
 type DefaultArchiveFactory struct {
@@ -34,6 +36,14 @@ func (e DefaultArchiveFactory) OpenBytes(data []byte, password string) (Archive,
 		return nil, errors.New("archive is nil")
 	}
 	return e.gozipFactory.OpenBytes(data, password)
+}
+
+// OpenBytes implements ArchiveFactory
+func (e DefaultArchiveFactory) OpenReader(reader io.Reader, password string) (Archive, error) {
+	if reader == nil {
+		return nil, errors.New("archive is nil")
+	}
+	return e.gozipFactory.OpenReader(reader, password)
 }
 
 func NewArchiveFactory() DefaultArchiveFactory {

@@ -145,3 +145,17 @@ func (e gozipArchiveFactory) OpenBytes(data []byte, password string) (Archive, e
 	}
 	return NewGoZIPArchive(r, func() error { return nil }), nil
 }
+
+type ReaderAtCloser interface {
+	io.ReadCloser
+	io.ReaderAt
+}
+
+func (e gozipArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string) (Archive, error) {
+	// Go's built-in zip reader doesn't support passwords. Maybe look into something like https://github.com/mholt/archiver
+	r, err := zip.NewReader(reader, size)
+	if err != nil {
+		return nil, err
+	}
+	return NewGoZIPArchive(r, func() error { return reader.Close() }), nil
+}
