@@ -12,7 +12,6 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
-	"github.com/readium/go-toolkit/pkg/service"
 )
 
 // Parses an image–based Publication from an unstructured archive format containing bitmap files, such as CBZ or a simple ZIP.
@@ -65,8 +64,8 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 		ReadingOrder: readingOrder,
 	}
 
-	prpsf := service.PerResourcePositionsServiceFactory("image/*")
-	builder := service.NewBuilder(
+	prpsf := pub.PerResourcePositionsServiceFactory("image/*")
+	builder := pub.NewServicesBuilder(
 		nil,
 		nil,
 		nil,

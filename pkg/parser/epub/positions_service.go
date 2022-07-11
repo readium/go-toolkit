@@ -5,7 +5,7 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/service"
+	"github.com/readium/go-toolkit/pkg/pub"
 )
 
 // Positions Service for an EPUB from its [readingOrder] and [fetcher].
@@ -26,11 +26,11 @@ type PositionsService struct {
 func (s *PositionsService) Close() {}
 
 func (s *PositionsService) Links() []manifest.Link {
-	return []manifest.Link{service.PositionsLink}
+	return []manifest.Link{pub.PositionsLink}
 }
 
 func (s *PositionsService) Get(link manifest.Link) (fetcher.Resource, bool) {
-	return service.GetForPositionsService(s, link)
+	return pub.GetForPositionsService(s, link)
 }
 
 // Positions implements pub.PositionsService
@@ -123,8 +123,8 @@ func (s *PositionsService) createLocator(link manifest.Link, progression float64
 	return loc
 }
 
-func PositionsServiceFactory(reflowableStrategy ReflowableStrategy) service.ServiceFactory {
-	return func(context service.Context) service.Service {
+func PositionsServiceFactory(reflowableStrategy ReflowableStrategy) pub.ServiceFactory {
+	return func(context pub.Context) pub.Service {
 		if reflowableStrategy == nil {
 			reflowableStrategy = RecommendedReflowableStrategy
 		}

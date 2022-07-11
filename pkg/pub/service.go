@@ -1,8 +1,16 @@
-package service
+package pub
 
 import (
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+)
+
+const (
+	ContentProtectionService_Name = "ContentProtectionService"
+	CoverService_Name             = "CoverService"
+	LocatorService_Name           = "LocatorService"
+	PositionsService_Name         = "PositionsService"
+	SearchService_Name            = "SearchService"
 )
 
 // Base interface to be implemented by all publication services.
@@ -33,7 +41,7 @@ type ServicesBuilder struct {
 	serviceFactories map[string]ServiceFactory
 }
 
-func NewBuilder(
+func NewServicesBuilder(
 	contentProtection ServiceFactory,
 	cover ServiceFactory,
 	locator ServiceFactory,

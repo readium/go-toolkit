@@ -7,7 +7,6 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/service"
 )
 
 // The Publication shared model is the entrypoint for all the metadata and services related to a Readium publication.
@@ -16,7 +15,7 @@ type Publication struct {
 	Fetcher  fetcher.Fetcher   // The underlying fetcher used to read publication resources.
 	// TODO servicesBuilder
 	// TODO positionsFactory
-	services []service.Service
+	services []Service
 }
 
 // Returns whether this publication conforms to the given Readium Web Publication Profile.
@@ -78,11 +77,11 @@ func (p Publication) Close() {
 	}
 }
 
-func New(m manifest.Manifest, f fetcher.Fetcher, b *service.ServicesBuilder) *Publication {
+func New(m manifest.Manifest, f fetcher.Fetcher, b *ServicesBuilder) *Publication {
 	if b == nil {
-		b = service.NewBuilder(nil, nil, nil, nil, nil)
+		b = NewServicesBuilder(nil, nil, nil, nil, nil)
 	}
-	services := b.Build(service.NewContext(m, f)) // Build the services
+	services := b.Build(NewContext(m, f)) // Build the services
 	var newManifest manifest.Manifest
 	copier.Copy(&newManifest, &m) // Make a deep copy of the manifest
 
@@ -101,9 +100,9 @@ func New(m manifest.Manifest, f fetcher.Fetcher, b *service.ServicesBuilder) *Pu
 	}
 }
 
-func NewBuilder(m manifest.Manifest, f fetcher.Fetcher, b *service.ServicesBuilder) *Builder {
+func NewBuilder(m manifest.Manifest, f fetcher.Fetcher, b *ServicesBuilder) *Builder {
 	if b == nil {
-		b = service.NewBuilder(nil, nil, nil, nil, nil)
+		b = NewServicesBuilder(nil, nil, nil, nil, nil)
 	}
 	return &Builder{
 		manifest:        m,
@@ -115,7 +114,7 @@ func NewBuilder(m manifest.Manifest, f fetcher.Fetcher, b *service.ServicesBuild
 type Builder struct {
 	manifest        manifest.Manifest
 	fetcher         fetcher.Fetcher
-	servicesBuilder service.ServicesBuilder
+	servicesBuilder ServicesBuilder
 }
 
 func (b Builder) Build() *Publication {

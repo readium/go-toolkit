@@ -7,7 +7,6 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
-	"github.com/readium/go-toolkit/pkg/service"
 	"github.com/readium/go-toolkit/pkg/util"
 )
 
@@ -63,7 +62,7 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 		ffetcher = fetcher.NewTransformingFetcher(f, NewDeobfuscator(manifest.Metadata.Identifier).Transform)
 	}
 
-	builder := service.NewBuilder(
+	builder := pub.NewServicesBuilder(
 		nil,
 		nil,
 		nil,
