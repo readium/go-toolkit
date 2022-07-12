@@ -300,7 +300,7 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 	}
 
 	// Presentation
-	
+	// TODO custom presentation unmarshalling
 
 	// Delete above vals so that we can put everything else in OtherMetadata
 	for _, v := range []string{

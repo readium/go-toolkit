@@ -13,7 +13,7 @@ type Locations struct {
 	Progression      float64                `json:"progression,omitempty"`      // Progression in the resource expressed as a percentage (between 0 and 1).
 	Position         uint                   `json:"position,omitempty"`         // An index in the publication (>= 1).
 	TotalProgression float64                `json:"totalProgression,omitempty"` // Progression in the publication expressed as a percentage (between 0 and 1).
-	OtherLocations   map[string]interface{} `json:"otherLocations"`             // Additional locations for extensions.
+	OtherLocations   map[string]interface{} // Additional locations for extensions.
 }
 
 func LocationsFromJSON(rawJson map[string]interface{}) (*Locations, error) {
