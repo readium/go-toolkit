@@ -62,13 +62,9 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 		ffetcher = fetcher.NewTransformingFetcher(f, NewDeobfuscator(manifest.Metadata.Identifier).Transform)
 	}
 
-	builder := pub.NewServicesBuilder(
-		nil,
-		nil,
-		nil,
-		PositionsServiceFactory(p.reflowablePositionsStrategy),
-		nil,
-	)
+	builder := pub.NewServicesBuilder(map[string]pub.ServiceFactory{
+		pub.PositionsService_Name: PositionsServiceFactory(p.reflowablePositionsStrategy),
+	})
 	return pub.NewBuilder(manifest, ffetcher, builder), nil
 }
 

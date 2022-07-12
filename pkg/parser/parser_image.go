@@ -64,14 +64,9 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 		ReadingOrder: readingOrder,
 	}
 
-	prpsf := pub.PerResourcePositionsServiceFactory("image/*")
-	builder := pub.NewServicesBuilder(
-		nil,
-		nil,
-		nil,
-		prpsf,
-		nil,
-	)
+	builder := pub.NewServicesBuilder(map[string]pub.ServiceFactory{
+		pub.PositionsService_Name: pub.PerResourcePositionsServiceFactory("image/*"),
+	})
 	return pub.NewBuilder(manifest, fetcher, builder), nil
 }
 

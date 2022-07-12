@@ -79,7 +79,7 @@ func (p Publication) Close() {
 
 func New(m manifest.Manifest, f fetcher.Fetcher, b *ServicesBuilder) *Publication {
 	if b == nil {
-		b = NewServicesBuilder(nil, nil, nil, nil, nil)
+		b = NewServicesBuilder(nil)
 	}
 	services := b.Build(NewContext(m, f)) // Build the services
 	var newManifest manifest.Manifest
@@ -102,7 +102,7 @@ func New(m manifest.Manifest, f fetcher.Fetcher, b *ServicesBuilder) *Publicatio
 
 func NewBuilder(m manifest.Manifest, f fetcher.Fetcher, b *ServicesBuilder) *Builder {
 	if b == nil {
-		b = NewServicesBuilder(nil, nil, nil, nil, nil)
+		b = NewServicesBuilder(nil)
 	}
 	return &Builder{
 		manifest:        m,

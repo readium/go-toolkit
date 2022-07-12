@@ -41,31 +41,20 @@ type ServicesBuilder struct {
 	serviceFactories map[string]ServiceFactory
 }
 
-func NewServicesBuilder(
-	contentProtection ServiceFactory,
+/*
+contentProtection ServiceFactory,
 	cover ServiceFactory,
 	locator ServiceFactory,
 	positions ServiceFactory,
 	search ServiceFactory,
-) *ServicesBuilder {
-	fcs := map[string]ServiceFactory{}
-	if contentProtection != nil {
-		fcs[ContentProtectionService_Name] = contentProtection
+*/
+
+func NewServicesBuilder(fcs map[string]ServiceFactory) *ServicesBuilder {
+	if fcs == nil {
+		fcs = map[string]ServiceFactory{}
 	}
-	if cover != nil {
-		fcs[CoverService_Name] = cover
-	}
-	if locator != nil {
-		fcs[LocatorService_Name] = locator
-	} else {
-		// TODO somehow DefaultLocatorService(it.manifest.readingOrder, it.publication)
-	}
-	if positions != nil {
-		fcs[PositionsService_Name] = positions
-	}
-	if search != nil {
-		fcs[SearchService_Name] = search
-	}
+
+	// TODO DefaultLocatorService(it.manifest.readingOrder, it.publication) if LocatorService_Name doesn't exist
 
 	return &ServicesBuilder{
 		serviceFactories: fcs,
