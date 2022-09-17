@@ -38,7 +38,8 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	}
 	defer f.Close()
 	if start == 0 && end == 0 {
-		data, err := io.ReadAll(f)
+		data := make([]byte, e.file.UncompressedSize64)
+		_, err := io.ReadFull(f, data)
 		if err != nil {
 			return nil, err
 		}
