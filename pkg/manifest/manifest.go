@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"path"
 
-	"github.com/jinzhu/copier"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/mediatype"
@@ -289,11 +288,12 @@ func (m Manifest) ManifestToJSON(selfLink *Link) map[string]interface{} {
 	}
 	res["metadata"] = m.Metadata
 	if selfLink != nil {
-		// Make a copy of the manifest links with the "self" link added
-		var copiedLinkList LinkList
-		copier.Copy(&copiedLinkList, &m.Links)
-		copiedLinkList = append(copiedLinkList, *selfLink)
-		res["links"] = copiedLinkList
+		newList := make(LinkList, len(m.Links)+1)
+		for i, link := range m.Links {
+			newList[i] = link
+		}
+		newList[len(newList)-1] = *selfLink
+		res["links"] = newList
 	} else {
 		res["links"] = m.Links
 	}
