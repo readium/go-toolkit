@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"path"
 
+	"github.com/jinzhu/copier"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/mediatype"
@@ -277,7 +278,7 @@ func (m *Manifest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (m Manifest) MarshalJSON() ([]byte, error) {
+func (m Manifest) ManifestToJSON(selfLink *Link) map[string]interface{} {
 	res := make(map[string]interface{})
 	if len(m.Context) > 1 {
 		res["@context"] = m.Context
@@ -287,7 +288,15 @@ func (m Manifest) MarshalJSON() ([]byte, error) {
 		res["@context"] = WebpubManifestContext
 	}
 	res["metadata"] = m.Metadata
-	res["links"] = m.Links
+	if selfLink != nil {
+		// Make a copy of the manifest links with the "self" link added
+		var copiedLinkList LinkList
+		copier.Copy(&copiedLinkList, &m.Links)
+		copiedLinkList = append(copiedLinkList, *selfLink)
+		res["links"] = copiedLinkList
+	} else {
+		res["links"] = m.Links
+	}
 	res["readingOrder"] = m.ReadingOrder
 	if len(m.Resources) > 0 {
 		res["resources"] = m.Resources
@@ -296,8 +305,11 @@ func (m Manifest) MarshalJSON() ([]byte, error) {
 		res["toc"] = m.TableOfContents
 	}
 	appendPublicationCollectionToJSON(m.Subcollections, res)
+	return res
+}
 
-	return json.Marshal(res)
+func (m Manifest) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.ManifestToJSON(nil))
 }
 
 /*
