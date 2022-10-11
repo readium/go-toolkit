@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"path"
+	"sync"
 )
 
 type gozipArchiveEntry struct {
@@ -88,7 +89,7 @@ func (e gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, e
 type gozipArchive struct {
 	zip           *zip.Reader
 	closer        func() error
-	cachedEntries map[string]Entry
+	cachedEntries sync.Map
 }
 
 func (a *gozipArchive) Close() {
@@ -96,23 +97,20 @@ func (a *gozipArchive) Close() {
 }
 
 func (a *gozipArchive) Entries() []Entry {
-	if a.cachedEntries == nil { // Initialize cache
-		a.cachedEntries = make(map[string]Entry)
-	}
 	entries := make([]Entry, 0, len(a.zip.File))
 	for _, f := range a.zip.File {
 		if f.FileInfo().IsDir() {
 			continue
 		}
 
-		aentry, ok := a.cachedEntries[f.Name]
+		aentry, ok := a.cachedEntries.Load(f.Name)
 		if !ok {
 			aentry = gozipArchiveEntry{
 				file: f,
 			}
-			a.cachedEntries[f.Name] = aentry
+			a.cachedEntries.Store(f.Name, aentry)
 		}
-		entries = append(entries, aentry)
+		entries = append(entries, aentry.(Entry))
 	}
 	return entries
 }
@@ -122,23 +120,20 @@ func (a *gozipArchive) Entry(p string) (Entry, error) {
 		return nil, fs.ErrNotExist
 	}
 	cpath := path.Clean(p)
-	if a.cachedEntries == nil {
-		// Initialize cache
-		a.cachedEntries = make(map[string]Entry)
-	} else {
-		// Check for entry in cache
-		aentry, ok := a.cachedEntries[cpath]
-		if ok { // Found entry in cache
-			return aentry, nil
-		}
+
+	// Check for entry in cache
+	aentry, ok := a.cachedEntries.Load(cpath)
+	if ok { // Found entry in cache
+		return aentry.(Entry), nil
 	}
+
 	for _, f := range a.zip.File {
 		fp := path.Clean(f.Name)
 		if fp == cpath {
 			aentry := gozipArchiveEntry{
 				file: f,
 			}
-			a.cachedEntries[fp] = aentry // Put entry in cache
+			a.cachedEntries.Store(fp, aentry) // Put entry in cache
 			return aentry, nil
 		}
 	}
