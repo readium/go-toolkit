@@ -3,7 +3,7 @@ package epub
 import (
 	"strconv"
 
-	"github.com/antchfx/xmlquery"
+	"github.com/chocolatkey/xmlquery"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -11,7 +11,9 @@ import (
 
 func GetRootFilePath(fetcher fetcher.Fetcher) (string, error) {
 	res := fetcher.Get(manifest.Link{Href: "/META-INF/container.xml"})
-	xml, err := res.ReadAsXML()
+	xml, err := res.ReadAsXML(map[string]string{
+		"urn:oasis:names:tc:opendocument:xmlns:container": "cn",
+	})
 	if err != nil {
 		return "", errors.Wrap(err, "failed loading container.xml")
 	}

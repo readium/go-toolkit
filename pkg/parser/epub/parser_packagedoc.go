@@ -3,7 +3,7 @@ package epub
 import (
 	"strconv"
 
-	"github.com/antchfx/xmlquery"
+	"github.com/chocolatkey/xmlquery"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util"
@@ -19,7 +19,10 @@ type PackageDocument struct {
 }
 
 func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDocument, error) {
-	pkg := document.SelectElement("/package")
+	pkg := document.SelectElement("/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='package']")
+	if pkg == nil {
+		return nil, errors.New("package root element not found")
+	}
 	packagePrefixes := parsePrefixes(pkg.SelectAttr("prefix"))
 	prefixMap := make(map[string]string)
 	for k, v := range PackageReservedPrefixes {

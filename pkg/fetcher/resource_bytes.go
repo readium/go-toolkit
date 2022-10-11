@@ -3,7 +3,7 @@ package fetcher
 import (
 	"errors"
 
-	"github.com/antchfx/xmlquery"
+	"github.com/chocolatkey/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
 )
 
@@ -62,8 +62,8 @@ func (r *BytesResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 }
 
 // ReadAsXML implements Resource
-func (r *BytesResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r)
+func (r *BytesResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
+	return ReadResourceAsXML(r, prefixes)
 }
 
 // NewBytesResource creates a new BytesResources from a lazy loader callback.

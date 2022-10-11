@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/antchfx/xmlquery"
+	"github.com/chocolatkey/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/stretchr/testify/assert"
 )

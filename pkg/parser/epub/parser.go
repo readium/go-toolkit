@@ -39,7 +39,12 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 		opfPath = "/" + opfPath
 	}
 
-	opfXmlDocument, errx := f.Get(manifest.Link{Href: opfPath}).ReadAsXML()
+	opfXmlDocument, errx := f.Get(manifest.Link{Href: opfPath}).ReadAsXML(map[string]string{
+		NamespaceOPF:                         "opf",
+		NamespaceDC:                          "dc",
+		VocabularyDCTerms:                    "dcterms",
+		"http://www.idpf.org/2013/rendition": "rendition",
+	})
 	if errx != nil {
 		return nil, errx
 	}
@@ -69,7 +74,11 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 }
 
 func parseEncryptionData(fetcher fetcher.Fetcher) (ret map[string]manifest.Encryption) {
-	n, err := fetcher.Get(manifest.Link{Href: "/META-INF/encryption.xml"}).ReadAsXML()
+	n, err := fetcher.Get(manifest.Link{Href: "/META-INF/encryption.xml"}).ReadAsXML(map[string]string{
+		NamespaceENC:  "enc",
+		NamespaceSIG:  "ds",
+		NamespaceCOMP: "comp",
+	})
 	if err != nil {
 		return
 	}
@@ -102,7 +111,9 @@ func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetche
 		if err != nil {
 			return
 		}
-		n, nerr := fetcher.Get(manifest.Link{Href: ncxPath}).ReadAsXML()
+		n, nerr := fetcher.Get(manifest.Link{Href: ncxPath}).ReadAsXML(map[string]string{
+			NamespaceNCX: "ncx",
+		})
 		if nerr != nil {
 			return
 		}
@@ -127,7 +138,10 @@ func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetche
 		if err != nil {
 			return
 		}
-		n, errx := fetcher.Get(manifest.Link{Href: navPath}).ReadAsXML()
+		n, errx := fetcher.Get(manifest.Link{Href: navPath}).ReadAsXML(map[string]string{
+			NamespaceXHTML: "html",
+			NamespaceOPS:   "epub",
+		})
 		if errx != nil {
 			return
 		}
@@ -138,9 +152,9 @@ func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetche
 
 func parseDisplayOptions(fetcher fetcher.Fetcher) (ret map[string]string) {
 	ret = make(map[string]string)
-	displayOptionsXml, err := fetcher.Get(manifest.Link{Href: "/META-INF/com.apple.ibooks.display-options.xml"}).ReadAsXML()
+	displayOptionsXml, err := fetcher.Get(manifest.Link{Href: "/META-INF/com.apple.ibooks.display-options.xml"}).ReadAsXML(nil)
 	if err != nil {
-		displayOptionsXml, err = fetcher.Get(manifest.Link{Href: "/META-INF/com.kobobooks.display-options.xml"}).ReadAsXML()
+		displayOptionsXml, err = fetcher.Get(manifest.Link{Href: "/META-INF/com.kobobooks.display-options.xml"}).ReadAsXML(nil)
 		if err != nil {
 			return
 		}

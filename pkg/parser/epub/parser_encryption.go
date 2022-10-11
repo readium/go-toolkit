@@ -3,7 +3,7 @@ package epub
 import (
 	"strconv"
 
-	"github.com/antchfx/xmlquery"
+	"github.com/chocolatkey/xmlquery"
 	"github.com/readium/go-toolkit/pkg/drm"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util"

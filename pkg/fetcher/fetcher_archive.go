@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/antchfx/xmlquery"
+	"github.com/chocolatkey/xmlquery"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
@@ -143,6 +143,6 @@ func (r *entryResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return ReadResourceAsJSON(r)
 }
 
-func (r *entryResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r)
+func (r *entryResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
+	return ReadResourceAsXML(r, prefixes)
 }
