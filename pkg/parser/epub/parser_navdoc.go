@@ -17,12 +17,12 @@ func ParseNavDoc(document *xmlquery.Node, filePath string) map[string][]manifest
 		}
 	}
 
-	body := document.SelectElement("//*[namespace-uri()='" + NamespaceXHTML + "' and local-name()='body']")
+	body := document.SelectElement("//" + NSSelect(NamespaceXHTML, "body"))
 	if body == nil {
 		return ret
 	}
 
-	for _, nav := range body.SelectElements("//*[namespace-uri()='" + NamespaceXHTML + "' and local-name()='nav']") {
+	for _, nav := range body.SelectElements("//" + NSSelect(NamespaceXHTML, "nav")) {
 		types, links := parseNavElement(nav, filePath, docPrefixes)
 		if types == nil && links == nil {
 			continue
@@ -58,7 +58,7 @@ func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]s
 		types = append(types, resolveProperty(prop, prefixMap, DefaultVocabType))
 	}
 
-	links := parseOlElement(nav.SelectElement("*[namespace-uri()='"+NamespaceXHTML+"' and local-name()='ol']"), filePath)
+	links := parseOlElement(nav.SelectElement(NSSelect(NamespaceXHTML, "ol")), filePath)
 	if len(links) > 0 && len(types) > 0 {
 		return types, links
 	}
@@ -69,7 +69,7 @@ func parseOlElement(ol *xmlquery.Node, filePath string) (links []manifest.Link) 
 	if ol == nil {
 		return nil
 	}
-	for _, li := range ol.SelectElements("*[namespace-uri()='" + NamespaceXHTML + "' and local-name()='li']") {
+	for _, li := range ol.SelectElements(NSSelect(NamespaceXHTML, "li")) {
 		l := parseLiElement(li, filePath)
 		if l != nil {
 			links = append(links, *l)
@@ -99,7 +99,7 @@ func parseLiElement(li *xmlquery.Node, filePath string) (link *manifest.Link) {
 		}
 	}
 
-	children := parseOlElement(li.SelectElement("*[namespace-uri()='"+NamespaceXHTML+"' and local-name()='ol']"), filePath)
+	children := parseOlElement(li.SelectElement(NSSelect(NamespaceXHTML, "ol")), filePath)
 	if len(children) == 0 && (href == "#" || title == "") {
 		return nil
 	}

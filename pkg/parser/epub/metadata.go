@@ -51,7 +51,7 @@ func NewMetadataParser(epubVersion float64, prefixMap map[string]string) Metadat
 
 func (m MetadataParser) Parse(document *xmlquery.Node, filePath string) *EPUBMetadata {
 	// Init lang
-	if l := document.SelectElement("/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='package']"); l != nil {
+	if l := document.SelectElement("/" + NSSelect(NamespaceOPF, "package")); l != nil {
 		for _, attr := range l.Attr {
 			if attr.Name.Local == "lang" {
 				m.packageLanguage = attr.Value
@@ -59,13 +59,13 @@ func (m MetadataParser) Parse(document *xmlquery.Node, filePath string) *EPUBMet
 		}
 	}
 	if l := document.SelectElement(
-		"//*[namespace-uri()='" + NamespaceOPF + "' and local-name()='metadata']/*[namespace-uri()='" + NamespaceDC + "' and local-name()='language']",
+		"//" + NSSelect(NamespaceOPF, "metadata") + "/" + NSSelect(NamespaceDC, "language"),
 	); l != nil {
 		m.metaLanguage = strings.TrimSpace(l.InnerText())
 	}
 
 	metadata := document.SelectElement(
-		"//*[namespace-uri()='" + NamespaceOPF + "' and local-name()='metadata']",
+		"//" + NSSelect(NamespaceOPF, "metadata"),
 	)
 	if metadata == nil {
 		return nil

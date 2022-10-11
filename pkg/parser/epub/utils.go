@@ -28,6 +28,10 @@ func GetRootFilePath(fetcher fetcher.Fetcher) (string, error) {
 	return p, nil
 }
 
+func NSSelect(namespace, localName string) string {
+	return "*[namespace-uri()='" + namespace + "' and local-name()='" + localName + "']"
+}
+
 func SelectNodeAttrNs(n *xmlquery.Node, ns, name string) string {
 	for _, a := range n.Attr {
 		if a.NamespaceURI == ns && a.Name.Local == name {

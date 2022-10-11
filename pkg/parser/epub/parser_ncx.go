@@ -9,8 +9,8 @@ import (
 )
 
 func ParseNCX(document *xmlquery.Node, filePath string) map[string][]manifest.Link {
-	toc := document.SelectElement("//*[namespace-uri()='" + NamespaceNCX + "' and local-name()='navMap']")
-	pageList := document.SelectElement("//*[namespace-uri()='" + NamespaceNCX + "' and local-name()='pageList']")
+	toc := document.SelectElement("//" + NSSelect(NamespaceNCX, "navMap"))
+	pageList := document.SelectElement("//" + NSSelect(NamespaceNCX, "pageList"))
 
 	ret := make(map[string][]manifest.Link)
 	if toc != nil {
@@ -31,7 +31,7 @@ func ParseNCX(document *xmlquery.Node, filePath string) map[string][]manifest.Li
 
 func parseNavMapElement(element *xmlquery.Node, filePath string) []manifest.Link {
 	var links []manifest.Link
-	for _, el := range element.SelectElements("*[namespace-uri()='" + NamespaceNCX + "' and local-name()='navPoint']") {
+	for _, el := range element.SelectElements(NSSelect(NamespaceNCX, "navPoint")) {
 		if p := parseNavPointElement(el, filePath); p != nil {
 			links = append(links, *p)
 		}
@@ -41,7 +41,7 @@ func parseNavMapElement(element *xmlquery.Node, filePath string) []manifest.Link
 
 func parsePageListElement(element *xmlquery.Node, filePath string) []manifest.Link {
 	var links []manifest.Link
-	for _, el := range element.SelectElements("*[namespace-uri()='" + NamespaceNCX + "' and local-name()='pageTarget']") {
+	for _, el := range element.SelectElements(NSSelect(NamespaceNCX, "pageTarget")) {
 		href := extractHref(el, filePath)
 		title := extractTitle(el)
 		if href == "" || title == "" {
@@ -59,7 +59,7 @@ func parseNavPointElement(element *xmlquery.Node, filePath string) *manifest.Lin
 	title := extractTitle(element)
 	href := extractHref(element, filePath)
 	var children []manifest.Link
-	for _, el := range element.SelectElements("*[namespace-uri()='" + NamespaceNCX + "' and local-name()='navPoint']") {
+	for _, el := range element.SelectElements(NSSelect(NamespaceNCX, "navPoint")) {
 		if p := parseNavPointElement(el, filePath); p != nil {
 			children = append(children, *p)
 		}
@@ -78,7 +78,7 @@ func parseNavPointElement(element *xmlquery.Node, filePath string) *manifest.Lin
 }
 
 func extractTitle(element *xmlquery.Node) string {
-	tel := element.SelectElement("*[namespace-uri()='" + NamespaceNCX + "' and local-name()='navLabel']/*[namespace-uri()='" + NamespaceNCX + "' and local-name()='text']")
+	tel := element.SelectElement(NSSelect(NamespaceNCX, "navLabel") + "/" + NSSelect(NamespaceNCX, "text"))
 	if tel == nil {
 		return ""
 	}
@@ -86,7 +86,7 @@ func extractTitle(element *xmlquery.Node) string {
 }
 
 func extractHref(element *xmlquery.Node, filePath string) string {
-	el := element.SelectElement("*[namespace-uri()='" + NamespaceNCX + "' and local-name()='content']")
+	el := element.SelectElement(NSSelect(NamespaceNCX, "content"))
 	if el == nil {
 		return ""
 	}
