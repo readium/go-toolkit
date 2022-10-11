@@ -64,6 +64,10 @@ func (l *LocalizedString) SetTranslation(language string, value string) {
 
 // GetOrFallback Returns the first translation for the given [language] BCP–47 tag.
 func (l *LocalizedString) GetOrFallback(language string) string {
+	if l == nil {
+		return ""
+	}
+
 	if l.Translations == nil {
 		return ""
 	}
