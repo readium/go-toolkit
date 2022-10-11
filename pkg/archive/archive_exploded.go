@@ -57,6 +57,31 @@ func (e explodedArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	return data[:n], nil
 }
 
+func (e explodedArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, error) {
+	if end < start {
+		return -1, errors.New("range not satisfiable")
+	}
+	f, err := os.Open(filepath.Join(e.dir, e.filepath))
+	if err != nil {
+		return -1, err
+	}
+	defer f.Close()
+	if start == 0 && end == 0 {
+		return io.Copy(w, f)
+	}
+	if start > 0 {
+		_, err := f.Seek(start, 0)
+		if err != nil {
+			return -1, err
+		}
+	}
+	n, err := io.CopyN(w, f, end-start+1)
+	if err != nil && err != io.EOF {
+		return n, err
+	}
+	return n, nil
+}
+
 // An archive exploded on the file system as a directory.
 type explodedArchive struct {
 	directory string // Directory, already cleaned!

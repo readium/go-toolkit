@@ -59,6 +59,31 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	return data[:n], nil
 }
 
+func (e gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, error) {
+	if end < start {
+		return -1, errors.New("range not satisfiable")
+	}
+	f, err := e.file.Open()
+	if err != nil {
+		return -1, err
+	}
+	defer f.Close()
+	if start == 0 && end == 0 {
+		return io.Copy(w, f)
+	}
+	if start > 0 {
+		n, err := io.CopyN(io.Discard, f, start)
+		if err != nil {
+			return n, err
+		}
+	}
+	n, err := io.CopyN(w, f, end-start+1)
+	if err != nil && err != io.EOF {
+		return n, err
+	}
+	return n, nil
+}
+
 // An archive from a zip file using go's stdlib
 type gozipArchive struct {
 	zip           *zip.Reader

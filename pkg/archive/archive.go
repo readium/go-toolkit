@@ -2,6 +2,7 @@ package archive
 
 import (
 	"errors"
+	"io"
 	"os"
 )
 
@@ -51,10 +52,11 @@ func NewArchiveFactory() DefaultArchiveFactory {
 
 // Holds an archive entry's metadata.
 type Entry interface {
-	Path() string                                // Absolute path to the entry in the archive.
-	Length() uint64                              // Uncompressed data length.
-	CompressedLength() uint64                    // Compressed data length.
-	Read(start int64, end int64) ([]byte, error) // Reads the whole content of this entry, or a portion when [start] or [end] are specified.
+	Path() string                                              // Absolute path to the entry in the archive.
+	Length() uint64                                            // Uncompressed data length.
+	CompressedLength() uint64                                  // Compressed data length.
+	Read(start int64, end int64) ([]byte, error)               // Reads the whole content of this entry, or a portion when [start] or [end] are specified.
+	Stream(w io.Writer, start int64, end int64) (int64, error) // Streams the whole content of this entry to a writer, or a portion when [start] or [end] are specified.
 	// Close()
 }
 
