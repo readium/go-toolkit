@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -61,6 +62,8 @@ func TestArchiveFetcherReadNotFound(t *testing.T) {
 		resource := a.Get(manifest.Link{Href: "/unknown"})
 		_, err := resource.Read(0, 0)
 		assert.Equal(t, NotFound(err.Cause), err)
+		_, err = resource.Stream(&bytes.Buffer{}, 0, 0)
+		assert.Equal(t, NotFound(err.Cause), err)
 	})
 }
 
@@ -68,8 +71,15 @@ func TestArchiveFetcherRead(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		resource := a.Get(manifest.Link{Href: "/mimetype"})
 		bin, err := resource.Read(0, 0)
-		assert.Nil(t, err)
-		assert.Equal(t, "application/epub+zip", string(bin))
+		if assert.Nil(t, err) {
+			assert.Equal(t, "application/epub+zip", string(bin))
+		}
+		var b bytes.Buffer
+		n, err := resource.Stream(&b, 0, 0)
+		if assert.Nil(t, err) {
+			assert.EqualValues(t, 20, n)
+			assert.Equal(t, "application/epub+zip", b.String())
+		}
 	})
 }
 
@@ -77,8 +87,15 @@ func TestArchiveFetcherReadRange(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		resource := a.Get(manifest.Link{Href: "/mimetype"})
 		bin, err := resource.Read(0, 10)
-		assert.Nil(t, err)
-		assert.Equal(t, "application", string(bin))
+		if assert.Nil(t, err) {
+			assert.Equal(t, "application", string(bin))
+		}
+		var b bytes.Buffer
+		n, err := resource.Stream(&b, 0, 10)
+		if assert.Nil(t, err) {
+			assert.EqualValues(t, 11, n)
+			assert.Equal(t, "application", b.String())
+		}
 	})
 }
 

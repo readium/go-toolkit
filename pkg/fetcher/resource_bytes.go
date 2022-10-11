@@ -1,7 +1,9 @@
 package fetcher
 
 import (
+	"bytes"
 	"errors"
+	"io"
 
 	"github.com/chocolatkey/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -49,6 +51,28 @@ func (r *BytesResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 		return r._bytes, nil
 	}
 	return r._bytes[start:end], nil
+}
+
+// Stream implements Resource
+func (r *BytesResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	if end < start {
+		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
+		return -1, err
+	}
+	if r._bytes == nil {
+		r._bytes = r.loader()
+	}
+	var buff *bytes.Buffer
+	if start == 0 && end == 0 {
+		buff = bytes.NewBuffer(r._bytes)
+	} else {
+		buff = bytes.NewBuffer(r._bytes[start:end])
+	}
+	n, err := io.Copy(w, buff)
+	if err != nil {
+		return n, Other(err)
+	}
+	return n, nil
 }
 
 // ReadAsString implements Resource

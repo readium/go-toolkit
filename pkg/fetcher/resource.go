@@ -3,6 +3,7 @@ package fetcher
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -43,6 +44,10 @@ type Resource interface {
 	// Reads the bytes at the given range.
 	// When start and end are null, the whole content is returned. Out-of-range indexes are clamped to the available length automatically.
 	Read(start int64, end int64) ([]byte, *ResourceError)
+
+	// Stream the bytes at the given range to a writer.
+	// When start and end are null, the whole content is returned. Out-of-range indexes are clamped to the available length automatically.
+	Stream(w io.Writer, start int64, end int64) (int64, *ResourceError)
 
 	// Reads the full content as a string.
 	// Assumes UTF-8 encoding if no Link charset is given
@@ -262,6 +267,11 @@ func (r FailureResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	return nil, r.ex
 }
 
+// Stream implements Resource
+func (r FailureResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	return -1, r.ex
+}
+
 // ReadAsString implements Resource
 func (r FailureResource) ReadAsString() (string, *ResourceError) {
 	return "", r.ex
@@ -313,6 +323,11 @@ func (r ProxyResource) Length() (int64, *ResourceError) {
 // Read implements Resource
 func (r ProxyResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	return r.Res.Read(start, end)
+}
+
+// Stream implements Resource
+func (r ProxyResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	return r.Res.Stream(w, start, end)
 }
 
 // ReadAsString implements Resource

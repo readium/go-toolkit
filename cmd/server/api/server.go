@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"net/http/pprof"
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/opds-community/libopds2-go/opds2"
@@ -44,6 +44,19 @@ func (s *PublicationServer) Init() http.Handler {
 
 func (s *PublicationServer) bookHandler(test bool) http.Handler {
 	r := mux.NewRouter()
+
+	r.HandleFunc("/debug/pprof/", pprof.Index)
+	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	r.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
+	r.Handle("/debug/pprof/block", pprof.Handler("block"))
+	r.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+	r.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	r.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
+	r.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
 
 	r.HandleFunc("/list.json", s.demoList)
 	r.HandleFunc("/{filename}/manifest.json", s.getManifest)
@@ -215,15 +228,16 @@ func (s *PublicationServer) getAsset(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, res.File())
 		return
 	}*/
-	b, rerr := res.Read(0, 0)
+
+	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
+	w.Header().Set("Content-Type", link.MediaType().String())
+	w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
+
+	_, rerr := res.Stream(w, 0, 0)
 	if rerr != nil {
 		w.WriteHeader(rerr.HTTPStatus())
 		w.Write([]byte(rerr.Error()))
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
-	w.Header().Set("Content-Type", link.MediaType().String())
-	w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
-	http.ServeContent(w, r, link.Href, time.Time{}, bytes.NewReader(b))
 }
