@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
@@ -96,6 +97,10 @@ func ReadResourceAsXML(r Resource, prefixes map[string]string) (*xmlquery.Node, 
 	}
 	node, err := xmlquery.ParseWithOptions(strings.NewReader(string(bytes)), xmlquery.ParserOptions{
 		Prefixes: prefixes,
+		Decoder: &xmlquery.DecoderOptions{
+			Strict: true,
+			Entity: xml.HTMLEntity,
+		},
 	})
 	if err != nil {
 		return nil, Other(err)

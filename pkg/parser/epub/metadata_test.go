@@ -1,24 +1,23 @@
 package epub
 
 import (
-	"os"
 	"testing"
 	"time"
 
-	"github.com/chocolatkey/xmlquery"
+	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/stretchr/testify/assert"
 )
 
 func loadMetadata(name string) (*manifest.Metadata, error) {
-	r, err := os.Open("./testdata/package/" + name + ".opf")
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	n, err := xmlquery.Parse(r)
-	if err != nil {
-		return nil, err
+	n, rerr := fetcher.NewFileResource(manifest.Link{}, "./testdata/package/"+name+".opf").ReadAsXML(map[string]string{
+		NamespaceOPF:                         "opf",
+		NamespaceDC:                          "dc",
+		VocabularyDCTerms:                    "dcterms",
+		"http://www.idpf.org/2013/rendition": "rendition",
+	})
+	if rerr != nil {
+		return nil, rerr.Cause
 	}
 
 	d, err := ParsePackageDocument(n, "")
@@ -30,6 +29,15 @@ func loadMetadata(name string) (*manifest.Metadata, error) {
 		FallbackTitle:   "fallback title",
 		PackageDocument: *d,
 	}.Create()
+
+	if manifest.Metadata.Identifier == "9782346140824" {
+		mnod := n.SelectElement(
+			"/" + NSSelect(NamespaceOPF, "package") + "/" + NSSelect(NamespaceOPF, "metadata"),
+		)
+		mtit := mnod.SelectElement("/dc:title")
+		println("DATA", mtit.InnerText())
+		println(mtit.OutputXML(true))
+	}
 
 	return &manifest.Metadata, nil
 }
