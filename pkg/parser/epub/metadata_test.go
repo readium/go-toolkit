@@ -386,6 +386,11 @@ func TestMetadataDatePublished(t *testing.T) {
 
 	assert.Equal(t, &tx, m2.Published)
 	assert.Equal(t, &tx, m3.Published)
+
+	// Non-ISO date
+	m3notiso, err := loadMetadata("dates-epub3-notiso")
+	assert.NoError(t, err)
+	assert.Equal(t, time.Date(1865, time.January, 1, 0, 0, 0, 0, time.UTC), *m3notiso.Published)
 }
 
 func TestMetadataDateModified(t *testing.T) {
@@ -399,6 +404,11 @@ func TestMetadataDateModified(t *testing.T) {
 
 	assert.Equal(t, &tx, m2.Modified)
 	assert.Equal(t, &tx, m3.Modified)
+
+	// Non-ISO date
+	m3notiso, err := loadMetadata("dates-epub3-notiso")
+	assert.NoError(t, err)
+	assert.Equal(t, time.Date(2012, time.April, 1, 0, 0, 0, 0, time.UTC), *m3notiso.Modified)
 }
 
 func TestMetadataConformsToProfileEPUB(t *testing.T) {
