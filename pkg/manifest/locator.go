@@ -10,48 +10,57 @@ import (
 // https://github.com/readium/architecture/tree/master/models/locators#the-location-object
 type Locations struct {
 	Fragments        []string               `json:"fragments,omitempty"`        // Contains one or more fragment in the resource referenced by the [Locator].
-	Progression      float64                `json:"progression,omitempty"`      // Progression in the resource expressed as a percentage (between 0 and 1).
-	Position         uint                   `json:"position,omitempty"`         // An index in the publication (>= 1).
-	TotalProgression float64                `json:"totalProgression,omitempty"` // Progression in the publication expressed as a percentage (between 0 and 1).
+	Progression      *float64               `json:"progression,omitempty"`      // Progression in the resource expressed as a percentage (between 0 and 1).
+	Position         *uint                  `json:"position,omitempty"`         // An index in the publication (>= 1).
+	TotalProgression *float64               `json:"totalProgression,omitempty"` // Progression in the publication expressed as a percentage (between 0 and 1).
 	OtherLocations   map[string]interface{} // Additional locations for extensions.
 }
 
-func LocationsFromJSON(rawJson map[string]interface{}) (*Locations, error) {
+func LocationsFromJSON(rawJson map[string]interface{}) (l Locations, err error) {
 	if rawJson == nil {
-		return nil, nil
+		return
 	}
-
-	locations := &Locations{}
 
 	// Fragments
 	fragments, err := parseSliceOrString(rawJson["fragments"], false)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed parsing 'fragments'")
+		err = errors.Wrap(err, "failed parsing 'fragments'")
+		return
 	}
 	if len(fragments) == 0 {
 		fragments, err = parseSliceOrString(rawJson["fragment"], false)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed parsing 'fragment'")
+			err = errors.Wrap(err, "failed parsing 'fragment'")
+			return
 		}
 	}
-	locations.Fragments = fragments
+	l.Fragments = fragments
 
 	// Progression
-	progression := parseOptFloat64(rawJson["progression"])
-	if progression >= 0.0 && progression <= 1.0 {
-		locations.Progression = progression
+	rawProgression, ok := rawJson["progression"]
+	if ok {
+		progression := parseOptFloat64(rawProgression)
+		if progression >= 0.0 && progression <= 1.0 {
+			l.Progression = &progression
+		}
 	}
 
 	// Position
-	position := parseOptFloat64(rawJson["position"])
-	if position > 0 {
-		locations.Position = float64ToUint(position)
+	rawPositions, ok := rawJson["position"]
+	if ok {
+		position := float64ToUint(parseOptFloat64(rawPositions))
+		if position > 0 {
+			l.Position = &position
+		}
 	}
 
 	// TotalProgression
-	totalProgression := parseOptFloat64(rawJson["totalProgression"])
-	if totalProgression >= 0.0 && totalProgression <= 1.0 {
-		locations.TotalProgression = totalProgression
+	rawTotalProgress, ok := rawJson["totalProgression"]
+	if ok {
+		totalProgression := parseOptFloat64(rawTotalProgress)
+		if totalProgression >= 0.0 && totalProgression <= 1.0 {
+			l.TotalProgression = &totalProgression
+		}
 	}
 
 	// Delete above vals so that we can put everything else in OtherLocations
@@ -63,10 +72,10 @@ func LocationsFromJSON(rawJson map[string]interface{}) (*Locations, error) {
 
 	// Now all we have left is everything else!
 	if len(rawJson) > 0 {
-		locations.OtherLocations = rawJson
+		l.OtherLocations = rawJson
 	}
 
-	return locations, nil
+	return l, nil
 }
 
 func (l *Locations) UnmarshalJSON(b []byte) error {
@@ -79,7 +88,7 @@ func (l *Locations) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	*l = *fl
+	*l = fl
 	return nil
 }
 
@@ -92,14 +101,14 @@ func (l Locations) MarshalJSON() ([]byte, error) {
 	if len(l.Fragments) > 0 {
 		j["fragments"] = l.Fragments
 	}
-	if l.Progression != 0.0 {
-		j["progression"] = l.Progression
+	if l.Progression != nil {
+		j["progression"] = *l.Progression
 	}
-	if l.Position > 0 {
-		j["position"] = l.Position
+	if l.Position != nil {
+		j["position"] = *l.Position
 	}
-	if l.TotalProgression > 0 {
-		j["totalProgression"] = l.TotalProgression
+	if l.TotalProgression != nil {
+		j["totalProgression"] = *l.TotalProgression
 	}
 
 	return json.Marshal(j)
@@ -114,16 +123,15 @@ type Text struct {
 	After     string `json:"after,omitempty"`     // The text after the locator.
 }
 
-func TextFromJSON(rawJson map[string]interface{}) *Text {
+func TextFromJSON(rawJson map[string]interface{}) (t Text) {
 	if rawJson == nil {
-		return nil
+		return
 	}
 
-	return &Text{
-		Before:    parseOptString(rawJson["before"]),
-		Highlight: parseOptString(rawJson["highlight"]),
-		After:     parseOptString(rawJson["after"]),
-	}
+	t.Before = parseOptString(rawJson["before"])
+	t.Highlight = parseOptString(rawJson["highlight"])
+	t.After = parseOptString(rawJson["after"])
+	return
 }
 
 // Locator provides a precise location in a publication in a format that can be stored and shared.
@@ -137,11 +145,11 @@ func TextFromJSON(rawJson map[string]interface{}) *Text {
 //
 // https://github.com/readium/architecture/tree/master/locators
 type Locator struct {
-	Href      string     `json:"href"`
-	Type      string     `json:"type"`
-	Title     string     `json:"title,omitempty"`
-	Locations *Locations `json:"locations,omitempty"`
-	Text      *Text      `json:"text,omitempty"`
+	Href      string    `json:"href"`
+	Type      string    `json:"type"`
+	Title     string    `json:"title,omitempty"`
+	Locations Locations `json:"locations,omitempty"`
+	Text      Text      `json:"text,omitempty"`
 }
 
 func LocatorFromJSON(rawJson map[string]interface{}) (*Locator, error) {
@@ -185,4 +193,24 @@ func (l *Locator) UnmarshalJSON(b []byte) error {
 	}
 	*l = *fl
 	return nil
+}
+
+func (l Locator) MarshalJSON() ([]byte, error) {
+	j := make(map[string]interface{})
+	j["href"] = l.Href
+	j["type"] = l.Type
+	if l.Title != "" {
+		j["title"] = l.Title
+	}
+
+	ll := l.Locations
+	if len(ll.Fragments) > 0 || len(ll.OtherLocations) > 1 || ll.Position != nil || ll.Progression != nil || ll.TotalProgression != nil {
+		j["locations"] = ll
+	}
+
+	if l.Text.After != "" || l.Text.Before != "" || l.Text.Highlight != "" {
+		j["text"] = l.Text
+	}
+
+	return json.Marshal(j)
 }

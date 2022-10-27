@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/pub"
 )
@@ -63,8 +64,8 @@ func (s *PositionsService) computePositions() [][]manifest.Locator {
 		}
 		if len(lpositions) > 0 {
 			pos := lpositions[len(lpositions)-1].Locations.Position
-			if pos > 0 {
-				lastPositionOfPreviousResource = pos
+			if pos != nil {
+				lastPositionOfPreviousResource = *pos
 			}
 		}
 		positions[i] = lpositions
@@ -78,8 +79,8 @@ func (s *PositionsService) computePositions() [][]manifest.Locator {
 	for i, p := range positions {
 		for j, locator := range p {
 			position := locator.Locations.Position
-			if position != 0 {
-				positions[i][j].Locations.TotalProgression = float64(position-1) / float64(totalPageCount)
+			if position != nil {
+				positions[i][j].Locations.TotalProgression = extensions.Pointer(float64((*position)-1) / float64(totalPageCount))
 			}
 		}
 	}
@@ -112,9 +113,9 @@ func (s *PositionsService) createLocator(link manifest.Link, progression float64
 		Href:  link.Href,
 		Type:  link.Type,
 		Title: link.Title,
-		Locations: &manifest.Locations{
-			Progression: progression,
-			Position:    position,
+		Locations: manifest.Locations{
+			Progression: extensions.Pointer(progression),
+			Position:    extensions.Pointer(position),
 		},
 	}
 	if loc.Type == "" {

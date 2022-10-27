@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 )
 
@@ -73,9 +74,9 @@ func (s PerResourcePositionsService) PositionsByReadingOrder() [][]manifest.Loca
 			Href:  v.Href,
 			Type:  typ,
 			Title: v.Title,
-			Locations: &manifest.Locations{
-				Position:         uint(i) + 1,
-				TotalProgression: float64(i) / float64(pageCount),
+			Locations: manifest.Locations{
+				Position:         extensions.Pointer(uint(i) + 1),
+				TotalProgression: extensions.Pointer(float64(i) / float64(pageCount)),
 			},
 		}}
 	}

@@ -3,6 +3,7 @@ package pub
 import (
 	"testing"
 
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,9 +21,9 @@ func TestPerResourcePositionsServiceSingleReadingOrder(t *testing.T) {
 	assert.Equal(t, []manifest.Locator{{
 		Href: "res",
 		Type: "image/png",
-		Locations: &manifest.Locations{
-			Position:         1,
-			TotalProgression: 0.0,
+		Locations: manifest.Locations{
+			Position:         extensions.Pointer(uint(1)),
+			TotalProgression: extensions.Pointer(float64(0.0)),
 		},
 	}}, service.Positions())
 }
@@ -40,26 +41,26 @@ func TestPerResourcePositionsServiceMultiReadingOrder(t *testing.T) {
 		{
 			Href: "res",
 			Type: "",
-			Locations: &manifest.Locations{
-				Position:         1,
-				TotalProgression: 0.0,
+			Locations: manifest.Locations{
+				Position:         extensions.Pointer(uint(1)),
+				TotalProgression: extensions.Pointer(float64(0.0)),
 			},
 		},
 		{
 			Href: "chap1",
 			Type: "image/png",
-			Locations: &manifest.Locations{
-				Position:         2,
-				TotalProgression: 1.0 / 3.0,
+			Locations: manifest.Locations{
+				Position:         extensions.Pointer(uint(2)),
+				TotalProgression: extensions.Pointer(float64(1.0 / 3.0)),
 			},
 		},
 		{
 			Href:  "chap2",
 			Type:  "image/png",
 			Title: "Chapter 2",
-			Locations: &manifest.Locations{
-				Position:         3,
-				TotalProgression: 2.0 / 3.0,
+			Locations: manifest.Locations{
+				Position:         extensions.Pointer(uint(3)),
+				TotalProgression: extensions.Pointer(float64(2.0 / 3.0)),
 			},
 		},
 	}, service.Positions())
@@ -74,9 +75,9 @@ func TestPerResourcePositionsServiceMediaTypeFallback(t *testing.T) {
 	assert.Equal(t, []manifest.Locator{{
 		Href: "res",
 		Type: "image/*",
-		Locations: &manifest.Locations{
-			Position:         1,
-			TotalProgression: 0.0,
+		Locations: manifest.Locations{
+			Position:         extensions.Pointer(uint(1)),
+			TotalProgression: extensions.Pointer(float64(0.0)),
 		},
 	}}, service.Positions())
 }

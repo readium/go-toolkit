@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,8 +37,8 @@ func TestLocatorUnmarshalJSON(t *testing.T) {
 		Href:      "http://locator",
 		Type:      "text/html",
 		Title:     "My Locator",
-		Locations: &Locations{Position: 42},
-		Text:      &Text{Highlight: "Excerpt"},
+		Locations: Locations{Position: extensions.Pointer[uint](42)},
+		Text:      Text{Highlight: "Excerpt"},
 	}, l)
 }
 
@@ -63,10 +64,10 @@ func TestLocatorJSON(t *testing.T) {
 		Href:  "http://locator",
 		Type:  "text/html",
 		Title: "My Locator",
-		Locations: &Locations{
-			Position: 42,
+		Locations: Locations{
+			Position: extensions.Pointer[uint](42),
 		},
-		Text: &Text{
+		Text: Text{
 			Highlight: "Excerpt",
 		},
 	})
@@ -101,9 +102,9 @@ func TestLocationsUnmarshalJSON(t *testing.T) {
 	}`), &l))
 	assert.Equal(t, Locations{
 		Fragments:        []string{"p=4", "frag34"},
-		Progression:      0.74,
-		TotalProgression: 0.32,
-		Position:         42,
+		Progression:      extensions.Pointer(0.74),
+		TotalProgression: extensions.Pointer(0.32),
+		Position:         extensions.Pointer[uint](42),
 		OtherLocations: map[string]interface{}{
 			"other": "other-location",
 		},
@@ -121,7 +122,7 @@ func TestLocationsUnmarshalSingleFragmentJSON(t *testing.T) {
 func TestLocationsUnmarshalIgnoresNegativePosition(t *testing.T) {
 	var l1 Locations
 	assert.NoError(t, json.Unmarshal([]byte(`{"position": 1}`), &l1))
-	assert.Equal(t, Locations{Position: 1}, l1)
+	assert.Equal(t, Locations{Position: extensions.Pointer[uint](1)}, l1)
 
 	var l2 Locations
 	assert.NoError(t, json.Unmarshal([]byte(`{"position": 0}`), &l2))
@@ -135,15 +136,15 @@ func TestLocationsUnmarshalIgnoresNegativePosition(t *testing.T) {
 func TestLocationsUnmarshalIgnoresProgressionOutOfRange(t *testing.T) {
 	var l1 Locations
 	assert.NoError(t, json.Unmarshal([]byte(`{"progression": 0.5}`), &l1))
-	assert.Equal(t, Locations{Progression: 0.5}, l1)
+	assert.Equal(t, Locations{Progression: extensions.Pointer(0.5)}, l1)
 
 	var l2 Locations
 	assert.NoError(t, json.Unmarshal([]byte(`{"progression": 0}`), &l2))
-	assert.Equal(t, Locations{Progression: 0.0}, l2)
+	assert.Equal(t, Locations{Progression: extensions.Pointer(0.0)}, l2)
 
 	var l3 Locations
 	assert.NoError(t, json.Unmarshal([]byte(`{"progression": 1}`), &l3))
-	assert.Equal(t, Locations{Progression: 1.0}, l3)
+	assert.Equal(t, Locations{Progression: extensions.Pointer(1.0)}, l3)
 
 	var l4 Locations
 	assert.NoError(t, json.Unmarshal([]byte(`{"progression": -0.5}`), &l4))
@@ -157,15 +158,15 @@ func TestLocationsUnmarshalIgnoresProgressionOutOfRange(t *testing.T) {
 func TestLocationsUnmarshalIgnoresTotalProgressionOutOfRange(t *testing.T) {
 	var l1 Locations
 	assert.NoError(t, json.Unmarshal([]byte(`{"totalProgression": 0.5}`), &l1))
-	assert.Equal(t, Locations{TotalProgression: 0.5}, l1)
+	assert.Equal(t, Locations{TotalProgression: extensions.Pointer(0.5)}, l1)
 
 	var l2 Locations
 	assert.NoError(t, json.Unmarshal([]byte(`{"totalProgression": 0}`), &l2))
-	assert.Equal(t, Locations{TotalProgression: 0.0}, l2)
+	assert.Equal(t, Locations{TotalProgression: extensions.Pointer(0.0)}, l2)
 
 	var l3 Locations
 	assert.NoError(t, json.Unmarshal([]byte(`{"totalProgression": 1}`), &l3))
-	assert.Equal(t, Locations{TotalProgression: 1.0}, l3)
+	assert.Equal(t, Locations{TotalProgression: extensions.Pointer(1.0)}, l3)
 
 	var l4 Locations
 	assert.NoError(t, json.Unmarshal([]byte(`{"totalProgression": -0.5}`), &l4))
@@ -186,9 +187,9 @@ func TestLocationsMinimalJSON(t *testing.T) {
 func TestLocationsJSON(t *testing.T) {
 	s, err := json.Marshal(&Locations{
 		Fragments:        []string{"p=4", "frag34"},
-		Progression:      0.74,
-		Position:         42,
-		TotalProgression: 25.32,
+		Progression:      extensions.Pointer(0.74),
+		Position:         extensions.Pointer[uint](42),
+		TotalProgression: extensions.Pointer(25.32),
 		OtherLocations: map[string]interface{}{
 			"other": "other-location",
 		},
