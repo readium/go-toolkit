@@ -1,6 +1,6 @@
 module github.com/readium/go-toolkit
 
-go 1.17
+go 1.18
 
 require (
 	github.com/agext/regexp v1.3.0
