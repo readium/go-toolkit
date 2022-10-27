@@ -62,14 +62,14 @@ func NewServicesBuilder(fcs map[string]ServiceFactory) *ServicesBuilder {
 }
 
 // Builds the actual list of publication services to use in a Publication.
-func (s *ServicesBuilder) Build(context Context) []Service {
-	list := make([]Service, 0, len(s.serviceFactories))
-	for _, v := range s.serviceFactories {
+func (s *ServicesBuilder) Build(context Context) map[string]Service {
+	services := make(map[string]Service, len(s.serviceFactories))
+	for k, v := range s.serviceFactories {
 		if v != nil {
-			list = append(list, v(context))
+			services[k] = v(context)
 		}
 	}
-	return list
+	return services
 }
 
 // Gets the publication service factory for the given service type.

@@ -15,7 +15,7 @@ type Publication struct {
 	Fetcher  fetcher.Fetcher   // The underlying fetcher used to read publication resources.
 	// TODO servicesBuilder
 	// TODO positionsFactory
-	services []Service
+	services map[string]Service
 }
 
 // Returns whether this publication conforms to the given Readium Web Publication Profile.
@@ -30,6 +30,44 @@ func (p Publication) JSONManifest() (string, error) {
 		return "", err
 	}
 	return string(bin), nil
+}
+
+func (p Publication) PositionsFromManifest() []manifest.Locator {
+	// TODO just access the service directly and don't marshal and unmarshal JSON?
+	data, err := p.Get(PositionsLink).ReadAsJSON()
+	if err != nil || data == nil {
+		return []manifest.Locator{}
+	}
+	rawPositions, ok := data["positions"]
+	if !ok {
+		return []manifest.Locator{}
+	}
+	positions, ok := rawPositions.([]map[string]interface{})
+	locators := make([]manifest.Locator, len(positions))
+	for i, rl := range positions {
+		locator, err := manifest.LocatorFromJSON(rl)
+		if locator == nil || err != nil {
+			return []manifest.Locator{}
+		}
+		locators[i] = *locator
+	}
+	return locators
+}
+
+func (p Publication) PositionsByReadingOrder() [][]manifest.Locator {
+	service := p.FindService(PositionsService_Name)
+	if service == nil {
+		return nil
+	}
+	return service.(PositionsService).PositionsByReadingOrder()
+}
+
+func (p *Publication) Positions() []manifest.Locator {
+	service := p.FindService(PositionsService_Name)
+	if service == nil {
+		return nil
+	}
+	return service.(PositionsService).Positions()
 }
 
 // The URL where this publication is served, computed from the [Link] with `self` relation.
@@ -57,6 +95,27 @@ func (p Publication) Find(path string) *manifest.Link {
 
 	link.Href = "/" + link.Href
 	return link
+}
+
+func (p Publication) FindService(serviceName string) Service {
+	for k, v := range p.services {
+		if k != serviceName {
+			continue
+		}
+		return v
+	}
+	return nil
+}
+
+func (p Publication) FindServices(serviceName string) []Service {
+	var services []Service
+	for k, v := range p.services {
+		if k != serviceName {
+			continue
+		}
+		services = append(services, v)
+	}
+	return services
 }
 
 // Returns the resource targeted by the given non-templated [link].
