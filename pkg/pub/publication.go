@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"path"
 
-	"github.com/jinzhu/copier"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 )
@@ -140,9 +139,8 @@ func New(m manifest.Manifest, f fetcher.Fetcher, b *ServicesBuilder) *Publicatio
 	if b == nil {
 		b = NewServicesBuilder(nil)
 	}
-	services := b.Build(NewContext(m, f)) // Build the services
-	var newManifest manifest.Manifest
-	copier.Copy(&newManifest, &m) // Make a deep copy of the manifest
+	newManifest := m                                // Make a copy of the manifest
+	services := b.Build(NewContext(newManifest, f)) // Build the services
 
 	// Add links from the services to the manifest links
 	for _, v := range services {

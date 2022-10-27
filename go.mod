@@ -4,11 +4,9 @@ go 1.17
 
 require (
 	github.com/agext/regexp v1.3.0
-	github.com/antchfx/xmlquery v1.3.8
 	github.com/chocolatkey/xmlquery v0.0.0-20221011024504-24b08dedc410
 	github.com/deckarep/golang-set v1.7.1
 	github.com/gorilla/mux v1.7.4
-	github.com/jinzhu/copier v0.3.5
 	github.com/opds-community/libopds2-go v0.0.0-20170628075933-9c163cf60f6e
 	github.com/pkg/errors v0.9.1
 	github.com/relvacode/iso8601 v1.1.0
