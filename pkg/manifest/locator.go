@@ -152,24 +152,24 @@ type Locator struct {
 	Text      Text      `json:"text,omitempty"`
 }
 
-func LocatorFromJSON(rawJson map[string]interface{}) (*Locator, error) {
+func LocatorFromJSON(rawJson map[string]interface{}) (Locator, error) {
 	if rawJson == nil {
-		return nil, nil
+		return Locator{}, nil
 	}
 
-	locator := &Locator{
+	locator := Locator{
 		Href:  parseOptString(rawJson["href"]),
 		Type:  parseOptString(rawJson["type"]),
 		Title: parseOptString(rawJson["title"]),
 	}
 	if locator.Href == "" || locator.Type == "" {
-		return nil, errors.New("'href' and 'type' are required")
+		return Locator{}, errors.New("'href' and 'type' are required")
 	}
 
 	if rawLocations, ok := rawJson["locations"].(map[string]interface{}); ok {
 		locations, err := LocationsFromJSON(rawLocations)
 		if err != nil {
-			return nil, err
+			return Locator{}, err
 		}
 		locator.Locations = locations
 	}
@@ -191,7 +191,7 @@ func (l *Locator) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	*l = *fl
+	*l = fl
 	return nil
 }
 

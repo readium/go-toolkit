@@ -44,11 +44,8 @@ func (p Publication) PositionsFromManifest() []manifest.Locator {
 	positions, ok := rawPositions.([]map[string]interface{})
 	locators := make([]manifest.Locator, len(positions))
 	for i, rl := range positions {
-		locator, err := manifest.LocatorFromJSON(rl)
-		if locator == nil || err != nil {
-			return []manifest.Locator{}
-		}
-		locators[i] = *locator
+		locator, _ := manifest.LocatorFromJSON(rl)
+		locators[i] = locator
 	}
 	return locators
 }
