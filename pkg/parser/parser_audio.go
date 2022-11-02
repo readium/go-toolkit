@@ -28,7 +28,7 @@ func (p AudioParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	if err != nil {
 		return nil, err
 	}
-	readingOrder := make([]manifest.Link, 0)
+	readingOrder := make(manifest.LinkList, 0)
 	for _, link := range links {
 		// Filter out all irrelevant files
 		fext := filepath.Ext(strings.ToLower(link.Href))

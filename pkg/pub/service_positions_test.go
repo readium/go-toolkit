@@ -15,7 +15,7 @@ func TestPerResourcePositionsServiceEmptyReadingOrder(t *testing.T) {
 
 func TestPerResourcePositionsServiceSingleReadingOrder(t *testing.T) {
 	service := PerResourcePositionsService{
-		readingOrder: []manifest.Link{{Href: "res", Type: "image/png"}},
+		readingOrder: manifest.LinkList{{Href: "res", Type: "image/png"}},
 	}
 
 	assert.Equal(t, []manifest.Locator{{
@@ -30,7 +30,7 @@ func TestPerResourcePositionsServiceSingleReadingOrder(t *testing.T) {
 
 func TestPerResourcePositionsServiceMultiReadingOrder(t *testing.T) {
 	service := PerResourcePositionsService{
-		readingOrder: []manifest.Link{
+		readingOrder: manifest.LinkList{
 			{Href: "res"},
 			{Href: "chap1", Type: "image/png"},
 			{Href: "chap2", Type: "image/png", Title: "Chapter 2"},
@@ -68,7 +68,7 @@ func TestPerResourcePositionsServiceMultiReadingOrder(t *testing.T) {
 
 func TestPerResourcePositionsServiceMediaTypeFallback(t *testing.T) {
 	service := PerResourcePositionsService{
-		readingOrder:      []manifest.Link{{Href: "res"}},
+		readingOrder:      manifest.LinkList{{Href: "res"}},
 		fallbackMediaType: "image/*",
 	}
 

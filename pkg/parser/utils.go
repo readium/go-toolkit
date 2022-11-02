@@ -8,7 +8,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/mediatype"
 )
 
-func hrefCommonFirstComponent(links []manifest.Link) string {
+func hrefCommonFirstComponent(links manifest.LinkList) string {
 	latest := ""
 	for _, link := range links {
 		normalized := strings.SplitN(strings.TrimPrefix(link.Href, "/"), "/", 2)[0]

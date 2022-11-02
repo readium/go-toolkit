@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func loadNavDoc(name string) (map[string][]manifest.Link, error) {
+func loadNavDoc(name string) (map[string]manifest.LinkList, error) {
 	n, rerr := fetcher.NewFileResource(manifest.Link{}, "./testdata/navdoc/"+name+".xhtml").ReadAsXML(map[string]string{
 		NamespaceXHTML: "html",
 		NamespaceOPS:   "epub",
@@ -23,7 +23,7 @@ func loadNavDoc(name string) (map[string][]manifest.Link, error) {
 func TestNavDocParserNondirectDescendantOfBody(t *testing.T) {
 	n, err := loadNavDoc("nav-section")
 	assert.NoError(t, err)
-	assert.Equal(t, []manifest.Link{
+	assert.Equal(t, manifest.LinkList{
 		{
 			Title: "Chapter 1",
 			Href:  "/OEBPS/xhtml/chapter1.xhtml",
@@ -79,7 +79,7 @@ func TestNavDocParserEntryWithoutLinkOrChildrenIgnored(t *testing.T) {
 func TestNavDocParserHierarchicalItemsNotAllowed(t *testing.T) {
 	n, err := loadNavDoc("nav-children")
 	assert.NoError(t, err)
-	assert.Equal(t, []manifest.Link{
+	assert.Equal(t, manifest.LinkList{
 		{Title: "Introduction", Href: "/OEBPS/xhtml/introduction.xhtml"},
 		{
 			Title: "Part I",
@@ -109,7 +109,7 @@ func TestNavDocParserEmptyDocAccepted(t *testing.T) {
 func TestNavDocParserTOC(t *testing.T) {
 	n, err := loadNavDoc("nav-complex")
 	assert.NoError(t, err)
-	assert.Equal(t, []manifest.Link{
+	assert.Equal(t, manifest.LinkList{
 		{Title: "Chapter 1", Href: "/OEBPS/xhtml/chapter1.xhtml"},
 		{Title: "Chapter 2", Href: "/OEBPS/xhtml/chapter2.xhtml"},
 	}, n["toc"])
@@ -118,7 +118,7 @@ func TestNavDocParserTOC(t *testing.T) {
 func TestNavDocParserPageList(t *testing.T) {
 	n, err := loadNavDoc("nav-complex")
 	assert.NoError(t, err)
-	assert.Equal(t, []manifest.Link{
+	assert.Equal(t, manifest.LinkList{
 		{Title: "1", Href: "/OEBPS/xhtml/chapter1.xhtml#page1"},
 		{Title: "2", Href: "/OEBPS/xhtml/chapter1.xhtml#page2"},
 	}, n["page-list"])

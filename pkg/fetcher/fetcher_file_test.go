@@ -175,7 +175,7 @@ func TestFileFetcherLinks(t *testing.T) {
 	links, err := testFileFetcher.Links()
 	assert.Nil(t, err)
 
-	mustContain := []manifest.Link{{
+	mustContain := manifest.LinkList{{
 		Href: "/dir_href/subdirectory/hello.mp3",
 		Type: "audio/mpeg",
 	}, {

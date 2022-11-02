@@ -8,7 +8,7 @@ import (
 type PublicationFactory struct {
 	FallbackTitle   string
 	PackageDocument PackageDocument
-	NavigationData  map[string][]manifest.Link
+	NavigationData  map[string]manifest.LinkList
 	EncryptionData  map[string]manifest.Encryption
 	DisplayOptions  map[string]string
 
@@ -52,7 +52,7 @@ func (f PublicationFactory) Create() manifest.Manifest {
 
 	// Compute Metadata
 	metadata := f.pubMetadata.Metadata()
-	metadataLinks := make([]manifest.Link, 0, len(links))
+	metadataLinks := make(manifest.LinkList, 0, len(links))
 	for _, link := range links {
 		metadataLinks = append(metadataLinks, mapEPUBLink(link))
 	}
@@ -64,7 +64,7 @@ func (f PublicationFactory) Create() manifest.Manifest {
 			readingOrderIds = append(readingOrderIds, v.idref)
 		}
 	}
-	readingOrder := make([]manifest.Link, 0, len(readingOrderIds))
+	readingOrder := make(manifest.LinkList, 0, len(readingOrderIds))
 	for _, id := range readingOrderIds {
 		item, ok := f.itemById[id]
 		if ok {
@@ -78,7 +78,7 @@ func (f PublicationFactory) Create() manifest.Manifest {
 			resourceItems = append(resourceItems, item)
 		}
 	}
-	resources := make([]manifest.Link, 0, len(resourceItems))
+	resources := make(manifest.LinkList, 0, len(resourceItems))
 	for _, item := range resourceItems {
 		resources = append(resources, f.computeLink(item, []string{}))
 	}
@@ -233,7 +233,7 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 }
 
 // Compute alternate links for [item], checking for an infinite recursion
-func (f PublicationFactory) computeAlternates(item Item, fallbackChain []string) (ret []manifest.Link) {
+func (f PublicationFactory) computeAlternates(item Item, fallbackChain []string) (ret manifest.LinkList) {
 	if item.fallback != "" && !extensions.Contains(fallbackChain, item.fallback) {
 		if item, ok := f.itemById[item.fallback]; ok {
 			if item.ID != "" {

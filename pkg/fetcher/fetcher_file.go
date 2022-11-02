@@ -20,8 +20,8 @@ type FileFetcher struct {
 }
 
 // Links implements Fetcher
-func (f *FileFetcher) Links() ([]manifest.Link, error) {
-	links := make([]manifest.Link, 0)
+func (f *FileFetcher) Links() (manifest.LinkList, error) {
+	links := make(manifest.LinkList, 0)
 	for href, xpath := range f.paths {
 		axpath, err := filepath.Abs(xpath)
 		if err == nil {

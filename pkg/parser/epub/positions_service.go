@@ -17,7 +17,7 @@ import (
 // https://github.com/readium/architecture/blob/master/models/locators/best-practices/format.md#epub
 // https://github.com/readium/architecture/issues/101
 type PositionsService struct {
-	readingOrder       []manifest.Link
+	readingOrder       manifest.LinkList
 	presentation       *manifest.Presentation
 	fetcher            fetcher.Fetcher
 	reflowableStrategy ReflowableStrategy
@@ -26,8 +26,8 @@ type PositionsService struct {
 
 func (s *PositionsService) Close() {}
 
-func (s *PositionsService) Links() []manifest.Link {
-	return []manifest.Link{pub.PositionsLink}
+func (s *PositionsService) Links() manifest.LinkList {
+	return manifest.LinkList{pub.PositionsLink}
 }
 
 func (s *PositionsService) Get(link manifest.Link) (fetcher.Resource, bool) {

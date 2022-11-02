@@ -8,8 +8,8 @@ import (
 	"github.com/readium/go-toolkit/pkg/util"
 )
 
-func ParseNavDoc(document *xmlquery.Node, filePath string) map[string][]manifest.Link {
-	ret := make(map[string][]manifest.Link)
+func ParseNavDoc(document *xmlquery.Node, filePath string) map[string]manifest.LinkList {
+	ret := make(map[string]manifest.LinkList)
 	docPrefixes := parsePrefixes(SelectNodeAttrNs(document, NamespaceOPS, "prefix"))
 	for k, v := range ContentReservedPrefixes {
 		if _, ok := docPrefixes[k]; !ok { // prefix element overrides reserved prefixes
@@ -41,7 +41,7 @@ func ParseNavDoc(document *xmlquery.Node, filePath string) map[string][]manifest
 	return ret
 }
 
-func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]string) ([]string, []manifest.Link) {
+func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]string) ([]string, manifest.LinkList) {
 	typeAttr := ""
 	for _, na := range nav.Attr {
 		if na.NamespaceURI == NamespaceOPS && na.Name.Local == "type" {
@@ -65,7 +65,7 @@ func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]s
 	return nil, nil
 }
 
-func parseOlElement(ol *xmlquery.Node, filePath string) (links []manifest.Link) {
+func parseOlElement(ol *xmlquery.Node, filePath string) (links manifest.LinkList) {
 	if ol == nil {
 		return nil
 	}
