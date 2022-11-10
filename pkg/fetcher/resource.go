@@ -143,6 +143,9 @@ func (ex *ResourceError) HTTPStatus() int {
 }
 
 func (ex *ResourceError) Error() string {
+	if ex == nil {
+		return "no error"
+	}
 	if ex.Cause == nil {
 		return fmt.Sprintf("resource: error %d", ex.Code)
 	}
