@@ -33,7 +33,7 @@ func loadDecoder(meta pdfcpu.Metadata) (*xmp.Document, []byte, error) {
 func ParseMetadata(ctx *pdfcpu.Context, link *manifest.Link) (m manifest.Manifest, err error) {
 	if link != nil {
 		m.ReadingOrder = manifest.LinkList{{
-			Href: link.Href,
+			Href: strings.TrimPrefix(link.Href, "/"),
 			Type: mediatype.PDF.String(),
 		}}
 	}

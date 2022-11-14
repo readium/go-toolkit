@@ -62,7 +62,7 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 
 	// Finalize
 	builder := pub.NewServicesBuilder(map[string]pub.ServiceFactory{
-		// pub.PositionsService_Name: PositionsServiceFactory(p.reflowablePositionsStrategy),
+		pub.PositionsService_Name: PositionsServiceFactory(),
 	})
 	return pub.NewBuilder(m, f, builder), nil
 }
