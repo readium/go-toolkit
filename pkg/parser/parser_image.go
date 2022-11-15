@@ -28,7 +28,7 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	if err != nil {
 		return nil, err
 	}
-	readingOrder := make(manifest.LinkList, 0)
+	readingOrder := make(manifest.LinkList, 0, len(links))
 	for _, link := range links {
 		// Filter out all irrelevant files
 		if extensions.IsHiddenOrThumbs(link.Href) || !link.MediaType().IsBitmap() {

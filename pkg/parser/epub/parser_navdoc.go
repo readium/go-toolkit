@@ -53,8 +53,9 @@ func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]s
 		return nil, nil
 	}
 
-	var types []string
-	for _, prop := range parseProperties(typeAttr) {
+	parsedProps := parseProperties(typeAttr)
+	types := make([]string, 0, len(parsedProps))
+	for _, prop := range parsedProps {
 		types = append(types, resolveProperty(prop, prefixMap, DefaultVocabType))
 	}
 
@@ -65,17 +66,19 @@ func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]s
 	return nil, nil
 }
 
-func parseOlElement(ol *xmlquery.Node, filePath string) (links manifest.LinkList) {
+func parseOlElement(ol *xmlquery.Node, filePath string) manifest.LinkList {
 	if ol == nil {
 		return nil
 	}
+	ols := ol.SelectElements(NSSelect(NamespaceXHTML, "li"))
+	links := make(manifest.LinkList, 0, len(ols))
 	for _, li := range ol.SelectElements(NSSelect(NamespaceXHTML, "li")) {
 		l := parseLiElement(li, filePath)
 		if l != nil {
 			links = append(links, *l)
 		}
 	}
-	return
+	return links
 }
 
 func parseLiElement(li *xmlquery.Node, filePath string) (link *manifest.Link) {

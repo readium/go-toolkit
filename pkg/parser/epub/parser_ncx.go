@@ -40,8 +40,9 @@ func parseNavMapElement(element *xmlquery.Node, filePath string) manifest.LinkLi
 }
 
 func parsePageListElement(element *xmlquery.Node, filePath string) manifest.LinkList {
-	var links manifest.LinkList
-	for _, el := range element.SelectElements(NSSelect(NamespaceNCX, "pageTarget")) {
+	selectedElements := element.SelectElements(NSSelect(NamespaceNCX, "pageTarget"))
+	links := make([]manifest.Link, 0, len(selectedElements))
+	for _, el := range selectedElements {
 		href := extractHref(el, filePath)
 		title := extractTitle(el)
 		if href == "" || title == "" {

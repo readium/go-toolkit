@@ -28,7 +28,7 @@ func (p AudioParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	if err != nil {
 		return nil, err
 	}
-	readingOrder := make(manifest.LinkList, 0)
+	readingOrder := make(manifest.LinkList, 0, len(links))
 	for _, link := range links {
 		// Filter out all irrelevant files
 		fext := filepath.Ext(strings.ToLower(link.Href))
@@ -39,7 +39,7 @@ func (p AudioParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 		if extensions.IsHiddenOrThumbs(link.Href) || !contains {
 			continue
 		}
-		links = append(links, link)
+		readingOrder = append(readingOrder, link)
 	}
 
 	if len(readingOrder) == 0 {

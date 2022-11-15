@@ -86,6 +86,7 @@ func SubjectFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNormal
 	var subjects []Subject
 	switch rjx := rawJsonArray.(type) {
 	case []interface{}:
+		subjects = make([]Subject, 0, len(rjx))
 		for i, entry := range rjx {
 			rs, err := SubjectFromJSON(entry, normalizeHref)
 			if err != nil {
@@ -102,7 +103,7 @@ func SubjectFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNormal
 			return nil, err
 		}
 		if s != nil {
-			subjects = append(subjects, *s)
+			subjects = []Subject{*s}
 		}
 	}
 	return subjects, nil

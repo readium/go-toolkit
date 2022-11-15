@@ -37,7 +37,7 @@ func (s *PositionsService) Get(link manifest.Link) (fetcher.Resource, bool) {
 // Positions implements pub.PositionsService
 func (s *PositionsService) Positions() []manifest.Locator {
 	poss := s.PositionsByReadingOrder()
-	var positions []manifest.Locator
+	positions := make([]manifest.Locator, 0, len(poss)) // At least 1 link per RO element
 	for _, v := range poss {
 		positions = append(positions, v...)
 	}
