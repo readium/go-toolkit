@@ -59,8 +59,8 @@ func (r *BytesResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	if start > (length - 1) {
 		start = length - 1
 	}
-	if end > (length - 1) {
-		end = length - 1
+	if end > length {
+		end = length
 	}
 
 	return r._bytes[start:end], nil
