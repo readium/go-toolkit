@@ -12,7 +12,7 @@ func parseSliceOrString(value interface{}, deduplicate bool) (result []string, e
 	case string:
 		result = []string{v} // Just a single item
 	case []interface{}:
-		result = []string{}
+		result = make([]string, 0, len(v))
 		for i, vv := range v {
 			str, ok := vv.(string)
 			if !ok {

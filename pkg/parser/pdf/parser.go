@@ -43,7 +43,9 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 		return nil, errors.New("unable to find PDF file: no matching link found")
 	}
 
-	ctx, err := pdfcpu.Read(fetcher.NewResourceReadSeeker(f.Get(*link)), pdfcpu.NewDefaultConfiguration())
+	conf := pdfcpu.NewDefaultConfiguration()
+	conf.ValidationMode = pdfcpu.ValidationRelaxed
+	ctx, err := pdfcpu.Read(fetcher.NewResourceReadSeeker(f.Get(*link)), conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed opening PDF")
 	}

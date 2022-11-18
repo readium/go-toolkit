@@ -58,5 +58,6 @@ func (rs *ResourceReadSeeker) Read(p []byte) (n int, err error) {
 		return
 	}
 	n = copy(p, bin)
+	rs.offset += int64(n)
 	return
 }
