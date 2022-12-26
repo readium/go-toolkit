@@ -33,8 +33,14 @@ func loadDecoder(meta pdfcpu.Metadata) (*xmp.Document, []byte, error) {
 func ParseMetadata(ctx *pdfcpu.Context, link *manifest.Link) (m manifest.Manifest, err error) {
 	if link != nil {
 		m.ReadingOrder = manifest.LinkList{{
-			Href: strings.TrimPrefix(link.Href, "/"),
-			Type: mediatype.PDF.String(),
+			Href:       strings.TrimPrefix(link.Href, "/"),
+			Type:       mediatype.PDF.String(),
+			Title:      link.Title,
+			Rels:       link.Rels,
+			Properties: link.Properties,
+			Alternates: link.Alternates,
+			Children:   link.Children,
+			Languages:  link.Languages,
 		}}
 	}
 	m.Metadata.ConformsTo = manifest.Profiles{manifest.ProfilePDF}
