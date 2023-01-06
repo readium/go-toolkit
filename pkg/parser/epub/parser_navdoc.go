@@ -3,9 +3,9 @@ package epub
 import (
 	"strings"
 
-	"github.com/chocolatkey/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/xmlquery"
 )
 
 func ParseNavDoc(document *xmlquery.Node, filePath string) map[string][]manifest.Link {

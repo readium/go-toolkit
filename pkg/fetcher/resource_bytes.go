@@ -5,8 +5,8 @@ import (
 	"errors"
 	"io"
 
-	"github.com/chocolatkey/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/xmlquery"
 )
 
 // BytesResource is a Resource serving a lazy-loaded bytes buffer.

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chocolatkey/xmlquery"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/xmlquery"
 )
 
 type Title struct {

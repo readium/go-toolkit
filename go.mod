@@ -4,11 +4,11 @@ go 1.18
 
 require (
 	github.com/agext/regexp v1.3.0
-	github.com/chocolatkey/xmlquery v0.0.0-20221011024504-24b08dedc410
 	github.com/deckarep/golang-set v1.7.1
 	github.com/gorilla/mux v1.7.4
 	github.com/opds-community/libopds2-go v0.0.0-20170628075933-9c163cf60f6e
 	github.com/pkg/errors v0.9.1
+	github.com/readium/xmlquery v0.0.0-20230106230237-8f493145aef4
 	github.com/relvacode/iso8601 v1.1.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/pflag v1.0.5

@@ -3,10 +3,10 @@ package epub
 import (
 	"strconv"
 
-	"github.com/chocolatkey/xmlquery"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/xmlquery"
 )
 
 type PackageDocument struct {
