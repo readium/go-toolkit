@@ -2,13 +2,14 @@ package fetcher
 
 import (
 	"errors"
+	"io"
 	"path"
 	"strings"
 
-	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/xmlquery"
 )
 
 // Provides access to entries of an archive.
@@ -93,10 +94,12 @@ type entryResource struct {
 	entry archive.Entry
 }
 
+// File implements Resource
 func (r *entryResource) File() string {
 	return ""
 }
 
+// Close implements Resource
 func (r *entryResource) Close() {
 	// Nothing needs to be done at the moment
 }
@@ -116,6 +119,7 @@ func (r *entryResource) Link() manifest.Link {
 	return r.link
 }
 
+// Read implements Resource
 func (r *entryResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	data, err := r.entry.Read(start, end)
 	if err == nil {
@@ -131,18 +135,38 @@ func (r *entryResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	return nil, Other(err)
 }
 
+// Stream implements Resource
+func (r *entryResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	n, err := r.entry.Stream(w, start, end)
+	if err == nil {
+		return n, nil
+	}
+
+	// Bad range
+	if err.Error() == "range not satisfiable" {
+		return -1, RangeNotSatisfiable(errors.New("end of range smaller than start"))
+	}
+
+	// Other error
+	return -1, Other(err)
+}
+
+// Length implements Resource
 func (r *entryResource) Length() (int64, *ResourceError) {
 	return int64(r.entry.Length()), nil
 }
 
+// ReadAsString implements Resource
 func (r *entryResource) ReadAsString() (string, *ResourceError) { // TODO determine how charset is needed
 	return ReadResourceAsString(r)
 }
 
+// ReadAsJSON implements Resource
 func (r *entryResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return ReadResourceAsJSON(r)
 }
 
-func (r *entryResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r)
+// ReadAsXML implements Resource
+func (r *entryResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
+	return ReadResourceAsXML(r, prefixes)
 }

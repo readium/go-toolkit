@@ -64,7 +64,10 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 		ReadingOrder: readingOrder,
 	}
 
-	return pub.NewBuilder(manifest, fetcher), nil // TODO services!
+	builder := pub.NewServicesBuilder(map[string]pub.ServiceFactory{
+		pub.PositionsService_Name: pub.PerResourcePositionsServiceFactory("image/*"),
+	})
+	return pub.NewBuilder(manifest, fetcher, builder), nil
 }
 
 var allowed_extensions_image = map[string]struct{}{"acbf": {}, "xml": {}, "txt": {}}

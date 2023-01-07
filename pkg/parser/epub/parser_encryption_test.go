@@ -1,23 +1,21 @@
 package epub
 
 import (
-	"os"
 	"testing"
 
-	"github.com/antchfx/xmlquery"
+	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/stretchr/testify/assert"
 )
 
 func loadEncryption(name string) (map[string]manifest.Encryption, error) {
-	r, err := os.Open("./testdata/encryption/encryption-" + name + ".xml")
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	n, err := xmlquery.Parse(r)
-	if err != nil {
-		return nil, err
+	n, rerr := fetcher.NewFileResource(manifest.Link{}, "./testdata/encryption/encryption-"+name+".xml").ReadAsXML(map[string]string{
+		NamespaceENC:  "enc",
+		NamespaceSIG:  "ds",
+		NamespaceCOMP: "comp",
+	})
+	if rerr != nil {
+		return nil, rerr.Cause
 	}
 
 	return ParseEncryption(n), nil

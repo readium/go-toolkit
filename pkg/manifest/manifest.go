@@ -277,7 +277,7 @@ func (m *Manifest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (m Manifest) MarshalJSON() ([]byte, error) {
+func (m Manifest) ManifestToJSON(selfLink *Link) map[string]interface{} {
 	res := make(map[string]interface{})
 	if len(m.Context) > 1 {
 		res["@context"] = m.Context
@@ -287,7 +287,16 @@ func (m Manifest) MarshalJSON() ([]byte, error) {
 		res["@context"] = WebpubManifestContext
 	}
 	res["metadata"] = m.Metadata
-	res["links"] = m.Links
+	if selfLink != nil {
+		newList := make(LinkList, len(m.Links)+1)
+		for i, link := range m.Links {
+			newList[i] = link
+		}
+		newList[len(newList)-1] = *selfLink
+		res["links"] = newList
+	} else {
+		res["links"] = m.Links
+	}
 	res["readingOrder"] = m.ReadingOrder
 	if len(m.Resources) > 0 {
 		res["resources"] = m.Resources
@@ -296,8 +305,11 @@ func (m Manifest) MarshalJSON() ([]byte, error) {
 		res["toc"] = m.TableOfContents
 	}
 	appendPublicationCollectionToJSON(m.Subcollections, res)
+	return res
+}
 
-	return json.Marshal(res)
+func (m Manifest) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.ManifestToJSON(nil))
 }
 
 /*

@@ -299,11 +299,14 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 		metadata.BelongsTo = belongsTo
 	}
 
+	// Presentation
+	// TODO custom presentation unmarshalling
+
 	// Delete above vals so that we can put everything else in OtherMetadata
 	for _, v := range []string{
 		"title", "subtitle", "sortAs", "identifier", "@type", "conformsTo", "modified", "published", "readingProgression", "description", "subject", "language",
 		"contributor", "publisher", "imprint", "author", "translator", "editor", "artist", "illustrator", "letterer", "penciler", "colorist", "inker", "narrator",
-		"duration", "numberOfPages", "belongsTo", "belongs_to",
+		"duration", "numberOfPages", "belongsTo", "belongs_to", "presentation",
 	} {
 		delete(rawJson, v)
 	}
@@ -334,6 +337,10 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	j := m.OtherMetadata
 	if j == nil {
 		j = make(map[string]interface{})
+	}
+
+	if m.Presentation != nil {
+		j["presentation"] = m.Presentation
 	}
 
 	if m.Identifier != "" {

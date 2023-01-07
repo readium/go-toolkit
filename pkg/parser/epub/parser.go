@@ -1,4 +1,4 @@
-package parser
+package epub
 
 import (
 	"github.com/pkg/errors"
@@ -6,23 +6,32 @@ import (
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
-	"github.com/readium/go-toolkit/pkg/parser/epub"
 	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/readium/go-toolkit/pkg/util"
 )
 
-type EPUBParser struct {
+type Parser struct {
+	reflowablePositionsStrategy ReflowableStrategy
+}
+
+func NewParser(strategy ReflowableStrategy) Parser {
+	if strategy == nil {
+		strategy = RecommendedReflowableStrategy
+	}
+	return Parser{
+		reflowablePositionsStrategy: strategy,
+	}
 }
 
 // Parse implements PublicationParser
-func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Builder, error) {
+func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Builder, error) {
 	fallbackTitle := asset.Name()
 
 	if !asset.MediaType().Equal(&mediatype.EPUB) {
 		return nil, nil
 	}
 
-	opfPath, err := epub.GetRootFilePath(f)
+	opfPath, err := GetRootFilePath(f)
 	if err != nil {
 		return nil, err
 	}
@@ -30,17 +39,22 @@ func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub
 		opfPath = "/" + opfPath
 	}
 
-	opfXmlDocument, errx := f.Get(manifest.Link{Href: opfPath}).ReadAsXML()
+	opfXmlDocument, errx := f.Get(manifest.Link{Href: opfPath}).ReadAsXML(map[string]string{
+		NamespaceOPF:                         "opf",
+		NamespaceDC:                          "dc",
+		VocabularyDCTerms:                    "dcterms",
+		"http://www.idpf.org/2013/rendition": "rendition",
+	})
 	if errx != nil {
 		return nil, errx
 	}
 
-	packageDocument, err := epub.ParsePackageDocument(opfXmlDocument, opfPath)
+	packageDocument, err := ParsePackageDocument(opfXmlDocument, opfPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid OPF file")
 	}
 
-	manifest := epub.PublicationFactory{
+	manifest := PublicationFactory{
 		FallbackTitle:   fallbackTitle,
 		PackageDocument: *packageDocument,
 		NavigationData:  parseNavigationData(*packageDocument, f),
@@ -50,24 +64,31 @@ func (p EPUBParser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub
 
 	ffetcher := f
 	if manifest.Metadata.Identifier != "" {
-		ffetcher = fetcher.NewTransformingFetcher(f, epub.NewDeobfuscator(manifest.Metadata.Identifier).Transform)
+		ffetcher = fetcher.NewTransformingFetcher(f, NewDeobfuscator(manifest.Metadata.Identifier).Transform)
 	}
 
-	return pub.NewBuilder(manifest, ffetcher), nil // TODO services!
+	builder := pub.NewServicesBuilder(map[string]pub.ServiceFactory{
+		pub.PositionsService_Name: PositionsServiceFactory(p.reflowablePositionsStrategy),
+	})
+	return pub.NewBuilder(manifest, ffetcher, builder), nil
 }
 
 func parseEncryptionData(fetcher fetcher.Fetcher) (ret map[string]manifest.Encryption) {
-	n, err := fetcher.Get(manifest.Link{Href: "/META-INF/encryption.xml"}).ReadAsXML()
+	n, err := fetcher.Get(manifest.Link{Href: "/META-INF/encryption.xml"}).ReadAsXML(map[string]string{
+		NamespaceENC:  "enc",
+		NamespaceSIG:  "ds",
+		NamespaceCOMP: "comp",
+	})
 	if err != nil {
 		return
 	}
-	return epub.ParseEncryption(n)
+	return ParseEncryption(n)
 }
 
-func parseNavigationData(packageDocument epub.PackageDocument, fetcher fetcher.Fetcher) (ret map[string][]manifest.Link) {
+func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetcher) (ret map[string][]manifest.Link) {
 	ret = make(map[string][]manifest.Link)
 	if packageDocument.EPUBVersion < 3.0 {
-		var ncxItem *epub.Item
+		var ncxItem *Item
 		if packageDocument.Spine.TOC != "" {
 			for _, v := range packageDocument.Manifest {
 				if v.ID == packageDocument.Spine.TOC {
@@ -90,16 +111,18 @@ func parseNavigationData(packageDocument epub.PackageDocument, fetcher fetcher.F
 		if err != nil {
 			return
 		}
-		n, nerr := fetcher.Get(manifest.Link{Href: ncxPath}).ReadAsXML()
+		n, nerr := fetcher.Get(manifest.Link{Href: ncxPath}).ReadAsXML(map[string]string{
+			NamespaceNCX: "ncx",
+		})
 		if nerr != nil {
 			return
 		}
-		ret = epub.ParseNCX(n, ncxPath)
+		ret = ParseNCX(n, ncxPath)
 	} else {
-		var navItem *epub.Item
+		var navItem *Item
 		for _, v := range packageDocument.Manifest {
 			for _, st := range v.Properties {
-				if st == epub.VocabularyItem+"nav" {
+				if st == VocabularyItem+"nav" {
 					navItem = &v
 					break
 				}
@@ -115,20 +138,23 @@ func parseNavigationData(packageDocument epub.PackageDocument, fetcher fetcher.F
 		if err != nil {
 			return
 		}
-		n, errx := fetcher.Get(manifest.Link{Href: navPath}).ReadAsXML()
+		n, errx := fetcher.Get(manifest.Link{Href: navPath}).ReadAsXML(map[string]string{
+			NamespaceXHTML: "html",
+			NamespaceOPS:   "epub",
+		})
 		if errx != nil {
 			return
 		}
-		ret = epub.ParseNavDoc(n, navPath)
+		ret = ParseNavDoc(n, navPath)
 	}
 	return
 }
 
 func parseDisplayOptions(fetcher fetcher.Fetcher) (ret map[string]string) {
 	ret = make(map[string]string)
-	displayOptionsXml, err := fetcher.Get(manifest.Link{Href: "/META-INF/com.apple.ibooks.display-options.xml"}).ReadAsXML()
+	displayOptionsXml, err := fetcher.Get(manifest.Link{Href: "/META-INF/com.apple.ibooks.display-options.xml"}).ReadAsXML(nil)
 	if err != nil {
-		displayOptionsXml, err = fetcher.Get(manifest.Link{Href: "/META-INF/com.kobobooks.display-options.xml"}).ReadAsXML()
+		displayOptionsXml, err = fetcher.Get(manifest.Link{Href: "/META-INF/com.kobobooks.display-options.xml"}).ReadAsXML(nil)
 		if err != nil {
 			return
 		}

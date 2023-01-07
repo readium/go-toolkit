@@ -72,7 +72,7 @@ func (a *FileAsset) CreateFetcher(dependencies Dependencies, credentials string)
 	if stat.IsDir() {
 		return fetcher.NewFileFetcher("/", a.filepath), nil
 	} else {
-		af, err := fetcher.NewArchiveFetcherFromPath(a.filepath)
+		af, err := fetcher.NewArchiveFetcherFromPathWithFactory(a.filepath, dependencies.ArchiveFactory)
 		if err == nil {
 			return af, nil
 		}

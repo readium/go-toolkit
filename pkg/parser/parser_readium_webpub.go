@@ -81,5 +81,5 @@ func (p WebPubParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetche
 		return nil, errors.New("invalid LCP protected PDF")
 	}
 
-	return pub.NewBuilder(*manifest, lFetcher), nil // TODO services!
+	return pub.NewBuilder(*manifest, lFetcher, nil), nil // TODO services!
 }

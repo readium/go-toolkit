@@ -1,23 +1,20 @@
 package epub
 
 import (
-	"os"
 	"testing"
 
-	"github.com/antchfx/xmlquery"
+	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/stretchr/testify/assert"
 )
 
 func loadNavDoc(name string) (map[string][]manifest.Link, error) {
-	r, err := os.Open("./testdata/navdoc/" + name + ".xhtml")
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	n, err := xmlquery.Parse(r)
-	if err != nil {
-		return nil, err
+	n, rerr := fetcher.NewFileResource(manifest.Link{}, "./testdata/navdoc/"+name+".xhtml").ReadAsXML(map[string]string{
+		NamespaceXHTML: "html",
+		NamespaceOPS:   "epub",
+	})
+	if rerr != nil {
+		return nil, rerr.Cause
 	}
 
 	return ParseNavDoc(n, "/OEBPS/xhtml/nav.xhtml"), nil

@@ -7,6 +7,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/parser"
+	"github.com/readium/go-toolkit/pkg/parser/epub"
 	"github.com/readium/go-toolkit/pkg/pub"
 )
 
@@ -29,7 +30,7 @@ func New(parsers []parser.PublicationParser, ignoreDefaultParsers bool, archiveF
 	}
 
 	defaultParsers := []parser.PublicationParser{
-		parser.EPUBParser{},
+		epub.NewParser(nil),
 		// TODO PDF parser
 		parser.NewWebPubParser(cli),
 		parser.ImageParser{},

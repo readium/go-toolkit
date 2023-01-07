@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/xmlquery"
 )
 
 // Provides access to resources on the local file system.
@@ -192,6 +192,37 @@ func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	return data[:n], nil
 }
 
+// Stream implements Resource
+func (r *FileResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	if end < start {
+		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
+		return -1, err
+	}
+	f, ex := r.open()
+	if ex != nil {
+		return -1, ex
+	}
+	r.read = true
+	if start == 0 && end == 0 {
+		n, err := io.Copy(w, f)
+		if err != nil {
+			return -1, Other(err)
+		}
+		return n, nil
+	}
+	if start > 0 {
+		_, err := f.Seek(start, 0)
+		if err != nil {
+			return -1, Other(err)
+		}
+	}
+	n, err := io.CopyN(w, f, end-start+1)
+	if err != nil && err != io.EOF {
+		return n, Other(err)
+	}
+	return n, nil
+}
+
 // Length implements Resource
 func (r *FileResource) Length() (int64, *ResourceError) {
 	f, ex := r.open()
@@ -216,8 +247,8 @@ func (r *FileResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 }
 
 // ReadAsXML implements Resource
-func (r *FileResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r)
+func (r *FileResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
+	return ReadResourceAsXML(r, prefixes)
 }
 
 func NewFileResource(link manifest.Link, abspath string) *FileResource {

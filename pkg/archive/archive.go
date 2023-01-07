@@ -2,12 +2,14 @@ package archive
 
 import (
 	"errors"
+	"io"
 	"os"
 )
 
 type ArchiveFactory interface {
-	Open(filepath string, password string) (Archive, error)  // Opens an archive from a local [file].
-	OpenBytes(data []byte, password string) (Archive, error) // Opens an archive from a [data] slice.
+	Open(filepath string, password string) (Archive, error)                         // Opens an archive from a local [file].
+	OpenBytes(data []byte, password string) (Archive, error)                        // Opens an archive from a [data] slice.
+	OpenReader(reader ReaderAtCloser, size int64, password string) (Archive, error) // Opens an archive from a reader.
 }
 
 type DefaultArchiveFactory struct {
@@ -36,16 +38,25 @@ func (e DefaultArchiveFactory) OpenBytes(data []byte, password string) (Archive,
 	return e.gozipFactory.OpenBytes(data, password)
 }
 
+// OpenBytes implements ArchiveFactory
+func (e DefaultArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string) (Archive, error) {
+	if reader == nil {
+		return nil, errors.New("archive is nil")
+	}
+	return e.gozipFactory.OpenReader(reader, size, password)
+}
+
 func NewArchiveFactory() DefaultArchiveFactory {
 	return DefaultArchiveFactory{}
 }
 
 // Holds an archive entry's metadata.
 type Entry interface {
-	Path() string                                // Absolute path to the entry in the archive.
-	Length() uint64                              // Uncompressed data length.
-	CompressedLength() uint64                    // Compressed data length.
-	Read(start int64, end int64) ([]byte, error) // Reads the whole content of this entry, or a portion when [start] or [end] are specified.
+	Path() string                                              // Absolute path to the entry in the archive.
+	Length() uint64                                            // Uncompressed data length.
+	CompressedLength() uint64                                  // Compressed data length.
+	Read(start int64, end int64) ([]byte, error)               // Reads the whole content of this entry, or a portion when [start] or [end] are specified.
+	Stream(w io.Writer, start int64, end int64) (int64, error) // Streams the whole content of this entry to a writer, or a portion when [start] or [end] are specified.
 	// Close()
 }
 

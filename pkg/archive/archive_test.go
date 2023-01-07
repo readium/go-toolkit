@@ -1,6 +1,7 @@
 package archive
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,48 +64,85 @@ func TestArchiveMissingEntry(t *testing.T) {
 func TestArchiveFullReading(t *testing.T) {
 	withArchives(t, func(archive Archive) {
 		entry, err := archive.Entry("mimetype")
-		assert.NoError(t, err)
-		b, err := entry.Read(0, 0)
-		assert.NoError(t, err)
-		assert.Equal(t, "application/epub+zip", string(b))
+		if assert.NoError(t, err) {
+			b, err := entry.Read(0, 0)
+			if assert.NoError(t, err) {
+				assert.Equal(t, "application/epub+zip", string(b))
+			}
+
+			var tmp bytes.Buffer
+			n, err := entry.Stream(&tmp, 0, 0)
+			if assert.NoError(t, err) {
+				assert.EqualValues(t, 20, n)
+				assert.Equal(t, "application/epub+zip", tmp.String())
+			}
+		}
 	})
 }
 
 func TestArchivePartialReading(t *testing.T) {
 	withArchives(t, func(archive Archive) {
 		entry, err := archive.Entry("mimetype")
-		assert.NoError(t, err)
-		b, err := entry.Read(0, 10)
-		assert.NoError(t, err)
-		assert.Equal(t, "application", string(b))
-		assert.Equal(t, 11, len(b))
+		if assert.NoError(t, err) {
+			b, err := entry.Read(0, 10)
+			if assert.NoError(t, err) {
+				assert.Equal(t, "application", string(b))
+				assert.Equal(t, 11, len(b))
+			}
+
+			var tmp bytes.Buffer
+			n, err := entry.Stream(&tmp, 0, 10)
+			if assert.NoError(t, err) {
+				assert.EqualValues(t, 11, n)
+				s := tmp.String()
+				assert.Equal(t, "application", s)
+				assert.Equal(t, 11, len(s))
+			}
+		}
 	})
 }
 
 func TestArchiveOutOfRangeClamping(t *testing.T) {
 	withArchives(t, func(archive Archive) {
 		entry, err := archive.Entry("mimetype")
-		assert.NoError(t, err)
-		b, err := entry.Read(-5, 60)
-		assert.NoError(t, err)
-		assert.Equal(t, "application/epub+zip", string(b))
-		assert.Equal(t, 20, len(b))
+		if assert.NoError(t, err) {
+			b, err := entry.Read(-5, 60)
+			if assert.NoError(t, err) {
+				assert.Equal(t, "application/epub+zip", string(b))
+				assert.Equal(t, 20, len(b))
+			}
+
+			var tmp bytes.Buffer
+			n, err := entry.Stream(&tmp, -5, 60)
+			if assert.NoError(t, err) {
+				assert.EqualValues(t, 20, n)
+				s := tmp.String()
+				assert.Equal(t, "application/epub+zip", s)
+				assert.Equal(t, 20, len(s))
+			}
+		}
 	})
 }
 
 func TestArchiveDecreasingRange(t *testing.T) {
 	withArchives(t, func(archive Archive) {
 		entry, err := archive.Entry("mimetype")
-		assert.NoError(t, err)
-		_, err = entry.Read(60, 20)
-		assert.Error(t, err, "decreasing ranges are not satisfiable")
+		if assert.NoError(t, err) {
+			_, err = entry.Read(60, 20)
+			assert.Error(t, err, "decreasing ranges are not satisfiable")
+
+			var tmp bytes.Buffer
+			_, err = entry.Stream(&tmp, 60, 20)
+			assert.Error(t, err, "decreasing ranges are not satisfiable")
+		}
 	})
 }
 
 func TestArchiveEntrySize(t *testing.T) {
 	withArchives(t, func(archive Archive) {
 		entry, err := archive.Entry("mimetype")
-		assert.NoError(t, err)
-		assert.EqualValues(t, 20, entry.Length())
+		if assert.NoError(t, err) {
+			assert.EqualValues(t, 20, entry.Length())
+		}
 	})
 }

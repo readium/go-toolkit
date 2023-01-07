@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"path"
+	"sync"
 )
 
 type gozipArchiveEntry struct {
@@ -38,7 +39,8 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	}
 	defer f.Close()
 	if start == 0 && end == 0 {
-		data, err := io.ReadAll(f)
+		data := make([]byte, e.file.UncompressedSize64)
+		_, err := io.ReadFull(f, data)
 		if err != nil {
 			return nil, err
 		}
@@ -58,11 +60,36 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	return data[:n], nil
 }
 
+func (e gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, error) {
+	if end < start {
+		return -1, errors.New("range not satisfiable")
+	}
+	f, err := e.file.Open()
+	if err != nil {
+		return -1, err
+	}
+	defer f.Close()
+	if start == 0 && end == 0 {
+		return io.Copy(w, f)
+	}
+	if start > 0 {
+		n, err := io.CopyN(io.Discard, f, start)
+		if err != nil {
+			return n, err
+		}
+	}
+	n, err := io.CopyN(w, f, end-start+1)
+	if err != nil && err != io.EOF {
+		return n, err
+	}
+	return n, nil
+}
+
 // An archive from a zip file using go's stdlib
 type gozipArchive struct {
 	zip           *zip.Reader
 	closer        func() error
-	cachedEntries map[string]Entry
+	cachedEntries sync.Map
 }
 
 func (a *gozipArchive) Close() {
@@ -70,23 +97,20 @@ func (a *gozipArchive) Close() {
 }
 
 func (a *gozipArchive) Entries() []Entry {
-	if a.cachedEntries == nil { // Initialize cache
-		a.cachedEntries = make(map[string]Entry)
-	}
 	entries := make([]Entry, 0, len(a.zip.File))
 	for _, f := range a.zip.File {
 		if f.FileInfo().IsDir() {
 			continue
 		}
 
-		aentry, ok := a.cachedEntries[f.Name]
+		aentry, ok := a.cachedEntries.Load(f.Name)
 		if !ok {
 			aentry = gozipArchiveEntry{
 				file: f,
 			}
-			a.cachedEntries[f.Name] = aentry
+			a.cachedEntries.Store(f.Name, aentry)
 		}
-		entries = append(entries, aentry)
+		entries = append(entries, aentry.(Entry))
 	}
 	return entries
 }
@@ -96,23 +120,20 @@ func (a *gozipArchive) Entry(p string) (Entry, error) {
 		return nil, fs.ErrNotExist
 	}
 	cpath := path.Clean(p)
-	if a.cachedEntries == nil {
-		// Initialize cache
-		a.cachedEntries = make(map[string]Entry)
-	} else {
-		// Check for entry in cache
-		aentry, ok := a.cachedEntries[cpath]
-		if ok { // Found entry in cache
-			return aentry, nil
-		}
+
+	// Check for entry in cache
+	aentry, ok := a.cachedEntries.Load(cpath)
+	if ok { // Found entry in cache
+		return aentry.(Entry), nil
 	}
+
 	for _, f := range a.zip.File {
 		fp := path.Clean(f.Name)
 		if fp == cpath {
 			aentry := gozipArchiveEntry{
 				file: f,
 			}
-			a.cachedEntries[fp] = aentry // Put entry in cache
+			a.cachedEntries.Store(fp, aentry) // Put entry in cache
 			return aentry, nil
 		}
 	}
@@ -129,7 +150,11 @@ func NewGoZIPArchive(zip *zip.Reader, closer func() error) Archive {
 type gozipArchiveFactory struct{}
 
 func (e gozipArchiveFactory) Open(filepath string, password string) (Archive, error) {
-	// Go's built-in zip reader doesn't support passwords. Maybe look into something like https://github.com/mholt/archiver
+	// Go's built-in zip reader doesn't support passwords.
+	if password != "" {
+		return nil, errors.New("password-protected archives not supported")
+	}
+
 	rc, err := zip.OpenReader(filepath)
 	if err != nil {
 		return nil, err
@@ -138,10 +163,32 @@ func (e gozipArchiveFactory) Open(filepath string, password string) (Archive, er
 }
 
 func (e gozipArchiveFactory) OpenBytes(data []byte, password string) (Archive, error) {
-	// Go's built-in zip reader doesn't support passwords. Maybe look into something like https://github.com/mholt/archiver
+	// Go's built-in zip reader doesn't support passwords.
+	if password != "" {
+		return nil, errors.New("password-protected archives not supported")
+	}
+
 	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return nil, err
 	}
 	return NewGoZIPArchive(r, func() error { return nil }), nil
+}
+
+type ReaderAtCloser interface {
+	io.Closer
+	io.ReaderAt
+}
+
+func (e gozipArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string) (Archive, error) {
+	// Go's built-in zip reader doesn't support passwords.
+	if password != "" {
+		return nil, errors.New("password-protected archives not supported")
+	}
+
+	r, err := zip.NewReader(reader, size)
+	if err != nil {
+		return nil, err
+	}
+	return NewGoZIPArchive(r, reader.Close), nil
 }

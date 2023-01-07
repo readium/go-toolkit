@@ -3,15 +3,17 @@ package epub
 import (
 	"strconv"
 
-	"github.com/antchfx/xmlquery"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/xmlquery"
 )
 
 func GetRootFilePath(fetcher fetcher.Fetcher) (string, error) {
 	res := fetcher.Get(manifest.Link{Href: "/META-INF/container.xml"})
-	xml, err := res.ReadAsXML()
+	xml, err := res.ReadAsXML(map[string]string{
+		"urn:oasis:names:tc:opendocument:xmlns:container": "cn",
+	})
 	if err != nil {
 		return "", errors.Wrap(err, "failed loading container.xml")
 	}
@@ -24,6 +26,10 @@ func GetRootFilePath(fetcher fetcher.Fetcher) (string, error) {
 		return "", errors.New("no full-path in rootfile")
 	}
 	return p, nil
+}
+
+func NSSelect(namespace, localName string) string {
+	return "*[namespace-uri()='" + namespace + "' and local-name()='" + localName + "']"
 }
 
 func SelectNodeAttrNs(n *xmlquery.Node, ns, name string) string {

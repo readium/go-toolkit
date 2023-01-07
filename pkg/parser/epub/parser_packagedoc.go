@@ -3,10 +3,10 @@ package epub
 import (
 	"strconv"
 
-	"github.com/antchfx/xmlquery"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/xmlquery"
 )
 
 type PackageDocument struct {
@@ -19,7 +19,10 @@ type PackageDocument struct {
 }
 
 func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDocument, error) {
-	pkg := document.SelectElement("/package")
+	pkg := document.SelectElement("/" + NSSelect(NamespaceOPF, "package"))
+	if pkg == nil {
+		return nil, errors.New("package root element not found")
+	}
 	packagePrefixes := parsePrefixes(pkg.SelectAttr("prefix"))
 	prefixMap := make(map[string]string)
 	for k, v := range PackageReservedPrefixes {
@@ -44,18 +47,16 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 	if metadata == nil {
 		return nil, errors.New("failed parsing package metadata")
 	}
-	manifestElement := pkg.SelectElement(
-		"/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='manifest']",
-	)
+	manifestElement := pkg.SelectElement("/" + NSSelect(NamespaceOPF, "manifest"))
 	if manifestElement == nil {
 		return nil, errors.New("package manifest not found")
 	}
-	spineElement := pkg.SelectElement("/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='spine']")
+	spineElement := pkg.SelectElement("/" + NSSelect(NamespaceOPF, "spine"))
 	if spineElement == nil {
 		return nil, errors.New("package spine not found")
 	}
 
-	mels := manifestElement.SelectElements("/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='item']")
+	mels := manifestElement.SelectElements("/" + NSSelect(NamespaceOPF, "item"))
 	manifest := make([]Item, 0, len(mels))
 	for _, mel := range mels {
 		item := ParseItem(mel, filePath, prefixMap)
@@ -124,7 +125,7 @@ type Spine struct {
 func ParseSpine(element *xmlquery.Node, prefixMap map[string]string, epubVersion float64) Spine {
 	itemrefs := make([]ItemRef, 0)
 	for _, itemref := range element.SelectElements(
-		"/*[namespace-uri()='" + NamespaceOPF + "' and local-name()='itemref']",
+		"/" + NSSelect(NamespaceOPF, "itemref"),
 	) {
 		itemref := ParseItemRef(itemref, prefixMap)
 		if itemref == nil {

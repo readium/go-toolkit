@@ -2,13 +2,15 @@ package fetcher
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
 
-	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/xmlquery"
 	"golang.org/x/text/encoding/unicode"
 )
 
@@ -44,6 +46,10 @@ type Resource interface {
 	// When start and end are null, the whole content is returned. Out-of-range indexes are clamped to the available length automatically.
 	Read(start int64, end int64) ([]byte, *ResourceError)
 
+	// Stream the bytes at the given range to a writer.
+	// When start and end are null, the whole content is returned. Out-of-range indexes are clamped to the available length automatically.
+	Stream(w io.Writer, start int64, end int64) (int64, *ResourceError)
+
 	// Reads the full content as a string.
 	// Assumes UTF-8 encoding if no Link charset is given
 	ReadAsString() (string, *ResourceError)
@@ -52,7 +58,7 @@ type Resource interface {
 	ReadAsJSON() (map[string]interface{}, *ResourceError)
 
 	// Reads the full content as a generic XML document.
-	ReadAsXML() (*xmlquery.Node, *ResourceError)
+	ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError)
 }
 
 func ReadResourceAsString(r Resource) (string, *ResourceError) {
@@ -84,12 +90,18 @@ func ReadResourceAsJSON(r Resource) (map[string]interface{}, *ResourceError) {
 	return object, nil
 }
 
-func ReadResourceAsXML(r Resource) (*xmlquery.Node, *ResourceError) {
+func ReadResourceAsXML(r Resource, prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
 	bytes, ex := r.Read(0, 0)
 	if ex != nil {
 		return nil, ex
 	}
-	node, err := xmlquery.Parse(strings.NewReader(string(bytes)))
+	node, err := xmlquery.ParseWithOptions(strings.NewReader(string(bytes)), xmlquery.ParserOptions{
+		Prefixes: prefixes,
+		Decoder: &xmlquery.DecoderOptions{
+			Strict: true,
+			Entity: xml.HTMLEntity,
+		},
+	})
 	if err != nil {
 		return nil, Other(err)
 	}
@@ -260,6 +272,11 @@ func (r FailureResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	return nil, r.ex
 }
 
+// Stream implements Resource
+func (r FailureResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	return -1, r.ex
+}
+
 // ReadAsString implements Resource
 func (r FailureResource) ReadAsString() (string, *ResourceError) {
 	return "", r.ex
@@ -271,7 +288,7 @@ func (r FailureResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 }
 
 // ReadAsXML implements Resource
-func (r FailureResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
+func (r FailureResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
 	return nil, r.ex
 }
 
@@ -313,6 +330,11 @@ func (r ProxyResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	return r.Res.Read(start, end)
 }
 
+// Stream implements Resource
+func (r ProxyResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	return r.Res.Stream(w, start, end)
+}
+
 // ReadAsString implements Resource
 func (r ProxyResource) ReadAsString() (string, *ResourceError) {
 	return r.Res.ReadAsString()
@@ -324,8 +346,8 @@ func (r ProxyResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 }
 
 // ReadAsXML implements Resource
-func (r ProxyResource) ReadAsXML() (*xmlquery.Node, *ResourceError) {
-	return r.Res.ReadAsXML()
+func (r ProxyResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
+	return r.Res.ReadAsXML(prefixes)
 }
 
 /**

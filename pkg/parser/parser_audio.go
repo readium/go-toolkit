@@ -66,7 +66,7 @@ func (p AudioParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 		ReadingOrder: readingOrder,
 	}
 
-	return pub.NewBuilder(manifest, fetcher), nil // TODO services!
+	return pub.NewBuilder(manifest, fetcher, nil), nil // TODO services!
 }
 
 var allowed_extensions_audio_extra = map[string]struct{}{

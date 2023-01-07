@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"net/http/pprof"
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/opds-community/libopds2-go/opds2"
@@ -44,6 +44,19 @@ func (s *PublicationServer) Init() http.Handler {
 
 func (s *PublicationServer) bookHandler(test bool) http.Handler {
 	r := mux.NewRouter()
+
+	r.HandleFunc("/debug/pprof/", pprof.Index)
+	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	r.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
+	r.Handle("/debug/pprof/block", pprof.Handler("block"))
+	r.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+	r.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	r.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
+	r.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
 
 	r.HandleFunc("/list.json", s.demoList)
 	r.HandleFunc("/{filename}/manifest.json", s.getManifest)
@@ -105,6 +118,9 @@ func (s *PublicationServer) getPublication(filename string, r *http.Request) (*p
 	}
 	for i, link := range pub.Manifest.TableOfContents {
 		pub.Manifest.TableOfContents[i] = makeRelative(link)
+	}
+	for i, link := range pub.Manifest.Links {
+		pub.Manifest.Links[i] = makeRelative(link)
 	}
 	var makeCollectionRelative func(mp manifest.PublicationCollectionMap)
 	makeCollectionRelative = func(mp manifest.PublicationCollectionMap) {
@@ -199,31 +215,29 @@ func (s *PublicationServer) getAsset(w http.ResponseWriter, r *http.Request) {
 	defer publication.Close()
 
 	href := path.Clean(vars["asset"])
-	link := publication.Manifest.Resources.FirstWithHref(href)
+	link := publication.Find(href)
 	if link == nil {
-		link = publication.Manifest.ReadingOrder.FirstWithHref(href)
-		if link == nil {
-			w.WriteHeader(404)
-			return
-		}
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
-	link.Href = "/" + link.Href
 
-	res := publication.Fetcher.Get(*link)
+	res := publication.Get(*link)
+	defer res.Close()
 	/*if res.File() != "" {
 		// Shortcut to serve the file in an optimal way
 		http.ServeFile(w, r, res.File())
 		return
 	}*/
-	b, rerr := res.Read(0, 0)
+
+	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
+	w.Header().Set("Content-Type", link.MediaType().String())
+	w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
+
+	_, rerr := res.Stream(w, 0, 0)
 	if rerr != nil {
 		w.WriteHeader(rerr.HTTPStatus())
 		w.Write([]byte(rerr.Error()))
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*") // TODO replace with CORS middleware
-	w.Header().Set("Content-Type", link.MediaType().String())
-	w.Header().Set("Cache-Control", "public, max-age=86400")
-	http.ServeContent(w, r, link.Href, time.Time{}, bytes.NewReader(b))
 }

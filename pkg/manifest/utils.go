@@ -85,9 +85,14 @@ func parseOptString(raw interface{}) string {
 	return rs
 }
 
-func parseOptUint(raw interface{}) uint {
-	ri, _ := raw.(uint)
-	return ri
+func parseOptBool(raw interface{}) bool {
+	rb, _ := raw.(bool)
+	return rb
+}
+
+func parseOptFloat64(raw interface{}) float64 {
+	rb, _ := raw.(float64)
+	return rb
 }
 
 func float64ToUint(f float64) uint {
@@ -102,14 +107,4 @@ func float64Positive(f float64) float64 {
 		return 0
 	}
 	return f
-}
-
-func parseOptBool(raw interface{}) bool {
-	rb, _ := raw.(bool)
-	return rb
-}
-
-func parseOptFloat64(raw interface{}) float64 {
-	rb, _ := raw.(float64)
-	return rb
 }

@@ -1,23 +1,22 @@
 package epub
 
 import (
-	"os"
 	"testing"
 
-	"github.com/antchfx/xmlquery"
+	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/stretchr/testify/assert"
 )
 
 func loadPackageDoc(name string) (*manifest.Manifest, error) {
-	r, err := os.Open("./testdata/package/" + name + ".opf")
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	n, err := xmlquery.Parse(r)
-	if err != nil {
-		return nil, err
+	n, rerr := fetcher.NewFileResource(manifest.Link{}, "./testdata/package/"+name+".opf").ReadAsXML(map[string]string{
+		NamespaceOPF:                         "opf",
+		NamespaceDC:                          "dc",
+		VocabularyDCTerms:                    "dcterms",
+		"http://www.idpf.org/2013/rendition": "rendition",
+	})
+	if rerr != nil {
+		return nil, rerr.Cause
 	}
 
 	d, err := ParsePackageDocument(n, "OEBPS/content.opf")
