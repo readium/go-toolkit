@@ -11,36 +11,74 @@ import (
 // https://www.w3.org/2021/a11y-discov-vocab/latest/
 // https://readium.org/webpub-manifest/schema/a11y.schema.json
 type A11y struct {
-	ConformsTo            []A11yProfile           `json:"conformsTo,omitempty"`           // An established standard to which the described resource conforms.
-	Certification         *A11yCertification      `json:"certification,omitempty"`        // Certification of accessible publications.
-	Summary               string                  `json:"summary,omitempty"`              // A human-readable summary of specific accessibility features or deficiencies, consistent with the other accessibility metadata but expressing subtleties such as "short descriptions are present but long descriptions will be needed for non-visual users" or "short descriptions are present and no long descriptions are needed."
-	AccessModes           []A11yAccessMode        `json:"accessMode,omitempty"`           // The human sensory perceptual system or cognitive faculty through which a person may process or perceive information.
-	AccessModesSufficient []A11yPrimaryAccessMode `json:"accessModeSufficient,omitempty"` //  A list of single or combined accessModes that are sufficient to understand all the intellectual content of a resource.
-	Features              []A11yFeature           `json:"feature,omitempty"`              // Content features of the resource, such as accessible media, alternatives and supported enhancements for accessibility.
-	Hazards               []A11yHazard            `json:"hazard,omitempty"`               // A characteristic of the described resource that is physiologically dangerous to some users.
+	ConformsTo            []A11yProfile             `json:"conformsTo,omitempty"`           // An established standard to which the described resource conforms.
+	Certification         *A11yCertification        `json:"certification,omitempty"`        // Certification of accessible publications.
+	Summary               string                    `json:"summary,omitempty"`              // A human-readable summary of specific accessibility features or deficiencies, consistent with the other accessibility metadata but expressing subtleties such as "short descriptions are present but long descriptions will be needed for non-visual users" or "short descriptions are present and no long descriptions are needed."
+	AccessModes           []A11yAccessMode          `json:"accessMode,omitempty"`           // The human sensory perceptual system or cognitive faculty through which a person may process or perceive information.
+	AccessModesSufficient [][]A11yPrimaryAccessMode `json:"accessModeSufficient,omitempty"` //  A list of single or combined accessModes that are sufficient to understand all the intellectual content of a resource.
+	Features              []A11yFeature             `json:"feature,omitempty"`              // Content features of the resource, such as accessible media, alternatives and supported enhancements for accessibility.
+	Hazards               []A11yHazard              `json:"hazard,omitempty"`               // A characteristic of the described resource that is physiologically dangerous to some users.
 }
 
-func A11yFromJSON(rawJson map[string]interface{}) (*A11y, error) {
-	if rawJson == nil {
+func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
+	if rawJSON == nil {
 		return nil, nil
 	}
 
-	algorithm, ok := rawJson["algorithm"].(string)
-	if !ok || algorithm == "" {
-		return nil, errors.New("[algorithm] is required") // TODO warning
+	a := new(A11y)
+
+	conformsTo, err := parseSliceOrString(rawJSON["conformsTo"], true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling 'conformsTo'")
+	}
+	a.ConformsTo = A11yProfilesFromStrings(conformsTo)
+
+	if certJSON, ok := rawJSON["certification"].(map[string]interface{}); ok {
+		c := A11yCertification{
+			CertifiedBy: parseOptString(certJSON["certifiedBy"]),
+			Credential: parseOptString(certJSON["credential"]),
+			Report: parseOptString(certJSON["report"]),
+		}
+		a.Certification = &c
 	}
 
-	e := new(Encryption)
-	e.Algorithm = algorithm
-	e.Compression = parseOptString(rawJson["compression"])
-	e.OriginalLength = int64(parseOptFloat64(rawJson["originalLength"]))
-	if e.OriginalLength == 0 {
-		e.OriginalLength = int64(parseOptFloat64(rawJson["original-length"]))
+	if summary, ok := rawJSON["summary"].(string); ok {
+		a.Summary = summary
 	}
-	e.Profile = parseOptString(rawJson["profile"])
-	e.Scheme = parseOptString(rawJson["scheme"])
 
-	return e, nil
+	accessModes, err := parseSliceOrString(rawJSON["accessMode"], true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling 'accessMode'")
+	}
+	a.AccessModes = A11yAccessModesFromStrings(accessModes)
+
+	ams := [][]A11yPrimaryAccessMode{}
+	if amsJSON, ok := rawJSON["accessModeSufficient"].([]interface{}); ok {
+		for _, l := range amsJSON {
+			if l, ok := l.([]interface{}); ok {
+				strings, err := parseStringSlice(l, true)
+				if err != nil {
+					return nil, errors.Wrap(err, "failed unmarshalling 'accessModeSufficient'")
+				}
+				ams = append(ams, A11yPrimaryAccessModesFromStrings(strings))
+			}
+		}
+	}
+	a.AccessModesSufficient = ams
+
+	features, err := parseSliceOrString(rawJSON["feature"], true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling 'feature'")
+	}
+	a.Features = A11yFeaturesFromStrings(features)
+
+	hazards, err := parseSliceOrString(rawJSON["hazard"], true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling 'hazard'")
+	}
+	a.Hazards = A11yHazardsFromStrings(hazards)
+
+	return a, nil
 }
 
 func (e *A11y) UnmarshalJSON(data []byte) error {
@@ -75,11 +113,17 @@ const (
 	EPUBA11yWCAG20AAA A11yProfile = "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa"
 )
 
+func A11yProfilesFromStrings(strings []string) []A11yProfile {
+	return fromStrings(strings, func(str string) A11yProfile {
+		return A11yProfile(str)
+	})
+}
+
 // A11yCertification represents a certification for an accessible publication.
 type A11yCertification struct {
-	CertifiedBy *string `json:"certifiedBy,omitempty"` // Identifies a party responsible for the testing and certification of the accessibility of a Publication.
-	Credential  *string `json:"credential,omitempty"`  // Identifies a credential or badge that establishes the authority of the party identified in the associated `certifiedBy` property to certify content accessible.
-	Report      *string `json:"report,omitempty"`      // Provides a link to an accessibility report created by the party identified in the associated `certifiedBy` property.
+	CertifiedBy string `json:"certifiedBy,omitempty"` // Identifies a party responsible for the testing and certification of the accessibility of a Publication.
+	Credential  string `json:"credential,omitempty"`  // Identifies a credential or badge that establishes the authority of the party identified in the associated `certifiedBy` property to certify content accessible.
+	Report      string `json:"report,omitempty"`      // Provides a link to an accessibility report created by the party identified in the associated `certifiedBy` property.
 }
 
 // A11yAccessMode is a human sensory perceptual system or cognitive faculty through which a person may process or perceive information.
@@ -124,6 +168,12 @@ const (
 	A11yAccessModeVisual A11yAccessMode = "visual"
 )
 
+func A11yAccessModesFromStrings(strings []string) []A11yAccessMode {
+	return fromStrings(strings, func(str string) A11yAccessMode {
+		return A11yAccessMode(str)
+	})
+}
+
 // A11yPrimaryAccessMode is a human primary sensory perceptual system or cognitive faculty through which a person may process or perceive information.
 type A11yPrimaryAccessMode string
 
@@ -143,6 +193,12 @@ const (
 	// Indicates that visual perception is necessary to consume the information.
 	A11yPrimaryAccessModeVisual A11yPrimaryAccessMode = "visual"
 )
+
+func A11yPrimaryAccessModesFromStrings(strings []string) []A11yPrimaryAccessMode {
+	return fromStrings(strings, func(str string) A11yPrimaryAccessMode {
+		return A11yPrimaryAccessMode(str)
+	})
+}
 
 // A11yFeature is a content feature of the described resource, such as accessible media, alternatives and supported enhancements for accessibility.
 type A11yFeature string
@@ -276,6 +332,12 @@ const (
 	A11yFeatureNone A11yFeature = "none"
 )
 
+func A11yFeaturesFromStrings(strings []string) []A11yFeature {
+	return fromStrings(strings, func(str string) A11yFeature {
+		return A11yFeature(str)
+	})
+}
+
 // A11yHazard is a characteristic of the described resource that is physiologically dangerous to some users.
 type A11yHazard string
 
@@ -308,3 +370,17 @@ const (
 	// Indicates that the resource does not contain any hazards.
 	A11yHazardNone A11yHazard = "none"
 )
+
+func A11yHazardsFromStrings(strings []string) []A11yHazard {
+	return fromStrings(strings, func(str string) A11yHazard {
+		return A11yHazard(str)
+	})
+}
+
+func fromStrings[T any](strings []string, transform func(string) T) []T {
+	res := []T{}
+	for _, s := range strings {
+		res = append(res, transform(s))
+	}
+	return res
+}

@@ -12,19 +12,24 @@ func parseSliceOrString(value interface{}, deduplicate bool) (result []string, e
 	case string:
 		result = []string{v} // Just a single item
 	case []interface{}:
-		result = []string{}
-		for i, vv := range v {
-			str, ok := vv.(string)
-			if !ok {
-				err = fmt.Errorf("object at position %d is not a string", i)
-				return
-			}
-			if deduplicate {
-				// Deduplicate the slice since it's going to be a set (no unique items)
-				result = extensions.AddToSet(result, str)
-			} else {
-				result = append(result, str)
-			}
+		result, err = parseStringSlice(v, deduplicate)
+	}
+	return
+}
+
+func parseStringSlice(value []interface{}, deduplicate bool) (result []string, err error) {
+	result = []string{}
+	for i, vv := range value {
+		str, ok := vv.(string)
+		if !ok {
+			err = fmt.Errorf("object at position %d is not a string", i)
+			return
+		}
+		if deduplicate {
+			// Deduplicate the slice since it's going to be a set (no unique items)
+			result = extensions.AddToSet(result, str)
+		} else {
+			result = append(result, str)
 		}
 	}
 	return
