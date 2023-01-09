@@ -104,7 +104,7 @@ func (s *PublicationServer) getPublication(filename string, r *http.Request) (*p
 	}
 
 	cp := filepath.Clean(string(fpath))
-	pub, err := streamer.New(nil, false, nil, nil).Open(asset.File(filepath.Join(s.config.PublicationPath, cp)), "")
+	pub, err := streamer.New(streamer.Config{}).Open(asset.File(filepath.Join(s.config.PublicationPath, cp)), "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed opening "+cp)
 	}
