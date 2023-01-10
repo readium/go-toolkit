@@ -378,21 +378,66 @@ func (m MetadataParser) computeMetaItem(expr MetadataItem, metas map[string][]Me
 type metadataAdapter struct {
 	epubVersion float64
 	items       map[string][]MetadataItem
+	links       []EPUBLink
 }
 
 func (m metadataAdapter) Duration() *float64 {
 	return ParseClockValue(m.FirstValue(VocabularyMedia + "duration"))
 }
 
+func (m metadataAdapter) First(property string) (item MetadataItem, ok bool) {
+	items, ok := m.items[property]
+	if !ok || len(items) == 0 {
+		return
+	}
+	item = items[0]
+	return
+}
+
 func (m metadataAdapter) FirstValue(property string) string {
-	p, ok := m.items[property]
+	item, ok := m.First(property)
 	if !ok {
 		return ""
 	}
-	if len(p) == 0 {
-		return ""
+	return item.value
+}
+
+func (m metadataAdapter) Values(property string) []string {
+	values := []string{}
+	if items, ok := m.items[property]; ok {
+		for _, item := range items {
+			values = append(values, item.value)
+		}
 	}
-	return p[0].value
+	return values
+}
+
+func (m metadataAdapter) Links(rel string) []EPUBLink {
+	links := []EPUBLink{}
+	for _, link := range m.links {
+		if extensions.Contains(link.rels, rel) {
+			links = append(links, link)
+		}
+	}
+	return links
+}
+
+func (m metadataAdapter) FirstLink(rel string) (EPUBLink, bool) {
+	for _, link := range m.links {
+		if extensions.Contains(link.rels, rel) {
+			return link, true
+		}
+	}
+	return EPUBLink{}, false
+}
+
+func (m metadataAdapter) FirstLinkRefining(rel string, refinedID string) (EPUBLink, bool) {
+	for _, link := range m.links {
+		if extensions.Contains(link.rels, rel) && link.refines == refinedID {
+			return link, true
+		}
+	}
+	return EPUBLink{}, false
 }
 
 type LinkMetadataAdapter = metadataAdapter
@@ -433,6 +478,7 @@ func (m PubMetadataAdapter) Metadata() manifest.Metadata {
 		LocalizedTitle:     m.LocalizedTitle(),
 		LocalizedSortAs:    m.LocalizedSortAs(),
 		LocalizedSubtitle:  m.LocalizedSubtitle(),
+		Accessibility:      m.Accessibility(),
 		Duration:           m.Duration(),
 		Subjects:           m.Subjects(),
 		Description:        m.Description(),
@@ -586,6 +632,149 @@ func (m PubMetadataAdapter) LocalizedSubtitle() *manifest.LocalizedString {
 func (m PubMetadataAdapter) LocalizedSortAs() *manifest.LocalizedString {
 	m.seedTitleData()
 	return m._localizedSortAs
+}
+
+func (m PubMetadataAdapter) Accessibility() *manifest.A11y {
+	a11y := manifest.NewA11y()
+	a11y.ConformsTo = m.a11yConformsTo()
+	a11y.Certification = m.a11yCertification()
+	a11y.Summary = m.a11ySummary()
+	a11y.AccessModes = m.a11yAccessModes()
+	a11y.AccessModesSufficient = m.a11yAccessModesSufficient()
+	a11y.Features = m.a11yFeatures()
+	a11y.Hazards = m.a11yHazards()
+
+	if a11y.IsEmpty() {
+		return nil
+	}
+	return &a11y
+}
+
+func (m PubMetadataAdapter) a11yConformsTo() []manifest.A11yProfile {
+	profiles := []manifest.A11yProfile{}
+
+	if items, ok := m.items[VocabularyDCTerms+"conformsto"]; ok {
+		for _, item := range items {
+			if profile := a11yProfile(item.value); profile != "" {
+				profiles = append(profiles, profile)
+			}
+		}
+	}
+
+	for _, link := range m.Links(VocabularyDCTerms + "conformsTo") {
+		if profile := a11yProfile(link.href); profile != "" {
+			profiles = append(profiles, profile)
+		}
+	}
+
+	return profiles
+}
+
+func a11yProfile(value string) manifest.A11yProfile {
+	switch value {
+	case "EPUB Accessibility 1.1 - WCAG 2.0 Level A",
+		"http://idpf.org/epub/a11y/accessibility-20170105.html#wcag-a",
+		"http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a",
+		"https://idpf.org/epub/a11y/accessibility-20170105.html#wcag-a",
+		"https://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a":
+		return manifest.EPUBA11y10WCAG20A
+
+	case "EPUB Accessibility 1.1 - WCAG 2.0 Level AA",
+		"http://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa",
+		"http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa",
+		"https://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa",
+		"https://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa":
+		return manifest.EPUBA11y10WCAG20AA
+
+	case "EPUB Accessibility 1.1 - WCAG 2.0 Level AAA",
+		"http://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
+		"http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
+		"https://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
+		"https://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa":
+		return manifest.EPUBA11yWCAG20AAA
+
+	default:
+		return ""
+	}
+}
+
+func (m PubMetadataAdapter) a11yCertification() *manifest.A11yCertification {
+	certifierItem, _ := m.First(VocabularyA11Y + "certifiedBy")
+	c := manifest.A11yCertification{
+		CertifiedBy: certifierItem.value,
+	}
+
+	if certifierItem.id != "" {
+		if items, ok := certifierItem.children[VocabularyA11Y+"certifierCredential"]; ok && len(items) > 0 {
+			c.Credential = items[0].value
+		}
+		if link, ok := m.FirstLinkRefining(VocabularyA11Y+"certifierReport", certifierItem.id); ok {
+			c.Report = link.href
+		}
+	} else {
+		c.Credential = m.FirstValue(VocabularyA11Y + "certifierCredential")
+		c.Report = m.FirstValue(VocabularyA11Y + "certifierReport")
+		if c.Report == "" {
+			if link, ok := m.FirstLink(VocabularyA11Y + "certifierReport"); ok {
+				c.Report = link.href
+			}
+		}
+	}
+
+	if c.IsEmpty() {
+		return nil
+	}
+	return &c
+}
+
+func (m PubMetadataAdapter) a11ySummary() string {
+	return m.FirstValue(VocabularySchema + "accessibilitySummary")
+}
+
+func (m PubMetadataAdapter) a11yAccessModes() []manifest.A11yAccessMode {
+	am := []manifest.A11yAccessMode{}
+	for _, v := range m.Values(VocabularySchema + "accessMode") {
+		am = append(am, manifest.A11yAccessMode(v))
+	}
+	return am
+}
+
+func (m PubMetadataAdapter) a11yAccessModesSufficient() [][]manifest.A11yPrimaryAccessMode {
+	ams := [][]manifest.A11yPrimaryAccessMode{}
+	for _, v := range m.Values(VocabularySchema + "accessModeSufficient") {
+		c := a11yAccessModesSufficient(v)
+		if len(c) > 0 {
+			ams = append(ams, c)
+		}
+	}
+	return ams
+}
+
+func a11yAccessModesSufficient(value string) []manifest.A11yPrimaryAccessMode {
+	ams := []manifest.A11yPrimaryAccessMode{}
+	for _, v := range strings.Split(value, ",") {
+		v = strings.TrimSpace(v)
+		if v != "" {
+			ams = append(ams, manifest.A11yPrimaryAccessMode(v))
+		}
+	}
+	return ams
+}
+
+func (m PubMetadataAdapter) a11yFeatures() []manifest.A11yFeature {
+	am := []manifest.A11yFeature{}
+	for _, v := range m.Values(VocabularySchema + "accessibilityFeature") {
+		am = append(am, manifest.A11yFeature(v))
+	}
+	return am
+}
+
+func (m PubMetadataAdapter) a11yHazards() []manifest.A11yHazard {
+	am := []manifest.A11yHazard{}
+	for _, v := range m.Values(VocabularySchema + "accessibilityHazard") {
+		am = append(am, manifest.A11yHazard(v))
+	}
+	return am
 }
 
 func (m *PubMetadataAdapter) seedBelongsToData() {

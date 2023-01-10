@@ -31,6 +31,12 @@ func NewA11y() A11y {
 	}
 }
 
+func (a A11y) IsEmpty() bool {
+	return len(a.ConformsTo) == 0 && a.Certification == nil && a.Summary == "" &&
+		len(a.AccessModes) == 0 && len(a.AccessModesSufficient) == 0 &&
+		len(a.Features) == 0 && len (a.Hazards) == 0
+}
+
 func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
 	if rawJSON == nil {
 		return nil, nil
@@ -135,6 +141,10 @@ type A11yCertification struct {
 	CertifiedBy string `json:"certifiedBy,omitempty"` // Identifies a party responsible for the testing and certification of the accessibility of a Publication.
 	Credential  string `json:"credential,omitempty"`  // Identifies a credential or badge that establishes the authority of the party identified in the associated `certifiedBy` property to certify content accessible.
 	Report      string `json:"report,omitempty"`      // Provides a link to an accessibility report created by the party identified in the associated `certifiedBy` property.
+}
+
+func (c A11yCertification) IsEmpty() bool {
+	return c.CertifiedBy == "" && c.Credential == "" && c.Report == ""
 }
 
 // A11yAccessMode is a human sensory perceptual system or cognitive faculty through which a person may process or perceive information.
