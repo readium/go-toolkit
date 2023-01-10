@@ -55,11 +55,11 @@ func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
 	ams := [][]A11yPrimaryAccessMode{}
 	if amsJSON, ok := rawJSON["accessModeSufficient"].([]interface{}); ok {
 		for _, l := range amsJSON {
-			if l, ok := l.([]interface{}); ok {
-				strings, err := parseStringSlice(l, true)
-				if err != nil {
-					return nil, errors.Wrap(err, "failed unmarshalling 'accessModeSufficient'")
-				}
+			strings, err := parseSliceOrString(l, true)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed unmarshalling 'accessModeSufficient'")
+			}
+			if len(strings) > 0 {
 				ams = append(ams, A11yPrimaryAccessModesFromStrings(strings))
 			}
 		}
