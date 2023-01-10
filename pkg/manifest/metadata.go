@@ -27,6 +27,7 @@ type Metadata struct {
 	LocalizedTitle     LocalizedString        `json:"title" validate:"required"`
 	LocalizedSubtitle  *LocalizedString       `json:"subtitle,omitempty"`
 	LocalizedSortAs    *LocalizedString       `json:"sortAs,omitempty"`
+	Accessibility      *A11y                  `json:"accessibility,omitempty"`
 	Modified           *time.Time             `json:"modified,omitempty"`
 	Published          *time.Time             `json:"published,omitempty"`
 	Languages          Strings                `json:"language,omitempty" validate:"BCP47"` // TODO validator
@@ -122,10 +123,19 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 		return nil, errors.Wrap(err, "failed parsing 'title'")
 	}
 
+	var a11y *A11y
+	if a11yJSON, ok := rawJson["accessibility"].(map[string]interface{}); ok {
+		a11y, err = A11yFromJSON(a11yJSON)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed parsing 'accessibility'")
+		}
+	}
+
 	metadata := &Metadata{
 		Identifier:         parseOptString(rawJson["identifier"]),
 		Type:               parseOptString(rawJson["@type"]),
 		LocalizedTitle:     *title,
+		Accessibility:      a11y,
 		Modified:           parseOptTime(rawJson["modified"]),
 		Published:          parseOptTime(rawJson["published"]),
 		ReadingProgression: ReadingProgression(parseOptString(rawJson["readingProgression"])),
@@ -304,9 +314,37 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 
 	// Delete above vals so that we can put everything else in OtherMetadata
 	for _, v := range []string{
-		"title", "subtitle", "sortAs", "identifier", "@type", "conformsTo", "modified", "published", "readingProgression", "description", "subject", "language",
-		"contributor", "publisher", "imprint", "author", "translator", "editor", "artist", "illustrator", "letterer", "penciler", "colorist", "inker", "narrator",
-		"duration", "numberOfPages", "belongsTo", "belongs_to", "presentation",
+		"@type",
+		"accessibility",
+		"artist",
+		"author",
+		"belongsTo",
+		"belongs_to",
+		"colorist",
+		"conformsTo",
+		"contributor",
+		"description",
+		"duration",
+		"editor",
+		"identifier",
+		"illustrator",
+		"imprint",
+		"inker",
+		"language",
+		"letterer",
+		"modified",
+		"narrator",
+		"numberOfPages",
+		"penciler",
+		"presentation",
+		"published",
+		"publisher",
+		"readingProgression",
+		"sortAs",
+		"subject",
+		"subtitle",
+		"title",
+		"translator",
 	} {
 		delete(rawJson, v)
 	}
@@ -355,6 +393,9 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	j["title"] = m.LocalizedTitle
 	if m.LocalizedSubtitle != nil {
 		j["subtitle"] = *m.LocalizedSubtitle
+	}
+	if m.Accessibility != nil {
+		j["accessibility"] = *m.Accessibility
 	}
 	if m.Modified != nil {
 		j["modified"] = *m.Modified

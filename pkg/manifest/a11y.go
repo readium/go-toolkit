@@ -20,6 +20,17 @@ type A11y struct {
 	Hazards               []A11yHazard              `json:"hazard,omitempty"`               // A characteristic of the described resource that is physiologically dangerous to some users.
 }
 
+// NewA11y creates a new empty A11y.
+func NewA11y() A11y {
+	return A11y{
+		ConformsTo:            []A11yProfile{},
+		AccessModes:           []A11yAccessMode{},
+		AccessModesSufficient: [][]A11yPrimaryAccessMode{},
+		Features:              []A11yFeature{},
+		Hazards:               []A11yHazard{},
+	}
+}
+
 func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
 	if rawJSON == nil {
 		return nil, nil

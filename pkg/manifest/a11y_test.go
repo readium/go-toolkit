@@ -7,18 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var emptyA11y = A11y{
-	ConformsTo:            []A11yProfile{},
-	AccessModes:           []A11yAccessMode{},
-	AccessModesSufficient: [][]A11yPrimaryAccessMode{},
-	Features:              []A11yFeature{},
-	Hazards:               []A11yHazard{},
-}
-
 func TestA11yUnmarshalMinimalJSON(t *testing.T) {
 	var m A11y
 	assert.NoError(t, json.Unmarshal([]byte("{}"), &m))
-	assert.Equal(t, emptyA11y, m, "unmarshalled JSON object should be equal to A11y object")
+	assert.Equal(t, NewA11y(), m, "unmarshalled JSON object should be equal to A11y object")
 }
 
 func TestA11yUnmarshalFullJSON(t *testing.T) {
@@ -71,13 +63,13 @@ func TestA11yUnmarshalFullJSON(t *testing.T) {
 func TestA11yUnmarshalInvalidSummaryIsIgnored(t *testing.T) {
 	var m A11y
 	assert.NoError(t, json.Unmarshal([]byte(`{"summary": ["sum1", "sum2"]}`), &m))
-	assert.Equal(t, emptyA11y, m, "unmarshalled JSON object should be equal to A11y object")
+	assert.Equal(t, NewA11y(), m, "unmarshalled JSON object should be equal to A11y object")
 }
 
 func TestA11yUnmarshalConformsToString(t *testing.T) {
 	var m A11y
 	assert.NoError(t, json.Unmarshal([]byte(`{"conformsTo": "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a"}`), &m))
-	var e A11y = emptyA11y
+	var e A11y = NewA11y()
 	e.ConformsTo = []A11yProfile{EPUBA11y10WCAG20A}
 	assert.Equal(t, e, m, "unmarshalled JSON object should be equal to A11y object")
 }
@@ -85,7 +77,7 @@ func TestA11yUnmarshalConformsToString(t *testing.T) {
 func TestA11yUnmarshalConformsToArray(t *testing.T) {
 	var m A11y
 	assert.NoError(t, json.Unmarshal([]byte(`{"conformsTo": ["http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a", "https://profile2"]}`), &m))
-	var e A11y = emptyA11y
+	var e A11y = NewA11y()
 	e.ConformsTo = []A11yProfile{EPUBA11y10WCAG20A, "https://profile2"}
 	assert.Equal(t, e, m, "unmarshalled JSON object should be equal to A11y object")
 }
@@ -93,7 +85,7 @@ func TestA11yUnmarshalConformsToArray(t *testing.T) {
 func TestA11yUnmarshalAccessModeSufficientContainingBothStringsAndArrays(t *testing.T) {
 	var m A11y
 	assert.NoError(t, json.Unmarshal([]byte(`{"accessModeSufficient": ["auditory", ["visual", "tactile"], [], "visual"]}`), &m))
-	var e A11y = emptyA11y
+	var e A11y = NewA11y()
 	e.AccessModesSufficient = [][]A11yPrimaryAccessMode{
 		{A11yPrimaryAccessModeAuditory},
 		{A11yPrimaryAccessModeVisual, A11yPrimaryAccessModeTactile},
