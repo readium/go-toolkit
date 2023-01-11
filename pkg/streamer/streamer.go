@@ -19,31 +19,37 @@ type Streamer struct {
 	// onCreatePublication
 }
 
-func New(parsers []parser.PublicationParser, ignoreDefaultParsers bool, archiveFactory archive.ArchiveFactory, httpClient *http.Client) Streamer { // TODO contentProtections
-	cli := httpClient
-	if cli == nil {
-		cli = http.DefaultClient
+type Config struct {
+	Parsers              []parser.PublicationParser
+	IgnoreDefaultParsers bool
+	ArchiveFactory       archive.ArchiveFactory
+	HttpClient           *http.Client
+}
+
+func New(config Config) Streamer { // TODO contentProtections
+	if config.HttpClient == nil {
+		config.HttpClient = http.DefaultClient
 	}
-	afact := archiveFactory
-	if afact == nil {
-		afact = archive.NewArchiveFactory()
+	if config.ArchiveFactory == nil {
+		config.ArchiveFactory = archive.NewArchiveFactory()
 	}
 
 	defaultParsers := []parser.PublicationParser{
 		epub.NewParser(nil),
 		// TODO PDF parser
-		parser.NewWebPubParser(cli),
+		parser.NewWebPubParser(config.HttpClient),
 		parser.ImageParser{},
 		parser.AudioParser{},
 	}
 
-	if !ignoreDefaultParsers {
-		parsers = append(parsers, defaultParsers...)
+	if !config.IgnoreDefaultParsers {
+		config.Parsers = append(config.Parsers, defaultParsers...)
 	}
+
 	return Streamer{
-		parsers:        parsers,
-		archiveFactory: afact,
-		httpClient:     cli,
+		parsers:        config.Parsers,
+		archiveFactory: config.ArchiveFactory,
+		httpClient:     config.HttpClient,
 	}
 }
 
