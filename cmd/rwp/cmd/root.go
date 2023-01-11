@@ -17,6 +17,7 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
+		// Error is already printed to stderr by Cobra.
 		os.Exit(1)
 	}
 }

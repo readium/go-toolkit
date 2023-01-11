@@ -47,7 +47,7 @@ Examples:
 			asset.File(path), "",
 		)
 		if err != nil {
-			return fmt.Errorf("open failed: %w", err)
+			return fmt.Errorf("failed opening %s: %w", path, err)
 		}
 
 		var jsonBytes []byte
@@ -57,7 +57,7 @@ Examples:
 			jsonBytes, err = json.MarshalIndent(pub.Manifest, "", indentFlag)
 		}
 		if err != nil {
-			return fmt.Errorf("json failed: %w", err)
+			return fmt.Errorf("failed rendering JSON for %s: %w", path, err)
 		}
 
 		fmt.Println(string(jsonBytes))
