@@ -403,10 +403,11 @@ func (m metadataAdapter) FirstValue(property string) string {
 }
 
 func (m metadataAdapter) Values(property string) []string {
-	values := []string{}
+	var values []string
 	if items, ok := m.items[property]; ok {
-		for _, item := range items {
-			values = append(values, item.value)
+		values = make([]string, len(items))
+		for i, item := range items {
+			values[i] = item.value
 		}
 	}
 	return values
@@ -732,9 +733,10 @@ func (m PubMetadataAdapter) a11ySummary() string {
 }
 
 func (m PubMetadataAdapter) a11yAccessModes() []manifest.A11yAccessMode {
-	am := []manifest.A11yAccessMode{}
-	for _, v := range m.Values(VocabularySchema + "accessMode") {
-		am = append(am, manifest.A11yAccessMode(v))
+	values := m.Values(VocabularySchema + "accessMode")
+	am := make([]manifest.A11yAccessMode, len(values))
+	for i, v := range values {
+		am[i] = manifest.A11yAccessMode(v)
 	}
 	return am
 }
@@ -762,19 +764,21 @@ func a11yAccessModesSufficient(value string) []manifest.A11yPrimaryAccessMode {
 }
 
 func (m PubMetadataAdapter) a11yFeatures() []manifest.A11yFeature {
-	am := []manifest.A11yFeature{}
-	for _, v := range m.Values(VocabularySchema + "accessibilityFeature") {
-		am = append(am, manifest.A11yFeature(v))
+	values := m.Values(VocabularySchema + "accessibilityFeature")
+	features := make([]manifest.A11yFeature, len(values))
+	for i, v := range values {
+		features[i] = manifest.A11yFeature(v)
 	}
-	return am
+	return features
 }
 
 func (m PubMetadataAdapter) a11yHazards() []manifest.A11yHazard {
-	am := []manifest.A11yHazard{}
-	for _, v := range m.Values(VocabularySchema + "accessibilityHazard") {
-		am = append(am, manifest.A11yHazard(v))
+	values := m.Values(VocabularySchema + "accessibilityHazard")
+	hazards := make([]manifest.A11yHazard, len(values))
+	for i, v := range values {
+		hazards[i] = manifest.A11yHazard(v)
 	}
-	return am
+	return hazards
 }
 
 func (m *PubMetadataAdapter) seedBelongsToData() {

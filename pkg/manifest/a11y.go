@@ -399,7 +399,7 @@ func A11yHazardsFromStrings(strings []string) []A11yHazard {
 }
 
 func fromStrings[T any](strings []string, transform func(string) T) []T {
-	res := []T{}
+	res := make([]T, 0, len(strings))
 	for _, s := range strings {
 		res = append(res, transform(s))
 	}

@@ -25,13 +25,13 @@ printed to stdout.
 
 Examples:
   Print out a minimal JSON RWPM. 
-  $ readium manifest publication.epub
+  $ rwp manifest publication.epub
 
   Pretty-print a JSON RWPM using tow-space indent.
-  $ readium manifest --indent "  " publication.epub
+  $ rwp manifest --indent "  " publication.epub
 
   Extract the publication title with ` + "`jq`" + `.
-  $ readium manifest publication.epub | jq -r .metadata.title
+  $ rwp manifest publication.epub | jq -r .metadata.title
   `,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
