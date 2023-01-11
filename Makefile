@@ -1,15 +1,15 @@
 help:
 	@echo "Usage: make <target>\n\n\
-	  build\tBuild the `readium` command-line utility in the current directory\n\
-	  install\tBuild and install the `readium` command-line utility\n\
+	  build\t\tBuild the \`rwp\` command-line utility in the current directory\n\
+	  install\tBuild and install the \`rwp\` command-line utility\n\
 	"
 
 .PHONY: build
 build:
-	(cd cmd/readium; go build; mv readium ../..)
+	(cd cmd/rwp; go build; mv rwp ../..)
 
 .PHONY: install
 install:
-	(cd cmd/readium; go install)
+	(cd cmd/rwp; go install)
 
 

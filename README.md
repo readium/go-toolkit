@@ -6,7 +6,7 @@ For development, run `go run cmd/server/main.go` to start the server, which by d
 
 ## Command line utility
 
-The `readium` command provides utilities to parse and generate Web Publications.
+The `rwp` command provides utilities to parse and generate Web Publications.
 
-To install `readium` in `~/go/bin`, run `make install`. Use `make build` to build the binary in the current directory.
+To install `rwp` in `~/go/bin`, run `make install`. Use `make build` to build the binary in the current directory.
 
