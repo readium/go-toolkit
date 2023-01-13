@@ -742,8 +742,9 @@ func (m PubMetadataAdapter) a11yAccessModes() []manifest.A11yAccessMode {
 }
 
 func (m PubMetadataAdapter) a11yAccessModesSufficient() [][]manifest.A11yPrimaryAccessMode {
-	ams := [][]manifest.A11yPrimaryAccessMode{}
-	for _, v := range m.Values(VocabularySchema + "accessModeSufficient") {
+	values := m.Values(VocabularySchema + "accessModeSufficient")
+	ams := make([][]manifest.A11yPrimaryAccessMode, 0, len(values))
+	for _, v := range values {
 		c := a11yAccessModesSufficient(v)
 		if len(c) > 0 {
 			ams = append(ams, c)
@@ -753,8 +754,9 @@ func (m PubMetadataAdapter) a11yAccessModesSufficient() [][]manifest.A11yPrimary
 }
 
 func a11yAccessModesSufficient(value string) []manifest.A11yPrimaryAccessMode {
-	ams := []manifest.A11yPrimaryAccessMode{}
-	for _, v := range strings.Split(value, ",") {
+	values := strings.Split(value, ",")
+	ams := make([]manifest.A11yPrimaryAccessMode, 0, len(values))
+	for _, v := range values {
 		v = strings.TrimSpace(v)
 		if v != "" {
 			ams = append(ams, manifest.A11yPrimaryAccessMode(v))
