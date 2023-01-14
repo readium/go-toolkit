@@ -27,6 +27,8 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 	assert.NoError(t, err)
 	duration := float64(4.24)
 	numberOfPages := uint(240)
+	a11y := NewA11y()
+	a11y.ConformsTo = []A11yProfile{EPUBA11y10WCAG20A}
 
 	assert.NoError(t, json.Unmarshal([]byte(`{
 		"identifier": "1234",
@@ -37,6 +39,7 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 		],
 		"title": {"en": "Title", "fr": "Titre"},
 		"subtitle": {"en": "Subtitle", "fr": "Sous-titre"},
+		"accessibility": {"conformsTo": "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a"},
 		"modified": "2001-01-01T12:36:27.000Z",
 		"published": "2001-01-02T12:36:27.000Z",
 		"language": ["en", "fr"],
@@ -68,6 +71,7 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 		"other-metadata1": "value",
 		"other-metadata2": [42]
 	}`), &m))
+
 	assert.Equal(t, Metadata{
 		Identifier: "1234",
 		Type:       "epub",
@@ -77,6 +81,7 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 			"fr": "Titre",
 		}),
 		LocalizedSubtitle:  &lst,
+		Accessibility:      &a11y,
 		Modified:           &modified,
 		Published:          &published,
 		Languages:          []string{"en", "fr"},
@@ -189,6 +194,8 @@ func TestMetadataFullJSON(t *testing.T) {
 	})
 	duration := float64(4.24)
 	numberOfPages := uint(240)
+	a11y := NewA11y()
+	a11y.ConformsTo = []A11yProfile{EPUBA11y10WCAG20AA}
 
 	b, err := json.Marshal(Metadata{
 		Identifier: "1234",
@@ -199,6 +206,7 @@ func TestMetadataFullJSON(t *testing.T) {
 			"fr": "Titre",
 		}),
 		LocalizedSubtitle:  &lst,
+		Accessibility:      &a11y,
 		Modified:           &modified,
 		Published:          &published,
 		Languages:          []string{"en", "fr"},
@@ -246,6 +254,7 @@ func TestMetadataFullJSON(t *testing.T) {
 		],
 		"title": {"en": "Title", "fr": "Titre"},
 		"subtitle": {"en": "Subtitle", "fr": "Sous-titre"},
+		"accessibility": {"conformsTo": ["http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa"]},
 		"modified": "2001-01-01T12:36:27.123Z",
 		"published": "2001-01-02T12:36:27Z",
 		"language": ["en", "fr"],

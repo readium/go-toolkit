@@ -28,6 +28,7 @@ func (f PublicationFactory) Create() manifest.Manifest {
 		metadataAdapter: metadataAdapter{
 			epubVersion: epubVersion,
 			items:       f.PackageDocument.metadata.global,
+			links:       f.PackageDocument.metadata.links,
 		},
 		fallbackTitle:      f.FallbackTitle,
 		uniqueIdentifierID: f.PackageDocument.uniqueIdentifierID,
