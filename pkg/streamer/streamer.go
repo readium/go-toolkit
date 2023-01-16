@@ -21,6 +21,7 @@ import (
 type Streamer struct {
 	parsers           []parser.PublicationParser
 	inferA11yMetadata bool
+	inferPageCount    bool
 	archiveFactory    archive.ArchiveFactory
 	// TODO pdfFactory
 	httpClient *http.Client
@@ -31,6 +32,7 @@ type Config struct {
 	Parsers              []parser.PublicationParser // Parsers used to open a publication, in addition to the default parsers.
 	IgnoreDefaultParsers bool                       // When true, only parsers provided in parsers will be used.
 	InferA11yMetadata    bool                       // When true, additional accessibility metadata will be infered from the manifest.
+	InferPageCount       bool                       // When true, will infer `Metadata.NumberOfPages` from the generated position list.
 	ArchiveFactory       archive.ArchiveFactory     // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
 	HttpClient           *http.Client               // Service performing HTTP requests.
 }
@@ -58,6 +60,7 @@ func New(config Config) Streamer { // TODO contentProtections
 	return Streamer{
 		parsers:           config.Parsers,
 		inferA11yMetadata: config.InferA11yMetadata,
+		inferPageCount:    config.InferPageCount,
 		archiveFactory:    config.ArchiveFactory,
 		httpClient:        config.HttpClient,
 	}
@@ -97,5 +100,18 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 
 	// TODO apply onCreatePublication
 
-	return builder.Build(), nil
+	pub := builder.Build()
+
+	if s.inferA11yMetadata {
+		pub.Manifest.Metadata.Accessibility = inferA11yMetadataFromManifest(pub.Manifest)
+	}
+
+	if s.inferPageCount && pub.Manifest.Metadata.NumberOfPages == nil {
+		pageCount := uint(len(pub.Positions()))
+		if pageCount > 0 {
+			pub.Manifest.Metadata.NumberOfPages = &pageCount
+		}
+	}
+
+	return pub, nil
 }

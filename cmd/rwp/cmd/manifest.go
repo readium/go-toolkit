@@ -17,6 +17,9 @@ var indentFlag string
 // Infer accessibility metadata.
 var inferA11yFlag bool
 
+// Infer the number of pages from the generated position list.
+var inferPageCountFlag bool
+
 var manifestCmd = &cobra.Command{
 	Use:   "manifest <pub-path>",
 	Short: "Generate a Readium Web Publication Manifest for a publication",
@@ -48,6 +51,7 @@ Examples:
 		path := filepath.Clean(args[0])
 		pub, err := streamer.New(streamer.Config{
 			InferA11yMetadata: inferA11yFlag,
+			InferPageCount:    inferPageCountFlag,
 		}).Open(
 			asset.File(path), "",
 		)
@@ -74,4 +78,5 @@ func init() {
 	rootCmd.AddCommand(manifestCmd)
 	manifestCmd.Flags().StringVarP(&indentFlag, "indent", "i", "", "Indentation used to pretty-print")
 	manifestCmd.Flags().BoolVar(&inferA11yFlag, "infer-a11y", false, "Infer accessibility metadata")
+	manifestCmd.Flags().BoolVar(&inferPageCountFlag, "infer-page-count", false, "Infer the number of pages from the generated position list.")
 }
