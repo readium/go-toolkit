@@ -12,6 +12,7 @@ import (
 type PackageDocument struct {
 	Path               string
 	EPUBVersion        float64
+	EPUBVersionString  string
 	uniqueIdentifierID string
 	metadata           EPUBMetadata
 	Manifest           []Item
@@ -33,14 +34,13 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 	}
 
 	// Version
-	epubVersion := 1.2
-	rv := pkg.SelectAttr("version")
-	if rv != "" {
-		ev, err := strconv.ParseFloat(rv, 64)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed parsing package version")
-		}
-		epubVersion = ev
+	epubVersionString := pkg.SelectAttr("version")
+	if epubVersionString == "" {
+		epubVersionString = "1.2"
+	}
+	epubVersion, err := strconv.ParseFloat(epubVersionString, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing package version")
 	}
 
 	metadata := NewMetadataParser(epubVersion, prefixMap).Parse(document, filePath)
@@ -70,6 +70,7 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 	return &PackageDocument{
 		Path:               filePath,
 		EPUBVersion:        epubVersion,
+		EPUBVersionString:  epubVersionString,
 		uniqueIdentifierID: pkg.SelectAttr("unique-identifier"),
 		metadata:           *metadata,
 		Manifest:           manifest,

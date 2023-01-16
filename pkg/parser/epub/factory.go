@@ -53,6 +53,7 @@ func (f PublicationFactory) Create() manifest.Manifest {
 
 	// Compute Metadata
 	metadata := f.pubMetadata.Metadata()
+	metadata.OtherMetadata[NamespaceOPF+"#version"] = f.PackageDocument.EPUBVersionString
 	metadataLinks := make([]manifest.Link, 0, len(links))
 	for _, link := range links {
 		metadataLinks = append(metadataLinks, mapEPUBLink(link))
