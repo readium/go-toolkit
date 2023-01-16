@@ -11,8 +11,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Indentation used to pretty-print
+// Indentation used to pretty-print.
 var indentFlag string
+
+// Infer accessibility metadata.
+var inferA11yFlag bool
 
 var manifestCmd = &cobra.Command{
 	Use:   "manifest <pub-path>",
@@ -24,10 +27,10 @@ and build a Readium Web Publication Manifest for it. The JSON manifest is
 printed to stdout.
 
 Examples:
-  Print out a minimal JSON RWPM. 
+  Print out a compact JSON RWPM. 
   $ rwp manifest publication.epub
 
-  Pretty-print a JSON RWPM using tow-space indent.
+  Pretty-print a JSON RWPM using two-space indent.
   $ rwp manifest --indent "  " publication.epub
 
   Extract the publication title with ` + "`jq`" + `.
@@ -43,7 +46,9 @@ Examples:
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path := filepath.Clean(args[0])
-		pub, err := streamer.New(streamer.Config{}).Open(
+		pub, err := streamer.New(streamer.Config{
+			InferA11yMetadata: inferA11yFlag,
+		}).Open(
 			asset.File(path), "",
 		)
 		if err != nil {
@@ -68,4 +73,5 @@ Examples:
 func init() {
 	rootCmd.AddCommand(manifestCmd)
 	manifestCmd.Flags().StringVarP(&indentFlag, "indent", "i", "", "Indentation used to pretty-print")
+	manifestCmd.Flags().BoolVar(&inferA11yFlag, "infer-a11y", false, "Infer accessibility metadata")
 }

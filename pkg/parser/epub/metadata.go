@@ -692,7 +692,7 @@ func a11yProfile(value string) manifest.A11yProfile {
 		"http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
 		"https://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
 		"https://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa":
-		return manifest.EPUBA11yWCAG20AAA
+		return manifest.EPUBA11y10WCAG20AAA
 
 	default:
 		return ""
