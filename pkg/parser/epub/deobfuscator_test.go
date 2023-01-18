@@ -1,6 +1,7 @@
 package epub
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -12,6 +13,7 @@ const identifier = "urn:uuid:36d5078e-ff7d-468e-a5f3-f47c14b91f2f"
 
 func withDeobfuscator(t *testing.T, href string, algorithm string, start, end int64, f func([]byte, []byte)) {
 	ft := fetcher.NewFileFetcher("/deobfuscation", "./testdata/deobfuscation")
+	t.Log(href)
 
 	// Cleartext font
 	clean, err := ft.Get(manifest.Link{Href: "/deobfuscation/cut-cut.woff"}).Read(start, end)
@@ -27,7 +29,7 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 	}
 	if algorithm != "" {
 		link.Properties.Add(manifest.Properties{
-			"encryption": map[string]interface{}{
+			"encrypted": map[string]interface{}{
 				"algorithm": algorithm,
 			},
 		})
@@ -38,8 +40,16 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 		f(nil, nil)
 		return
 	}
-
 	f(clean, obfu)
+
+	bbuff := new(bytes.Buffer)
+	_, err = NewDeobfuscator(identifier).Transform(ft.Get(link)).Stream(bbuff, start, end)
+	if !assert.Nil(t, err) {
+		assert.NoError(t, err.Cause)
+		f(nil, nil)
+		return
+	}
+	f(clean, bbuff.Bytes())
 }
 
 func TestDeobfuscatorIDPF(t *testing.T) {

@@ -277,7 +277,7 @@ func (m *Manifest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (m Manifest) ManifestToJSON(selfLink *Link) map[string]interface{} {
+func (m Manifest) ToMap(selfLink *Link) map[string]interface{} {
 	res := make(map[string]interface{})
 	if len(m.Context) > 1 {
 		res["@context"] = m.Context
@@ -309,7 +309,7 @@ func (m Manifest) ManifestToJSON(selfLink *Link) map[string]interface{} {
 }
 
 func (m Manifest) MarshalJSON() ([]byte, error) {
-	return json.Marshal(m.ManifestToJSON(nil))
+	return json.Marshal(m.ToMap(nil))
 }
 
 /*
