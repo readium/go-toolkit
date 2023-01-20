@@ -11,19 +11,30 @@ import (
 	"github.com/readium/go-toolkit/pkg/pub"
 )
 
+// Streamer opens a `Publication` using a list of parsers.
+//
+// The `Streamer` is configured to use Readium's default parsers, which you can
+// bypass using `Config.IgnoreDefaultParsers`. However, you can provide
+// additional `Config.Parsers` which will take precedence over the default
+// ones. This can also be used to provide an alternative configuration of a
+// default parser.
 type Streamer struct {
-	parsers        []parser.PublicationParser
-	archiveFactory archive.ArchiveFactory
+	parsers           []parser.PublicationParser
+	inferA11yMetadata bool
+	inferPageCount    bool
+	archiveFactory    archive.ArchiveFactory
 	// TODO pdfFactory
 	httpClient *http.Client
 	// onCreatePublication
 }
 
 type Config struct {
-	Parsers              []parser.PublicationParser
-	IgnoreDefaultParsers bool
-	ArchiveFactory       archive.ArchiveFactory
-	HttpClient           *http.Client
+	Parsers              []parser.PublicationParser // Parsers used to open a publication, in addition to the default parsers.
+	IgnoreDefaultParsers bool                       // When true, only parsers provided in parsers will be used.
+	InferA11yMetadata    bool                       // When true, additional accessibility metadata will be infered from the manifest.
+	InferPageCount       bool                       // When true, will infer `Metadata.NumberOfPages` from the generated position list.
+	ArchiveFactory       archive.ArchiveFactory     // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
+	HttpClient           *http.Client               // Service performing HTTP requests.
 }
 
 func New(config Config) Streamer { // TODO contentProtections
@@ -47,9 +58,11 @@ func New(config Config) Streamer { // TODO contentProtections
 	}
 
 	return Streamer{
-		parsers:        config.Parsers,
-		archiveFactory: config.ArchiveFactory,
-		httpClient:     config.HttpClient,
+		parsers:           config.Parsers,
+		inferA11yMetadata: config.InferA11yMetadata,
+		inferPageCount:    config.InferPageCount,
+		archiveFactory:    config.ArchiveFactory,
+		httpClient:        config.HttpClient,
 	}
 }
 
@@ -81,9 +94,24 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 		return nil, errors.New("cannot find a parser for this asset")
 	}
 
+	if s.inferA11yMetadata {
+		builder.Manifest.Metadata.Accessibility = inferA11yMetadataFromManifest(builder.Manifest)
+	}
+
 	// TODO apply onCreatePublication
 
-	// TODO addLegacyProperties
+	pub := builder.Build()
 
-	return builder.Build(), nil
+	if s.inferA11yMetadata {
+		pub.Manifest.Metadata.Accessibility = inferA11yMetadataFromManifest(pub.Manifest)
+	}
+
+	if s.inferPageCount && pub.Manifest.Metadata.NumberOfPages == nil {
+		pageCount := uint(len(pub.Positions()))
+		if pageCount > 0 {
+			pub.Manifest.Metadata.NumberOfPages = &pageCount
+		}
+	}
+
+	return pub, nil
 }
