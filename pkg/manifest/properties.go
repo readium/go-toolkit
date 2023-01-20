@@ -91,7 +91,7 @@ func (p Properties) Layout() EPUBLayout {
 }
 
 func (p Properties) Encryption() *Encryption {
-	mp, ok := p.Get("encryption").(map[string]interface{})
+	mp, ok := p.Get("encrypted").(map[string]interface{})
 	if mp == nil || !ok {
 		return nil
 	}

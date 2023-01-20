@@ -227,8 +227,8 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 		rels = extensions.AddToSet(rels, "cover")
 	}
 
-	if edat, ok := f.EncryptionData[item.ID]; ok {
-		properties["encryption"] = edat // TODO: determine if .toJSON().toMap() necessary
+	if edat, ok := f.EncryptionData[item.Href]; ok {
+		properties["encrypted"] = edat.ToMap() // ToMap makes it JSON-like
 	}
 
 	return rels, manifest.Properties(properties)

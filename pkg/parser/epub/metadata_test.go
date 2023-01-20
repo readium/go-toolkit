@@ -30,14 +30,14 @@ func loadMetadata(name string) (*manifest.Metadata, error) {
 		PackageDocument: *d,
 	}.Create()
 
-	if manifest.Metadata.Identifier == "9782346140824" {
+	/*if manifest.Metadata.Identifier == "9782346140824" {
 		mnod := n.SelectElement(
 			"/" + NSSelect(NamespaceOPF, "package") + "/" + NSSelect(NamespaceOPF, "metadata"),
 		)
 		mtit := mnod.SelectElement("/dc:title")
 		println("DATA", mtit.InnerText())
 		println(mtit.OutputXML(true))
-	}
+	}*/
 
 	return &manifest.Metadata, nil
 }

@@ -179,7 +179,7 @@ func TestPackageDocLinkResources(t *testing.T) {
 }*/
 
 func TestPackageDocLinkFallbacksCircularDependencies(t *testing.T) {
-	p, err := loadPackageDoc("fallbacks-termination")
+	_, err := loadPackageDoc("fallbacks-termination")
 	assert.NoError(t, err)
-	t.Logf("%+v\n", p)
+	// t.Logf("%+v\n", p)
 }
