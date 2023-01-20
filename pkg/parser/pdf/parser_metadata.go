@@ -164,8 +164,6 @@ func ParsePDFMetadata(ctx *pdfcpu.Context, m *manifest.Manifest) error {
 		})
 	}
 
-	// ctx.Producer
-	// ctx.Creator
 	if ctx.ModDate != "" && m.Metadata.Modified == nil {
 		modDate := extensions.ParseDate(ctx.ModDate)
 		if modDate != nil {
