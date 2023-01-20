@@ -1,6 +1,7 @@
 package pdf
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
@@ -89,9 +90,7 @@ func ParseMetadata(ctx *pdfcpu.Context, link *manifest.Link) (m manifest.Manifes
 
 		kwl, err := pdfcpu.KeywordsList(ctx.XRefTable)
 		if err == nil {
-			for _, l := range kwl {
-				hashmaterial = append(hashmaterial, l)
-			}
+			hashmaterial = append(hashmaterial, kwl...)
 		}
 
 		aa, err := ctx.ListAttachments()
@@ -135,6 +134,11 @@ func ParsePDFMetadata(ctx *pdfcpu.Context, m *manifest.Manifest) error {
 	if ctx.PageCount > 0 && m.Metadata.NumberOfPages == nil {
 		pc := uint(ctx.PageCount)
 		m.Metadata.NumberOfPages = &pc
+	}
+
+	// Identifier
+	if len(ctx.XRefTable.ID) > 0 {
+		m.Metadata.Identifier = hex.EncodeToString([]byte(ctx.XRefTable.ID[0].String()))
 	}
 
 	// Title
