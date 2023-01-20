@@ -38,7 +38,7 @@ func New(config Config) Streamer { // TODO contentProtections
 	defaultParsers := []parser.PublicationParser{
 		epub.NewParser(nil), // TODO pass strategy
 		pdf.NewParser(),
-		parser.NewWebPubParser(cli),
+		parser.NewWebPubParser(config.HttpClient),
 		parser.ImageParser{},
 		parser.AudioParser{},
 	}
