@@ -24,8 +24,7 @@ var ContentReservedPrefixes = map[string]string{
 type DefaultVocab int
 
 const (
-	NoVocab DefaultVocab = iota
-	DefaultVocabMeta
+	DefaultVocabMeta = iota
 	DefaultVocabLink
 	DefaultVocabItem
 	DefaultVocabItemref
@@ -48,7 +47,7 @@ func resolveProperty(property string, prefixMap map[string]string, defaultVocab 
 			s = append(s, v)
 		}
 	}
-	if len(s) == 1 && defaultVocab != 0 {
+	if len(s) == 1 {
 		return DefaultVocabMap[defaultVocab] + s[0]
 	} else {
 		pmm, ok := prefixMap[s[0]]

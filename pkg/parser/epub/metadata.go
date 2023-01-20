@@ -196,7 +196,7 @@ func (m MetadataParser) parseMetaElement(element *xmlquery.Node) *MetadataItem {
 		if content == "" {
 			return nil
 		}
-		resolvedName := resolveProperty(name, m.prefixMap, NoVocab)
+		resolvedName := resolveProperty(name, m.prefixMap, DefaultVocabMeta)
 		return &MetadataItem{
 			property: resolvedName,
 			value:    content,
@@ -214,7 +214,7 @@ func (m MetadataParser) parseMetaElement(element *xmlquery.Node) *MetadataItem {
 		}
 		resolvedScheme := strings.TrimSpace(element.SelectAttr("scheme"))
 		if resolvedScheme != "" {
-			resolvedScheme = resolveProperty(resolvedScheme, m.prefixMap, NoVocab)
+			resolvedScheme = resolveProperty(resolvedScheme, m.prefixMap, DefaultVocabMeta)
 		}
 		return &MetadataItem{
 			property: resolveProperty(propName, m.prefixMap, DefaultVocabMeta),
@@ -557,7 +557,7 @@ func (m PubMetadataAdapter) Description() string {
 }
 
 func (m PubMetadataAdapter) Cover() string {
-	return m.FirstValue("cover")
+	return m.FirstValue(VocabularyMeta + "cover")
 }
 
 func (m *PubMetadataAdapter) seedTitleData() {
@@ -1001,6 +1001,8 @@ func (m *PubMetadataAdapter) Presentation() manifest.Presentation {
 func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 	if m._otherMetadata == nil {
 		usedProperties := map[string]struct{}{
+			VocabularyMeta + "cover": {}, // EPUB 2 cover meta
+
 			VocabularyDCTerms + "identifier":    {},
 			VocabularyDCTerms + "language":      {},
 			VocabularyDCTerms + "title":         {},
