@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/chocolatkey/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/xmlquery"
 	"golang.org/x/text/encoding/unicode"
 )
 

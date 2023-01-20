@@ -56,3 +56,21 @@ func (e *Encryption) UnmarshalJSON(data []byte) error {
 	*e = *fe
 	return nil
 }
+
+func (m Encryption) ToMap() map[string]interface{} {
+	mp := make(map[string]interface{})
+	mp["algorithm"] = m.Algorithm
+	if m.Compression != "" {
+		mp["compression"] = m.Compression
+	}
+	if m.OriginalLength != 0 {
+		mp["originalLength"] = m.OriginalLength
+	}
+	if m.Profile != "" {
+		mp["profile"] = m.Profile
+	}
+	if m.Scheme != "" {
+		mp["scheme"] = m.Scheme
+	}
+	return mp
+}

@@ -6,10 +6,10 @@ import (
 	"path"
 	"strings"
 
-	"github.com/chocolatkey/xmlquery"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/xmlquery"
 )
 
 // Provides access to entries of an archive.

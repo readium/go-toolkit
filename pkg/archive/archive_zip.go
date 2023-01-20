@@ -150,7 +150,11 @@ func NewGoZIPArchive(zip *zip.Reader, closer func() error) Archive {
 type gozipArchiveFactory struct{}
 
 func (e gozipArchiveFactory) Open(filepath string, password string) (Archive, error) {
-	// Go's built-in zip reader doesn't support passwords. Maybe look into something like https://github.com/mholt/archiver
+	// Go's built-in zip reader doesn't support passwords.
+	if password != "" {
+		return nil, errors.New("password-protected archives not supported")
+	}
+
 	rc, err := zip.OpenReader(filepath)
 	if err != nil {
 		return nil, err
@@ -159,7 +163,11 @@ func (e gozipArchiveFactory) Open(filepath string, password string) (Archive, er
 }
 
 func (e gozipArchiveFactory) OpenBytes(data []byte, password string) (Archive, error) {
-	// Go's built-in zip reader doesn't support passwords. Maybe look into something like https://github.com/mholt/archiver
+	// Go's built-in zip reader doesn't support passwords.
+	if password != "" {
+		return nil, errors.New("password-protected archives not supported")
+	}
+
 	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return nil, err
@@ -173,7 +181,11 @@ type ReaderAtCloser interface {
 }
 
 func (e gozipArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string) (Archive, error) {
-	// Go's built-in zip reader doesn't support passwords. Maybe look into something like https://github.com/mholt/archiver
+	// Go's built-in zip reader doesn't support passwords.
+	if password != "" {
+		return nil, errors.New("password-protected archives not supported")
+	}
+
 	r, err := zip.NewReader(reader, size)
 	if err != nil {
 		return nil, err

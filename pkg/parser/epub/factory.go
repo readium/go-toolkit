@@ -28,6 +28,7 @@ func (f PublicationFactory) Create() manifest.Manifest {
 		metadataAdapter: metadataAdapter{
 			epubVersion: epubVersion,
 			items:       f.PackageDocument.metadata.global,
+			links:       f.PackageDocument.metadata.links,
 		},
 		fallbackTitle:      f.FallbackTitle,
 		uniqueIdentifierID: f.PackageDocument.uniqueIdentifierID,
@@ -52,6 +53,7 @@ func (f PublicationFactory) Create() manifest.Manifest {
 
 	// Compute Metadata
 	metadata := f.pubMetadata.Metadata()
+	metadata.OtherMetadata[NamespaceOPF+"#version"] = f.PackageDocument.EPUBVersionString
 	metadataLinks := make(manifest.LinkList, 0, len(links))
 	for _, link := range links {
 		metadataLinks = append(metadataLinks, mapEPUBLink(link))
@@ -225,8 +227,8 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 		rels = extensions.AddToSet(rels, "cover")
 	}
 
-	if edat, ok := f.EncryptionData[item.ID]; ok {
-		properties["encryption"] = edat // TODO: determine if .toJSON().toMap() necessary
+	if edat, ok := f.EncryptionData[item.Href]; ok {
+		properties["encrypted"] = edat.ToMap() // ToMap makes it JSON-like
 	}
 
 	return rels, manifest.Properties(properties)

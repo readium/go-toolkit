@@ -30,14 +30,14 @@ func loadMetadata(name string) (*manifest.Metadata, error) {
 		PackageDocument: *d,
 	}.Create()
 
-	if manifest.Metadata.Identifier == "9782346140824" {
+	/*if manifest.Metadata.Identifier == "9782346140824" {
 		mnod := n.SelectElement(
 			"/" + NSSelect(NamespaceOPF, "package") + "/" + NSSelect(NamespaceOPF, "metadata"),
 		)
 		mtit := mnod.SelectElement("/dc:title")
 		println("DATA", mtit.InnerText())
 		println(mtit.OutputXML(true))
-	}
+	}*/
 
 	return &manifest.Metadata, nil
 }
@@ -297,6 +297,56 @@ func TestMetadataTitleSubtitleParsed(t *testing.T) {
 	}), *m3.LocalizedSubtitle)
 }
 
+func TestMetadataNoAccessibility(t *testing.T) {
+	m, err := loadMetadata("version-default")
+	assert.NoError(t, err)
+	assert.Nil(t, m.Accessibility)
+}
+
+func TestMetadataEPUB2Accessibility(t *testing.T) {
+	m, err := loadMetadata("accessibility-epub2")
+	assert.NoError(t, err)
+	e := manifest.NewA11y()
+	e.ConformsTo = []manifest.A11yProfile{manifest.EPUBA11y10WCAG20A}
+	e.Certification = &manifest.A11yCertification{
+		CertifiedBy: "Accessibility Testers Group",
+		Credential:  "DAISY OK",
+		Report:      "https://example.com/a11y-report/",
+	}
+	e.Summary = "The publication contains structural and page navigation."
+	e.AccessModes = []manifest.A11yAccessMode{manifest.A11yAccessModeTextual, manifest.A11yAccessModeVisual}
+	e.AccessModesSufficient = [][]manifest.A11yPrimaryAccessMode{
+		{manifest.A11yPrimaryAccessModeTextual},
+		{manifest.A11yPrimaryAccessModeTextual, manifest.A11yPrimaryAccessModeVisual},
+	}
+	e.Features = []manifest.A11yFeature{manifest.A11yFeatureStructuralNavigation, manifest.A11yFeatureAlternativeText}
+	e.Hazards = []manifest.A11yHazard{manifest.A11yHazardMotionSimulation, manifest.A11yHazardNoSoundHazard}
+	assert.Equal(t, &e, m.Accessibility)
+	assert.Nil(t, m.OtherMetadata["accessibility"])
+}
+
+func TestMetadataEPUB3Accessibility(t *testing.T) {
+	m, err := loadMetadata("accessibility-epub3")
+	assert.NoError(t, err)
+	e := manifest.NewA11y()
+	e.ConformsTo = []manifest.A11yProfile{manifest.EPUBA11y10WCAG20A}
+	e.Certification = &manifest.A11yCertification{
+		CertifiedBy: "Accessibility Testers Group",
+		Credential:  "DAISY OK",
+		Report:      "https://example.com/a11y-report/",
+	}
+	e.Summary = "The publication contains structural and page navigation."
+	e.AccessModes = []manifest.A11yAccessMode{manifest.A11yAccessModeTextual, manifest.A11yAccessModeVisual}
+	e.AccessModesSufficient = [][]manifest.A11yPrimaryAccessMode{
+		{manifest.A11yPrimaryAccessModeTextual},
+		{manifest.A11yPrimaryAccessModeTextual, manifest.A11yPrimaryAccessModeVisual},
+	}
+	e.Features = []manifest.A11yFeature{manifest.A11yFeatureStructuralNavigation, manifest.A11yFeatureAlternativeText}
+	e.Hazards = []manifest.A11yHazard{manifest.A11yHazardMotionSimulation, manifest.A11yHazardNoSoundHazard}
+	assert.Equal(t, &e, m.Accessibility)
+	assert.Nil(t, m.OtherMetadata["accessibility"])
+}
+
 func TestMetadataTitleFileAs(t *testing.T) {
 	m2, err := loadMetadata("titles-epub2")
 	assert.NoError(t, err)
@@ -474,6 +524,7 @@ func TestMetadataOtherMetadata(t *testing.T) {
 			map[string]interface{}{"@value": "Web", "http://my.url/#scheme": "http"},
 			"Internet",
 		},
+		"http://www.idpf.org/2007/opf#version": "3.0",
 		"http://my.url/#property0": map[string]interface{}{
 			"@value": "refines0",
 			"http://my.url/#property1": map[string]interface{}{
