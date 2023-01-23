@@ -1,6 +1,7 @@
 package epub
 
 import (
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -24,8 +25,7 @@ var ContentReservedPrefixes = map[string]string{
 type DefaultVocab int
 
 const (
-	NoVocab DefaultVocab = iota
-	DefaultVocabMeta
+	DefaultVocabMeta = iota
 	DefaultVocabLink
 	DefaultVocabItem
 	DefaultVocabItemref
@@ -48,8 +48,9 @@ func resolveProperty(property string, prefixMap map[string]string, defaultVocab 
 			s = append(s, v)
 		}
 	}
-	if len(s) == 1 && defaultVocab != 0 {
-		return DefaultVocabMap[defaultVocab] + s[0]
+	if len(s) == 1 {
+		name := url.PathEscape(s[0])
+		return DefaultVocabMap[defaultVocab] + name
 	} else {
 		pmm, ok := prefixMap[s[0]]
 		if ok && len(s) == 2 {
@@ -57,7 +58,8 @@ func resolveProperty(property string, prefixMap map[string]string, defaultVocab 
 			if lc != '#' && lc != '/' { // Namespace URI doesn't end with '/' or '#'
 				pmm += "#"
 			}
-			return pmm + s[1]
+			name := url.PathEscape(s[1])
+			return pmm + name
 		} else {
 			return property
 		}

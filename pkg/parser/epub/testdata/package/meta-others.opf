@@ -10,6 +10,7 @@
     <meta id="r1" refines="r0" property="my:property1">refines1</meta>
     <meta id="r2" refines="r1" property="my:property2">refines2</meta>
     <meta id="r3" refines="r1" property="my:property3">refines3</meta>
+    <meta content="1.9.20" name="Sigil version"/>
   </metadata>
   <manifest>
     <item id="titlepage" href="titlepage.xhtml"/>
