@@ -60,9 +60,9 @@ func ParseDate(raw string) *time.Time {
 	return &t
 }
 
-func Contains(strings []string, s string) bool {
-	for _, v := range strings {
-		if v == s {
+func Contains[T comparable](list []T, element T) bool {
+	for _, v := range list {
+		if v == element {
 			return true
 		}
 	}

@@ -692,7 +692,7 @@ func a11yProfile(value string) manifest.A11yProfile {
 		"http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
 		"https://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
 		"https://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa":
-		return manifest.EPUBA11yWCAG20AAA
+		return manifest.EPUBA11y10WCAG20AAA
 
 	default:
 		return ""
@@ -1017,6 +1017,17 @@ func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 			VocabularyRendition + "spread":      {},
 			VocabularyRendition + "orientation": {},
 			VocabularyRendition + "layout":      {},
+
+			VocabularyDCTerms + "conformsto":          {},
+			VocabularyDCTerms + "conformsTo":          {},
+			VocabularyA11Y + "certifiedBy":            {},
+			VocabularyA11Y + "certifierCredential":    {},
+			VocabularyA11Y + "certifierReport":        {},
+			VocabularySchema + "accessibilitySummary": {},
+			VocabularySchema + "accessMode":           {},
+			VocabularySchema + "accessModeSufficient": {},
+			VocabularySchema + "accessibilityFeature": {},
+			VocabularySchema + "accessibilityHazard":  {},
 		}
 
 		m._otherMetadata = make(map[string]interface{})

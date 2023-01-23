@@ -127,7 +127,7 @@ const (
 	// EPUB Accessibility 1.0 - WCAG 2.0 Level AA
 	EPUBA11y10WCAG20AA A11yProfile = "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa"
 	// EPUB Accessibility 1.0 - WCAG 2.0 Level AAA
-	EPUBA11yWCAG20AAA A11yProfile = "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa"
+	EPUBA11y10WCAG20AAA A11yProfile = "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa"
 )
 
 func A11yProfilesFromStrings(strings []string) []A11yProfile {

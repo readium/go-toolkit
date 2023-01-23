@@ -159,18 +159,18 @@ func NewBuilder(m manifest.Manifest, f fetcher.Fetcher, b *ServicesBuilder) *Bui
 		b = NewServicesBuilder(nil)
 	}
 	return &Builder{
-		manifest:        m,
-		fetcher:         f,
-		servicesBuilder: *b,
+		Manifest:        m,
+		Fetcher:         f,
+		ServicesBuilder: *b,
 	}
 }
 
 type Builder struct {
-	manifest        manifest.Manifest
-	fetcher         fetcher.Fetcher
-	servicesBuilder ServicesBuilder
+	Manifest        manifest.Manifest
+	Fetcher         fetcher.Fetcher
+	ServicesBuilder ServicesBuilder
 }
 
 func (b Builder) Build() *Publication {
-	return New(b.manifest, b.fetcher, &b.servicesBuilder)
+	return New(b.Manifest, b.Fetcher, &b.ServicesBuilder)
 }
