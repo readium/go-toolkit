@@ -524,7 +524,8 @@ func TestMetadataOtherMetadata(t *testing.T) {
 			map[string]interface{}{"@value": "Web", "http://my.url/#scheme": "http"},
 			"Internet",
 		},
-		"http://www.idpf.org/2007/opf#version": "3.0",
+		"http://idpf.org/epub/vocab/package/meta/#Sigil%20version": "1.9.20",
+		"http://www.idpf.org/2007/opf#version":                     "3.0",
 		"http://my.url/#property0": map[string]interface{}{
 			"@value": "refines0",
 			"http://my.url/#property1": map[string]interface{}{
