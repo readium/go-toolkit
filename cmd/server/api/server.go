@@ -36,8 +36,7 @@ func NewPublicationServer(config ServerConfig) *PublicationServer {
 }
 
 func (s *PublicationServer) Init() http.Handler {
-	n := negroni.Classic()
-	n.Use(negroni.NewStatic(http.Dir(s.config.StaticPath)))
+	n := negroni.New(negroni.NewStatic(http.Dir(s.config.StaticPath)))
 	n.UseHandler(s.bookHandler(false))
 	return n
 }
@@ -233,7 +232,7 @@ func (s *PublicationServer) getAsset(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", link.MediaType().String())
 	w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
 
-	_, rerr := res.Stream(w, 0, 0)
+	_, rerr := res.Stream(w, 0, 0) // TODO byte range support
 	if rerr != nil {
 		w.WriteHeader(rerr.HTTPStatus())
 		w.Write([]byte(rerr.Error()))

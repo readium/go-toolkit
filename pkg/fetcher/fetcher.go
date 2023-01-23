@@ -13,7 +13,7 @@ type Fetcher interface {
 	 * If the medium has an inherent resource order, it should be followed.
 	 * Otherwise, HREFs are sorted alphabetically.
 	 */
-	Links() ([]manifest.Link, error)
+	Links() (manifest.LinkList, error)
 
 	/**
 	 * Returns the [Resource] at the given [link]'s HREF.
@@ -31,8 +31,8 @@ type Fetcher interface {
 // A [Fetcher] providing no resources at all.
 type EmptyFetcher struct{}
 
-func (f EmptyFetcher) Links() ([]manifest.Link, error) {
-	return []manifest.Link{}, nil
+func (f EmptyFetcher) Links() (manifest.LinkList, error) {
+	return manifest.LinkList{}, nil
 }
 
 func (f EmptyFetcher) Get(link manifest.Link) Resource {

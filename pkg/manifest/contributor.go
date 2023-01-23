@@ -100,6 +100,7 @@ func ContributorFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNo
 	var contributors []Contributor
 	switch rjx := rawJsonArray.(type) {
 	case []interface{}:
+		contributors = make([]Contributor, 0, len(rjx))
 		for i, entry := range rjx {
 			rc, err := ContributorFromJSON(entry, normalizeHref)
 			if err != nil {
@@ -116,7 +117,7 @@ func ContributorFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNo
 			return nil, err
 		}
 		if c != nil {
-			contributors = append(contributors, *c)
+			contributors = []Contributor{*c}
 		}
 	}
 	return contributors, nil

@@ -8,8 +8,8 @@ import (
 	"github.com/readium/xmlquery"
 )
 
-func ParseNavDoc(document *xmlquery.Node, filePath string) map[string][]manifest.Link {
-	ret := make(map[string][]manifest.Link)
+func ParseNavDoc(document *xmlquery.Node, filePath string) map[string]manifest.LinkList {
+	ret := make(map[string]manifest.LinkList)
 	docPrefixes := parsePrefixes(SelectNodeAttrNs(document, NamespaceOPS, "prefix"))
 	for k, v := range ContentReservedPrefixes {
 		if _, ok := docPrefixes[k]; !ok { // prefix element overrides reserved prefixes
@@ -41,7 +41,7 @@ func ParseNavDoc(document *xmlquery.Node, filePath string) map[string][]manifest
 	return ret
 }
 
-func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]string) ([]string, []manifest.Link) {
+func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]string) ([]string, manifest.LinkList) {
 	typeAttr := ""
 	for _, na := range nav.Attr {
 		if na.NamespaceURI == NamespaceOPS && na.Name.Local == "type" {
@@ -53,8 +53,9 @@ func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]s
 		return nil, nil
 	}
 
-	var types []string
-	for _, prop := range parseProperties(typeAttr) {
+	parsedProps := parseProperties(typeAttr)
+	types := make([]string, 0, len(parsedProps))
+	for _, prop := range parsedProps {
 		types = append(types, resolveProperty(prop, prefixMap, DefaultVocabType))
 	}
 
@@ -65,17 +66,19 @@ func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]s
 	return nil, nil
 }
 
-func parseOlElement(ol *xmlquery.Node, filePath string) (links []manifest.Link) {
+func parseOlElement(ol *xmlquery.Node, filePath string) manifest.LinkList {
 	if ol == nil {
 		return nil
 	}
+	ols := ol.SelectElements(NSSelect(NamespaceXHTML, "li"))
+	links := make(manifest.LinkList, 0, len(ols))
 	for _, li := range ol.SelectElements(NSSelect(NamespaceXHTML, "li")) {
 		l := parseLiElement(li, filePath)
 		if l != nil {
 			links = append(links, *l)
 		}
 	}
-	return
+	return links
 }
 
 func parseLiElement(li *xmlquery.Node, filePath string) (link *manifest.Link) {

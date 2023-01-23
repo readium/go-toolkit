@@ -20,8 +20,8 @@ type FileFetcher struct {
 }
 
 // Links implements Fetcher
-func (f *FileFetcher) Links() ([]manifest.Link, error) {
-	links := make([]manifest.Link, 0)
+func (f *FileFetcher) Links() (manifest.LinkList, error) {
+	links := make(manifest.LinkList, 0)
 	for href, xpath := range f.paths {
 		axpath, err := filepath.Abs(xpath)
 		if err == nil {
@@ -178,18 +178,20 @@ func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 		}
 		return data, nil
 	}
+	data := make([]byte, end-start+1)
 	if start > 0 {
-		_, err := io.CopyN(io.Discard, f, start)
-		if err != nil {
+		n, err := f.ReadAt(data, start)
+		if err != nil && err != io.EOF {
 			return nil, Other(err)
 		}
+		return data[:n], nil
+	} else {
+		n, err := f.Read(data)
+		if err != nil && err != io.EOF {
+			return nil, Other(err)
+		}
+		return data[:n], nil
 	}
-	data := make([]byte, end-start+1)
-	n, err := f.Read(data)
-	if err != nil {
-		return nil, Other(err)
-	}
-	return data[:n], nil
 }
 
 // Stream implements Resource

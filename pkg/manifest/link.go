@@ -148,7 +148,7 @@ func LinkFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormaliz
 }
 
 func LinksFromJSONArray(rawJsonArray []interface{}, normalizeHref LinkHrefNormalizer) ([]Link, error) {
-	links := make([]Link, 0)
+	links := make([]Link, 0, len(rawJsonArray))
 	for i, entry := range rawJsonArray {
 		entry, ok := entry.(map[string]interface{})
 		if !ok {

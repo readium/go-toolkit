@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func loadNcx(name string) (map[string][]manifest.Link, error) {
+func loadNcx(name string) (map[string]manifest.LinkList, error) {
 	n, rerr := fetcher.NewFileResource(manifest.Link{}, "./testdata/ncx/"+name+".ncx").ReadAsXML(map[string]string{
 		NamespaceNCX: "ncx",
 	})
@@ -58,7 +58,7 @@ func TestNCXParserUnlinkedEntriesWithoutChildrenIgnored(t *testing.T) {
 func TestNCXParserHierarchicalItemsAllowed(t *testing.T) {
 	n, err := loadNcx("ncx-children")
 	assert.NoError(t, err)
-	assert.Equal(t, []manifest.Link{
+	assert.Equal(t, manifest.LinkList{
 		{Title: "Introduction", Href: "/OEBPS/xhtml/introduction.xhtml"},
 		{
 			Title: "Part I",
@@ -88,7 +88,7 @@ func TestNCXParserEmptyNCX(t *testing.T) {
 func TestNCXParserTOC(t *testing.T) {
 	n, err := loadNcx("ncx-complex")
 	assert.NoError(t, err)
-	assert.Equal(t, []manifest.Link{
+	assert.Equal(t, manifest.LinkList{
 		{Title: "Chapter 1", Href: "/OEBPS/xhtml/chapter1.xhtml"},
 		{Title: "Chapter 2", Href: "/OEBPS/xhtml/chapter2.xhtml"},
 	}, n["toc"])
@@ -97,7 +97,7 @@ func TestNCXParserTOC(t *testing.T) {
 func TestNCXParserPageList(t *testing.T) {
 	n, err := loadNcx("ncx-complex")
 	assert.NoError(t, err)
-	assert.Equal(t, []manifest.Link{
+	assert.Equal(t, manifest.LinkList{
 		{Title: "1", Href: "/OEBPS/xhtml/chapter1.xhtml#page1"},
 		{Title: "2", Href: "/OEBPS/xhtml/chapter1.xhtml#page2"},
 	}, n["page-list"])

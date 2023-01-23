@@ -85,8 +85,8 @@ func parseEncryptionData(fetcher fetcher.Fetcher) (ret map[string]manifest.Encry
 	return ParseEncryption(n)
 }
 
-func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetcher) (ret map[string][]manifest.Link) {
-	ret = make(map[string][]manifest.Link)
+func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetcher) (ret map[string]manifest.LinkList) {
+	ret = make(map[string]manifest.LinkList)
 	if packageDocument.EPUBVersion < 3.0 {
 		var ncxItem *Item
 		if packageDocument.Spine.TOC != "" {
