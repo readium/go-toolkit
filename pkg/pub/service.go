@@ -15,7 +15,7 @@ const (
 
 // Base interface to be implemented by all publication services.
 type Service interface {
-	Links() []manifest.Link                          // Links to be added to the publication
+	Links() manifest.LinkList                        // Links to be added to the publication
 	Get(link manifest.Link) (fetcher.Resource, bool) // A service can return a Resource that supplements, replaces or compensates for other links
 	Close()                                          // Closes any opened file handles, removes temporary files, etc.
 }

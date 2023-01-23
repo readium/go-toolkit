@@ -15,7 +15,7 @@ func TestEPUBPositionsServiceEmptyReadingOrder(t *testing.T) {
 
 /*func TestEPUBPositionsServiceSingleReadingOrder(t *testing.T) {
 	service := EPUBPositionsService{
-		readingOrder: []manifest.Link{{Href: "res", Type: "application/xml"}},
+		readingOrder: manifest.LinkList{{Href: "res", Type: "application/xml"}},
 	}
 
 	assert.Equal(t, []manifest.Locator{{

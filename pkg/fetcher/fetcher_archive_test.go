@@ -28,7 +28,7 @@ func TestArchiveFetcherLinks(t *testing.T) {
 		}
 	}
 
-	mustContain := []manifest.Link{
+	mustContain := manifest.LinkList{
 		makeTestLink("/mimetype", "", 20, false),
 		makeTestLink("/EPUB/cover.xhtml", "application/xhtml+xml", 259, true),
 		makeTestLink("/EPUB/css/epub.css", "text/css", 595, true),

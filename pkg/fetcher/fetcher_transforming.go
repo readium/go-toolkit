@@ -9,7 +9,7 @@ type TransformingFetcher struct {
 }
 
 // Links implements Fetcher
-func (f *TransformingFetcher) Links() ([]manifest.Link, error) {
+func (f *TransformingFetcher) Links() (manifest.LinkList, error) {
 	return f.fetcher.Links()
 }
 

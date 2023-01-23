@@ -46,10 +46,23 @@ func (r *BytesResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 	}
 	if r._bytes == nil {
 		r._bytes = r.loader()
+		if len(r._bytes) == 0 {
+			return nil, Other(errors.New("BytesResource has empty bytes"))
+		}
 	}
 	if start == 0 && end == 0 {
 		return r._bytes, nil
 	}
+
+	// Bounds check
+	length := int64(len(r._bytes))
+	if start > (length - 1) {
+		start = length - 1
+	}
+	if end > length {
+		end = length
+	}
+
 	return r._bytes[start:end], nil
 }
 

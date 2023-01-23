@@ -8,11 +8,11 @@ import (
 	"github.com/readium/xmlquery"
 )
 
-func ParseNCX(document *xmlquery.Node, filePath string) map[string][]manifest.Link {
+func ParseNCX(document *xmlquery.Node, filePath string) map[string]manifest.LinkList {
 	toc := document.SelectElement("//" + NSSelect(NamespaceNCX, "navMap"))
 	pageList := document.SelectElement("//" + NSSelect(NamespaceNCX, "pageList"))
 
-	ret := make(map[string][]manifest.Link)
+	ret := make(map[string]manifest.LinkList)
 	if toc != nil {
 		p := parseNavMapElement(toc, filePath)
 		if len(p) > 0 {
@@ -29,8 +29,8 @@ func ParseNCX(document *xmlquery.Node, filePath string) map[string][]manifest.Li
 	return ret
 }
 
-func parseNavMapElement(element *xmlquery.Node, filePath string) []manifest.Link {
-	var links []manifest.Link
+func parseNavMapElement(element *xmlquery.Node, filePath string) manifest.LinkList {
+	var links manifest.LinkList
 	for _, el := range element.SelectElements(NSSelect(NamespaceNCX, "navPoint")) {
 		if p := parseNavPointElement(el, filePath); p != nil {
 			links = append(links, *p)
@@ -39,9 +39,10 @@ func parseNavMapElement(element *xmlquery.Node, filePath string) []manifest.Link
 	return links
 }
 
-func parsePageListElement(element *xmlquery.Node, filePath string) []manifest.Link {
-	var links []manifest.Link
-	for _, el := range element.SelectElements(NSSelect(NamespaceNCX, "pageTarget")) {
+func parsePageListElement(element *xmlquery.Node, filePath string) manifest.LinkList {
+	selectedElements := element.SelectElements(NSSelect(NamespaceNCX, "pageTarget"))
+	links := make([]manifest.Link, 0, len(selectedElements))
+	for _, el := range selectedElements {
 		href := extractHref(el, filePath)
 		title := extractTitle(el)
 		if href == "" || title == "" {
@@ -58,7 +59,7 @@ func parsePageListElement(element *xmlquery.Node, filePath string) []manifest.Li
 func parseNavPointElement(element *xmlquery.Node, filePath string) *manifest.Link {
 	title := extractTitle(element)
 	href := extractHref(element, filePath)
-	var children []manifest.Link
+	var children manifest.LinkList
 	for _, el := range element.SelectElements(NSSelect(NamespaceNCX, "navPoint")) {
 		if p := parseNavPointElement(el, filePath); p != nil {
 			children = append(children, *p)

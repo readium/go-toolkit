@@ -42,7 +42,7 @@ var DefaultVocabMap = map[DefaultVocab]string{
 
 func resolveProperty(property string, prefixMap map[string]string, defaultVocab DefaultVocab) string {
 	st := strings.SplitN(property, ":", 2)
-	s := []string{}
+	s := make([]string, 0, len(st))
 	for _, v := range st {
 		if v != "" {
 			s = append(s, v)
@@ -79,7 +79,7 @@ var muchSpaceSuchWowMatcher = regexp.MustCompile(`\s+`)
 
 func parseProperties(raw string) []string {
 	vals := muchSpaceSuchWowMatcher.Split(raw, -1)
-	s := []string{}
+	s := make([]string, 0, len(vals))
 	for _, v := range vals {
 		if v != "" {
 			s = append(s, v)

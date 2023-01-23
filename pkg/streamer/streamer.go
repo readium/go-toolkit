@@ -8,6 +8,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/parser"
 	"github.com/readium/go-toolkit/pkg/parser/epub"
+	"github.com/readium/go-toolkit/pkg/parser/pdf"
 	"github.com/readium/go-toolkit/pkg/pub"
 )
 
@@ -46,8 +47,8 @@ func New(config Config) Streamer { // TODO contentProtections
 	}
 
 	defaultParsers := []parser.PublicationParser{
-		epub.NewParser(nil),
-		// TODO PDF parser
+		epub.NewParser(nil), // TODO pass strategy
+		pdf.NewParser(),
 		parser.NewWebPubParser(config.HttpClient),
 		parser.ImageParser{},
 		parser.AudioParser{},

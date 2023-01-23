@@ -18,9 +18,9 @@ type ArchiveFetcher struct {
 }
 
 // Links implements Fetcher
-func (f *ArchiveFetcher) Links() ([]manifest.Link, error) {
+func (f *ArchiveFetcher) Links() (manifest.LinkList, error) {
 	entries := f.archive.Entries()
-	links := make([]manifest.Link, 0, len(entries))
+	links := make(manifest.LinkList, 0, len(entries))
 	for _, af := range entries {
 		fp := path.Clean(af.Path())
 		if !strings.HasPrefix(fp, "/") {

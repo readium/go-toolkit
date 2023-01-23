@@ -24,7 +24,7 @@ type PositionsService interface {
 // PerResourcePositionsService implements PositionsService
 // Simple [PositionsService] which generates one position per [readingOrder] resource.
 type PerResourcePositionsService struct {
-	readingOrder      []manifest.Link
+	readingOrder      manifest.LinkList
 	fallbackMediaType string
 }
 
@@ -45,8 +45,8 @@ func GetForPositionsService(service PositionsService, link manifest.Link) (fetch
 
 func (s PerResourcePositionsService) Close() {}
 
-func (s PerResourcePositionsService) Links() []manifest.Link {
-	return []manifest.Link{PositionsLink}
+func (s PerResourcePositionsService) Links() manifest.LinkList {
+	return manifest.LinkList{PositionsLink}
 }
 
 func (s PerResourcePositionsService) Get(link manifest.Link) (fetcher.Resource, bool) {
