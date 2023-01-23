@@ -4,10 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
@@ -17,7 +15,7 @@ import (
 )
 
 // This is completely random
-var UUIDNameSpaceForPDF = uuid.Must(uuid.Parse("4a706cb0-458c-4180-9601-086121ee8d9f"))
+// var UUIDNameSpaceForPDF = uuid.Must(uuid.Parse("4a706cb0-458c-4180-9601-086121ee8d9f"))
 
 func loadDecoder(meta pdfcpu.Metadata) (*xmp.Document, []byte, error) {
 	metabin, err := io.ReadAll(meta.Reader)
@@ -46,16 +44,16 @@ func ParseMetadata(ctx *pdfcpu.Context, link *manifest.Link) (m manifest.Manifes
 	}
 	m.Metadata.ConformsTo = manifest.Profiles{manifest.ProfilePDF}
 
-	hashmaterial := make([]string, 0, 64)
+	// hashmaterial := make([]string, 0, 64)
 	metas, _ := ctx.ExtractMetadata()
 	for _, meta := range metas {
-		doc, metabin, derr := loadDecoder(meta)
+		doc, _, derr := loadDecoder(meta)
 		if derr != nil {
 			err = derr
 			return
 		}
 		defer doc.Close()
-		hashmaterial = append(hashmaterial, string(metabin))
+		// hashmaterial = append(hashmaterial, string(metabin))
 
 		// b, _ := json.MarshalIndent(doc, "", "  ")
 		// println(string(b))
@@ -71,7 +69,9 @@ func ParseMetadata(ctx *pdfcpu.Context, link *manifest.Link) (m manifest.Manifes
 		return
 	}
 
-	if m.Metadata.Identifier == "" {
+	// Removed for now, because identifiers are technically optional in webpub, and we can't
+	// tell if this is the actual PDF ID or not if we use this custom hash as a fallback.
+	/*if m.Metadata.Identifier == "" {
 		// Create a UUIDv5 which is based on a SHA1 hash of the PDF's metadata.
 		// This is done instead of a hash of the entire file like the mobile toolkits
 		// because it minimizes the amount of reading of the PDF file, vitally important
@@ -114,7 +114,7 @@ func ParseMetadata(ctx *pdfcpu.Context, link *manifest.Link) (m manifest.Manifes
 		}
 
 		m.Metadata.Identifier = uuid.NewSHA1(UUIDNameSpaceForPDF, []byte(strings.Join(hashmaterial, "|"))).String()
-	}
+	}*/
 
 	return
 }
