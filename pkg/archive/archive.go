@@ -7,9 +7,9 @@ import (
 )
 
 type ArchiveFactory interface {
-	Open(filepath string, password string) (Archive, error)                         // Opens an archive from a local [file].
-	OpenBytes(data []byte, password string) (Archive, error)                        // Opens an archive from a [data] slice.
-	OpenReader(reader ReaderAtCloser, size int64, password string) (Archive, error) // Opens an archive from a reader.
+	Open(filepath string, password string) (Archive, error)                                             // Opens an archive from a local [file].
+	OpenBytes(data []byte, password string) (Archive, error)                                            // Opens an archive from a [data] slice.
+	OpenReader(reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) // Opens an archive from a reader.
 }
 
 type DefaultArchiveFactory struct {
@@ -39,11 +39,11 @@ func (e DefaultArchiveFactory) OpenBytes(data []byte, password string) (Archive,
 }
 
 // OpenBytes implements ArchiveFactory
-func (e DefaultArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string) (Archive, error) {
+func (e DefaultArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
 	if reader == nil {
 		return nil, errors.New("archive is nil")
 	}
-	return e.gozipFactory.OpenReader(reader, size, password)
+	return e.gozipFactory.OpenReader(reader, size, password, minimizeReads)
 }
 
 func NewArchiveFactory() DefaultArchiveFactory {
