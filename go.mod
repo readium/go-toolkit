@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/agext/regexp v1.3.0
 	github.com/deckarep/golang-set v1.7.1
-	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.7.4
 	github.com/opds-community/libopds2-go v0.0.0-20170628075933-9c163cf60f6e
 	github.com/pdfcpu/pdfcpu v0.3.13
