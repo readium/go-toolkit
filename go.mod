@@ -19,7 +19,7 @@ require (
 	github.com/trimmer-io/go-xmp v1.0.0
 	github.com/urfave/negroni v1.0.0
 	golang.org/x/net v0.0.0-20221004154528-8021a29435af
-	golang.org/x/text v0.3.7
+	golang.org/x/text v0.3.8
 )
 
 require (
