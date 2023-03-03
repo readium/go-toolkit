@@ -57,7 +57,7 @@ func (s *PositionsService) computePositions() [][]manifest.Locator {
 	positions := make([][]manifest.Locator, len(s.readingOrder))
 	for i, link := range s.readingOrder {
 		var lpositions []manifest.Locator
-		if manifest.LayoutOf(link) == manifest.EPUBLayoutFixed {
+		if s.presentation.LayoutOf(link) == manifest.EPUBLayoutFixed {
 			lpositions = s.createFixed(link, lastPositionOfPreviousResource)
 		} else {
 			lpositions = s.createReflowable(link, lastPositionOfPreviousResource, s.fetcher)
