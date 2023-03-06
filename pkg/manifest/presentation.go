@@ -153,9 +153,12 @@ func (p Presentation) MarshalJSON() ([]byte, error) {
 }
 
 // Get the layout of the given resource in this publication. Falls back on REFLOWABLE.
-func LayoutOf(link Link) EPUBLayout {
+func (p Presentation) LayoutOf(link Link) EPUBLayout {
 	if l := link.Properties.Layout(); l != "" {
 		return l
+	}
+	if p.Layout != nil && *p.Layout != "" {
+		return *p.Layout
 	}
 	return EPUBLayoutReflowable
 }
