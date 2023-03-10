@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 )
 
 // A11y holds the accessibility metadata of a Publication.
@@ -34,7 +35,41 @@ func NewA11y() A11y {
 func (a A11y) IsEmpty() bool {
 	return len(a.ConformsTo) == 0 && a.Certification == nil && a.Summary == "" &&
 		len(a.AccessModes) == 0 && len(a.AccessModesSufficient) == 0 &&
-		len(a.Features) == 0 && len (a.Hazards) == 0
+		len(a.Features) == 0 && len(a.Hazards) == 0
+}
+
+// Merge extends or overwrites the current A11y with the given one.
+func (a *A11y) Merge(other *A11y) {
+	if other == nil || other.IsEmpty() {
+		return
+	}
+
+	a.ConformsTo = extensions.AppendIfMissing(a.ConformsTo, other.ConformsTo...)
+
+	if other.Certification != nil {
+		a.Certification = other.Certification
+	}
+
+	if len(other.Summary) > 0 {
+		a.Summary = other.Summary
+	}
+
+	a.AccessModes = extensions.AppendIfMissing(a.AccessModes, other.AccessModes...)
+	a.Features = extensions.AppendIfMissing(a.Features, other.Features...)
+	a.Hazards = extensions.AppendIfMissing(a.Hazards, other.Hazards...)
+
+	for _, otherAms := range other.AccessModesSufficient {
+		found := false
+		for _, ams := range a.AccessModesSufficient {
+			if extensions.Equal(otherAms, ams) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			a.AccessModesSufficient = append(a.AccessModesSufficient, otherAms)
+		}
+	}
 }
 
 func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
@@ -53,8 +88,8 @@ func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
 	if certJSON, ok := rawJSON["certification"].(map[string]interface{}); ok {
 		c := A11yCertification{
 			CertifiedBy: parseOptString(certJSON["certifiedBy"]),
-			Credential: parseOptString(certJSON["credential"]),
-			Report: parseOptString(certJSON["report"]),
+			Credential:  parseOptString(certJSON["credential"]),
+			Report:      parseOptString(certJSON["report"]),
 		}
 		a.Certification = &c
 	}

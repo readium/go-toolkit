@@ -112,6 +112,34 @@ func (m Metadata) EffectiveReadingProgression() ReadingProgression {
 	return LTR
 }
 
+// InferredAccessibility returns the accessibility metadata inferred from the
+// manifest and stored in OtherMetadata.
+func (m Metadata) InferredAccessibility() *A11y {
+	var a11y *A11y
+	if a11yJSON, ok := m.OtherMetadata["inferredAccessibility"].(map[string]interface{}); ok {
+		a11y, _ = A11yFromJSON(a11yJSON)
+	}
+	return a11y
+}
+
+// SetOtherMetadata marshalls the value to a JSON map before storing it in
+// OtherMetadata under the given key.
+func (m Metadata) SetOtherMetadata(key string, value interface{}) error {
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	var object map[string]interface{}
+	err = json.Unmarshal(bytes, &object)
+	if err != nil {
+		return err
+	}
+
+	m.OtherMetadata[key] = object
+
+	return nil
+}
+
 func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormalizer) (*Metadata, error) {
 	if rawJson == nil {
 		return nil, nil

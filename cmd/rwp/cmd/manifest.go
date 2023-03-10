@@ -15,7 +15,7 @@ import (
 var indentFlag string
 
 // Infer accessibility metadata.
-var inferA11yFlag bool
+var inferA11yFlag InferA11yMetadata = "no"
 
 // Infer the number of pages from the generated position list.
 var inferPageCountFlag bool
@@ -50,7 +50,7 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path := filepath.Clean(args[0])
 		pub, err := streamer.New(streamer.Config{
-			InferA11yMetadata: inferA11yFlag,
+			InferA11yMetadata: streamer.InferA11yMetadata(inferA11yFlag),
 			InferPageCount:    inferPageCountFlag,
 		}).Open(
 			asset.File(path), "",
@@ -77,6 +77,28 @@ Examples:
 func init() {
 	rootCmd.AddCommand(manifestCmd)
 	manifestCmd.Flags().StringVarP(&indentFlag, "indent", "i", "", "Indentation used to pretty-print")
-	manifestCmd.Flags().BoolVar(&inferA11yFlag, "infer-a11y", false, "Infer accessibility metadata")
+	manifestCmd.Flags().Var(&inferA11yFlag, "infer-a11y", "Infer accessibility metadata (no, merged, split)")
 	manifestCmd.Flags().BoolVar(&inferPageCountFlag, "infer-page-count", false, "Infer the number of pages from the generated position list.")
+}
+
+type InferA11yMetadata streamer.InferA11yMetadata
+
+// String is used both by fmt.Print and by Cobra in help text
+func (e *InferA11yMetadata) String() string {
+	return string(*e)
+}
+
+func (e *InferA11yMetadata) Set(v string) error {
+	switch v {
+	case "no", "merged", "split":
+		*e = InferA11yMetadata(v)
+		return nil
+	default:
+		return errors.New(`must be one of "no", "merged", or "split"`)
+	}
+}
+
+// Type is only used in help text.
+func (e *InferA11yMetadata) Type() string {
+	return "InferA11yMetadata"
 }

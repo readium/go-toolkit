@@ -59,19 +59,3 @@ func ParseDate(raw string) *time.Time {
 	}
 	return &t
 }
-
-func Contains[T comparable](list []T, element T) bool {
-	for _, v := range list {
-		if v == element {
-			return true
-		}
-	}
-	return false
-}
-
-func AddToSet(s []string, e string) []string {
-	if !Contains(s, e) {
-		s = append(s, e)
-	}
-	return s
-}

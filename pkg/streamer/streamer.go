@@ -21,7 +21,7 @@ import (
 // default parser.
 type Streamer struct {
 	parsers           []parser.PublicationParser
-	inferA11yMetadata bool
+	inferA11yMetadata InferA11yMetadata
 	inferPageCount    bool
 	archiveFactory    archive.ArchiveFactory
 	// TODO pdfFactory
@@ -32,11 +32,24 @@ type Streamer struct {
 type Config struct {
 	Parsers              []parser.PublicationParser // Parsers used to open a publication, in addition to the default parsers.
 	IgnoreDefaultParsers bool                       // When true, only parsers provided in parsers will be used.
-	InferA11yMetadata    bool                       // When true, additional accessibility metadata will be infered from the manifest.
+	InferA11yMetadata    InferA11yMetadata          // When set, additional accessibility metadata will be infered from the manifest.
 	InferPageCount       bool                       // When true, will infer `Metadata.NumberOfPages` from the generated position list.
 	ArchiveFactory       archive.ArchiveFactory     // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
 	HttpClient           *http.Client               // Service performing HTTP requests.
 }
+
+type InferA11yMetadata string
+
+const (
+	// No accessibility metadata will be infered.
+	InferA11yMetadataNo InferA11yMetadata = "no"
+	// Accessibility metadata will be infered from the manifest and merged in
+	// the `Accessibility` object.
+	InferA11yMetadataMerged InferA11yMetadata = "merged"
+	// Accessibility metadata will be infered from the manifest and added
+	// separately in the `InferredAccessibility` object.
+	InferA11yMetadataSplit InferA11yMetadata = "split"
+)
 
 func New(config Config) Streamer { // TODO contentProtections
 	if config.HttpClient == nil {
@@ -95,16 +108,22 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 		return nil, errors.New("cannot find a parser for this asset")
 	}
 
-	if s.inferA11yMetadata {
-		builder.Manifest.Metadata.Accessibility = inferA11yMetadataFromManifest(builder.Manifest)
-	}
-
 	// TODO apply onCreatePublication
 
 	pub := builder.Build()
 
-	if s.inferA11yMetadata {
-		pub.Manifest.Metadata.Accessibility = inferA11yMetadataFromManifest(pub.Manifest)
+	if s.inferA11yMetadata == InferA11yMetadataMerged || s.inferA11yMetadata == InferA11yMetadataSplit {
+		if inferredA11y := inferA11yMetadataFromManifest(pub.Manifest); inferredA11y != nil {
+			pub.Manifest.Metadata.SetOtherMetadata("inferredAccessibility", inferredA11y)
+
+			if s.inferA11yMetadata == InferA11yMetadataMerged {
+				if pub.Manifest.Metadata.Accessibility == nil {
+					pub.Manifest.Metadata.Accessibility = inferredA11y
+				} else {
+					pub.Manifest.Metadata.Accessibility.Merge(inferredA11y)
+				}
+			}
+		}
 	}
 
 	if s.inferPageCount && pub.Manifest.Metadata.NumberOfPages == nil {

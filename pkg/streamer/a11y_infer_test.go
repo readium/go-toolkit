@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReturnsAugmentedA11yMetadataWithInference(t *testing.T) {
+func TestReturnsAdditionalInferredA11yMetadata(t *testing.T) {
 	a11y := manifest.NewA11y()
 	a11y.ConformsTo = []manifest.A11yProfile{"unknown"}
 
@@ -21,7 +21,7 @@ func TestReturnsAugmentedA11yMetadataWithInference(t *testing.T) {
 		},
 	}
 
-	inferreddA11y := a11y
+	inferreddA11y := manifest.NewA11y()
 	inferreddA11y.AccessModesSufficient = [][]manifest.A11yPrimaryAccessMode{{manifest.A11yPrimaryAccessModeTextual}}
 
 	res := inferA11yMetadataFromManifest(m)
@@ -109,8 +109,9 @@ func TestInferTextualAccessModeSufficientFromLackOfMedia(t *testing.T) {
 
 	testReadingOrder := func(contains bool, mt mediatype.MediaType, extension string) {
 		testManifest(contains, manifest.Manifest{
-			Metadata:     manifest.Metadata{Accessibility: &a11y},
-			ReadingOrder: []manifest.Link{newLink(mt, extension)},
+			Metadata:        manifest.Metadata{Accessibility: &a11y},
+			ReadingOrder:    []manifest.Link{newLink(mt, extension)},
+			TableOfContents: []manifest.Link{newLink(mt, extension)},
 		})
 	}
 
@@ -122,8 +123,9 @@ func TestInferTextualAccessModeSufficientFromLackOfMedia(t *testing.T) {
 
 	testResources := func(contains bool, mt mediatype.MediaType, extension string) {
 		testManifest(contains, manifest.Manifest{
-			Metadata:  manifest.Metadata{Accessibility: &a11y},
-			Resources: []manifest.Link{newLink(mt, extension)},
+			Metadata:        manifest.Metadata{Accessibility: &a11y},
+			Resources:       []manifest.Link{newLink(mt, extension)},
+			TableOfContents: []manifest.Link{newLink(mt, extension)},
 		})
 	}
 

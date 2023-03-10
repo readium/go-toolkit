@@ -32,10 +32,16 @@ Examples:
 
 #### Accessibility inference
 
-`rwp manifest` can infer additional accessibility metadata when they are missing, with the `--infer-a11y` flag.
+`rwp manifest` can infer additional accessibility metadata when they are missing, with the `--infer-a11y` flag. It takes one of the following arguments:
+
+| Option           | Description                                                                                            |
+|------------------|--------------------------------------------------------------------------------------------------------|
+| `no` (*default*) | No accessibility metadata will be inferred.                                                            |
+| `merged`         | Accessibility metadata will be inferred and merged with the authored ones in `metadata.accessibility`. |
+| `split`          | Accessibility metadata will be inferred but stored separately in `metadata.inferredAccessibility`.     |
 
 ```sh
-rwp manifest --infer-a11y publication.epub  | jq .metadata.accessibility
+rwp manifest --infer-a11y=merged publication.epub  | jq .metadata
 ```
 
 ##### Inferred metadata
