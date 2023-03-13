@@ -112,11 +112,13 @@ func (m Metadata) EffectiveReadingProgression() ReadingProgression {
 	return LTR
 }
 
+const InferredAccessibilityMetadataKey = "https://readium.org/webpub-manifest#inferredAccessibility"
+
 // InferredAccessibility returns the accessibility metadata inferred from the
 // manifest and stored in OtherMetadata.
 func (m Metadata) InferredAccessibility() *A11y {
 	var a11y *A11y
-	if a11yJSON, ok := m.OtherMetadata["inferredAccessibility"].(map[string]interface{}); ok {
+	if a11yJSON, ok := m.OtherMetadata[InferredAccessibilityMetadataKey].(map[string]interface{}); ok {
 		a11y, _ = A11yFromJSON(a11yJSON)
 	}
 	return a11y

@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/asset"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/parser"
 	"github.com/readium/go-toolkit/pkg/parser/epub"
 	"github.com/readium/go-toolkit/pkg/parser/pdf"
@@ -114,7 +115,7 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 
 	if s.inferA11yMetadata == InferA11yMetadataMerged || s.inferA11yMetadata == InferA11yMetadataSplit {
 		if inferredA11y := inferA11yMetadataFromManifest(pub.Manifest); inferredA11y != nil {
-			pub.Manifest.Metadata.SetOtherMetadata("inferredAccessibility", inferredA11y)
+			pub.Manifest.Metadata.SetOtherMetadata(manifest.InferredAccessibilityMetadataKey, inferredA11y)
 
 			if s.inferA11yMetadata == InferA11yMetadataMerged {
 				if pub.Manifest.Metadata.Accessibility == nil {
