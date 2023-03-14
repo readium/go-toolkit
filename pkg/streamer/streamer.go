@@ -33,13 +33,13 @@ type Streamer struct {
 type Config struct {
 	Parsers              []parser.PublicationParser // Parsers used to open a publication, in addition to the default parsers.
 	IgnoreDefaultParsers bool                       // When true, only parsers provided in parsers will be used.
-	InferA11yMetadata    InferA11yMetadata          // When set, additional accessibility metadata will be infered from the manifest.
+	InferA11yMetadata    InferA11yMetadata          // When not empty, additional accessibility metadata will be infered from the manifest.
 	InferPageCount       bool                       // When true, will infer `Metadata.NumberOfPages` from the generated position list.
 	ArchiveFactory       archive.ArchiveFactory     // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
 	HttpClient           *http.Client               // Service performing HTTP requests.
 }
 
-type InferA11yMetadata int
+type InferA11yMetadata uint
 
 const (
 	// No accessibility metadata will be infered.
@@ -129,17 +129,23 @@ func (s *Streamer) inferA11yMetadataInPublication(pub *pub.Publication) {
 	if s.inferA11yMetadata == InferA11yMetadataNo {
 		return
 	}
-	if s.inferA11yMetadata == InferA11yMetadataMerged || s.inferA11yMetadata == InferA11yMetadataSplit {
-		if inferredA11y := inferA11yMetadataFromManifest(pub.Manifest); inferredA11y != nil {
-			pub.Manifest.Metadata.SetOtherMetadata(manifest.InferredAccessibilityMetadataKey, inferredA11y)
+	inferredA11y := inferA11yMetadataFromManifest(pub.Manifest)
+	if inferredA11y == nil {
+		return
+	}
 
-			if s.inferA11yMetadata == InferA11yMetadataMerged {
-				if pub.Manifest.Metadata.Accessibility == nil {
-					pub.Manifest.Metadata.Accessibility = inferredA11y
-				} else {
-					pub.Manifest.Metadata.Accessibility.Merge(inferredA11y)
-				}
-			}
+	switch s.inferA11yMetadata {
+	case InferA11yMetadataMerged:
+		if pub.Manifest.Metadata.Accessibility == nil {
+			pub.Manifest.Metadata.Accessibility = inferredA11y
+		} else {
+			pub.Manifest.Metadata.Accessibility.Merge(inferredA11y)
 		}
+
+	case InferA11yMetadataSplit:
+		pub.Manifest.Metadata.SetOtherMetadata(manifest.InferredAccessibilityMetadataKey, inferredA11y)
+
+	case InferA11yMetadataNo:
+		return
 	}
 }
