@@ -15,7 +15,7 @@ import (
 var indentFlag string
 
 // Infer accessibility metadata.
-var inferA11yFlag InferA11yMetadata = "no"
+var inferA11yFlag InferA11yMetadata
 
 // Infer the number of pages from the generated position list.
 var inferPageCountFlag bool
@@ -77,7 +77,7 @@ Examples:
 func init() {
 	rootCmd.AddCommand(manifestCmd)
 	manifestCmd.Flags().StringVarP(&indentFlag, "indent", "i", "", "Indentation used to pretty-print")
-	manifestCmd.Flags().Var(&inferA11yFlag, "infer-a11y", "Infer accessibility metadata (no, merged, split)")
+	manifestCmd.Flags().Var(&inferA11yFlag, "infer-a11y", "Infer accessibility metadata: no, merged, split")
 	manifestCmd.Flags().BoolVar(&inferPageCountFlag, "infer-page-count", false, "Infer the number of pages from the generated position list.")
 }
 
@@ -85,20 +85,34 @@ type InferA11yMetadata streamer.InferA11yMetadata
 
 // String is used both by fmt.Print and by Cobra in help text
 func (e *InferA11yMetadata) String() string {
-	return string(*e)
+	if e == nil {
+		return "no"
+	}
+	switch *e {
+	case InferA11yMetadata(streamer.InferA11yMetadataMerged):
+		return "merged"
+	case InferA11yMetadata(streamer.InferA11yMetadataSplit):
+		return "split"
+	default:
+		return "no"
+	}
 }
 
 func (e *InferA11yMetadata) Set(v string) error {
 	switch v {
-	case "no", "merged", "split":
-		*e = InferA11yMetadata(v)
-		return nil
+	case "no":
+		*e = InferA11yMetadata(streamer.InferA11yMetadataNo)
+	case "merged":
+		*e = InferA11yMetadata(streamer.InferA11yMetadataMerged)
+	case "split":
+		*e = InferA11yMetadata(streamer.InferA11yMetadataSplit)
 	default:
 		return errors.New(`must be one of "no", "merged", or "split"`)
 	}
+	return nil
 }
 
 // Type is only used in help text.
 func (e *InferA11yMetadata) Type() string {
-	return "InferA11yMetadata"
+	return "string"
 }

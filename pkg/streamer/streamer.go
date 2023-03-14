@@ -39,17 +39,17 @@ type Config struct {
 	HttpClient           *http.Client               // Service performing HTTP requests.
 }
 
-type InferA11yMetadata string
+type InferA11yMetadata int
 
 const (
 	// No accessibility metadata will be infered.
-	InferA11yMetadataNo InferA11yMetadata = "no"
+	InferA11yMetadataNo InferA11yMetadata = 0 + iota
 	// Accessibility metadata will be infered from the manifest and merged in
 	// the `Accessibility` object.
-	InferA11yMetadataMerged InferA11yMetadata = "merged"
+	InferA11yMetadataMerged
 	// Accessibility metadata will be infered from the manifest and added
 	// separately in the `InferredAccessibility` object.
-	InferA11yMetadataSplit InferA11yMetadata = "split"
+	InferA11yMetadataSplit
 )
 
 func New(config Config) Streamer { // TODO contentProtections
@@ -113,6 +113,22 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 
 	pub := builder.Build()
 
+	s.inferA11yMetadataInPublication(pub)
+
+	if s.inferPageCount && pub.Manifest.Metadata.NumberOfPages == nil {
+		pageCount := uint(len(pub.Positions()))
+		if pageCount > 0 {
+			pub.Manifest.Metadata.NumberOfPages = &pageCount
+		}
+	}
+
+	return pub, nil
+}
+
+func (s *Streamer) inferA11yMetadataInPublication(pub *pub.Publication) {
+	if s.inferA11yMetadata == InferA11yMetadataNo {
+		return
+	}
 	if s.inferA11yMetadata == InferA11yMetadataMerged || s.inferA11yMetadata == InferA11yMetadataSplit {
 		if inferredA11y := inferA11yMetadataFromManifest(pub.Manifest); inferredA11y != nil {
 			pub.Manifest.Metadata.SetOtherMetadata(manifest.InferredAccessibilityMetadataKey, inferredA11y)
@@ -126,13 +142,4 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 			}
 		}
 	}
-
-	if s.inferPageCount && pub.Manifest.Metadata.NumberOfPages == nil {
-		pageCount := uint(len(pub.Positions()))
-		if pageCount > 0 {
-			pub.Manifest.Metadata.NumberOfPages = &pageCount
-		}
-	}
-
-	return pub, nil
 }
