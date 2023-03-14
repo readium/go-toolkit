@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/internal/util"
 )
 
 // TODO replace with generic
@@ -127,19 +128,29 @@ func (m Metadata) InferredAccessibility() *A11y {
 // SetOtherMetadata marshalls the value to a JSON map before storing it in
 // OtherMetadata under the given key.
 func (m Metadata) SetOtherMetadata(key string, value interface{}) error {
-	bytes, err := json.Marshal(value)
+	value, err := toJSONMap(value)
 	if err != nil {
 		return err
+	}
+	m.OtherMetadata[key] = value
+	return nil
+}
+
+func toJSONMap(value interface{}) (map[string]interface{}, error) {
+	if value, ok := value.(util.JSONMappable); ok {
+		return value.JSONMap()
+	}
+
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
 	}
 	var object map[string]interface{}
 	err = json.Unmarshal(bytes, &object)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	m.OtherMetadata[key] = object
-
-	return nil
+	return object, nil
 }
 
 func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormalizer) (*Metadata, error) {
