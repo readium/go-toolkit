@@ -39,7 +39,7 @@ type Config struct {
 	HttpClient           *http.Client               // Service performing HTTP requests.
 }
 
-type InferA11yMetadata uint
+type InferA11yMetadata uint8
 
 const (
 	// No accessibility metadata will be infered.
