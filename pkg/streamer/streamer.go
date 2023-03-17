@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/asset"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/parser"
 	"github.com/readium/go-toolkit/pkg/parser/epub"
 	"github.com/readium/go-toolkit/pkg/parser/pdf"
@@ -21,7 +22,7 @@ import (
 // default parser.
 type Streamer struct {
 	parsers           []parser.PublicationParser
-	inferA11yMetadata bool
+	inferA11yMetadata InferA11yMetadata
 	inferPageCount    bool
 	archiveFactory    archive.ArchiveFactory
 	// TODO pdfFactory
@@ -32,11 +33,24 @@ type Streamer struct {
 type Config struct {
 	Parsers              []parser.PublicationParser // Parsers used to open a publication, in addition to the default parsers.
 	IgnoreDefaultParsers bool                       // When true, only parsers provided in parsers will be used.
-	InferA11yMetadata    bool                       // When true, additional accessibility metadata will be infered from the manifest.
+	InferA11yMetadata    InferA11yMetadata          // When not empty, additional accessibility metadata will be infered from the manifest.
 	InferPageCount       bool                       // When true, will infer `Metadata.NumberOfPages` from the generated position list.
 	ArchiveFactory       archive.ArchiveFactory     // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
 	HttpClient           *http.Client               // Service performing HTTP requests.
 }
+
+type InferA11yMetadata uint8
+
+const (
+	// No accessibility metadata will be infered.
+	InferA11yMetadataNo InferA11yMetadata = 0 + iota
+	// Accessibility metadata will be infered from the manifest and merged in
+	// the `Accessibility` object.
+	InferA11yMetadataMerged
+	// Accessibility metadata will be infered from the manifest and added
+	// separately in the `InferredAccessibility` object.
+	InferA11yMetadataSplit
+)
 
 func New(config Config) Streamer { // TODO contentProtections
 	if config.HttpClient == nil {
@@ -95,17 +109,11 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 		return nil, errors.New("cannot find a parser for this asset")
 	}
 
-	if s.inferA11yMetadata {
-		builder.Manifest.Metadata.Accessibility = inferA11yMetadataFromManifest(builder.Manifest)
-	}
-
 	// TODO apply onCreatePublication
 
 	pub := builder.Build()
 
-	if s.inferA11yMetadata {
-		pub.Manifest.Metadata.Accessibility = inferA11yMetadataFromManifest(pub.Manifest)
-	}
+	s.inferA11yMetadataInPublication(pub)
 
 	if s.inferPageCount && pub.Manifest.Metadata.NumberOfPages == nil {
 		pageCount := uint(len(pub.Positions()))
@@ -115,4 +123,29 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 	}
 
 	return pub, nil
+}
+
+func (s *Streamer) inferA11yMetadataInPublication(pub *pub.Publication) {
+	if s.inferA11yMetadata == InferA11yMetadataNo {
+		return
+	}
+	inferredA11y := inferA11yMetadataFromManifest(pub.Manifest)
+	if inferredA11y == nil {
+		return
+	}
+
+	switch s.inferA11yMetadata {
+	case InferA11yMetadataMerged:
+		if pub.Manifest.Metadata.Accessibility == nil {
+			pub.Manifest.Metadata.Accessibility = inferredA11y
+		} else {
+			pub.Manifest.Metadata.Accessibility.Merge(inferredA11y)
+		}
+
+	case InferA11yMetadataSplit:
+		pub.Manifest.Metadata.SetOtherMetadata(manifest.InferredAccessibilityMetadataKey, inferredA11y)
+
+	case InferA11yMetadataNo:
+		return
+	}
 }
