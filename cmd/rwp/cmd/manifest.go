@@ -48,6 +48,11 @@ Examples:
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// By the time we reach this point, we know that the arguments were
+		// properly parsed, and we don't want to show the usage if an API error
+		// occurs.
+		cmd.SilenceUsage = true
+
 		path := filepath.Clean(args[0])
 		pub, err := streamer.New(streamer.Config{
 			InferA11yMetadata: streamer.InferA11yMetadata(inferA11yFlag),
