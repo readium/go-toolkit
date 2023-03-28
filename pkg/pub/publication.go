@@ -22,6 +22,29 @@ func (p Publication) ConformsTo(profile manifest.Profile) bool {
 	return p.Manifest.ConformsTo(profile)
 }
 
+// Finds the first [Link] with the given href in the publication's links.
+// Searches through (in order) the reading order, resources and links recursively following alternate and children links.
+// If there's no match, tries again after removing any query parameter and anchor from the given href.
+func (p Publication) LinkWithHref(href string) *manifest.Link {
+	return p.Manifest.LinkWithHref(href)
+}
+
+// Finds the first [Link] having the given [rel] in the publications's links.
+func (p Publication) LinkWithRel(rel string) *manifest.Link {
+	return p.Manifest.LinkWithRel(rel)
+}
+
+// Finds all [Link]s having the given [rel] in the publications's links.
+func (p Publication) LinksWithRel(rel string) []manifest.Link {
+	return p.Manifest.LinksWithRel(rel)
+}
+
+// Creates a new [Locator] object from a [Link] to a resource of this publication.
+// Returns nil if the resource is not found in this publication.
+func (p Publication) LocatorFromLink(link manifest.Link) *manifest.Locator {
+	return p.Manifest.LocatorFromLink(link)
+}
+
 // Returns the RWPM JSON representation for this [Publication]'s manifest, as a string.
 func (p Publication) JSONManifest() (string, error) {
 	bin, err := json.Marshal(p.Manifest)

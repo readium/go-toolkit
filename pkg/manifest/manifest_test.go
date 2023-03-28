@@ -350,3 +350,142 @@ func TestManifestHrefResolvedToRootRemotePackage(t *testing.T) {
 
 	assert.Equal(t, "http://example.com/directory/chap1.html", m.ReadingOrder[0].Href)
 }
+
+func TestManifestLocatorFromMinimalLink(t *testing.T) {
+	manifest := Manifest{
+		Metadata: Metadata{
+			LocalizedTitle: NewLocalizedStringFromString(""),
+		},
+		ReadingOrder: LinkList{{
+			Href:  "/href",
+			Type:  "text/html",
+			Title: "Resource",
+		}},
+	}
+
+	var z float64
+	assert.Equal(t, &Locator{
+		Href:  "/href",
+		Type:  "text/html",
+		Title: "Resource",
+		Locations: Locations{
+			Progression: &z,
+		},
+	}, manifest.LocatorFromLink(Link{
+		Href: "/href",
+	}))
+}
+
+func TestManifestLocatorFromInside(t *testing.T) {
+	manifest := Manifest{
+		Metadata: Metadata{
+			LocalizedTitle: NewLocalizedStringFromString(""),
+		},
+		ReadingOrder: LinkList{{
+			Href: "/href1",
+			Type: "text/html",
+		}},
+		Resources: LinkList{{
+			Href: "/href2",
+			Type: "text/html",
+		}},
+		Links: LinkList{{
+			Href: "/href3",
+			Type: "text/html",
+		}},
+	}
+
+	var z float64
+	assert.Equal(t, &Locator{
+		Href: "/href1",
+		Type: "text/html",
+		Locations: Locations{
+			Progression: &z,
+		},
+	}, manifest.LocatorFromLink(Link{
+		Href: "/href1",
+	}))
+	assert.Equal(t, &Locator{
+		Href: "/href2",
+		Type: "text/html",
+		Locations: Locations{
+			Progression: &z,
+		},
+	}, manifest.LocatorFromLink(Link{
+		Href: "/href2",
+	}))
+	assert.Equal(t, &Locator{
+		Href: "/href3",
+		Type: "text/html",
+		Locations: Locations{
+			Progression: &z,
+		},
+	}, manifest.LocatorFromLink(Link{
+		Href: "/href3",
+	}))
+}
+
+func TestManifestLocatorFromFullLinkWithFragment(t *testing.T) {
+	manifest := Manifest{
+		Metadata: Metadata{
+			LocalizedTitle: NewLocalizedStringFromString(""),
+		},
+		ReadingOrder: LinkList{{
+			Href:  "/href",
+			Type:  "text/html",
+			Title: "Resource",
+		}},
+	}
+
+	assert.Equal(t, &Locator{
+		Href:  "/href",
+		Type:  "text/html",
+		Title: "Resource",
+		Locations: Locations{
+			Fragments: []string{"page=42"},
+		},
+	}, manifest.LocatorFromLink(Link{
+		Href:  "/href#page=42",
+		Type:  "text/xml",
+		Title: "My link",
+	}))
+}
+
+func TestManifestLocatorFallbackTitle(t *testing.T) {
+	manifest := Manifest{
+		Metadata: Metadata{
+			LocalizedTitle: NewLocalizedStringFromString(""),
+		},
+		ReadingOrder: LinkList{{
+			Href: "/href",
+			Type: "text/html",
+		}},
+	}
+	assert.Equal(t, &Locator{
+		Href:  "/href",
+		Type:  "text/html",
+		Title: "My link",
+		Locations: Locations{
+			Fragments: []string{"page=42"},
+		},
+	}, manifest.LocatorFromLink(Link{
+		Href:  "/href#page=42",
+		Type:  "text/xml",
+		Title: "My link",
+	}))
+}
+
+func TestManifestLocatorLinkNotFound(t *testing.T) {
+	manifest := Manifest{
+		Metadata: Metadata{
+			LocalizedTitle: NewLocalizedStringFromString(""),
+		},
+		ReadingOrder: LinkList{{
+			Href: "/href",
+			Type: "text/html",
+		}},
+	}
+	assert.Nil(t, manifest.LocatorFromLink(Link{
+		Href: "/notfound",
+	}))
+}
