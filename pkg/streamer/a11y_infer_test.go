@@ -22,6 +22,7 @@ func TestReturnsAdditionalInferredA11yMetadata(t *testing.T) {
 	}
 
 	inferreddA11y := manifest.NewA11y()
+	inferreddA11y.AccessModes = []manifest.A11yAccessMode{manifest.A11yAccessModeTextual}
 	inferreddA11y.AccessModesSufficient = [][]manifest.A11yPrimaryAccessMode{{manifest.A11yPrimaryAccessModeTextual}}
 
 	res := inferA11yMetadataFromManifest(m)
@@ -70,7 +71,7 @@ func assertAccessMode(t *testing.T, accessMode manifest.A11yAccessMode, extensio
 }
 
 // If the publication is partially or fully accessible (WCAG A or above)
-func TestInferTextualAccessModeSufficientFromProfile(t *testing.T) {
+func TestInferTextualAccessModeAndAccessModeSufficientFromProfile(t *testing.T) {
 	test := func(profile manifest.A11yProfile) {
 		a11y := manifest.NewA11y()
 		a11y.ConformsTo = []manifest.A11yProfile{profile}
@@ -81,6 +82,7 @@ func TestInferTextualAccessModeSufficientFromProfile(t *testing.T) {
 		}
 		res := inferA11yMetadataFromManifest(m)
 		assert.NotNil(t, res)
+		assert.Contains(t, res.AccessModes, manifest.A11yAccessModeTextual)
 		assert.Contains(t, res.AccessModesSufficient, []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual})
 	}
 
@@ -91,15 +93,17 @@ func TestInferTextualAccessModeSufficientFromProfile(t *testing.T) {
 
 // Or if the publication does not contain any image, audio or video resource
 // (inspect "resources" and "readingOrder" in RWPM)
-func TestInferTextualAccessModeSufficientFromLackOfMedia(t *testing.T) {
+func TestInferTextualAccessModeAndAccessModeSufficientFromLackOfMedia(t *testing.T) {
 	testManifest := func(contains bool, m manifest.Manifest) {
 		res := inferA11yMetadataFromManifest(m)
 		assert.NotNil(t, res)
 		ams := []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual}
 
 		if contains {
+			assert.Contains(t, res.AccessModes, manifest.A11yAccessModeTextual)
 			assert.Contains(t, res.AccessModesSufficient, ams)
 		} else {
+			assert.NotContains(t, res.AccessModes, manifest.A11yAccessModeTextual)
 			assert.NotContains(t, res.AccessModesSufficient, ams)
 		}
 	}
@@ -305,6 +309,21 @@ func TestInferFeatureDisplayTransformability(t *testing.T) {
 	test(true, manifest.EPUBA11y10WCAG20AA, manifest.EPUBLayoutReflowable)
 	test(true, manifest.EPUBA11y10WCAG20AAA, manifest.EPUBLayoutReflowable)
 	test(false, manifest.EPUBA11y10WCAG20AAA, manifest.EPUBLayoutFixed)
+}
+
+// If the publication contains any reference to Media Overlays.
+func TestInferFeatureSynchronizedAudioText(t *testing.T) {
+	link := newLink(mediatype.HTML, "html")
+	link.Properties = map[string]interface{}{
+		"contains": []string{"mathml"},
+	}
+	m := manifest.Manifest{
+		Metadata: manifest.Metadata{
+			ConformsTo: []manifest.Profile{manifest.ProfileEPUB},
+		},
+		ReadingOrder: []manifest.Link{link},
+	}
+	assertFeature(t, m, manifest.A11yFeatureMathML)
 }
 
 func assertFeature(t *testing.T, m manifest.Manifest, feature manifest.A11yFeature) {
