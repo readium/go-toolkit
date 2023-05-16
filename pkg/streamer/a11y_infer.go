@@ -126,6 +126,13 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 			}
 		}
 
+		for _, link := range mf.Resources {
+			if link.MediaType().Matches(&mediatype.SMIL) {
+				addFeature(manifest.A11yFeatureSynchronizedAudioText)
+				break
+			}
+		}
+
 		if mf.Metadata.Presentation != nil && *mf.Metadata.Presentation.Layout == manifest.EPUBLayoutReflowable && conformsToWCAGAA {
 			addFeature(manifest.A11yFeatureDisplayTransformability)
 		}

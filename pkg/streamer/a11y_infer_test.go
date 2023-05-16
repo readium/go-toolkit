@@ -313,17 +313,16 @@ func TestInferFeatureDisplayTransformability(t *testing.T) {
 
 // If the publication contains any reference to Media Overlays.
 func TestInferFeatureSynchronizedAudioText(t *testing.T) {
-	link := newLink(mediatype.HTML, "html")
-	link.Properties = map[string]interface{}{
-		"contains": []string{"mathml"},
-	}
+	link := newLink(mediatype.XHTML, "xhtml")
+	smil := newLink(mediatype.SMIL, "smil")
 	m := manifest.Manifest{
 		Metadata: manifest.Metadata{
 			ConformsTo: []manifest.Profile{manifest.ProfileEPUB},
 		},
 		ReadingOrder: []manifest.Link{link},
+		Resources:    []manifest.Link{smil},
 	}
-	assertFeature(t, m, manifest.A11yFeatureMathML)
+	assertFeature(t, m, manifest.A11yFeatureSynchronizedAudioText)
 }
 
 func assertFeature(t *testing.T, m manifest.Manifest, feature manifest.A11yFeature) {
