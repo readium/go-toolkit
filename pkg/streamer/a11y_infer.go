@@ -41,19 +41,19 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 	}
 
 	if len(manifestA11y.AccessModesSufficient) == 0 {
-		setTextual := false
+		var accessMode manifest.A11yPrimaryAccessMode
 
 		for _, profile := range manifestA11y.ConformsTo {
 			if profile == manifest.EPUBA11y10WCAG20A ||
 				profile == manifest.EPUBA11y10WCAG20AA ||
 				profile == manifest.EPUBA11y10WCAG20AAA {
-				setTextual = true
+				accessMode = manifest.A11yPrimaryAccessModeTextual
 				break
 			}
 		}
 
-		if !setTextual {
-			setTextual = true
+		if accessMode == "" {
+			accessMode = manifest.A11yPrimaryAccessModeTextual
 			for _, link := range allResources {
 				mt := link.MediaType()
 				if mt.IsAudio() ||
@@ -61,23 +61,24 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 					(mt.IsBitmap() && !extensions.Contains(link.Rels, "cover")) ||
 					mt.Matches(&mediatype.PDF) {
 
-					setTextual = false
+					accessMode = ""
 					break
 				}
 			}
 		}
 
-		if setTextual {
-			inferredA11y.AccessModesSufficient = append(
-				inferredA11y.AccessModesSufficient,
-				[]manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual},
-			)
+		if accessMode == "" {
+			if allResources.AllAreAudio() {
+				accessMode = manifest.A11yPrimaryAccessModeAuditory
+			} else if allResources.AllAreVisual() {
+				accessMode = manifest.A11yPrimaryAccessModeVisual
+			}
 		}
 
-		if allResources.AllAreAudio() {
+		if accessMode != "" {
 			inferredA11y.AccessModesSufficient = append(
 				inferredA11y.AccessModesSufficient,
-				[]manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeAuditory},
+				[]manifest.A11yPrimaryAccessMode{accessMode},
 			)
 		}
 	}

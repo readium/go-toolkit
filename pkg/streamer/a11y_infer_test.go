@@ -179,6 +179,54 @@ func TestInferAuditoryAccessModeSufficient(t *testing.T) {
 	testResources(true, mp3, mp3)
 }
 
+// If the publication contains only references to image or video resources (inspect "resources" and "readingOrder" in RWPM)
+func TestInferVisualAccessModeSufficient(t *testing.T) {
+	testManifest := func(contains bool, m manifest.Manifest) {
+		res := inferA11yMetadataFromManifest(m)
+		assert.NotNil(t, res)
+		ams := []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeVisual}
+
+		if contains {
+			assert.Contains(t, res.AccessModesSufficient, ams)
+		} else {
+			assert.NotContains(t, res.AccessModesSufficient, ams)
+		}
+	}
+
+	a11y := manifest.NewA11y()
+	a11y.ConformsTo = []manifest.A11yProfile{"unknown"}
+
+	testReadingOrder := func(contains bool, links ...manifest.Link) {
+		testManifest(contains, manifest.Manifest{
+			Metadata:     manifest.Metadata{Accessibility: &a11y},
+			ReadingOrder: links,
+		})
+	}
+
+	html := newLink(mediatype.HTML, "html")
+	jpg := newLink(mediatype.JPEG, "jpg")
+	mpeg := newLink(mediatype.MPEG, "mpeg")
+
+	testReadingOrder(false, html)
+	testReadingOrder(false, html, jpg)
+	testReadingOrder(true, jpg)
+	testReadingOrder(true, mpeg)
+	testReadingOrder(true, jpg, mpeg)
+
+	testResources := func(contains bool, links ...manifest.Link) {
+		testManifest(contains, manifest.Manifest{
+			Metadata:  manifest.Metadata{Accessibility: &a11y},
+			Resources: links,
+		})
+	}
+
+	testResources(false, html)
+	testResources(false, html, jpg)
+	testResources(true, jpg)
+	testResources(true, mpeg)
+	testResources(true, jpg, mpeg)
+}
+
 // If the publications contains a table of contents (check for the presence of
 // a "toc" collection in RWPM)
 func TestInferFeatureTableOfContents(t *testing.T) {
