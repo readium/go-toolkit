@@ -1,6 +1,7 @@
 package element
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -20,6 +21,18 @@ type Element interface {
 	Attributes(key AttributeKey) []Attribute[any]
 
 	Locator() manifest.Locator // Locator targeting this element in the Publication.
+}
+
+func ElementToMap(e Element) map[string]interface{} {
+	res := make(map[string]interface{})
+	res["locator"] = e.Locator()
+	if l := e.Language(); l != "" {
+		res["language"] = l
+	}
+	if l := e.AccessibilityLabel(); l != "" {
+		res["accessibilityLabel"] = l
+	}
+	return res
 }
 
 // An element which can be represented as human-readable text.
@@ -50,32 +63,80 @@ type EmbeddedElement interface {
 	EmbeddedLink() manifest.Link // Referenced resource in the publication.
 }
 
-// An audio or video clip.
-// Used for both audio and video the avoid code duplication since they're the same at the moment.
-// TODO: Should we separate anyway?
-type AVElement struct {
+// An audio clip.
+type AudioElement struct {
 	locator      manifest.Locator
 	embeddedLink manifest.Link
 	AttributesHolder
 }
 
 // Implements Element
-func (e AVElement) Locator() manifest.Locator {
+func (e AudioElement) Locator() manifest.Locator {
 	return e.locator
 }
 
 // Implements EmbeddedElement
-func (e AVElement) EmbeddedLink() manifest.Link {
+func (e AudioElement) EmbeddedLink() manifest.Link {
+	e.embeddedLink.Href = strings.TrimPrefix(e.embeddedLink.Href, "/")
 	return e.embeddedLink
 }
 
 // Implements TextualElement
-func (e AVElement) Text() string {
+func (e AudioElement) Text() string {
 	return e.AccessibilityLabel()
 }
 
-func NewAVElement(locator manifest.Locator, embeddedLink manifest.Link, attributes []Attribute[any]) AVElement {
-	return AVElement{
+func (e AudioElement) MarshalJSON() ([]byte, error) {
+	res := ElementToMap(e)
+	res["text"] = e.Text()
+	res["link"] = e.EmbeddedLink()
+	res["@type"] = "Video"
+	return json.Marshal(res)
+}
+
+func NewAudioElement(locator manifest.Locator, embeddedLink manifest.Link, attributes []Attribute[any]) AudioElement {
+	return AudioElement{
+		AttributesHolder: AttributesHolder{
+			attributes: attributes,
+		},
+		locator:      locator,
+		embeddedLink: embeddedLink,
+	}
+}
+
+// A video clip.
+type VideoElement struct {
+	locator      manifest.Locator
+	embeddedLink manifest.Link
+	AttributesHolder
+}
+
+// Implements Element
+func (e VideoElement) Locator() manifest.Locator {
+	return e.locator
+}
+
+// Implements EmbeddedElement
+func (e VideoElement) EmbeddedLink() manifest.Link {
+	e.embeddedLink.Href = strings.TrimPrefix(e.embeddedLink.Href, "/")
+	return e.embeddedLink
+}
+
+// Implements TextualElement
+func (e VideoElement) Text() string {
+	return e.AccessibilityLabel()
+}
+
+func (e VideoElement) MarshalJSON() ([]byte, error) {
+	res := ElementToMap(e)
+	res["text"] = e.Text()
+	res["link"] = e.EmbeddedLink()
+	res["@type"] = "Video"
+	return json.Marshal(res)
+}
+
+func NewVideoElement(locator manifest.Locator, embeddedLink manifest.Link, attributes []Attribute[any]) VideoElement {
+	return VideoElement{
 		AttributesHolder: AttributesHolder{
 			attributes: attributes,
 		},
@@ -100,6 +161,7 @@ func (e ImageElement) Locator() manifest.Locator {
 
 // Implements EmbeddedElement
 func (e ImageElement) EmbeddedLink() manifest.Link {
+	e.embeddedLink.Href = strings.TrimPrefix(e.embeddedLink.Href, "/")
 	return e.embeddedLink
 }
 
@@ -110,6 +172,14 @@ func (e ImageElement) Text() string {
 		return e.caption
 	}
 	return e.AccessibilityLabel()
+}
+
+func (e ImageElement) MarshalJSON() ([]byte, error) {
+	res := ElementToMap(e)
+	res["text"] = e.Text()
+	res["link"] = e.EmbeddedLink()
+	res["@type"] = "Image"
+	return json.Marshal(res)
 }
 
 func NewImageElement(locator manifest.Locator, embeddedLink manifest.Link, caption string, attributes []Attribute[any]) ImageElement {
@@ -154,4 +224,37 @@ func (e TextElement) Locator() manifest.Locator {
 
 func (e TextElement) Role() TextRole {
 	return e.role
+}
+
+func (e TextElement) MarshalJSON() ([]byte, error) {
+	res := ElementToMap(e)
+	res["role"] = e.role.Role()
+	textElements := make([]interface{}, len(e.segments))
+	for i, s := range e.segments {
+		te := map[string]interface{}{
+			"locator": s.Locator,
+			"text":    s.Text,
+		}
+		if l := s.Language(); l != "" {
+			te["language"] = l
+		}
+		if l := s.AccessibilityLabel(); l != "" {
+			te["accessibilityLabel"] = l
+		}
+		textElements[i] = te
+	}
+	res["text"] = textElements
+	res["@type"] = "Text"
+	return json.Marshal(res)
+}
+
+func NewTextElement(locator manifest.Locator, role TextRole, segments []TextSegement, attributes []Attribute[any]) TextElement {
+	return TextElement{
+		AttributesHolder: AttributesHolder{
+			attributes: attributes,
+		},
+		locator:  locator,
+		role:     role,
+		segments: segments,
+	}
 }

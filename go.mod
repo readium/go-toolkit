@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/agext/regexp v1.3.0
+	github.com/andybalholm/cascadia v1.3.2
 	github.com/deckarep/golang-set v1.7.1
 	github.com/gorilla/mux v1.7.4
 	github.com/opds-community/libopds2-go v0.0.0-20170628075933-9c163cf60f6e
@@ -18,8 +19,8 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/trimmer-io/go-xmp v1.0.0
 	github.com/urfave/negroni v1.0.0
-	golang.org/x/net v0.7.0
-	golang.org/x/text v0.7.0
+	golang.org/x/net v0.10.0
+	golang.org/x/text v0.9.0
 )
 
 require (
@@ -41,7 +42,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	golang.org/x/image v0.5.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

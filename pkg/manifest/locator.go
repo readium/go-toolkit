@@ -114,6 +114,19 @@ func (l Locations) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j)
 }
 
+// HTML extensions for [Locations]
+
+func (l Locations) CSSSelector() string {
+	if v, ok := l.OtherLocations["cssSelector"]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+// TODO partialCfi and domRange getters
+
 // Textual context of the locator.
 // A Locator Text Object contains multiple text fragments, useful to give a context to the [Locator] or for highlights.
 // https://github.com/readium/architecture/tree/master/models/locators#the-text-object
@@ -137,11 +150,11 @@ func TextFromJSON(rawJson map[string]interface{}) (t Text) {
 // Locator provides a precise location in a publication in a format that can be stored and shared.
 //
 // There are many different use cases for locators:
-//  - getting back to the last position in a publication
-//  - bookmarks
-//  - highlights & annotations
-//  - search results
-//  - human-readable (and shareable) reference in a publication
+//   - getting back to the last position in a publication
+//   - bookmarks
+//   - highlights & annotations
+//   - search results
+//   - human-readable (and shareable) reference in a publication
 //
 // https://github.com/readium/architecture/tree/master/locators
 type Locator struct {

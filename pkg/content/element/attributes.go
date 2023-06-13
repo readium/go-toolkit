@@ -2,8 +2,8 @@ package element
 
 type AttributeKey string
 
-const AcessibilityLabelKey AttributeKey = "accessibilityLabel"
-const LanguageKey AttributeKey = "language"
+const AcessibilityLabelAttributeKey AttributeKey = "accessibilityLabel"
+const LanguageAttributeKey AttributeKey = "language"
 
 // An attribute is an arbitrary key-value metadata pair.
 type Attribute[T any] struct {
@@ -11,13 +11,26 @@ type Attribute[T any] struct {
 	Value T
 }
 
+func NewAttribute(key AttributeKey, value any) Attribute[any] {
+	return Attribute[any]{
+		Key:   key,
+		Value: value,
+	}
+}
+
 // An object associated with a list of attributes.
 type AttributesHolder struct {
 	attributes []Attribute[any] // Associated list of attributes.
 }
 
+func NewAttributesHolder(attributes []Attribute[any]) AttributesHolder {
+	return AttributesHolder{
+		attributes: attributes,
+	}
+}
+
 func (ah AttributesHolder) Language() string {
-	v := ah.Attribute(LanguageKey)
+	v := ah.Attribute(LanguageAttributeKey)
 	if v != nil {
 		return v.Value.(string)
 	}
@@ -25,7 +38,7 @@ func (ah AttributesHolder) Language() string {
 }
 
 func (ah AttributesHolder) AccessibilityLabel() string {
-	v := ah.Attribute(AcessibilityLabelKey)
+	v := ah.Attribute(AcessibilityLabelAttributeKey)
 	if v != nil {
 		return v.Value.(string)
 	}

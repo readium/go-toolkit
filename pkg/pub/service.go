@@ -11,6 +11,7 @@ const (
 	LocatorService_Name           = "LocatorService"
 	PositionsService_Name         = "PositionsService"
 	SearchService_Name            = "SearchService"
+	ContentService_Name           = "ContentService"
 )
 
 // Base interface to be implemented by all publication services.
