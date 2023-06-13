@@ -14,7 +14,7 @@ import (
 
 var ContentLink = manifest.Link{
 	Href: "/~readium/content.json",
-	Type: "application/vnd.readium.content+json; charset=UTF-8",
+	Type: "application/vnd.readium.content+json",
 }
 
 // TODO uri template or something so we're not just dumping entire content
