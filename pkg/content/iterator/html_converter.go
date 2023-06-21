@@ -277,13 +277,13 @@ type HTMLConverter struct {
 	elements   []element.Element
 	startIndex int
 
-	segmentsAcc        []element.TextSegement // Segments accumulated for the current element.
-	textAcc            strings.Builder        // Text since the beginning of the current segment, after coalescing whitespaces.
-	wholeRawTextAcc    *string                // Text content since the beginning of the resource, including whitespaces.
-	elementRawTextAcc  string                 // Text content since the beginning of the current element, including whitespaces.
-	rawTextAcc         string                 // Text content since the beginning of the current element, including whitespaces.
-	currentLanguage    *string                // Language of the current segment.
-	currentCSSSelector *string                // CSS selector of the current element.
+	segmentsAcc        []element.TextSegment // Segments accumulated for the current element.
+	textAcc            strings.Builder       // Text since the beginning of the current segment, after coalescing whitespaces.
+	wholeRawTextAcc    *string               // Text content since the beginning of the resource, including whitespaces.
+	elementRawTextAcc  string                // Text content since the beginning of the current element, including whitespaces.
+	rawTextAcc         string                // Text content since the beginning of the current element, including whitespaces.
+	currentLanguage    *string               // Language of the current segment.
+	currentCSSSelector *string               // CSS selector of the current element.
 
 	breadcrumbs []*html.Node // LIFO stack of the current element's block ancestors.
 }
@@ -478,7 +478,7 @@ func (c *HTMLConverter) flushText() {
 	}
 	c.elements = append(c.elements, el)
 	c.elementRawTextAcc = ""
-	c.segmentsAcc = []element.TextSegement{}
+	c.segmentsAcc = []element.TextSegment{}
 }
 
 func (c *HTMLConverter) flushSegment() {
@@ -508,7 +508,7 @@ func (c *HTMLConverter) flushSegment() {
 			}
 			before = &last
 		}
-		seg := element.TextSegement{
+		seg := element.TextSegment{
 			Locator: manifest.Locator{
 				Href:  c.baseLocator.Href,
 				Type:  c.baseLocator.Type,

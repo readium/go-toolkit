@@ -194,7 +194,7 @@ func NewImageElement(locator manifest.Locator, embeddedLink manifest.Link, capti
 }
 
 // Ranged portion of text with associated attributes.
-type TextSegement struct {
+type TextSegment struct {
 	AttributesHolder                  // Attributes associated with this segment, e.g. language.
 	Locator          manifest.Locator // Locator to the segment of text.
 	Text             string           // Text in the segment.
@@ -205,7 +205,7 @@ type TextElement struct {
 	AttributesHolder
 	locator  manifest.Locator
 	role     TextRole
-	segments []TextSegement
+	segments []TextSegment
 }
 
 // Implements TextualElement
@@ -248,7 +248,7 @@ func (e TextElement) MarshalJSON() ([]byte, error) {
 	return json.Marshal(res)
 }
 
-func NewTextElement(locator manifest.Locator, role TextRole, segments []TextSegement, attributes []Attribute[any]) TextElement {
+func NewTextElement(locator manifest.Locator, role TextRole, segments []TextSegment, attributes []Attribute[any]) TextElement {
 	return TextElement{
 		AttributesHolder: AttributesHolder{
 			attributes: attributes,
