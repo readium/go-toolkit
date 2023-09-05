@@ -73,10 +73,9 @@ func (f PublicationFactory) Create() manifest.Manifest {
 			readingOrder = append(readingOrder, f.computeLink(item, []string{}))
 		}
 	}
-	readingOrderAllIds := f.computeIdsWithFallbacks(readingOrderIds)
 	var resourceItems []Item
 	for _, item := range mani {
-		if !extensions.Contains(readingOrderAllIds, item.ID) {
+		if !extensions.Contains(readingOrderIds, item.ID) {
 			resourceItems = append(resourceItems, item)
 		}
 	}
@@ -142,40 +141,6 @@ func mapEPUBLink(link EPUBLink) manifest.Link {
 	}
 
 	return l
-}
-
-// Recursively find the ids of the fallback items in [items]
-func (f PublicationFactory) computeIdsWithFallbacks(ids []string) []string {
-	var fallbackIds []string
-	for _, id := range ids {
-		for _, v := range f.computeFallbackChain(id) {
-			if !extensions.Contains(fallbackIds, v) {
-				fallbackIds = append(fallbackIds, v)
-			}
-		}
-	}
-	return fallbackIds
-}
-
-// Compute the ids contained in the fallback chain of [item]
-func (f PublicationFactory) computeFallbackChain(id string) []string {
-	// The termination has already been checked while computing links
-	var ids []string
-	item, ok := f.itemById[id]
-	if !ok {
-		return ids
-	}
-	if item.ID != "" {
-		ids = append(ids, item.ID)
-	}
-	if item.fallback != "" {
-		for _, v := range f.computeFallbackChain(item.fallback) {
-			if !extensions.Contains(ids, v) {
-				ids = append(ids, v)
-			}
-		}
-	}
-	return ids
 }
 
 // Compute a Publication [Link] for an epub [Item] and its fallbacks
