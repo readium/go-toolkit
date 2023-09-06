@@ -39,10 +39,14 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 	// Inferred textual if the publication is partially or fully accessible
 	// (WCAG A or above).
 	isTextual := conformsToWCAGA
-	if !isTextual {
-		// ... or if the publication does not contain any image, audio or video
-		// resource (inspect "resources" and "readingOrder" in RWPM), or if the
-		// only image available can be identified as a cover.
+
+	// ... or if a reflowable EPUB does not contain any image, audio or
+	// video resource (inspect "resources" and "readingOrder" in RWPM), or
+	// if the only image available can be identified as a cover.
+	if !isTextual &&
+		mf.ConformsTo(manifest.ProfileEPUB) &&
+		mf.Metadata.Presentation != nil &&
+		*mf.Metadata.Presentation.Layout == manifest.EPUBLayoutReflowable {
 		isTextual = true
 		for _, link := range allResources {
 			mt := link.MediaType()

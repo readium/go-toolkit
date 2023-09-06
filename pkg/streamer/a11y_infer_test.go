@@ -14,7 +14,9 @@ func TestReturnsAdditionalInferredA11yMetadata(t *testing.T) {
 
 	m := manifest.Manifest{
 		Metadata: manifest.Metadata{
+			ConformsTo:    manifest.Profiles{manifest.ProfileEPUB},
 			Accessibility: &a11y,
+			Presentation:  newEPUBPresentation(manifest.EPUBLayoutReflowable),
 		},
 		ReadingOrder: []manifest.Link{
 			newLink(mediatype.HTML, "html"),
@@ -91,7 +93,7 @@ func TestInferTextualAccessModeAndAccessModeSufficientFromProfile(t *testing.T) 
 	test(manifest.EPUBA11y10WCAG20AAA)
 }
 
-// Or if the publication does not contain any image, audio or video resource
+// Or if a reflowable EPUB does not contain any image, audio or video resource
 // (inspect "resources" and "readingOrder" in RWPM)
 func TestInferTextualAccessModeAndAccessModeSufficientFromLackOfMedia(t *testing.T) {
 	testManifest := func(contains bool, m manifest.Manifest) {
@@ -113,7 +115,11 @@ func TestInferTextualAccessModeAndAccessModeSufficientFromLackOfMedia(t *testing
 
 	testReadingOrder := func(contains bool, mt mediatype.MediaType, extension string) {
 		testManifest(contains, manifest.Manifest{
-			Metadata:        manifest.Metadata{Accessibility: &a11y},
+			Metadata: manifest.Metadata{
+				ConformsTo:    manifest.Profiles{manifest.ProfileEPUB},
+				Accessibility: &a11y,
+				Presentation:  newEPUBPresentation(manifest.EPUBLayoutReflowable),
+			},
 			ReadingOrder:    []manifest.Link{newLink(mt, extension)},
 			TableOfContents: []manifest.Link{newLink(mt, extension)},
 		})
@@ -127,7 +133,12 @@ func TestInferTextualAccessModeAndAccessModeSufficientFromLackOfMedia(t *testing
 
 	testResources := func(contains bool, mt mediatype.MediaType, extension string) {
 		testManifest(contains, manifest.Manifest{
-			Metadata:        manifest.Metadata{Accessibility: &a11y},
+			Metadata: manifest.Metadata{
+				ConformsTo:    manifest.Profiles{manifest.ProfileEPUB},
+				Accessibility: &a11y,
+				Presentation:  newEPUBPresentation(manifest.EPUBLayoutReflowable),
+			},
+			ReadingOrder:    []manifest.Link{newLink(mt, extension)},
 			Resources:       []manifest.Link{newLink(mt, extension)},
 			TableOfContents: []manifest.Link{newLink(mt, extension)},
 		})
@@ -140,10 +151,35 @@ func TestInferTextualAccessModeAndAccessModeSufficientFromLackOfMedia(t *testing
 	testResources(false, mediatype.PDF, "pdf")
 }
 
+// ... but not for FXL EPUB
+func TestDontInferTextualAccessModeAndAccessModeSufficientFromLackOfMediaForFXL(t *testing.T) {
+	a11y := manifest.NewA11y()
+	a11y.ConformsTo = []manifest.A11yProfile{"unknown"}
+
+	m := manifest.Manifest{
+		Metadata: manifest.Metadata{
+			ConformsTo:    manifest.Profiles{manifest.ProfileEPUB},
+			Accessibility: &a11y,
+			Presentation:  newEPUBPresentation(manifest.EPUBLayoutFixed),
+		},
+		ReadingOrder:    []manifest.Link{newLink(mediatype.HTML, "html")},
+		TableOfContents: []manifest.Link{newLink(mediatype.HTML, "html")},
+	}
+
+	res := inferA11yMetadataFromManifest(m)
+	assert.NotNil(t, res)
+	ams := []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual}
+	assert.NotContains(t, res.AccessModes, manifest.A11yAccessModeTextual)
+	assert.NotContains(t, res.AccessModesSufficient, ams)
+}
+
 // If the publication contains only references to audio resources (inspect "resources" and "readingOrder" in RWPM)
 func TestInferAuditoryAccessModeSufficient(t *testing.T) {
 	testManifest := func(contains bool, m manifest.Manifest) {
 		res := inferA11yMetadataFromManifest(m)
+		if res == nil && !contains {
+			return
+		}
 		assert.NotNil(t, res)
 		ams := []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeAuditory}
 
@@ -187,6 +223,9 @@ func TestInferAuditoryAccessModeSufficient(t *testing.T) {
 func TestInferVisualAccessModeSufficient(t *testing.T) {
 	testManifest := func(contains bool, m manifest.Manifest) {
 		res := inferA11yMetadataFromManifest(m)
+		if res == nil && !contains {
+			return
+		}
 		assert.NotNil(t, res)
 		ams := []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeVisual}
 
@@ -329,4 +368,10 @@ func assertFeature(t *testing.T, m manifest.Manifest, feature manifest.A11yFeatu
 	res := inferA11yMetadataFromManifest(m)
 	assert.NotNil(t, res)
 	assert.Contains(t, res.Features, feature)
+}
+
+func newEPUBPresentation(layout manifest.EPUBLayout) *manifest.Presentation {
+	pres := manifest.NewPresentation()
+	pres.Layout = &layout
+	return pres
 }
