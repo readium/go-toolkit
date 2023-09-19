@@ -1,6 +1,7 @@
 package iterator
 
 import (
+	"net/url"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -266,6 +267,11 @@ func TraverseNode(visitor NodeVisitor, root *html.Node) {
 	}
 }
 
+type breadcrumbData struct {
+	node        *html.Node
+	cssSelector string
+}
+
 // Note that this whole thing is based off of JSoup's NodeVisitor and NodeTraverser classes
 // https://jsoup.org/apidocs/org/jsoup/select/NodeVisitor.html
 // https://jsoup.org/apidocs/org/jsoup/select/NodeTraversor.html
@@ -277,15 +283,14 @@ type HTMLConverter struct {
 	elements   []element.Element
 	startIndex int
 
-	segmentsAcc        []element.TextSegment // Segments accumulated for the current element.
-	textAcc            strings.Builder       // Text since the beginning of the current segment, after coalescing whitespaces.
-	wholeRawTextAcc    *string               // Text content since the beginning of the resource, including whitespaces.
-	elementRawTextAcc  string                // Text content since the beginning of the current element, including whitespaces.
-	rawTextAcc         string                // Text content since the beginning of the current element, including whitespaces.
-	currentLanguage    *string               // Language of the current segment.
-	currentCSSSelector *string               // CSS selector of the current element.
+	segmentsAcc       []element.TextSegment // Segments accumulated for the current element.
+	textAcc           strings.Builder       // Text since the beginning of the current segment, after coalescing whitespaces.
+	wholeRawTextAcc   *string               // Text content since the beginning of the resource, including whitespaces.
+	elementRawTextAcc string                // Text content since the beginning of the current element, including whitespaces.
+	rawTextAcc        string                // Text content since the beginning of the current element, including whitespaces.
+	currentLanguage   *string               // Language of the current segment.
 
-	breadcrumbs []*html.Node // LIFO stack of the current element's block ancestors.
+	breadcrumbs []breadcrumbData // LIFO stack of the current element's block ancestors.
 }
 
 func (c *HTMLConverter) Result() ParsedElements {
@@ -307,12 +312,18 @@ func (c *HTMLConverter) Head(n *html.Node, depth int) {
 		isBlock := !isInlineTag(n)
 		var cssSelector *string
 		if isBlock {
-			// Add blocks to breadcrumbs
-			c.breadcrumbs = append(c.breadcrumbs, n)
-
 			// Calculate CSS selector now because we'll definitely need it
 			cs := util.CSSSelector(n)
 			cssSelector = &cs
+
+			// Flush text
+			c.flushText()
+
+			// Add blocks to breadcrumbs
+			c.breadcrumbs = append(c.breadcrumbs, breadcrumbData{
+				node:        n,
+				cssSelector: cs,
+			})
 		}
 
 		if n.DataAtom == atom.Br {
@@ -405,7 +416,6 @@ func (c *HTMLConverter) Head(n *html.Node, depth int) {
 
 		if isBlock {
 			c.flushText()
-			c.currentCSSSelector = cssSelector
 		}
 	}
 }
@@ -428,7 +438,7 @@ func (c *HTMLConverter) Tail(n *html.Node, depth int) {
 		appendNormalizedWhitespace(&c.textAcc, n.Data, stripLeading)
 	} else if n.Type == html.ElementNode {
 		if !isInlineTag(n) { // Is block
-			if c.breadcrumbs[len(c.breadcrumbs)-1] != n {
+			if len(c.breadcrumbs) > 0 && c.breadcrumbs[len(c.breadcrumbs)-1].node != n {
 				// TODO, should we panic? Kotlin does assert(breadcrumbs.last() == node) which throws
 				panic("HTMLConverter: breadcrumbs mismatch")
 			}
@@ -442,8 +452,9 @@ func (c *HTMLConverter) flushText() {
 	c.flushSegment()
 
 	if c.startIndex == 0 && c.startElement != nil &&
-		((len(c.breadcrumbs) == 0 && c.startElement == nil) ||
-			(c.startElement != nil && c.breadcrumbs[len(c.breadcrumbs)-1] == c.startElement)) {
+		((len(c.breadcrumbs) == 0 && c.startElement == nil) || // TODO is this right??
+			(c.startElement != nil && len(c.breadcrumbs) > 0 &&
+				c.breadcrumbs[len(c.breadcrumbs)-1].node == c.startElement)) {
 		c.startIndex = len(c.elements)
 	}
 
@@ -454,6 +465,46 @@ func (c *HTMLConverter) flushText() {
 	// Trim the end of the last segment's text to get a cleaner output for the TextElement.
 	// Only whitespaces between the segments are meaningful.
 	c.segmentsAcc[len(c.segmentsAcc)-1].Text = strings.TrimRightFunc(c.segmentsAcc[len(c.segmentsAcc)-1].Text, unicode.IsSpace)
+
+	var bestRole element.TextRole = element.Body{}
+	if len(c.breadcrumbs) > 0 {
+		el := c.breadcrumbs[len(c.breadcrumbs)-1].node
+		for _, at := range el.Attr {
+			if at.Namespace == "http://www.idpf.org/2007/ops" && at.Key == "type" && at.Val == "footnote" {
+				bestRole = element.Footnote{}
+				break
+			}
+		}
+		if bestRole.Role() == "body" { // Still a body
+			switch el.DataAtom {
+			case atom.H1:
+				bestRole = element.Heading{Level: 1}
+			case atom.H2:
+				bestRole = element.Heading{Level: 2}
+			case atom.H3:
+				bestRole = element.Heading{Level: 3}
+			case atom.H4:
+				bestRole = element.Heading{Level: 4}
+			case atom.H5:
+				bestRole = element.Heading{Level: 5}
+			case atom.H6:
+				bestRole = element.Heading{Level: 6}
+			case atom.Blockquote:
+				fallthrough
+			case atom.Q:
+				quote := element.Quote{}
+				for _, at := range el.Attr {
+					if at.Key == "cite" {
+						quote.ReferenceURL, _ = url.Parse(at.Val)
+					}
+					if at.Key == "title" {
+						quote.ReferenceTitle = at.Val
+					}
+				}
+				bestRole = quote
+			}
+		}
+	}
 
 	var before *string
 	if len(c.segmentsAcc) > 0 {
@@ -469,12 +520,14 @@ func (c *HTMLConverter) flushText() {
 			},
 			Text: trimText(c.elementRawTextAcc, before),
 		},
-		element.Body{},
+		bestRole,
 		c.segmentsAcc,
 		nil,
 	)
-	if c.currentCSSSelector != nil {
-		el.Locator().Locations.OtherLocations["cssSelector"] = *c.currentCSSSelector
+	if len(c.breadcrumbs) > 0 {
+		if lastCrumb := c.breadcrumbs[len(c.breadcrumbs)-1]; lastCrumb.cssSelector != "" {
+			el.Locator().Locations.OtherLocations["cssSelector"] = lastCrumb.cssSelector
+		}
 	}
 	c.elements = append(c.elements, el)
 	c.elementRawTextAcc = ""
@@ -514,14 +567,17 @@ func (c *HTMLConverter) flushSegment() {
 				Type:  c.baseLocator.Type,
 				Title: c.baseLocator.Title,
 				Locations: manifest.Locations{
+					// TODO fix: needs to use baseLocator locations too!
 					OtherLocations: map[string]interface{}{},
 				},
 				Text: trimText(c.rawTextAcc, before),
 			},
 			Text: text,
 		}
-		if c.currentCSSSelector != nil {
-			seg.Locator.Locations.OtherLocations["cssSelector"] = *c.currentCSSSelector
+		if len(c.breadcrumbs) > 0 {
+			if lastCrumb := c.breadcrumbs[len(c.breadcrumbs)-1]; lastCrumb.cssSelector != "" {
+				seg.Locator.Locations.OtherLocations["cssSelector"] = lastCrumb.cssSelector
+			}
 		}
 		if c.currentLanguage != nil {
 			seg.AttributesHolder = element.NewAttributesHolder([]element.Attribute[any]{
