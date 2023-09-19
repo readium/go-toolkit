@@ -3,6 +3,7 @@ package pub
 import (
 	"encoding/json"
 	"path"
+	"strings"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -112,7 +113,9 @@ func (p Publication) Find(path string) *manifest.Link {
 		}
 	}
 
-	link.Href = "/" + link.Href
+	if !strings.HasPrefix(link.Href, "/") {
+		link.Href = "/" + link.Href
+	}
 	return link
 }
 
