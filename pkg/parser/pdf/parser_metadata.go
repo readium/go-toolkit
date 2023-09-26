@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -29,7 +30,7 @@ func loadDecoder(meta pdfcpu.Metadata) (*xmp.Document, []byte, error) {
 	return doc, metabin, nil
 }
 
-func ParseMetadata(ctx *pdfcpu.Context, link *manifest.Link) (m manifest.Manifest, err error) {
+func ParseMetadata(ctx *model.Context, link *manifest.Link) (m manifest.Manifest, err error) {
 	if link != nil {
 		m.ReadingOrder = manifest.LinkList{{
 			Href:       strings.TrimPrefix(link.Href, "/"),
@@ -45,7 +46,7 @@ func ParseMetadata(ctx *pdfcpu.Context, link *manifest.Link) (m manifest.Manifes
 	m.Metadata.ConformsTo = manifest.Profiles{manifest.ProfilePDF}
 
 	// hashmaterial := make([]string, 0, 64)
-	metas, _ := ctx.ExtractMetadata()
+	metas, _ := pdfcpu.ExtractMetadata(ctx)
 	for _, meta := range metas {
 		doc, _, derr := loadDecoder(meta)
 		if derr != nil {
@@ -129,7 +130,7 @@ func ParseXMPMetadata(doc *xmp.Document, metadata *manifest.Metadata) error {
 	return nil
 }
 
-func ParsePDFMetadata(ctx *pdfcpu.Context, m *manifest.Manifest) error {
+func ParsePDFMetadata(ctx *model.Context, m *manifest.Manifest) error {
 	// Page count
 	if ctx.PageCount > 0 && m.Metadata.NumberOfPages == nil {
 		pc := uint(ctx.PageCount)
@@ -182,7 +183,7 @@ func ParsePDFMetadata(ctx *pdfcpu.Context, m *manifest.Manifest) error {
 	}
 
 	// Bookmarks (TOC)
-	if bookmarks, err := ctx.BookmarksForOutline(); err == nil {
+	if bookmarks, err := pdfcpu.Bookmarks(ctx); err == nil {
 		rootLink := m.ReadingOrder.FirstWithMediaType(&mediatype.PDF)
 		root := ""
 		if rootLink != nil {
@@ -196,8 +197,8 @@ func ParsePDFMetadata(ctx *pdfcpu.Context, m *manifest.Manifest) error {
 					Title: b.Title,
 					Type:  mediatype.PDF.String(),
 				}
-				if len(b.Children) > 0 {
-					bf(lnk.Children, b.Children)
+				if len(b.Kids) > 0 {
+					bf(lnk.Children, b.Kids)
 				}
 				m.TableOfContents = append(m.TableOfContents, lnk)
 			}

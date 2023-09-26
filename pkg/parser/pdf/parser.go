@@ -2,6 +2,7 @@ package pdf
 
 import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/asset"
@@ -20,7 +21,7 @@ func NewParser() Parser {
 
 func init() {
 	// Disable this feature of pdfcpu
-	pdfcpu.ConfigPath = "disable"
+	model.ConfigPath = "disable"
 }
 
 // Parse implements PublicationParser
@@ -43,8 +44,8 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 		return nil, errors.New("unable to find PDF file: no matching link found")
 	}
 
-	conf := pdfcpu.NewDefaultConfiguration()
-	conf.ValidationMode = pdfcpu.ValidationRelaxed
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
 	ctx, err := pdfcpu.Read(fetcher.NewResourceReadSeeker(f.Get(*link)), conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed opening PDF")
