@@ -93,7 +93,7 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 			return nil, err
 		}
 	}
-	data := make([]byte, end-start+1)
+	data := make([]byte, min(end-start+1, int64(e.file.UncompressedSize64)))
 	_, err = io.ReadFull(f, data)
 	if err != nil {
 		return nil, err
