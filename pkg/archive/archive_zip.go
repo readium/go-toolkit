@@ -94,11 +94,11 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 		}
 	}
 	data := make([]byte, end-start+1)
-	n, err := f.Read(data)
+	_, err = io.ReadFull(f, data)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return data, nil
 }
 
 func (e gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, error) {
