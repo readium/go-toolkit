@@ -34,8 +34,7 @@ func (e gozipArchiveEntry) CompressedLength() uint64 {
 // This is a special mode to minimize the number of reads from the underlying reader.
 // It's especially useful when trying to stream the ZIP from a remote file, e.g.
 // cloud storage. It's only enabled when trying to read the entire file and compression
-// is enabled. Maybe at some point it should be enabled for range reads as well, but
-// that's something that depends on the usecase, size of the file etc. so it's off for now.
+// is enabled. Care needs to be taken to cover every edge case.
 func (e gozipArchiveEntry) couldMinimizeReads() bool {
 	return e.minimizeReads && e.CompressedLength() > 0
 }
@@ -45,7 +44,7 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 		return nil, errors.New("range not satisfiable")
 	}
 
-	minimizeReads := e.couldMinimizeReads() && start == 0 && end == 0
+	minimizeReads := e.couldMinimizeReads()
 
 	var f io.Reader
 	var err error
@@ -71,12 +70,7 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 		}
 		frdr := flate.NewReader(bytes.NewReader(compressedData))
 		defer frdr.Close()
-		data := make([]byte, e.file.UncompressedSize64)
-		_, err = io.ReadFull(frdr, data)
-		if err != nil {
-			return nil, err
-		}
-		return data, nil
+		f = frdr
 	}
 
 	if start == 0 && end == 0 {
@@ -132,7 +126,7 @@ func (e gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, e
 		}
 		frdr := flate.NewReader(bytes.NewReader(compressedData))
 		defer frdr.Close()
-		return io.Copy(w, frdr)
+		f = frdr
 	}
 
 	if start == 0 && end == 0 {
