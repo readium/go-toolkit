@@ -93,9 +93,11 @@ func (l *Locations) UnmarshalJSON(b []byte) error {
 }
 
 func (l Locations) MarshalJSON() ([]byte, error) {
-	j := l.OtherLocations
-	if j == nil {
-		j = make(map[string]interface{})
+	j := make(map[string]interface{})
+	if l.OtherLocations != nil {
+		for k, v := range l.OtherLocations {
+			j[k] = v
+		}
 	}
 
 	if len(l.Fragments) > 0 {
