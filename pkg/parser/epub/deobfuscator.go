@@ -39,23 +39,22 @@ func (d DeobfuscatingResource) Read(start, end int64) ([]byte, *fetcher.Resource
 		algorithm = penc.Algorithm
 	}
 
-	for k, v := range algorithm2length {
-		if k == algorithm {
-			data, err := d.ProxyResource.Read(start, end)
-			if err != nil {
-				return nil, err
-			}
-			var obfuscationKey []byte
-			switch algorithm {
-			case "http://ns.adobe.com/pdf/enc#RC":
-				obfuscationKey = d.getHashKeyAdobe()
-			default:
-				shasum := sha1.Sum([]byte(d.identifier))
-				obfuscationKey = shasum[:]
-			}
-			deobfuscateFont(data, start, obfuscationKey, v)
-			return data, nil
+	v, ok := algorithm2length[algorithm]
+	if ok {
+		data, err := d.ProxyResource.Read(start, end)
+		if err != nil {
+			return nil, err
 		}
+		var obfuscationKey []byte
+		switch algorithm {
+		case "http://ns.adobe.com/pdf/enc#RC":
+			obfuscationKey = d.getHashKeyAdobe()
+		default:
+			shasum := sha1.Sum([]byte(d.identifier))
+			obfuscationKey = shasum[:]
+		}
+		deobfuscateFont(data, start, obfuscationKey, v)
+		return data, nil
 	}
 
 	// Algorithm not in known, so skip deobfuscation
@@ -69,74 +68,73 @@ func (d DeobfuscatingResource) Stream(w io.Writer, start int64, end int64) (int6
 		algorithm = penc.Algorithm
 	}
 
-	for k, v := range algorithm2length {
-		if k == algorithm {
-			if start >= v {
-				// We're past the obfuscated part, just proxy it
-				return d.ProxyResource.Stream(w, start, end)
-			}
-
-			// Create a pipe to proxy the stream for deobfuscation
-			pr, pw := io.Pipe()
-
-			// Start piping the resource's stream in a goroutine
-			go func() {
-				_, err := d.ProxyResource.Stream(pw, start, end)
-				if err != nil {
-					pw.CloseWithError(err)
-				} else {
-					pw.Close()
-				}
-			}()
-
-			// First, we just read the obfuscated portion (1040 or 1024 first bytes)
-			obfuscatedPortion := make([]byte, v)
-			on, err := pr.Read(obfuscatedPortion)
-			if err != nil && err != io.EOF {
-				if fre, ok := err.(*fetcher.ResourceError); ok {
-					return 0, fre
-				} else {
-					return 0, fetcher.Other(errors.Wrap(err, "error reading obfuscated portion of font"))
-				}
-			}
-
-			// Handle filesize <= the obfuscated portion's length or the requested length
-			atEnd := false
-			if err == io.EOF || (end != 0 && end <= start+int64(on)) {
-				obfuscatedPortion = obfuscatedPortion[:on]
-				atEnd = true
-				pr.Close()
-			}
-
-			// Deobfuscate just the obfuscated portion
-			var obfuscationKey []byte
-			switch algorithm {
-			case "http://ns.adobe.com/pdf/enc#RC":
-				obfuscationKey = d.getHashKeyAdobe()
-			default:
-				shasum := sha1.Sum([]byte(d.identifier))
-				obfuscationKey = shasum[:]
-			}
-			deobfuscateFont(obfuscatedPortion, start, obfuscationKey, v)
-
-			defer pr.Close()
-
-			// And write it to the stream
-			_, err = w.Write(obfuscatedPortion)
-			if err != nil {
-				return 0, fetcher.Other(errors.Wrap(err, "error writing obfuscated portion of font"))
-			}
-
-			// The rest of the font is not obfuscated, so it's "copied" directly using a 32KB buffer
-			var wn int64
-			if !atEnd {
-				wn, err = io.Copy(w, pr)
-				if err != nil {
-					return 0, fetcher.Other(errors.Wrap(err, "error writing unobfuscated portion of font"))
-				}
-			}
-			return int64(on) + wn, nil
+	v, ok := algorithm2length[algorithm]
+	if ok {
+		if start >= v {
+			// We're past the obfuscated part, just proxy it
+			return d.ProxyResource.Stream(w, start, end)
 		}
+
+		// Create a pipe to proxy the stream for deobfuscation
+		pr, pw := io.Pipe()
+
+		// Start piping the resource's stream in a goroutine
+		go func() {
+			_, err := d.ProxyResource.Stream(pw, start, end)
+			if err != nil {
+				pw.CloseWithError(err)
+			} else {
+				pw.Close()
+			}
+		}()
+
+		// First, we just read the obfuscated portion (1040 or 1024 first bytes)
+		obfuscatedPortion := make([]byte, v)
+		on, err := pr.Read(obfuscatedPortion)
+		if err != nil && err != io.EOF {
+			if fre, ok := err.(*fetcher.ResourceError); ok {
+				return 0, fre
+			} else {
+				return 0, fetcher.Other(errors.Wrap(err, "error reading obfuscated portion of font"))
+			}
+		}
+
+		// Handle filesize <= the obfuscated portion's length or the requested length
+		atEnd := false
+		if on < len(obfuscatedPortion) || (end != 0 && end <= start+int64(on)) {
+			obfuscatedPortion = obfuscatedPortion[:on]
+			atEnd = true
+			pr.Close()
+		}
+
+		// Deobfuscate just the obfuscated portion
+		var obfuscationKey []byte
+		switch algorithm {
+		case "http://ns.adobe.com/pdf/enc#RC":
+			obfuscationKey = d.getHashKeyAdobe()
+		default:
+			shasum := sha1.Sum([]byte(d.identifier))
+			obfuscationKey = shasum[:]
+		}
+		deobfuscateFont(obfuscatedPortion, start, obfuscationKey, v)
+
+		defer pr.Close()
+
+		// And write it to the stream
+		_, err = w.Write(obfuscatedPortion)
+		if err != nil {
+			return 0, fetcher.Other(errors.Wrap(err, "error writing obfuscated portion of font"))
+		}
+
+		// The rest of the font is not obfuscated, so it's "copied" directly using a 32KB buffer
+		var wn int64
+		if !atEnd {
+			wn, err = io.Copy(w, pr)
+			if err != nil {
+				return 0, fetcher.Other(errors.Wrap(err, "error writing unobfuscated portion of font"))
+			}
+		}
+		return int64(on) + wn, nil
 	}
 
 	// Algorithm not in known, so skip deobfuscation
