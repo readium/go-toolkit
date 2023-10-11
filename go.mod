@@ -18,8 +18,8 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/trimmer-io/go-xmp v1.0.0
 	github.com/urfave/negroni v1.0.0
-	golang.org/x/net v0.7.0
-	golang.org/x/text v0.7.0
+	golang.org/x/net v0.17.0
+	golang.org/x/text v0.13.0
 )
 
 require (
@@ -41,7 +41,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	golang.org/x/image v0.5.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
