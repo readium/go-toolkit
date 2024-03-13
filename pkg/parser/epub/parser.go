@@ -164,7 +164,7 @@ func parseDisplayOptions(fetcher fetcher.Fetcher) (ret map[string]string) {
 		}
 	}
 
-	if platform := displayOptionsXml.SelectElement("platform"); platform != nil {
+	if platform := displayOptionsXml.SelectElement("//platform"); platform != nil {
 		for _, option := range platform.SelectElements("option") {
 			optName := option.SelectAttr("name")
 			optValue := option.InnerText()
