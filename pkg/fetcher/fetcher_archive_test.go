@@ -16,16 +16,17 @@ func withArchiveFetcher(t *testing.T, callback func(a *ArchiveFetcher)) {
 
 func TestArchiveFetcherLinks(t *testing.T) {
 	makeTestLink := func(href string, typ string, entryLength uint64, isCompressed bool) manifest.Link {
-		return manifest.Link{
+		l := manifest.Link{
 			Href: href,
 			Type: typ,
-			Properties: manifest.Properties{
-				"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
-					"entryLength":       entryLength,
-					"isEntryCompressed": isCompressed,
-				},
-			},
 		}
+		l.Properties.Add(map[string]interface{}{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
+				"entryLength":       entryLength,
+				"isEntryCompressed": isCompressed,
+			},
+		})
+		return l
 	}
 
 	mustContain := manifest.LinkList{
@@ -127,26 +128,26 @@ func TestArchiveFetcherFileNotFoundLength(t *testing.T) {
 func TestArchiveFetcherAddsProperties(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		resource := a.Get(manifest.Link{Href: "/EPUB/css/epub.css"})
-		assert.Equal(t, manifest.Properties{
-			"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
+		assert.Equal(t, (&manifest.Properties{}).Add(map[string]interface{}{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
 				"entryLength":       uint64(595),
 				"isEntryCompressed": true,
 			},
-		}, resource.Link().Properties)
+		}), resource.Link().Properties)
 	})
 }
 
 func TestArchiveFetcherOriginalPropertiesKept(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(manifest.Link{Href: "/EPUB/css/epub.css", Properties: manifest.Properties{
+		l := manifest.Link{Href: "/EPUB/css/epub.css"}
+		l.Properties.Add(map[string]interface{}{"other": "property"})
+		resource := a.Get(l)
+		assert.Equal(t, (&manifest.Properties{}).Add(map[string]interface{}{
 			"other": "property",
-		}})
-		assert.Equal(t, manifest.Properties{
-			"other": "property",
-			"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
 				"entryLength":       uint64(595),
 				"isEntryCompressed": true,
 			},
-		}, resource.Link().Properties)
+		}), resource.Link().Properties)
 	})
 }

@@ -40,8 +40,8 @@ func (f *ArchiveFetcher) Links() (manifest.LinkList, error) {
 		if cl == 0 {
 			cl = af.Length()
 		}
-		link.Properties.Add(manifest.Properties{
-			"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
+		link.Properties.Add(map[string]interface{}{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
 				"entryLength":       cl,
 				"isEntryCompressed": af.CompressedLength() > 0,
 			},
@@ -109,8 +109,8 @@ func (r *entryResource) Link() manifest.Link {
 	if cl == 0 {
 		cl = r.entry.Length()
 	}
-	r.link.Properties.Add(manifest.Properties{
-		"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
+	r.link.Properties.Add(map[string]interface{}{
+		"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
 			"entryLength":       cl,
 			"isEntryCompressed": r.entry.CompressedLength() > 0,
 		},

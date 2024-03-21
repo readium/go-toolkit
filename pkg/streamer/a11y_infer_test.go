@@ -212,9 +212,9 @@ func TestInferFeaturePageList(t *testing.T) {
 // "resources" in RWPM)
 func TestInferFeatureMathML(t *testing.T) {
 	link := newLink(mediatype.HTML, "html")
-	link.Properties = map[string]interface{}{
+	link.Properties.Add(map[string]interface{}{
 		"contains": []string{"mathml"},
-	}
+	})
 	m := manifest.Manifest{
 		Metadata: manifest.Metadata{
 			ConformsTo: []manifest.Profile{manifest.ProfileEPUB},

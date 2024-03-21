@@ -66,17 +66,19 @@ func TestLinkUnmarshalFullJSON(t *testing.T) {
 		]
 	}`), &l))
 	assert.Equal(t, Link{
-		Href:       "http://href",
-		Type:       "application/pdf",
-		Templated:  true,
-		Title:      "Link Title",
-		Rels:       []string{"publication", "cover"},
-		Properties: map[string]interface{}{"orientation": "landscape"},
-		Height:     1024,
-		Width:      768,
-		Bitrate:    74.2,
-		Duration:   45.6,
-		Languages:  []string{"fr"},
+		Href:      "http://href",
+		Type:      "application/pdf",
+		Templated: true,
+		Title:     "Link Title",
+		Rels:      []string{"publication", "cover"},
+		Properties: (&Properties{}).Add(map[string]interface{}{
+			"orientation": "landscape",
+		}),
+		Height:    1024,
+		Width:     768,
+		Bitrate:   74.2,
+		Duration:  45.6,
+		Languages: []string{"fr"},
 		Alternates: []Link{
 			{Href: "/alternate1"},
 			{Href: "/alternate2"},
@@ -181,17 +183,19 @@ func TestLinkMinimalJSON(t *testing.T) {
 
 func TestLinkFullJSON(t *testing.T) {
 	b, err := json.Marshal(Link{
-		Href:       "http://href",
-		Type:       "application/pdf",
-		Templated:  true,
-		Title:      "Link Title",
-		Rels:       []string{"publication", "cover"},
-		Properties: map[string]interface{}{"orientation": "landscape"},
-		Height:     1024,
-		Width:      768,
-		Bitrate:    74.2,
-		Duration:   45.6,
-		Languages:  []string{"fr"},
+		Href:      "http://href",
+		Type:      "application/pdf",
+		Templated: true,
+		Title:     "Link Title",
+		Rels:      []string{"publication", "cover"},
+		Properties: (&Properties{}).Add(map[string]interface{}{
+			"orientation": "landscape",
+		}),
+		Height:    1024,
+		Width:     768,
+		Bitrate:   74.2,
+		Duration:  45.6,
+		Languages: []string{"fr"},
 		Alternates: []Link{
 			{Href: "/alternate1"},
 			{Href: "/alternate2"},
