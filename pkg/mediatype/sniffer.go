@@ -143,6 +143,36 @@ func SniffBitmap(context SnifferContext) *MediaType {
 	return nil
 }
 
+// Sniffs audio files.
+func SniffAudio(context SnifferContext) *MediaType {
+	if context.HasFileExtension("aac") {
+		return &AAC
+	}
+	if context.HasFileExtension("aiff") {
+		return &AIFF
+	}
+	// TODO flac, m4a
+	if context.HasFileExtension("mp3") {
+		return &MP3
+	}
+	if context.HasFileExtension("ogg", "oga") {
+		return &OGG
+	}
+	if context.HasFileExtension("opus") {
+		return &OPUS
+	}
+	if context.HasFileExtension("wav") {
+		return &WAV
+	}
+	if context.HasFileExtension("webm") {
+		return &WEBMAudio
+	}
+
+	// TODO read magic bytes?
+
+	return nil
+}
+
 // Sniffs a Readium Web Publication, protected or not by LCP.
 func SniffWebpub(context SnifferContext) *MediaType {
 	if context.HasFileExtension("audiobook") || context.HasMediaType("application/audiobook+zip") {
@@ -217,8 +247,8 @@ func SniffEPUB(context SnifferContext) *MediaType {
 
 // Sniffs a Lightweight Packaging Format (LPF).
 // References:
-//  - https://www.w3.org/TR/lpf/
-//  - https://www.w3.org/TR/pub-manifest/
+//   - https://www.w3.org/TR/lpf/
+//   - https://www.w3.org/TR/pub-manifest/
 func SniffLPF(context SnifferContext) *MediaType {
 	if context.HasFileExtension("lpf") || context.HasMediaType("application/lpf+zip") {
 		return &LPF
