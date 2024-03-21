@@ -3,6 +3,7 @@ package manifest
 import (
 	"encoding/json"
 	"path"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
@@ -53,6 +54,49 @@ func (m Manifest) ConformsTo(profile Profile) bool {
 		}
 	}
 	return false
+}
+
+// Finds the first [Link] with the given href in the manifest's links.
+// Searches through (in order) the reading order, resources and links recursively following alternate and children links.
+// If there's no match, tries again after removing any query parameter and anchor from the given href.
+func (m Manifest) LinkWithHref(href string) *Link {
+	var deepLinkWithHref func(ll LinkList, href string) *Link
+	deepLinkWithHref = func(ll LinkList, href string) *Link {
+		for _, l := range ll {
+			if l.Href == href {
+				return &l
+			} else {
+				if link := deepLinkWithHref(l.Alternates, href); link != nil {
+					return link
+				}
+				if link := deepLinkWithHref(l.Children, href); link != nil {
+					return link
+				}
+			}
+		}
+		return nil
+	}
+
+	find := func(href string) *Link {
+		if l := deepLinkWithHref(m.ReadingOrder, href); l != nil {
+			return l
+		}
+		if l := deepLinkWithHref(m.Resources, href); l != nil {
+			return l
+		}
+		if l := deepLinkWithHref(m.Links, href); l != nil {
+			return l
+		}
+		return nil
+	}
+
+	if l := find(href); l != nil {
+		return l
+	}
+	if l := find(strings.SplitN(strings.SplitN(href, "#", 2)[0], "?", 2)[0]); l != nil {
+		return l
+	}
+	return nil
 }
 
 // Finds the first [Link] with the given relation in the manifest's links.
@@ -113,6 +157,43 @@ func (m Manifest) LinksWithRel(rel string) []Link {
 	}
 
 	return res
+}
+
+// Creates a new [Locator] object from a [Link] to a resource of this manifest.
+// Returns nil if the resource is not found in this manifest.
+func (m Manifest) LocatorFromLink(link Link) *Locator {
+	components := strings.SplitN(link.Href, "#", 2)
+	href := components[0]
+	resourceLink := m.LinkWithHref(href)
+	if resourceLink == nil {
+		return nil
+	}
+	if resourceLink.Type == "" {
+		return nil
+	}
+	var fragment string
+	if len(components) > 1 {
+		fragment = components[1]
+	}
+
+	l := &Locator{
+		Href:  href,
+		Type:  resourceLink.Type,
+		Title: resourceLink.Title,
+	}
+
+	if l.Title == "" {
+		l.Title = link.Title
+	}
+
+	if fragment != "" {
+		l.Locations.Fragments = []string{fragment}
+	} else {
+		var p float64
+		l.Locations.Progression = &p
+	}
+
+	return l
 }
 
 // Parses a [Manifest] from its RWPM JSON representation.

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 )
 
 // Contributor
@@ -153,8 +154,14 @@ func (c Contributors) MarshalJSON() ([]byte, error) {
 	if len(c) == 0 {
 		return []byte("null"), nil
 	}
-	if len(c) == 1 {
-		return json.Marshal(c[0])
+
+	// De-duplicate contributors before marshalling
+	marshalled, err := extensions.DeduplicateAndMarshalJSON([]Contributor(c))
+	if err != nil {
+		return nil, err
 	}
-	return json.Marshal([]Contributor(c))
+	if len(marshalled) == 1 {
+		return json.Marshal(marshalled[0])
+	}
+	return json.Marshal(marshalled)
 }

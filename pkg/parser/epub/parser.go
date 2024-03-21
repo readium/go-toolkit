@@ -3,6 +3,7 @@ package epub
 import (
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/asset"
+	"github.com/readium/go-toolkit/pkg/content/iterator"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
@@ -69,6 +70,9 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 
 	builder := pub.NewServicesBuilder(map[string]pub.ServiceFactory{
 		pub.PositionsService_Name: PositionsServiceFactory(p.reflowablePositionsStrategy),
+		pub.ContentService_Name: pub.DefaultContentServiceFactory([]iterator.ResourceContentIteratorFactory{
+			iterator.HTMLFactory(),
+		}),
 	})
 	return pub.NewBuilder(manifest, ffetcher, builder), nil
 }
@@ -160,7 +164,7 @@ func parseDisplayOptions(fetcher fetcher.Fetcher) (ret map[string]string) {
 		}
 	}
 
-	if platform := displayOptionsXml.SelectElement("platform"); platform != nil {
+	if platform := displayOptionsXml.SelectElement("//platform"); platform != nil {
 		for _, option := range platform.SelectElements("option") {
 			optName := option.SelectAttr("name")
 			optValue := option.InnerText()
