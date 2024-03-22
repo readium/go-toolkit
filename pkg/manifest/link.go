@@ -107,7 +107,7 @@ func LinkFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormaliz
 	// Properties
 	properties, ok := rawJson["properties"].(map[string]interface{})
 	if ok {
-		link.Properties = properties
+		link.Properties.Add(properties)
 	}
 
 	// Rels
@@ -179,6 +179,48 @@ func (l *Link) UnmarshalJSON(b []byte) error {
 	}
 	*l = *fl
 	return nil
+}
+
+func (l Link) MarshalJSON() ([]byte, error) {
+	res := make(map[string]interface{})
+	res["href"] = l.Href
+	if l.Type != "" {
+		res["type"] = l.Type
+	}
+	if l.Templated {
+		res["templated"] = l.Templated
+	}
+	if l.Title != "" {
+		res["title"] = l.Title
+	}
+	if len(l.Rels) > 0 {
+		res["rel"] = l.Rels
+	}
+	if l.Properties.Length() > 0 {
+		res["properties"] = l.Properties
+	}
+	if l.Height > 0 {
+		res["height"] = l.Height
+	}
+	if l.Width > 0 {
+		res["width"] = l.Width
+	}
+	if l.Bitrate > 0 {
+		res["bitrate"] = l.Bitrate
+	}
+	if l.Duration > 0 {
+		res["duration"] = l.Duration
+	}
+	if len(l.Languages) > 0 {
+		res["language"] = l.Languages
+	}
+	if len(l.Alternates) > 0 {
+		res["alternate"] = l.Alternates
+	}
+	if len(l.Children) > 0 {
+		res["children"] = l.Children
+	}
+	return json.Marshal(res)
 }
 
 // Slice of links

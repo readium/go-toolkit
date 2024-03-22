@@ -136,9 +136,9 @@ func mapEPUBLink(link EPUBLink) manifest.Link {
 	}
 
 	if len(contains) > 0 {
-		l.Properties = manifest.Properties{
+		l.Properties.Add(map[string]interface{}{
 			"contains": contains,
-		}
+		})
 	}
 
 	return l
@@ -190,7 +190,7 @@ func (f PublicationFactory) computeLink(item Item, fallbackChain []string) manif
 		Alternates: f.computeAlternates(item, fallbackChain),
 	}
 
-	if len(properties) > 0 {
+	if properties.Length() > 0 {
 		ret.Properties = properties
 	}
 
@@ -231,7 +231,7 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 		properties["encrypted"] = edat.ToMap() // ToMap makes it JSON-like
 	}
 
-	return rels, manifest.Properties(properties)
+	return rels, (&manifest.Properties{}).Add(properties)
 }
 
 // Compute alternate links for [item], checking for an infinite recursion
