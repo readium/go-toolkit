@@ -196,7 +196,7 @@ func (l Link) MarshalJSON() ([]byte, error) {
 	if len(l.Rels) > 0 {
 		res["rel"] = l.Rels
 	}
-	if l.Properties.Length() > 0 {
+	if len(l.Properties) > 0 {
 		res["properties"] = l.Properties
 	}
 	if l.Height > 0 {

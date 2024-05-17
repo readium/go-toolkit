@@ -71,9 +71,9 @@ func TestLinkUnmarshalFullJSON(t *testing.T) {
 		Templated: true,
 		Title:     "Link Title",
 		Rels:      []string{"publication", "cover"},
-		Properties: (&Properties{}).Add(map[string]interface{}{
+		Properties: Properties{
 			"orientation": "landscape",
-		}),
+		},
 		Height:    1024,
 		Width:     768,
 		Bitrate:   74.2,
@@ -188,9 +188,9 @@ func TestLinkFullJSON(t *testing.T) {
 		Templated: true,
 		Title:     "Link Title",
 		Rels:      []string{"publication", "cover"},
-		Properties: (&Properties{}).Add(map[string]interface{}{
+		Properties: Properties{
 			"orientation": "landscape",
-		}),
+		},
 		Height:    1024,
 		Width:     768,
 		Bitrate:   74.2,

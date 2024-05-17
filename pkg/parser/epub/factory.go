@@ -190,7 +190,7 @@ func (f PublicationFactory) computeLink(item Item, fallbackChain []string) manif
 		Alternates: f.computeAlternates(item, fallbackChain),
 	}
 
-	if properties.Length() > 0 {
+	if len(properties) > 0 {
 		ret.Properties = properties
 	}
 

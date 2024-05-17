@@ -23,13 +23,12 @@ func TestArchiveFetcherLinks(t *testing.T) {
 			Href: href,
 			Type: typ,
 		}
-		var p manifest.Properties
-		p.Add(map[string]interface{}{
+		p := manifest.Properties{
 			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
 				"entryLength":       entryLength,
 				"isEntryCompressed": isCompressed,
 			},
-		})
+		}
 		return struct {
 			manifest.Link
 			manifest.Properties

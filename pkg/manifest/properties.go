@@ -2,29 +2,18 @@ package manifest
 
 import (
 	"encoding/json"
-	"sync"
 
 	"github.com/pkg/errors"
 )
 
-type Properties struct {
-	properties map[string]interface{}
-	mutext     *sync.RWMutex
-}
+type Properties map[string]interface{}
 
 func (p *Properties) Add(newProperties map[string]interface{}) Properties {
-	if p == nil {
-		p = &Properties{}
+	if *p == nil {
+		*p = make(Properties)
 	}
-	if p.properties == nil || p.mutext == nil {
-		p.properties = make(map[string]interface{})
-		p.mutext = &sync.RWMutex{}
-	}
-	p.mutext.Lock()
-	defer p.mutext.Unlock()
-
 	for k, v := range newProperties {
-		p.properties[k] = v
+		(*p)[k] = v
 	}
 	return *p
 }
@@ -33,45 +22,22 @@ func (p *Properties) Delete(key string) Properties {
 	if p == nil {
 		p = &Properties{}
 	}
-	if p.properties == nil || p.mutext == nil {
-		p.properties = make(map[string]interface{})
-		p.mutext = &sync.RWMutex{}
-	}
-	p.mutext.Lock()
-	defer p.mutext.Unlock()
-
-	delete(p.properties, key)
+	delete(*p, key)
 	return *p
 }
 
-func (p Properties) Get(key string) interface{} {
-	if p.properties != nil && p.mutext != nil {
-		p.mutext.RLock()
-		defer p.mutext.RUnlock()
-
-		return p.properties[key]
+func (p *Properties) Get(key string) interface{} {
+	if p != nil {
+		return (*p)[key]
 	}
 	return nil
 }
 
-func (p Properties) Length() int {
-	if p.properties == nil || p.mutext == nil {
-		return 0
-	}
-	p.mutext.RLock()
-	defer p.mutext.RUnlock()
-
-	return len(p.properties)
-}
-
 func (p Properties) GetString(key string) string {
-	if p.properties == nil || p.mutext == nil {
+	if p == nil {
 		return ""
 	}
-	p.mutext.RLock()
-	defer p.mutext.RUnlock()
-
-	v, ok := p.properties[key]
+	v, ok := p[key]
 	if !ok {
 		return ""
 	}
@@ -83,13 +49,10 @@ func (p Properties) GetString(key string) string {
 }
 
 func (p Properties) GetBool(key string) *bool {
-	if p.properties == nil || p.mutext == nil {
+	if p == nil {
 		return nil
 	}
-	p.mutext.RLock()
-	defer p.mutext.RUnlock()
-
-	v, ok := p.properties[key]
+	v, ok := p[key]
 	if !ok {
 		return nil
 	}
@@ -149,13 +112,10 @@ func (p Properties) Encryption() *Encryption {
 }
 
 func (p Properties) Contains() []string {
-	if p.properties == nil {
+	if p == nil {
 		return nil
 	}
-	p.mutext.RLock()
-	defer p.mutext.RUnlock()
-
-	v, ok := p.properties["contains"]
+	v, ok := p["contains"]
 	if !ok {
 		return nil
 	}
@@ -168,20 +128,14 @@ func (p Properties) Contains() []string {
 
 func PropertiesFromJSON(rawJson interface{}) (Properties, error) {
 	if rawJson == nil {
-		return Properties{}, nil
+		return make(Properties), nil
 	}
 
 	properties, ok := rawJson.(map[string]interface{})
 	if !ok {
-		return Properties{}, errors.New("Properties has invalid JSON object")
+		return nil, errors.New("Properties has invalid JSON object")
 	}
-	if len(properties) > 0 {
-		return Properties{
-			properties: properties,
-			mutext:     &sync.RWMutex{},
-		}, nil
-	}
-	return Properties{}, nil
+	return properties, nil
 }
 
 func (p *Properties) UnmarshalJSON(data []byte) error {
@@ -196,13 +150,4 @@ func (p *Properties) UnmarshalJSON(data []byte) error {
 	}
 	*p = pr
 	return nil
-}
-
-func (p Properties) MarshalJSON() ([]byte, error) {
-	if p.properties == nil || p.mutext == nil {
-		return json.Marshal(nil)
-	}
-	p.mutext.RLock()
-	defer p.mutext.RUnlock()
-	return json.Marshal(p.properties)
 }
