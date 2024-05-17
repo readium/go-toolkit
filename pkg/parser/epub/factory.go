@@ -231,7 +231,7 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 		properties["encrypted"] = edat.ToMap() // ToMap makes it JSON-like
 	}
 
-	return rels, (&manifest.Properties{}).Add(properties)
+	return rels, manifest.Properties(properties)
 }
 
 // Compute alternate links for [item], checking for an infinite recursion

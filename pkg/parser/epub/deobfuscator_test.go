@@ -28,7 +28,7 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 		Href: href,
 	}
 	if algorithm != "" {
-		link.Properties.Add(map[string]interface{}{
+		link.Properties.Add(manifest.Properties{
 			"encrypted": map[string]interface{}{
 				"algorithm": algorithm,
 			},

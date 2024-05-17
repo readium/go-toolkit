@@ -107,7 +107,7 @@ func LinkFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormaliz
 	// Properties
 	properties, ok := rawJson["properties"].(map[string]interface{})
 	if ok {
-		link.Properties.Add(properties)
+		link.Properties = properties
 	}
 
 	// Rels

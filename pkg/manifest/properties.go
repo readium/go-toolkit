@@ -8,7 +8,7 @@ import (
 
 type Properties map[string]interface{}
 
-func (p *Properties) Add(newProperties map[string]interface{}) Properties {
+func (p *Properties) Add(newProperties Properties) Properties {
 	if *p == nil {
 		*p = make(Properties)
 	}
