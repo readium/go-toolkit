@@ -38,6 +38,10 @@ type Resource interface {
 	// It might be modified by the [Resource] to include additional metadata, e.g. the `Content-Type` HTTP header in [Link.Type].
 	Link() manifest.Link
 
+	// Returns the properties associated with the resource.
+	// This is opened for extensions.
+	Properties() manifest.Properties
+
 	// Returns data length from metadata if available, or calculated from reading the bytes otherwise.
 	// This value must be treated as a hint, as it might not reflect the actual bytes length. To get the real length, you need to read the whole resource.
 	Length() (int64, *ResourceError)
@@ -265,6 +269,10 @@ func (r FailureResource) Link() manifest.Link {
 	return r.link
 }
 
+func (r FailureResource) Properties() manifest.Properties {
+	return manifest.Properties{}
+}
+
 // Length implements Resource
 func (r FailureResource) Length() (int64, *ResourceError) {
 	return 0, r.ex
@@ -321,6 +329,10 @@ func (r ProxyResource) Close() {
 // Link implements Resource
 func (r ProxyResource) Link() manifest.Link {
 	return r.Res.Link()
+}
+
+func (r ProxyResource) Properties() manifest.Properties {
+	return manifest.Properties{}
 }
 
 // Length implements Resource

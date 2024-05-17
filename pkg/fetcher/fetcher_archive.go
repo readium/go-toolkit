@@ -36,16 +36,6 @@ func (f *ArchiveFetcher) Links() (manifest.LinkList, error) {
 				link.Type = mt.String()
 			}
 		}
-		cl := af.CompressedLength()
-		if cl == 0 {
-			cl = af.Length()
-		}
-		link.Properties.Add(map[string]interface{}{
-			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
-				"entryLength":       cl,
-				"isEntryCompressed": af.CompressedLength() > 0,
-			},
-		})
 		links = append(links, link)
 	}
 	return links, nil
@@ -57,10 +47,24 @@ func (f *ArchiveFetcher) Get(link manifest.Link) Resource {
 	if err != nil {
 		return NewFailureResource(link, NotFound(err))
 	}
-	return &entryResource{
+	er := &entryResource{
 		link:  link,
 		entry: entry,
 	}
+
+	// Compute archive properties
+	cl := entry.CompressedLength()
+	if cl == 0 {
+		cl = entry.Length()
+	}
+	er.properties.Add(map[string]interface{}{
+		"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
+			"entryLength":       cl,
+			"isEntryCompressed": entry.CompressedLength() > 0,
+		},
+	})
+
+	return er
 }
 
 // Close implements Fetcher
@@ -90,8 +94,9 @@ func NewArchiveFetcherFromPathWithFactory(path string, factory archive.ArchiveFa
 
 // Resource from archive entry
 type entryResource struct {
-	link  manifest.Link
-	entry archive.Entry
+	link       manifest.Link
+	entry      archive.Entry
+	properties manifest.Properties
 }
 
 // File implements Resource
@@ -104,21 +109,14 @@ func (r *entryResource) Close() {
 	// Nothing needs to be done at the moment
 }
 
+// Link implements Resource
 func (r *entryResource) Link() manifest.Link {
-	cl := r.entry.CompressedLength()
-	if cl == 0 {
-		cl = r.entry.Length()
-	}
-	if r.link.Properties.Get("https://readium.org/webpub-manifest/properties#archive") == nil {
-		r.link.Properties.Add(map[string]interface{}{
-			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
-				"entryLength":       cl,
-				"isEntryCompressed": r.entry.CompressedLength() > 0,
-			},
-		})
-	}
-
 	return r.link
+}
+
+// Properties implements Resource
+func (r *entryResource) Properties() manifest.Properties {
+	return r.properties
 }
 
 // Read implements Resource
