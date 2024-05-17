@@ -136,9 +136,9 @@ func mapEPUBLink(link EPUBLink) manifest.Link {
 	}
 
 	if len(contains) > 0 {
-		l.Properties.Add(map[string]interface{}{
+		l.Properties = manifest.Properties{
 			"contains": contains,
-		})
+		}
 	}
 
 	return l

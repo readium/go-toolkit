@@ -28,11 +28,9 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 		Href: href,
 	}
 	if algorithm != "" {
-		link.Properties.Add(manifest.Properties{
-			"encrypted": map[string]interface{}{
-				"algorithm": algorithm,
-			},
-		})
+		link.Properties["encrypted"] = map[string]interface{}{
+			"algorithm": algorithm,
+		}
 	}
 	obfu, err := NewDeobfuscator(identifier).Transform(ft.Get(link)).Read(start, end)
 	if !assert.Nil(t, err) {

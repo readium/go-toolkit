@@ -142,27 +142,11 @@ func TestArchiveFetcherFileNotFoundLength(t *testing.T) {
 func TestArchiveFetcherAddsProperties(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		resource := a.Get(manifest.Link{Href: "/EPUB/css/epub.css"})
-		assert.Equal(t, (&manifest.Properties{}).Add(map[string]interface{}{
+		assert.Equal(t, manifest.Properties{
 			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
 				"entryLength":       uint64(595),
 				"isEntryCompressed": true,
 			},
-		}), resource.Properties())
+		}, resource.Properties())
 	})
 }
-
-/*func TestArchiveFetcherOriginalPropertiesKept(t *testing.T) {
-	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		l := manifest.Link{Href: "/EPUB/css/epub.css"}
-		l.Properties.Add(map[string]interface{}{"other": "property"})
-		resource := a.Get(l)
-		assert.Equal(t, (&manifest.Properties{}).Add(map[string]interface{}{
-			"other": "property",
-			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
-				"entryLength":       uint64(595),
-				"isEntryCompressed": true,
-			},
-		}), resource.Properties())
-	})
-}
-*/
