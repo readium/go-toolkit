@@ -47,22 +47,23 @@ func (f *ArchiveFetcher) Get(link manifest.Link) Resource {
 	if err != nil {
 		return NewFailureResource(link, NotFound(err))
 	}
-	er := &entryResource{
-		link:  link,
-		entry: entry,
-	}
 
 	// Compute archive properties
 	cl := entry.CompressedLength()
 	if cl == 0 {
 		cl = entry.Length()
 	}
-	er.properties.Add(map[string]interface{}{
-		"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
-			"entryLength":       cl,
-			"isEntryCompressed": entry.CompressedLength() > 0,
+
+	er := &entryResource{
+		link:  link,
+		entry: entry,
+		properties: manifest.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
+				"entryLength":       cl,
+				"isEntryCompressed": entry.CompressedLength() > 0,
+			},
 		},
-	})
+	}
 
 	return er
 }
