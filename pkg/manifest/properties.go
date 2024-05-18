@@ -8,7 +8,10 @@ import (
 
 type Properties map[string]interface{}
 
-func (p *Properties) Add(newProperties Properties) Properties {
+// Properties should be immutable, therefore these functions have been removed.
+// The code is left here in case it's useful in a future implementation.
+
+/*func (p *Properties) Add(newProperties Properties) Properties {
 	if *p == nil {
 		*p = make(Properties)
 	}
@@ -17,6 +20,14 @@ func (p *Properties) Add(newProperties Properties) Properties {
 	}
 	return *p
 }
+
+func (p *Properties) Delete(key string) Properties {
+	if p == nil {
+		p = &Properties{}
+	}
+	delete(*p, key)
+	return *p
+}*/
 
 func (p *Properties) Get(key string) interface{} {
 	if p != nil {

@@ -29,6 +29,11 @@ func (r *BytesResource) Link() manifest.Link {
 	return r.link
 }
 
+// Properties implements Resource
+func (r *BytesResource) Properties() manifest.Properties {
+	return manifest.Properties{}
+}
+
 // Length implements Resource
 func (r *BytesResource) Length() (int64, *ResourceError) {
 	bin, err := r.Read(0, 0)
