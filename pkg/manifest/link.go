@@ -338,6 +338,18 @@ func (ll LinkList) AllAreVideo() bool {
 	return true
 }
 
+// Returns whether all the resources in the collection are bitmaps or video clips.
+func (ll LinkList) AllAreVisual() bool {
+	for _, link := range ll {
+		mt := link.MediaType()
+		if !mt.IsBitmap() && !mt.IsVideo() {
+			return false
+		}
+		// TODO should we check alternates?
+	}
+	return true
+}
+
 // Returns whether all the resources in the collection are HTML documents.
 func (ll LinkList) AllAreHTML() bool {
 	for _, link := range ll {
