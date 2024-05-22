@@ -68,7 +68,7 @@ func (s DefaultContentService) Content(start *manifest.Locator) content.Content 
 	}
 }
 
-type ContentImplementation struct {
+type contentImplementation struct {
 	context                          Context
 	start                            *manifest.Locator
 	resourceContentIteratorFactories []iterator.ResourceContentIteratorFactory
