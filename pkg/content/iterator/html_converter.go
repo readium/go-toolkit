@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/readium/go-toolkit/pkg/content/element"
+	iutil "github.com/readium/go-toolkit/pkg/internal/util"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util"
 	"golang.org/x/net/html"
@@ -312,7 +313,7 @@ func (c *HTMLConverter) Head(n *html.Node, depth int) {
 		var cssSelector *string
 		if isBlock {
 			// Calculate CSS selector now because we'll definitely need it
-			cs := util.CSSSelector(n)
+			cs := iutil.CSSSelector(n)
 			cssSelector = &cs
 
 			// Flush text
@@ -331,7 +332,7 @@ func (c *HTMLConverter) Head(n *html.Node, depth int) {
 			c.flushText()
 
 			if cssSelector == nil {
-				cs := util.CSSSelector(n)
+				cs := iutil.CSSSelector(n)
 				cssSelector = &cs
 			}
 			elementLocator := manifest.Locator{
