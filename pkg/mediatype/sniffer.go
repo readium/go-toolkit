@@ -145,26 +145,27 @@ func SniffBitmap(context SnifferContext) *MediaType {
 
 // Sniffs audio files.
 func SniffAudio(context SnifferContext) *MediaType {
-	if context.HasFileExtension("aac") {
+	if context.HasFileExtension("aac") || context.HasMediaType("audio/aac") {
 		return &AAC
 	}
-	if context.HasFileExtension("aiff") {
+	if context.HasFileExtension("aiff") || context.HasMediaType("audio/aiff") {
 		return &AIFF
 	}
 	// TODO flac, m4a
-	if context.HasFileExtension("mp3") {
+	if context.HasFileExtension("mp3") || context.HasMediaType("audio/mpeg") {
 		return &MP3
 	}
-	if context.HasFileExtension("ogg", "oga") {
+	if context.HasFileExtension("ogg", "oga") || context.HasMediaType("audio/ogg") {
 		return &OGG
 	}
-	if context.HasFileExtension("opus") {
+	if context.HasFileExtension("opus") || context.HasMediaType("audio/opus") {
 		return &OPUS
 	}
-	if context.HasFileExtension("wav") {
+	if context.HasFileExtension("wav") || context.HasMediaType("audio/wav") {
 		return &WAV
 	}
-	if context.HasFileExtension("webm") {
+	if context.HasFileExtension("webm") || context.HasMediaType("audio/webm") {
+		// Note: .webm extension could also be a video
 		return &WEBMAudio
 	}
 
