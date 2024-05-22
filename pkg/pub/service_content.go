@@ -61,7 +61,7 @@ func (s DefaultContentService) Get(link manifest.Link) (fetcher.Resource, bool) 
 }
 
 func (s DefaultContentService) Content(start *manifest.Locator) content.Content {
-	return ContentImplementation{
+	return contentImplementation{
 		context:                          s.context,
 		start:                            start,
 		resourceContentIteratorFactories: s.resourceContentIteratorFactories,
@@ -74,7 +74,7 @@ type contentImplementation struct {
 	resourceContentIteratorFactories []iterator.ResourceContentIteratorFactory
 }
 
-func (c ContentImplementation) Iterator() iterator.Iterator {
+func (c contentImplementation) Iterator() iterator.Iterator {
 	return iterator.NewPublicationContent(
 		c.context.Manifest,
 		c.context.Fetcher,
@@ -83,11 +83,11 @@ func (c ContentImplementation) Iterator() iterator.Iterator {
 	)
 }
 
-func (c ContentImplementation) Elements() ([]element.Element, error) {
+func (c contentImplementation) Elements() ([]element.Element, error) {
 	return content.ContentElements(c)
 }
 
-func (c ContentImplementation) Text(separator *string) (string, error) {
+func (c contentImplementation) Text(separator *string) (string, error) {
 	return content.ContentText(c, separator)
 }
 
