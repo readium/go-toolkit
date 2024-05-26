@@ -56,12 +56,12 @@ func (ah AttributesHolder) Attribute(key AttributeKey) *Attribute[any] {
 }
 
 // Gets all the attributes with the given [key].
-func (ah AttributesHolder) Attributes(key AttributeKey) []Attribute[any] {
+func (ah AttributesHolder) Attributes(key AttributeKey) AttributesHolder {
 	var result []Attribute[any]
 	for _, at := range ah.attributes {
 		if at.Key == key {
 			result = append(result, at)
 		}
 	}
-	return result
+	return NewAttributesHolder(result)
 }

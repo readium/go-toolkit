@@ -18,7 +18,7 @@ type Element interface {
 	Language() string
 	AccessibilityLabel() string
 	Attribute(key AttributeKey) *Attribute[any]
-	Attributes(key AttributeKey) []Attribute[any]
+	Attributes(key AttributeKey) AttributesHolder
 
 	Locator() manifest.Locator // Locator targeting this element in the Publication.
 }
@@ -41,7 +41,7 @@ type TextualElement interface {
 	Language() string
 	AccessibilityLabel() string
 	Attribute(key AttributeKey) *Attribute[any]
-	Attributes(key AttributeKey) []Attribute[any]
+	Attributes(key AttributeKey) AttributesHolder
 
 	// Element
 	Locator() manifest.Locator // Locator targeting this element in the Publication.
@@ -55,7 +55,7 @@ type EmbeddedElement interface {
 	Language() string
 	AccessibilityLabel() string
 	Attribute(key AttributeKey) *Attribute[any]
-	Attributes(key AttributeKey) []Attribute[any]
+	Attributes(key AttributeKey) AttributesHolder
 
 	// Element
 	Locator() manifest.Locator // Locator targeting this element in the Publication.
