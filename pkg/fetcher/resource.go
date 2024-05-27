@@ -332,7 +332,7 @@ func (r ProxyResource) Link() manifest.Link {
 }
 
 func (r ProxyResource) Properties() manifest.Properties {
-	return manifest.Properties{}
+	return r.Res.Properties()
 }
 
 // Length implements Resource
