@@ -29,6 +29,11 @@ func (r *BytesResource) Link() manifest.Link {
 	return r.link
 }
 
+// Properties implements Resource
+func (r *BytesResource) Properties() manifest.Properties {
+	return manifest.Properties{}
+}
+
 // Length implements Resource
 func (r *BytesResource) Length() (int64, *ResourceError) {
 	bin, err := r.Read(0, 0)
@@ -63,7 +68,7 @@ func (r *BytesResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 		end = length
 	}
 
-	return r._bytes[start:end], nil
+	return r._bytes[start : end+1], nil
 }
 
 // Stream implements Resource
@@ -79,7 +84,7 @@ func (r *BytesResource) Stream(w io.Writer, start int64, end int64) (int64, *Res
 	if start == 0 && end == 0 {
 		buff = bytes.NewBuffer(r._bytes)
 	} else {
-		buff = bytes.NewBuffer(r._bytes[start:end])
+		buff = bytes.NewBuffer(r._bytes[start : end+1])
 	}
 	n, err := io.Copy(w, buff)
 	if err != nil {

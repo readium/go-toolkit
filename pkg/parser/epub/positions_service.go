@@ -171,9 +171,9 @@ type ArchiveEntryLength struct {
 // PositionCount implements ReflowableStrategy
 func (l ArchiveEntryLength) PositionCount(resource fetcher.Resource) uint {
 	var length uint64
-	props := resource.Link().Properties
+	props := resource.Properties()
 	if p := props.Get("https://readium.org/webpub-manifest/properties#archive"); p != nil {
-		if pm, ok := p.(manifest.Properties); ok {
+		if pm, ok := p.(map[string]interface{}); ok {
 			if el, ok := pm["entryLength"].(uint64); ok {
 				length = el
 			}

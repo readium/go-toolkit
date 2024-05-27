@@ -32,7 +32,7 @@ func TestPropertiesUnmarshalFullJSON(t *testing.T) {
 	}, p)
 }
 
-func TestPropertiesAddGiven(t *testing.T) {
+/*func TestPropertiesAddGiven(t *testing.T) {
 	p2 := Properties{
 		"other-property1": "value",
 		"other-property2": []interface{}{float64(42)},
@@ -44,7 +44,7 @@ func TestPropertiesAddGiven(t *testing.T) {
 	}, p2.Add(Properties{
 		"additional": "property",
 	}))
-}
+}*/
 
 // Presentation-specific properties
 

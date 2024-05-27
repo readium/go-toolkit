@@ -303,7 +303,7 @@ func TestInferFeaturePageList(t *testing.T) {
 // "resources" in RWPM)
 func TestInferFeatureMathML(t *testing.T) {
 	link := newLink(mediatype.HTML, "html")
-	link.Properties = map[string]interface{}{
+	link.Properties = manifest.Properties{
 		"contains": []string{"mathml"},
 	}
 	m := manifest.Manifest{

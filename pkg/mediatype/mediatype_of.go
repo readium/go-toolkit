@@ -9,8 +9,18 @@ import (
 // You can register additional sniffers globally by modifying this list.
 // The sniffers order is important, because some formats are subsets of other formats.
 var Sniffers = []Sniffer{
-	SniffXHTML, SniffHTML, SniffOPDS, SniffLCPLicense, SniffBitmap,
-	SniffWebpub, SniffW3CWPUB, SniffEPUB, SniffLPF, SniffArchive, SniffPDF,
+	SniffEPUB,
+	SniffLPF,
+	SniffArchive,
+	SniffPDF,
+	SniffXHTML,
+	SniffHTML,
+	SniffBitmap,
+	SniffAudio,
+	SniffOPDS,
+	SniffLCPLicense,
+	SniffW3CWPUB,
+	SniffWebpub,
 	// Note SniffSystem isn't here!
 }
 

@@ -128,6 +128,10 @@ func (r *FileResource) Link() manifest.Link {
 	return r.link
 }
 
+func (r *FileResource) Properties() manifest.Properties {
+	return manifest.Properties{}
+}
+
 // Close implements Resource
 func (r *FileResource) Close() {
 	if r.file != nil {

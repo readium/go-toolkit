@@ -15,20 +15,30 @@ func withArchiveFetcher(t *testing.T, callback func(a *ArchiveFetcher)) {
 }
 
 func TestArchiveFetcherLinks(t *testing.T) {
-	makeTestLink := func(href string, typ string, entryLength uint64, isCompressed bool) manifest.Link {
-		return manifest.Link{
+	makeTestLink := func(href string, typ string, entryLength uint64, isCompressed bool) struct {
+		manifest.Link
+		manifest.Properties
+	} {
+		l := manifest.Link{
 			Href: href,
 			Type: typ,
-			Properties: manifest.Properties{
-				"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
-					"entryLength":       entryLength,
-					"isEntryCompressed": isCompressed,
-				},
+		}
+		p := manifest.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
+				"entryLength":       entryLength,
+				"isEntryCompressed": isCompressed,
 			},
 		}
+		return struct {
+			manifest.Link
+			manifest.Properties
+		}{l, p}
 	}
 
-	mustContain := manifest.LinkList{
+	mustContain := []struct {
+		manifest.Link
+		manifest.Properties
+	}{
 		makeTestLink("/mimetype", "", 20, false),
 		makeTestLink("/EPUB/cover.xhtml", "application/xhtml+xml", 259, true),
 		makeTestLink("/EPUB/css/epub.css", "text/css", 595, true),
@@ -45,7 +55,12 @@ func TestArchiveFetcherLinks(t *testing.T) {
 		links, err := a.Links()
 		assert.Nil(t, err)
 
-		assert.ElementsMatch(t, mustContain, links)
+		mustLinks := make([]manifest.Link, len(mustContain))
+		for i, l := range mustContain {
+			assert.Equal(t, l.Properties, a.Get(l.Link).Properties())
+			mustLinks[i] = l.Link
+		}
+		assert.ElementsMatch(t, mustLinks, links)
 	})
 }
 
@@ -128,25 +143,10 @@ func TestArchiveFetcherAddsProperties(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		resource := a.Get(manifest.Link{Href: "/EPUB/css/epub.css"})
 		assert.Equal(t, manifest.Properties{
-			"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
 				"entryLength":       uint64(595),
 				"isEntryCompressed": true,
 			},
-		}, resource.Link().Properties)
-	})
-}
-
-func TestArchiveFetcherOriginalPropertiesKept(t *testing.T) {
-	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(manifest.Link{Href: "/EPUB/css/epub.css", Properties: manifest.Properties{
-			"other": "property",
-		}})
-		assert.Equal(t, manifest.Properties{
-			"other": "property",
-			"https://readium.org/webpub-manifest/properties#archive": manifest.Properties{
-				"entryLength":       uint64(595),
-				"isEntryCompressed": true,
-			},
-		}, resource.Link().Properties)
+		}, resource.Properties())
 	})
 }

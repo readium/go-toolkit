@@ -413,9 +413,11 @@ func (m *Metadata) UnmarshalJSON(b []byte) error {
 }
 
 func (m Metadata) MarshalJSON() ([]byte, error) {
-	j := m.OtherMetadata
-	if j == nil {
-		j = make(map[string]interface{})
+	j := make(map[string]interface{})
+	if m.OtherMetadata != nil {
+		for k, v := range m.OtherMetadata {
+			j[k] = v
+		}
 	}
 
 	if m.Presentation != nil {
