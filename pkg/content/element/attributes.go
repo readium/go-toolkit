@@ -30,7 +30,7 @@ func NewAttributesHolder(attributes []Attribute[any]) AttributesHolder {
 }
 
 func (ah AttributesHolder) Language() string {
-	v := ah.Attribute(LanguageAttributeKey)
+	v := ah.GetFirst(LanguageAttributeKey)
 	if v != nil {
 		return v.Value.(string)
 	}
@@ -38,7 +38,7 @@ func (ah AttributesHolder) Language() string {
 }
 
 func (ah AttributesHolder) AccessibilityLabel() string {
-	v := ah.Attribute(AcessibilityLabelAttributeKey)
+	v := ah.GetFirst(AcessibilityLabelAttributeKey)
 	if v != nil {
 		return v.Value.(string)
 	}
@@ -46,7 +46,7 @@ func (ah AttributesHolder) AccessibilityLabel() string {
 }
 
 // Gets the first attribute with the given [key].
-func (ah AttributesHolder) Attribute(key AttributeKey) *Attribute[any] {
+func (ah AttributesHolder) GetFirst(key AttributeKey) *Attribute[any] {
 	for _, at := range ah.attributes {
 		if at.Key == key {
 			return &at
@@ -56,7 +56,7 @@ func (ah AttributesHolder) Attribute(key AttributeKey) *Attribute[any] {
 }
 
 // Gets all the attributes with the given [key].
-func (ah AttributesHolder) Attributes(key AttributeKey) AttributesHolder {
+func (ah AttributesHolder) Get(key AttributeKey) AttributesHolder {
 	var result []Attribute[any]
 	for _, at := range ah.attributes {
 		if at.Key == key {
@@ -64,4 +64,8 @@ func (ah AttributesHolder) Attributes(key AttributeKey) AttributesHolder {
 		}
 	}
 	return NewAttributesHolder(result)
+}
+
+func (ah AttributesHolder) Attributes() AttributesHolder {
+	return NewAttributesHolder(ah.attributes)
 }
