@@ -56,3 +56,8 @@ rwp manifest --infer-a11y=merged publication.epub  | jq .metadata
 | `feature` | `tableOfContents` | If the publications contains a table of contents (check for the presence of a `toc` collection in RWPM) |
 | `feature` | `MathML` | If the publication contains any resource with MathML (check for the presence of the `contains` property where the value is `mathml` in `readingOrder` or `resources` in RWPM) |
 | `feature` | `synchronizedAudioText` | If the publication contains any reference to Media Overlays (TBD in RWPM) |
+
+### HTTP streaming of local publications
+
+`rwp serve` starts an HTTP server that serves EPUB, CBZ and other compatible formats from a given directory.
+A log is printed to stdout.

@@ -31,6 +31,9 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # Produces very small images
 FROM gcr.io/distroless/static-debian12 AS packager
 
+# Extra metadata
+LABEL org.opencontainers.image.source="https://github.com/readium/go-toolkit"
+
 # Add Fedora's mimetypes (pretty up-to-date and expansive)
 # since the distroless container doesn't have any. Go uses
 # this file as part of its mime package, and readium/go-toolkit
