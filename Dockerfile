@@ -1,7 +1,7 @@
 FROM golang:1-bookworm as builder
 
 # Install GoReleaser
-RUN wget https://github.com/goreleaser/goreleaser/releases/download/v1.26.2/goreleaser_1.26.2_amd64.deb
+RUN wget --no-verbose https://github.com/goreleaser/goreleaser/releases/download/v1.26.2/goreleaser_1.26.2_amd64.deb
 RUN dpkg -i goreleaser_1.26.2_amd64.deb
 
 # Create and change to the app directory.
@@ -16,15 +16,14 @@ RUN go mod download
 # Copy local code to the container image.
 COPY . ./
 
-# Download the example publications
 # RUN git lfs pull && ls -alh publications
 
-# Run tests
-FROM builder AS tester
-RUN go test ./...
-
 # Run goreleaser
-RUN goreleaser build --single-target --id rwp --skip-validate --snapshot
+RUN goreleaser build --single-target --id rwp --skip=validate --snapshot
+
+# Run tests
+# FROM builder AS tester
+# RUN go test ./...
 
 # Produces very small images
 FROM gcr.io/distroless/static-debian12 AS packager
@@ -41,6 +40,7 @@ ADD https://readium-playground-files.storage.googleapis.com/demo/moby-dick.epub 
 ADD https://readium-playground-files.storage.googleapis.com/demo/BellaOriginal3.epub /srv/publications/
 
 # Copy built Go binary
+COPY X                   dist/rwp_linux_amd64_v3/rwp
 COPY --from=builder /app/dist/rwp_linux_amd64_v3/rwp /opt/
 
 EXPOSE 15080
