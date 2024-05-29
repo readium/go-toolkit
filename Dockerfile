@@ -47,4 +47,4 @@ EXPOSE 15080
 USER nonroot:nonroot
 
 ENTRYPOINT ["/opt/rwp"]
-CMD ["serve", "/srv/publications"]
+CMD ["serve", "/srv/publications", "--address", "0.0.0.0"]

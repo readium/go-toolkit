@@ -11,6 +11,11 @@ import (
 func (s *Server) Routes() *mux.Router {
 	r := mux.NewRouter()
 
+	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
 	if s.config.Debug {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
 		r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
