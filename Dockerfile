@@ -1,7 +1,7 @@
 FROM --platform=$BUILDPLATFORM golang:1-bookworm as builder
+ARG BUILDARCH TARGETOS TARGETARCH
 
 # Install GoReleaser
-ARG BUILDARCH TARGETOS TARGETARCH
 RUN wget --no-verbose "https://github.com/goreleaser/goreleaser/releases/download/v1.26.2/goreleaser_1.26.2_$BUILDARCH.deb"
 RUN dpkg -i "goreleaser_1.26.2_$BUILDARCH.deb"
 
@@ -37,8 +37,8 @@ FROM gcr.io/distroless/static-debian12 AS packager
 ADD https://pagure.io/mailcap/raw/master/f/mime.types /etc/
 
 # Add two demo EPUBs to the container by default
-ADD https://readium-playground-files.storage.googleapis.com/demo/moby-dick.epub /srv/publications/
-ADD https://readium-playground-files.storage.googleapis.com/demo/BellaOriginal3.epub /srv/publications/
+ADD --chown=nonroot:nonroot https://readium-playground-files.storage.googleapis.com/demo/moby-dick.epub /srv/publications/
+ADD --chown=nonroot:nonroot https://readium-playground-files.storage.googleapis.com/demo/BellaOriginal3.epub /srv/publications/
 
 # Copy built Go binary
 COPY --from=builder "/app/rwp" /opt/
