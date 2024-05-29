@@ -110,7 +110,6 @@ func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	defer publication.Close()
 
 	// Create "self" link in manifest
 	scheme := "http://"
@@ -158,7 +157,7 @@ func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("access-control-allow-origin", "*") // TODO: provide options?
 
 	// Etag based on hash of the manifest bytes
-	etag := strconv.FormatUint(xxh3.Hash(identJSON.Bytes()), 36)
+	etag := `"` + strconv.FormatUint(xxh3.Hash(identJSON.Bytes()), 36) + `"`
 	w.Header().Set("Etag", etag)
 	if match := req.Header.Get("If-None-Match"); match != "" {
 		if strings.Contains(match, etag) {
@@ -187,7 +186,6 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	defer publication.Close()
 
 	// Make sure the asset exists in the publication
 	href := path.Clean(vars["asset"])
