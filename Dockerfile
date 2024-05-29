@@ -1,5 +1,9 @@
 FROM golang:1-bookworm as builder
 
+# Install GoReleaser
+RUN wget https://github.com/goreleaser/goreleaser/releases/download/v1.26.2/goreleaser_1.26.2_amd64.deb
+RUN dpkg -i goreleaser_1.26.2_amd64.deb
+
 # Create and change to the app directory.
 WORKDIR /app
 
