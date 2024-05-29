@@ -40,7 +40,6 @@ ADD https://readium-playground-files.storage.googleapis.com/demo/moby-dick.epub 
 ADD https://readium-playground-files.storage.googleapis.com/demo/BellaOriginal3.epub /srv/publications/
 
 # Copy built Go binary
-COPY X                   dist/rwp_linux_amd64_v3/rwp
 COPY --from=builder /app/dist/rwp_linux_amd64_v3/rwp /opt/
 
 EXPOSE 15080
