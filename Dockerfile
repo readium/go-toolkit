@@ -20,7 +20,9 @@ COPY . ./
 # RUN git lfs pull && ls -alh publications
 
 # Run goreleaser
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --single-target --id rwp --skip=validate --snapshot --output ./rwp
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --single-target --id rwp --skip=validate --snapshot --output ./rwp
 
 # Run tests
 # FROM builder AS tester
