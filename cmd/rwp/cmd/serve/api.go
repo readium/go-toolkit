@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	httprange "github.com/gotd/contrib/http_range"
 	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/cmd/rwp/cmd/serve/cache"
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/pub"
@@ -53,43 +54,49 @@ func (s *Server) getPublication(filename string) (*pub.Publication, error) {
 		return nil, err
 	}
 
-	// TODO: cache open publications
-
 	cp := filepath.Clean(string(fpath))
-	pub, err := streamer.New(streamer.Config{
-		InferA11yMetadata: s.config.InferA11yMetadata,
-	}).Open(asset.File(filepath.Join(s.config.BaseDirectory, cp)), "")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed opening "+cp)
-	}
+	dat, ok := s.lfu.Get(cp)
+	if !ok {
+		pub, err := streamer.New(streamer.Config{
+			InferA11yMetadata: s.config.InferA11yMetadata,
+		}).Open(asset.File(filepath.Join(s.config.BaseDirectory, cp)), "")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed opening "+cp)
+		}
 
-	// TODO: Remove this after we make links relative in the go-toolkit
-	for i, link := range pub.Manifest.Links {
-		pub.Manifest.Links[i] = makeRelative(link)
-	}
-	for i, link := range pub.Manifest.Resources {
-		pub.Manifest.Resources[i] = makeRelative(link)
-	}
-	for i, link := range pub.Manifest.ReadingOrder {
-		pub.Manifest.ReadingOrder[i] = makeRelative(link)
-	}
-	for i, link := range pub.Manifest.TableOfContents {
-		pub.Manifest.TableOfContents[i] = makeRelative(link)
-	}
-	var makeCollectionRelative func(mp manifest.PublicationCollectionMap)
-	makeCollectionRelative = func(mp manifest.PublicationCollectionMap) {
-		for i := range mp {
-			for j := range mp[i] {
-				for k := range mp[i][j].Links {
-					mp[i][j].Links[k] = makeRelative(mp[i][j].Links[k])
+		// TODO: Remove this after we make links relative in the go-toolkit
+		for i, link := range pub.Manifest.Links {
+			pub.Manifest.Links[i] = makeRelative(link)
+		}
+		for i, link := range pub.Manifest.Resources {
+			pub.Manifest.Resources[i] = makeRelative(link)
+		}
+		for i, link := range pub.Manifest.ReadingOrder {
+			pub.Manifest.ReadingOrder[i] = makeRelative(link)
+		}
+		for i, link := range pub.Manifest.TableOfContents {
+			pub.Manifest.TableOfContents[i] = makeRelative(link)
+		}
+		var makeCollectionRelative func(mp manifest.PublicationCollectionMap)
+		makeCollectionRelative = func(mp manifest.PublicationCollectionMap) {
+			for i := range mp {
+				for j := range mp[i] {
+					for k := range mp[i][j].Links {
+						mp[i][j].Links[k] = makeRelative(mp[i][j].Links[k])
+					}
+					makeCollectionRelative(mp[i][j].Subcollections)
 				}
-				makeCollectionRelative(mp[i][j].Subcollections)
 			}
 		}
-	}
-	makeCollectionRelative(pub.Manifest.Subcollections)
+		makeCollectionRelative(pub.Manifest.Subcollections)
 
-	return pub, nil
+		// Cache the publication
+		encPub := &cache.CachedPublication{Publication: pub}
+		s.lfu.Set(cp, encPub)
+
+		return encPub.Publication, nil
+	}
+	return dat.(*cache.CachedPublication).Publication, nil
 }
 
 func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
