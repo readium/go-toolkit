@@ -1,8 +1,9 @@
-FROM golang:1-bookworm as builder
+FROM --platform=$BUILDPLATFORM golang:1-bookworm as builder
 
 # Install GoReleaser
-RUN wget --no-verbose https://github.com/goreleaser/goreleaser/releases/download/v1.26.2/goreleaser_1.26.2_amd64.deb
-RUN dpkg -i goreleaser_1.26.2_amd64.deb
+ARG BUILDARCH TARGETOS TARGETARCH
+RUN wget --no-verbose "https://github.com/goreleaser/goreleaser/releases/download/v1.26.2/goreleaser_1.26.2_$BUILDARCH.deb"
+RUN dpkg -i "goreleaser_1.26.2_$BUILDARCH.deb"
 
 # Create and change to the app directory.
 WORKDIR /app
@@ -19,7 +20,7 @@ COPY . ./
 # RUN git lfs pull && ls -alh publications
 
 # Run goreleaser
-RUN goreleaser build --single-target --id rwp --skip=validate --snapshot
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --single-target --id rwp --skip=validate --snapshot --output ./rwp
 
 # Run tests
 # FROM builder AS tester
@@ -40,7 +41,7 @@ ADD https://readium-playground-files.storage.googleapis.com/demo/moby-dick.epub 
 ADD https://readium-playground-files.storage.googleapis.com/demo/BellaOriginal3.epub /srv/publications/
 
 # Copy built Go binary
-COPY --from=builder /app/dist/rwp_linux_amd64_v3/rwp /opt/
+COPY --from=builder "/app/rwp" /opt/
 
 EXPOSE 15080
 
