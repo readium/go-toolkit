@@ -3,6 +3,7 @@ package fetcher
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -363,6 +364,22 @@ func (r ProxyResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 // ReadAsXML implements Resource
 func (r ProxyResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
 	return r.Res.ReadAsXML(prefixes)
+}
+
+func (r ProxyResource) CompressedAs(compressionMethod uint16) bool {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return false
+	}
+	return cres.CompressedAs(compressionMethod)
+}
+
+func (r ProxyResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return -1, Other(errors.New("resource is not compressed"))
+	}
+	return cres.StreamCompressed(w)
 }
 
 /**

@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -18,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/cmd/rwp/cmd/serve/cache"
 	"github.com/readium/go-toolkit/pkg/asset"
+	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/readium/go-toolkit/pkg/streamer"
@@ -243,8 +245,16 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusPartialContent)
 	}
 
-	// Stream the asset
-	_, rerr = res.Stream(w, start, end)
+	cres, ok := res.(fetcher.CompressedResource)
+	if ok && cres.CompressedAs(zip.Deflate) && start == 0 && end == 0 && supportsDeflate(r) {
+		// Stream the asset in compressed format
+		w.Header().Set("content-encoding", "deflate")
+		_, err = cres.StreamCompressed(w)
+	} else {
+		// Stream the asset
+		_, rerr = res.Stream(w, start, end)
+	}
+
 	if rerr != nil {
 		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
 			// Ignore client errors

@@ -152,6 +152,18 @@ func (r *entryResource) Stream(w io.Writer, start int64, end int64) (int64, *Res
 	return -1, Other(err)
 }
 
+func (r *entryResource) CompressedAs(compressionMethod uint16) bool {
+	return r.entry.CompressedAs(compressionMethod)
+}
+
+func (r *entryResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
+	i, err := r.entry.StreamCompressed(w)
+	if err == nil {
+		return i, nil
+	}
+	return -1, Other(err)
+}
+
 // Length implements Resource
 func (r *entryResource) Length() (int64, *ResourceError) {
 	return int64(r.entry.Length()), nil

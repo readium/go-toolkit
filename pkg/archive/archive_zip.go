@@ -31,6 +31,13 @@ func (e gozipArchiveEntry) CompressedLength() uint64 {
 	return e.file.CompressedSize64
 }
 
+func (e gozipArchiveEntry) CompressedAs(compressionMethod uint16) bool {
+	if compressionMethod != zip.Deflate {
+		return false
+	}
+	return e.file.Method == zip.Deflate
+}
+
 // This is a special mode to minimize the number of reads from the underlying reader.
 // It's especially useful when trying to stream the ZIP from a remote file, e.g.
 // cloud storage. It's only enabled when trying to read the entire file and compression
@@ -143,6 +150,18 @@ func (e gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, e
 		return n, err
 	}
 	return n, nil
+}
+
+func (e gozipArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
+	if e.file.Method != zip.Deflate {
+		return -1, errors.New("not a compressed resource")
+	}
+	f, err := e.file.OpenRaw()
+	if err != nil {
+		return -1, err
+	}
+
+	return io.Copy(w, f)
 }
 
 // An archive from a zip file using go's stdlib
