@@ -249,6 +249,7 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	if ok && cres.CompressedAs(zip.Deflate) && start == 0 && end == 0 && supportsDeflate(r) {
 		// Stream the asset in compressed format
 		w.Header().Set("content-encoding", "deflate")
+		w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength(), 10))
 		_, err = cres.StreamCompressed(w)
 	} else {
 		// Stream the asset

@@ -366,6 +366,7 @@ func (r ProxyResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *R
 	return r.Res.ReadAsXML(prefixes)
 }
 
+// CompressedAs implements CompressedResource
 func (r ProxyResource) CompressedAs(compressionMethod uint16) bool {
 	cres, ok := r.Res.(CompressedResource)
 	if !ok {
@@ -374,6 +375,16 @@ func (r ProxyResource) CompressedAs(compressionMethod uint16) bool {
 	return cres.CompressedAs(compressionMethod)
 }
 
+// CompressedLength implements CompressedResource
+func (r ProxyResource) CompressedLength() int64 {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return -1
+	}
+	return cres.CompressedLength()
+}
+
+// StreamCompressed implements CompressedResource
 func (r ProxyResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
 	cres, ok := r.Res.(CompressedResource)
 	if !ok {

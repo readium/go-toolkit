@@ -143,6 +143,7 @@ func (d DeobfuscatingResource) Stream(w io.Writer, start int64, end int64) (int6
 	return d.ProxyResource.Stream(w, start, end)
 }
 
+// CompressedAs implements CompressedResource
 func (d DeobfuscatingResource) CompressedAs(compressionMethod uint16) bool {
 	_, v := d.obfuscation()
 	if v > 0 {
@@ -152,6 +153,17 @@ func (d DeobfuscatingResource) CompressedAs(compressionMethod uint16) bool {
 	return d.ProxyResource.CompressedAs(compressionMethod)
 }
 
+// CompressedLength implements CompressedResource
+func (d DeobfuscatingResource) CompressedLength() int64 {
+	_, v := d.obfuscation()
+	if v > 0 {
+		return -1
+	}
+
+	return d.ProxyResource.CompressedLength()
+}
+
+// StreamCompressed implements CompressedResource
 func (d DeobfuscatingResource) StreamCompressed(w io.Writer) (int64, *fetcher.ResourceError) {
 	_, v := d.obfuscation()
 	if v > 0 {
