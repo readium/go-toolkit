@@ -23,8 +23,8 @@ var bindPortFlag uint16
 
 var serveCmd = &cobra.Command{
 	Use:   "serve <directory>",
-	Short: "Start a local HTTP server, serving a specificed directory of publications",
-	Long: `Start a local HTTP server, serving a specificed directory of publications.
+	Short: "Start a local HTTP server, serving a specified directory of publications",
+	Long: `Start a local HTTP server, serving a specified directory of publications.
 
 This command will start an HTTP serve listening by default on 'localhost:15080',
 serving all compatible files (EPUB, PDF, CBZ, etc.) found in the directory
