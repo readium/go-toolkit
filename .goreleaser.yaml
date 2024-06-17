@@ -2,29 +2,37 @@
 before:
   hooks:
     - go mod tidy
+    - go generate ./...
 builds:
   - main: ./cmd/rwp/
+    env:
+      - CGO_ENABLED=0
     id: rwp
     binary: rwp
     goos:
       - linux
       - windows
       - darwin
+    goamd64:
+      - v3
 
-  - main: ./cmd/server/
-    id: rwp-server
-    binary: rwp-server
-    goos:
-      - linux
-      - windows
-      - darwin
+#  - main: ./cmd/server/
+#    env:
+#      - CGO_ENABLED=0
+#    id: rwp-server
+#    binary: rwp-server
+#    goos:
+#      - linux
+#      - windows
+#      - darwin
 
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of uname.
+    # Used to start with {{ .ProjectName }}
     name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
+      rwp_
+      {{- tolower .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
