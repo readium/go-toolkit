@@ -26,6 +26,10 @@ func (e explodedArchiveEntry) CompressedLength() uint64 {
 	return 0
 }
 
+func (e explodedArchiveEntry) CompressedAs(compressionMethod uint16) bool {
+	return false
+}
+
 func (e explodedArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	if end < start {
 		return nil, errors.New("range not satisfiable")
@@ -80,6 +84,10 @@ func (e explodedArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64
 		return n, err
 	}
 	return n, nil
+}
+
+func (e explodedArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
+	return -1, errors.New("entry is not compressed")
 }
 
 // An archive exploded on the file system as a directory.

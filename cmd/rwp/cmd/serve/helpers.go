@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -61,4 +62,29 @@ func conformsToAsMimetype(conformsTo manifest.Profiles) string {
 		break
 	}
 	return mime
+}
+
+func supportsDeflate(r *http.Request) bool {
+	vv := r.Header.Values("Accept-Encoding")
+	for _, v := range vv {
+		for _, sv := range strings.Split(v, ",") {
+			coding := parseCoding(sv)
+			if coding == "" {
+				continue
+			}
+			if coding == "deflate" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func parseCoding(s string) (coding string) {
+	p := strings.IndexRune(s, ';')
+	if p == -1 {
+		p = len(s)
+	}
+	coding = strings.ToLower(strings.TrimSpace(s[:p]))
+	return
 }
