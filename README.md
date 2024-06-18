@@ -6,10 +6,12 @@ More documentation coming soon! Things are changing too quickly right now.
 
 Run `go run cmd/server/main.go` to start the server, which by default listens on `127.0.0.1:5080`. 
 
+Note: The example configuration file specifies `./publications` as the `publication-path`, but the actual test publications are located in the `test` directory in the project repository. To run the server, you will need to either create a `publications` directory and place your own publication files there, or update the `publication-path` setting in the config file to point to the `test` directory.
+
 The server exposes the following HTTP endpoints:
 
 - `/list.json` - Returns a list of available publications
-- `/{filename}/manifest.json` - Returns the Web Publication Manifest for the specified publication
+- `/{filename}/manifest.json` - Returns the Web Publication Manifest for the specified publication  
 - `/{filename}/{asset}` - Returns a publication asset (e.g. chapters, images, etc.)
 
 ### Accessing a publication
@@ -17,14 +19,14 @@ The server exposes the following HTTP endpoints:
 1. Get the list of publications:
 
 ```
-GET http://127.0.0.1:5080/list.json 
+GET http://127.0.0.1:5080/list.json
 ```
 
 This returns a JSON array of available publications:
 
 ```json
 [
-  {"filename":"publication1", "path":"cHVibGljYXRpb24x"},
+  {"filename":"publication1", "path":"cHVibGljYXRpb24x"}, 
   {"filename":"publication2", "path":"cHVibGljYXRpb24y"}
 ]
 ```
@@ -32,7 +34,7 @@ This returns a JSON array of available publications:
 2. Access the manifest for a publication:
 
 ```
-GET http://127.0.0.1:5080/{path}/manifest.json 
+GET http://127.0.0.1:5080/{path}/manifest.json
 ```
 
 Where `{path}` is the base64 URL encoded filename of the publication.
@@ -41,34 +43,35 @@ Where `{path}` is the base64 URL encoded filename of the publication.
 
 ```
 GET http://127.0.0.1:5080/{path}/{asset}
-```
+``` 
 
 Where `{asset}` is the path of the asset within the publication. These paths can be discovered from the manifest.
 
-### Configuration
+### Configuration 
 
 Check out the [example configuration file](https://github.com/readium/go-toolkit/blob/master/cmd/server/configs/config.local.toml.example) for configuration options:
 
 ```toml
 # Example of a local env config file, useful for development
 env-name = "local"
-sentry-dsn = "https://deadbeef@sentry.tld" 
-cache-dsn = "local://not-yet-determined-scheme"
-origins = ["example.com", "localhost", "127.0.0.1"]  
+sentry-dsn = "https://deadbeef@sentry.tld"
+cache-dsn = "local://not-yet-determined-scheme" 
+origins = ["example.com", "localhost", "127.0.0.1"]
 log-level = "debug"
-bind-address = "localhost"
+bind-address = "localhost" 
 bind-port = "15080"
-publication-path = "./publications"  
+publication-path = "./publications"  # Update this to "./test" to use the test publications
 static-path = "./public"
 ```
 
-- `bind-address` - The network interface to bind the server to  
-- `bind-port` - The port number to run the server on
-- `origins` - Allowed CORS origins  
-- `publication-path` - Directory containing publication files to serve
+- `bind-address` - The network interface to bind the server to
+- `bind-port` - The port number to run the server on 
+- `origins` - Allowed CORS origins
+- `publication-path` - Directory containing publication files to serve 
 - `static-path` - Directory containing static assets for the server
 - `sentry-dsn` - Sentry error reporting DSN
-- `cache-dsn` - Connection string for caching (not yet implemented)
+- `cache-dsn` - Connection string for caching (not yet implemented)  
+
 
 ## Command line utility
 
