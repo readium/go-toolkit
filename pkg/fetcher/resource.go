@@ -3,12 +3,14 @@ package fetcher
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/xmlquery"
 	"golang.org/x/text/encoding/unicode"
@@ -363,6 +365,33 @@ func (r ProxyResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 // ReadAsXML implements Resource
 func (r ProxyResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
 	return r.Res.ReadAsXML(prefixes)
+}
+
+// CompressedAs implements CompressedResource
+func (r ProxyResource) CompressedAs(compressionMethod archive.CompressionMethod) bool {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return false
+	}
+	return cres.CompressedAs(compressionMethod)
+}
+
+// CompressedLength implements CompressedResource
+func (r ProxyResource) CompressedLength() int64 {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return -1
+	}
+	return cres.CompressedLength()
+}
+
+// StreamCompressed implements CompressedResource
+func (r ProxyResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return -1, Other(errors.New("resource is not compressed"))
+	}
+	return cres.StreamCompressed(w)
 }
 
 /**

@@ -55,9 +55,10 @@ type Entry interface {
 	Path() string                                              // Absolute path to the entry in the archive.
 	Length() uint64                                            // Uncompressed data length.
 	CompressedLength() uint64                                  // Compressed data length.
+	CompressedAs(compressionMethod CompressionMethod) bool     // Whether the entry is compressed using the given method.
 	Read(start int64, end int64) ([]byte, error)               // Reads the whole content of this entry, or a portion when [start] or [end] are specified.
 	Stream(w io.Writer, start int64, end int64) (int64, error) // Streams the whole content of this entry to a writer, or a portion when [start] or [end] are specified.
-	// Close()
+	StreamCompressed(w io.Writer) (int64, error)               // Streams the compressed content of this entry to a writer.
 }
 
 // Represents an immutable archive.

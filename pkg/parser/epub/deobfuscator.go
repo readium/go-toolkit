@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 )
 
@@ -32,7 +33,7 @@ type DeobfuscatingResource struct {
 	identifier string
 }
 
-func (d DeobfuscatingResource) Read(start, end int64) ([]byte, *fetcher.ResourceError) {
+func (d DeobfuscatingResource) obfuscation() (string, int64) {
 	algorithm := ""
 	penc := d.Res.Link().Properties.Encryption()
 	if penc != nil {
@@ -40,7 +41,15 @@ func (d DeobfuscatingResource) Read(start, end int64) ([]byte, *fetcher.Resource
 	}
 
 	v, ok := algorithm2length[algorithm]
-	if ok {
+	if !ok {
+		return algorithm, 0
+	}
+	return algorithm, v
+}
+
+func (d DeobfuscatingResource) Read(start, end int64) ([]byte, *fetcher.ResourceError) {
+	algorithm, v := d.obfuscation()
+	if v > 0 {
 		data, err := d.ProxyResource.Read(start, end)
 		if err != nil {
 			return nil, err
@@ -62,14 +71,8 @@ func (d DeobfuscatingResource) Read(start, end int64) ([]byte, *fetcher.Resource
 }
 
 func (d DeobfuscatingResource) Stream(w io.Writer, start int64, end int64) (int64, *fetcher.ResourceError) {
-	algorithm := ""
-	penc := d.Res.Link().Properties.Encryption()
-	if penc != nil {
-		algorithm = penc.Algorithm
-	}
-
-	v, ok := algorithm2length[algorithm]
-	if ok {
+	algorithm, v := d.obfuscation()
+	if v > 0 {
 		if start >= v {
 			// We're past the obfuscated part, just proxy it
 			return d.ProxyResource.Stream(w, start, end)
@@ -139,6 +142,36 @@ func (d DeobfuscatingResource) Stream(w io.Writer, start int64, end int64) (int6
 
 	// Algorithm not in known, so skip deobfuscation
 	return d.ProxyResource.Stream(w, start, end)
+}
+
+// CompressedAs implements CompressedResource
+func (d DeobfuscatingResource) CompressedAs(compressionMethod archive.CompressionMethod) bool {
+	_, v := d.obfuscation()
+	if v > 0 {
+		return false
+	}
+
+	return d.ProxyResource.CompressedAs(compressionMethod)
+}
+
+// CompressedLength implements CompressedResource
+func (d DeobfuscatingResource) CompressedLength() int64 {
+	_, v := d.obfuscation()
+	if v > 0 {
+		return -1
+	}
+
+	return d.ProxyResource.CompressedLength()
+}
+
+// StreamCompressed implements CompressedResource
+func (d DeobfuscatingResource) StreamCompressed(w io.Writer) (int64, *fetcher.ResourceError) {
+	_, v := d.obfuscation()
+	if v > 0 {
+		return 0, fetcher.Other(errors.New("cannot stream compressed resource when obfuscated"))
+	}
+
+	return d.ProxyResource.StreamCompressed(w)
 }
 
 func (d DeobfuscatingResource) getHashKeyAdobe() []byte {

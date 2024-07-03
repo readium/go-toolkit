@@ -17,7 +17,9 @@ import (
 	httprange "github.com/gotd/contrib/http_range"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/cmd/rwp/cmd/serve/cache"
+	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/asset"
+	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/readium/go-toolkit/pkg/streamer"
@@ -243,8 +245,17 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusPartialContent)
 	}
 
-	// Stream the asset
-	_, rerr = res.Stream(w, start, end)
+	cres, ok := res.(fetcher.CompressedResource)
+	if ok && cres.CompressedAs(archive.CompressionMethodDeflate) && start == 0 && end == 0 && supportsDeflate(r) {
+		// Stream the asset in compressed format
+		w.Header().Set("content-encoding", "deflate")
+		w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength(), 10))
+		_, err = cres.StreamCompressed(w)
+	} else {
+		// Stream the asset
+		_, rerr = res.Stream(w, start, end)
+	}
+
 	if rerr != nil {
 		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
 			// Ignore client errors

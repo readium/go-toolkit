@@ -152,6 +152,25 @@ func (r *entryResource) Stream(w io.Writer, start int64, end int64) (int64, *Res
 	return -1, Other(err)
 }
 
+// CompressedAs implements CompressedResource
+func (r *entryResource) CompressedAs(compressionMethod archive.CompressionMethod) bool {
+	return r.entry.CompressedAs(compressionMethod)
+}
+
+// CompressedLength implements CompressedResource
+func (r *entryResource) CompressedLength() int64 {
+	return int64(r.entry.CompressedLength())
+}
+
+// StreamCompressed implements CompressedResource
+func (r *entryResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
+	i, err := r.entry.StreamCompressed(w)
+	if err == nil {
+		return i, nil
+	}
+	return -1, Other(err)
+}
+
 // Length implements Resource
 func (r *entryResource) Length() (int64, *ResourceError) {
 	return int64(r.entry.Length()), nil
