@@ -31,8 +31,8 @@ func (e gozipArchiveEntry) CompressedLength() uint64 {
 	return e.file.CompressedSize64
 }
 
-func (e gozipArchiveEntry) CompressedAs(compressionMethod uint16) bool {
-	if compressionMethod != zip.Deflate {
+func (e gozipArchiveEntry) CompressedAs(compressionMethod CompressionMethod) bool {
+	if compressionMethod != CompressionMethodDeflate {
 		return false
 	}
 	return e.file.Method == zip.Deflate

@@ -1,9 +1,13 @@
 package fetcher
 
-import "io"
+import (
+	"io"
+
+	"github.com/readium/go-toolkit/pkg/archive"
+)
 
 type CompressedResource interface {
-	CompressedAs(compressionMethod uint16) bool
+	CompressedAs(compressionMethod archive.CompressionMethod) bool
 	CompressedLength() int64
 	StreamCompressed(w io.Writer) (int64, *ResourceError)
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 )
 
@@ -144,7 +145,7 @@ func (d DeobfuscatingResource) Stream(w io.Writer, start int64, end int64) (int6
 }
 
 // CompressedAs implements CompressedResource
-func (d DeobfuscatingResource) CompressedAs(compressionMethod uint16) bool {
+func (d DeobfuscatingResource) CompressedAs(compressionMethod archive.CompressionMethod) bool {
 	_, v := d.obfuscation()
 	if v > 0 {
 		return false

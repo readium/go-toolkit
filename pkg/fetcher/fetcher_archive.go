@@ -153,7 +153,7 @@ func (r *entryResource) Stream(w io.Writer, start int64, end int64) (int64, *Res
 }
 
 // CompressedAs implements CompressedResource
-func (r *entryResource) CompressedAs(compressionMethod uint16) bool {
+func (r *entryResource) CompressedAs(compressionMethod archive.CompressionMethod) bool {
 	return r.entry.CompressedAs(compressionMethod)
 }
 

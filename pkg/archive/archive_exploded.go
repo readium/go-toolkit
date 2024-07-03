@@ -26,7 +26,7 @@ func (e explodedArchiveEntry) CompressedLength() uint64 {
 	return 0
 }
 
-func (e explodedArchiveEntry) CompressedAs(compressionMethod uint16) bool {
+func (e explodedArchiveEntry) CompressedAs(compressionMethod CompressionMethod) bool {
 	return false
 }
 

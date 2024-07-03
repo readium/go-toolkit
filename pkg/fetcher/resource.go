@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/xmlquery"
 	"golang.org/x/text/encoding/unicode"
@@ -367,7 +368,7 @@ func (r ProxyResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *R
 }
 
 // CompressedAs implements CompressedResource
-func (r ProxyResource) CompressedAs(compressionMethod uint16) bool {
+func (r ProxyResource) CompressedAs(compressionMethod archive.CompressionMethod) bool {
 	cres, ok := r.Res.(CompressedResource)
 	if !ok {
 		return false
