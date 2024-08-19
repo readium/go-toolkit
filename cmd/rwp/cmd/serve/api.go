@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -196,9 +197,15 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	finalLink := *link
+
+	// Expand templated links to include URL query parameters
+	if finalLink.Templated {
+		finalLink = finalLink.ExpandTemplate(convertURLValuesToMap(r.URL.Query()))
+	}
 
 	// Get the asset from the publication
-	res := publication.Get(*link)
+	res := publication.Get(finalLink)
 	defer res.Close()
 
 	// Get asset length in bytes
@@ -213,6 +220,9 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	contentType := link.MediaType().String()
 	if sub, ok := mimeSubstitutions[contentType]; ok {
 		contentType = sub
+	}
+	if slices.Contains(utfCharsetNeeded, contentType) {
+		contentType += "; charset=utf-8"
 	}
 	w.Header().Set("content-type", contentType)
 	w.Header().Set("cache-control", "private, max-age=86400, immutable")

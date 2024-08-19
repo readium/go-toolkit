@@ -20,8 +20,8 @@ type ImageParser struct{}
 
 // Parse implements PublicationParser
 func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
-	if !p.accepts(asset, fetcher) {
-		return nil, nil
+	if ok, err := p.accepts(asset, fetcher); err != nil || !ok {
+		return nil, err
 	}
 
 	links, err := fetcher.Links()
@@ -70,16 +70,15 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	return pub.NewBuilder(manifest, fetcher, builder), nil
 }
 
-var allowed_extensions_image = map[string]struct{}{"acbf": {}, "xml": {}, "txt": {}}
+var allowed_extensions_image = map[string]struct{}{"acbf": {}, "xml": {}, "txt": {}, "json": {}}
 
-func (p ImageParser) accepts(asset asset.PublicationAsset, fetcher fetcher.Fetcher) bool {
-	if asset.MediaType().Equal(&mediatype.CBZ) {
-		return true
+func (p ImageParser) accepts(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (bool, error) {
+	if asset.MediaType().Equal(&mediatype.CBZ) || asset.MediaType().Equal(&mediatype.CBR) {
+		return true, nil
 	}
 	links, err := fetcher.Links()
 	if err != nil {
-		// TODO log
-		return false
+		return false, err
 	}
 	for _, link := range links {
 		if extensions.IsHiddenOrThumbs(link.Href) {
@@ -94,8 +93,8 @@ func (p ImageParser) accepts(asset asset.PublicationAsset, fetcher fetcher.Fetch
 		}
 		_, contains := allowed_extensions_image[fext]
 		if !contains {
-			return false
+			return false, nil
 		}
 	}
-	return true
+	return true, nil
 }

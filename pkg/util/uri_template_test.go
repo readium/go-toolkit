@@ -38,7 +38,7 @@ func TestUTExpandComplicatedTemplated(t *testing.T) { // form-style ampersand-se
 	assert.Equal(
 		t,
 		"/url?x=aaa&hello=Hello,%20world&y=bname",
-		NewURITemplate("/url{?x,hello,y}name").Expand(parameters),
+		NewURITemplate("/url{?x,hello,y,z}name").Expand(parameters),
 	)
 
 	assert.Equal(

@@ -1,0 +1,38 @@
+<smil xmlns="http://www.w3.org/ns/SMIL" 
+      version="3.0">
+ 
+ <body>
+ 
+    <par id="par0">
+    <text src="page1.xhtml#word0"/>
+    <audio src="audio/page1.m4a" clipBegin="0.00s" clipEnd="0.84s"/>
+	</par>
+	
+	 <par id="par1">
+    <text src="page1.xhtml#word1"/>
+    <audio src="audio/page1.m4a" clipBegin="0.84s" clipEnd="3.69s"/>
+	</par>
+
+	<par id="par2">
+	<text src="page1.xhtml#word2"/>
+	<audio src="audio/page1.m4a" clipBegin="3.69s" clipEnd="7.08s"/>
+	</par>
+	
+ <par id="par3">
+    <text src="page1.xhtml#word3"/>
+    <audio src="audio/page1.m4a" clipBegin="7.08s" clipEnd="9.19s"/>
+	</par>
+
+	<par id="par4">
+	<text src="page1.xhtml#word4"/>
+	<audio src="audio/page1.m4a" clipBegin="9.19s" clipEnd="10.92s"/>
+	</par>
+
+<par id="par5">
+	<text src="page1.xhtml#word5"/>
+	<audio src="audio/page1.m4a" clipBegin="10.92s" clipEnd="14.50s"/>
+	</par>
+		    
+</body>
+</smil>
+

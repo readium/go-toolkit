@@ -107,7 +107,7 @@ func ParseItem(element *xmlquery.Node, filePath string, prefixMap map[string]str
 	pp := parseProperties(element.SelectAttr("properties"))
 	if len(pp) > 0 {
 		item.Properties = make([]string, 0, len(pp))
-		for _, prop := range parseProperties(element.SelectAttr("properties")) {
+		for _, prop := range pp {
 			if prop == "" {
 				continue
 			}

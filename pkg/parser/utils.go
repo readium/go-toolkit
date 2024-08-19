@@ -43,6 +43,6 @@ func isMediatypeReadiumWebPubProfile(mt mediatype.MediaType) bool {
 	return mt.Matches(
 		&mediatype.ReadiumWebpub, &mediatype.ReadiumWebpubManifest,
 		&mediatype.ReadiumAudiobook, &mediatype.ReadiumAudiobookManifest, &mediatype.LCPProtectedAudiobook,
-		&mediatype.Divina, &mediatype.DivinaManifest, &mediatype.LCPProtectedPDF,
+		&mediatype.ReadiumDivina, &mediatype.ReadiumDivinaManifest, &mediatype.LCPProtectedPDF,
 	)
 }

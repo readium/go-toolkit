@@ -12,6 +12,7 @@ const (
 	PositionsService_Name         = "PositionsService"
 	SearchService_Name            = "SearchService"
 	ContentService_Name           = "ContentService"
+	MediaOverlayService_Name      = "MediaOverlayService"
 )
 
 // Base interface to be implemented by all publication services.
@@ -45,8 +46,6 @@ type ServicesBuilder struct {
 /*
 contentProtection ServiceFactory,
 	cover ServiceFactory,
-	locator ServiceFactory,
-	positions ServiceFactory,
 	search ServiceFactory,
 */
 

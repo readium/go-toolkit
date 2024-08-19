@@ -14,8 +14,8 @@ import (
 
 // MediaType represents a document format, identified by a unique RFC 6838 media type.
 // [MediaType] handles:
-//  - components parsing – eg. type, subtype and parameters,
-//  - media types comparison.
+//   - components parsing – eg. type, subtype and parameters,
+//   - media types comparison.
 //
 // Comparing media types is more complicated than it looks, since they can contain parameters,
 // such as `charset=utf-8`. We can't ignore them because some formats use parameters in their
@@ -287,13 +287,13 @@ func (mt MediaType) IsVideo() bool {
 
 // Returns whether this media type is of a Readium Web Publication Manifest.
 func (mt MediaType) IsRwpm() bool {
-	return mt.Matches(&ReadiumAudiobookManifest, &DivinaManifest, &ReadiumWebpubManifest)
+	return mt.Matches(&ReadiumAudiobookManifest, &ReadiumDivinaManifest, &ReadiumWebpubManifest)
 }
 
 // Returns whether this media type is of a publication file.
 func (mt MediaType) IsPublication() bool {
 	return mt.Matches(
-		&ReadiumAudiobook, &ReadiumAudiobookManifest, &CBZ, &Divina, &DivinaManifest, &EPUB, &LCPProtectedAudiobook,
+		&ReadiumAudiobook, &ReadiumAudiobookManifest, &CBZ, &ReadiumDivina, &ReadiumDivinaManifest, &EPUB, &LCPProtectedAudiobook,
 		&LCPProtectedPDF, &LPF, &PDF, &W3CWPUBManifest, &ReadiumWebpub, &ReadiumWebpubManifest, &ZAB,
 	)
 }

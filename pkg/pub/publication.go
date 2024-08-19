@@ -167,6 +167,9 @@ func New(m manifest.Manifest, f fetcher.Fetcher, b *ServicesBuilder) *Publicatio
 
 	// Add links from the services to the manifest links
 	for _, v := range services {
+		if v == nil {
+			continue
+		}
 		lnks := v.Links()
 		if len(lnks) > 0 {
 			newManifest.Links = append(newManifest.Links, lnks...)

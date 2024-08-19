@@ -73,6 +73,7 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 		pub.ContentService_Name: pub.DefaultContentServiceFactory([]iterator.ResourceContentIteratorFactory{
 			iterator.HTMLFactory(),
 		}),
+		pub.MediaOverlayService_Name: MediaOverlayFactory(),
 	})
 	return pub.NewBuilder(manifest, ffetcher, builder), nil
 }
