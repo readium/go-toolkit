@@ -41,6 +41,10 @@ func MediaOverlayFactory() pub.ServiceFactory {
 				}
 			}
 		}
+		if len(smilMap) == 0 {
+			// No items anyway, don't set up service
+			return nil
+		}
 
 		return &MediaOverlayService{
 			fetcher:                context.Fetcher,
