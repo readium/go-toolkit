@@ -33,6 +33,23 @@ func TestSMILDocTypicalAudio(t *testing.T) {
 	}
 }
 
-// TODO test more documents, especially atypical
-// For example, missing either clipBegin or clipEnd
-// Or ones with <seq> elements
+func TestSMILW3Examples(t *testing.T) {
+	// Examples from the EPUB Media Overlay spec from W3
+	for _, v := range []string{"w3-2", "w3-3", "w3-4", "w3-8", "w3-10"} {
+		_, err := loadSmil(v)
+		assert.NoError(t, err)
+	}
+}
+
+func TestSMILClipBoundaries(t *testing.T) {
+	doc, err := loadSmil("audio-clip")
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.Len(t, doc.Guided, 3) {
+		return
+	}
+	assert.Equal(t, "OEBPS/audio/page1.m4a#t=,0.84", doc.Guided[0].AudioRef)
+	assert.Equal(t, "OEBPS/audio/page1.m4a#t=0.84", doc.Guided[1].AudioRef)
+	assert.Equal(t, "OEBPS/audio/page1.m4a", doc.Guided[2].AudioRef)
+}

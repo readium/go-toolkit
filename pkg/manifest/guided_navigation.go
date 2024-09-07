@@ -20,3 +20,4 @@ type GuidedNavigationObject struct {
 }
 
 // TODO: functions for objects to get e.g. audio time, audio file, text file, fragment id, audio "clip", image xywh, etc.
+// This will come after the URL utility revamp to avoid implementation twice
