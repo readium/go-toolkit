@@ -12,6 +12,7 @@ const (
 	PositionsService_Name         = "PositionsService"
 	SearchService_Name            = "SearchService"
 	ContentService_Name           = "ContentService"
+	GuidedNavigationService_Name  = "GuidedNavigationService"
 )
 
 // Base interface to be implemented by all publication services.
@@ -45,8 +46,6 @@ type ServicesBuilder struct {
 /*
 contentProtection ServiceFactory,
 	cover ServiceFactory,
-	locator ServiceFactory,
-	positions ServiceFactory,
 	search ServiceFactory,
 */
 
@@ -66,8 +65,12 @@ func NewServicesBuilder(fcs map[string]ServiceFactory) *ServicesBuilder {
 func (s *ServicesBuilder) Build(context Context) map[string]Service {
 	services := make(map[string]Service, len(s.serviceFactories))
 	for k, v := range s.serviceFactories {
+		// Allow service factories to be nil
 		if v != nil {
-			services[k] = v(context)
+			// Allow service factories to return nil
+			if service := v(context); service != nil {
+				services[k] = service
+			}
 		}
 	}
 	return services

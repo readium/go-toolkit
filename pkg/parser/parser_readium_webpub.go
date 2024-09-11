@@ -50,10 +50,11 @@ func (p WebPubParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetche
 		if len(links) == 0 {
 			return nil, errors.New("links is empty")
 		}
-		manifestJSON, err = lFetcher.Get(links[0]).ReadAsJSON()
-		if err != nil {
-			return nil, err
+		mj, rerr := lFetcher.Get(links[0]).ReadAsJSON()
+		if rerr != nil {
+			return nil, rerr.Cause
 		}
+		manifestJSON = mj
 	}
 
 	manifest, err := manifest.ManifestFromJSON(manifestJSON, isPackage)

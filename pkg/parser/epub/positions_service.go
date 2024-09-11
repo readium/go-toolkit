@@ -125,10 +125,11 @@ func (s *PositionsService) createLocator(link manifest.Link, progression float64
 }
 
 func PositionsServiceFactory(reflowableStrategy ReflowableStrategy) pub.ServiceFactory {
+	if reflowableStrategy == nil {
+		reflowableStrategy = RecommendedReflowableStrategy
+	}
+
 	return func(context pub.Context) pub.Service {
-		if reflowableStrategy == nil {
-			reflowableStrategy = RecommendedReflowableStrategy
-		}
 		return &PositionsService{
 			readingOrder:       context.Manifest.ReadingOrder,
 			presentation:       context.Manifest.Metadata.Presentation,

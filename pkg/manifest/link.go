@@ -229,6 +229,12 @@ type LinkList []Link
 // Returns the first [Link] with the given [href], or null if not found.
 func (ll LinkList) IndexOfFirstWithHref(href string) int {
 	for i, link := range ll {
+		if link.Templated {
+			if strings.TrimPrefix(link.ExpandTemplate(nil).Href, "/") == href {
+				// TODO: remove trimming when href utils are updated
+				return i
+			}
+		}
 		if link.Href == href {
 			return i
 		}
@@ -244,6 +250,12 @@ func (ll LinkList) IndexOfFirstWithHref(href string) int {
 // Finds the first link matching the given HREF.
 func (ll LinkList) FirstWithHref(href string) *Link {
 	for _, link := range ll {
+		if link.Templated {
+			if strings.TrimPrefix(link.ExpandTemplate(nil).Href, "/") == href {
+				// TODO: remove trimming when href utils are updated
+				return &link
+			}
+		}
 		if link.Href == href {
 			return &link
 		}

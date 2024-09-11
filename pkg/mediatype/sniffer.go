@@ -184,10 +184,10 @@ func SniffWebpub(context SnifferContext) *MediaType {
 	}
 
 	if context.HasFileExtension("divina") || context.HasMediaType("application/divina+zip") {
-		return &Divina
+		return &ReadiumDivina
 	}
 	if context.HasMediaType("application/divina+json") {
-		return &DivinaManifest
+		return &ReadiumDivinaManifest
 	}
 
 	if context.HasFileExtension("webpub") || context.HasMediaType("application/webpub+zip") {
@@ -281,8 +281,12 @@ func SniffLPF(context SnifferContext) *MediaType {
 // Authorized extensions for resources in a CBZ archive.
 // Reference: https://wiki.mobileread.com/wiki/CBR_and_CBZ
 var cbz_extensions = map[string]struct{}{
-	"bmp": {}, "dib": {}, "gif": {}, "jif": {}, "jfi": {}, "jfif": {}, "jpg": {}, "jpeg": {}, "png": {}, "tif": {}, "tiff": {}, "webp": {}, // Bitmap. Note there's no AVIF or JXL
-	"acbf": {}, "xml": {}, "txt": {}, // Metadata
+	// Bitmaps
+	"bmp": {}, "dib": {}, "gif": {}, "jif": {}, "jfi": {}, "jfif": {}, "jpg": {},
+	"jpeg": {}, "png": {}, "tif": {}, "tiff": {}, "webp": {}, "avif": {}, "jxl": {},
+
+	// Metadata
+	"acbf": {}, "xml": {}, "txt": {},
 }
 
 // Authorized extensions for resources in a ZAB archive (Zipped Audio Book).

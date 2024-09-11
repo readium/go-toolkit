@@ -8,13 +8,14 @@ import (
 	"github.com/readium/go-toolkit/pkg/content/iterator"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/mediatype"
 )
 
 // TODO content iterator special ~readium link
 
 var ContentLink = manifest.Link{
 	Href: "/~readium/content.json",
-	Type: "application/vnd.readium.content+json",
+	Type: mediatype.ReadiumContentDocument.String(),
 }
 
 // TODO uri template or something so we're not just dumping entire content

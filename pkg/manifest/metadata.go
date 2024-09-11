@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/internal/util"
 )
@@ -52,8 +53,9 @@ type Metadata struct {
 	NumberOfPages      *uint                  `json:"numberOfPages,omitempty"`
 	BelongsTo          map[string]Collections `json:"belongsTo,omitempty"`
 	Presentation       *Presentation          `json:"presentation,omitempty"`
+	MediaOverlay       *MediaOverlay          `json:"mediaOverlay,omitempty"`
 
-	OtherMetadata map[string]interface{} `json:"-"` // Extension point for other metadata. TODO implement
+	OtherMetadata map[string]interface{} `json:"-"` // Extension point for other metadata.
 }
 
 func (m Metadata) Title() string {
@@ -351,7 +353,31 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 	}
 
 	// Presentation
-	// TODO custom presentation unmarshalling
+	if presentation, ok := rawJson["presentation"].(map[string]interface{}); ok {
+		metadata.Presentation = &Presentation{}
+
+		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			TagName: "json",
+			Result:  metadata.Presentation,
+		})
+		if err := decoder.Decode(presentation); err != nil {
+			return nil, errors.Wrap(err, "failed parsing 'presentation'")
+		}
+		metadata.Presentation.setDefaults()
+	}
+
+	// Media Overlay
+	if mediaOverlay, ok := rawJson["mediaOverlay"].(map[string]interface{}); ok {
+		metadata.MediaOverlay = &MediaOverlay{}
+
+		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			TagName: "json",
+			Result:  metadata.MediaOverlay,
+		})
+		if err := decoder.Decode(mediaOverlay); err != nil {
+			return nil, errors.Wrap(err, "failed parsing 'mediaOverlay'")
+		}
+	}
 
 	// Delete above vals so that we can put everything else in OtherMetadata
 	for _, v := range []string{
@@ -378,6 +404,7 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 		"numberOfPages",
 		"penciler",
 		"presentation",
+		"mediaOverlay",
 		"published",
 		"publisher",
 		"readingProgression",
@@ -422,6 +449,9 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 
 	if m.Presentation != nil {
 		j["presentation"] = m.Presentation
+	}
+	if m.MediaOverlay != nil {
+		j["mediaOverlay"] = m.MediaOverlay
 	}
 
 	if m.Identifier != "" {
