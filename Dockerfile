@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1-bookworm AS builder
+FROM --platform=$BUILDPLATFORM golang:1-bookworm@sha256:af9b40f2b1851be993763b85288f8434af87b5678af04355b1e33ff530b5765f AS builder
 ARG BUILDARCH TARGETOS TARGETARCH
 
 # Install GoReleaser
