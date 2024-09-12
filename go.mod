@@ -6,7 +6,7 @@ require (
 	github.com/CAFxX/httpcompression v0.0.9
 	github.com/agext/regexp v1.3.0
 	github.com/andybalholm/cascadia v1.3.2
-	github.com/deckarep/golang-set v1.7.1
+	github.com/deckarep/golang-set v1.8.0
 	github.com/go-viper/mapstructure/v2 v2.0.0
 	github.com/gorilla/mux v1.7.4
 	github.com/gotd/contrib v0.20.0
