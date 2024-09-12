@@ -2,6 +2,7 @@ package epub
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -28,8 +29,44 @@ func GetRootFilePath(fetcher fetcher.Fetcher) (string, error) {
 	return p, nil
 }
 
+// TODO: Use updated xpath/xmlquery functions
 func NSSelect(namespace, localName string) string {
 	return "*[namespace-uri()='" + namespace + "' and local-name()='" + localName + "']"
+}
+
+// TODO: Use updated xpath/xmlquery functions
+func DualNSSelect(namespace1, namespace2, localName string) string {
+	return "*[(namespace-uri()='" + namespace1 + "' or namespace-uri()='" + namespace2 + "') and local-name()='" + localName + "']"
+}
+
+// TODO: Use updated xpath/xmlquery functions
+func ManyNSSelectMany(namespaces []string, localNames []string) string {
+	if len(namespaces) == 0 || len(localNames) == 0 {
+		panic("namespaces and localNames must not be empty")
+	}
+
+	var sb strings.Builder
+	sb.WriteString("*[(")
+	for i, ns := range namespaces {
+		if i > 0 {
+			sb.WriteString(" or ")
+		}
+		sb.WriteString("namespace-uri()='")
+		sb.WriteString(ns)
+		sb.WriteString("'")
+	}
+	sb.WriteString(") and (")
+	for i, ln := range localNames {
+		if i > 0 {
+			sb.WriteString(" or ")
+		}
+		sb.WriteString("local-name()='")
+		sb.WriteString(ln)
+		sb.WriteString("'")
+	}
+	sb.WriteString(")]")
+
+	return sb.String()
 }
 
 func SelectNodeAttrNs(n *xmlquery.Node, ns, name string) string {

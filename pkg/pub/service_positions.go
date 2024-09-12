@@ -6,11 +6,12 @@ import (
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/mediatype"
 )
 
 var PositionsLink = manifest.Link{
 	Href: "/~readium/positions.json",
-	Type: "application/vnd.readium.position-list+json",
+	Type: mediatype.ReadiumPositionList.String(),
 }
 
 // PositionsService implements Service

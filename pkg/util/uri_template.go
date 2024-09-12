@@ -57,17 +57,27 @@ func expandFormStyle(s string, parameters map[string]string) string {
 	strs := strings.Split(s, ",")
 	var sb strings.Builder
 	sb.WriteRune('?')
+	var added bool
 	for i, str := range strs {
-		v, _ := parameters[str]
+		v, ok := parameters[str]
+		if !ok {
+			continue
+		}
 		if i != 0 {
 			sb.WriteRune('&')
 		}
+		added = true
 		sb.WriteString(str)
 		sb.WriteRune('=')
 		if v == "" {
 			continue
 		}
 		sb.WriteString(v)
+	}
+	if !added {
+		// Remove '?' if no params were actually added
+		s := sb.String()
+		return s[:len(s)-1]
 	}
 	return sb.String()
 }

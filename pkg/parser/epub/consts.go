@@ -11,6 +11,7 @@ const (
 	NamespaceOPS   = "http://www.idpf.org/2007/ops"
 	NamespaceXHTML = "http://www.w3.org/1999/xhtml"
 	NamespaceSMIL  = "http://www.w3.org/ns/SMIL"
+	NamespaceSMIL2 = "http://www.w3.org/2001/SMIL20/"
 	NamespaceNCX   = "http://www.daisy.org/z3986/2005/ncx/"
 )
 

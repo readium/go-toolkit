@@ -2,14 +2,24 @@ package serve
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/mediatype"
 )
 
 var mimeSubstitutions = map[string]string{
-	"application/vnd.ms-opentype":          "font/otf",                                            // Not just because it's sane, but because CF will compress it!
-	"application/vnd.readium.content+json": "application/vnd.readium.content+json; charset=utf-8", // Need utf-8 encoding
+	"application/vnd.ms-opentype": "font/otf", // Not just because it's sane, but because CF will compress it!
+}
+
+var utfCharsetNeeded = []string{
+	mediatype.ReadiumWebpubManifest.String(),
+	mediatype.ReadiumDivinaManifest.String(),
+	mediatype.ReadiumAudiobookManifest.String(),
+	mediatype.ReadiumPositionList.String(),
+	mediatype.ReadiumContentDocument.String(),
+	mediatype.ReadiumGuidedNavigationDocument.String(),
 }
 
 var compressableMimes = []string{
@@ -19,11 +29,11 @@ var compressableMimes = []string{
 	"text/css",
 	"text/html",
 	"application/xhtml+xml",
-	"application/webpub+json",
-	"application/divina+json",
-	"application/vnd.readium.position-list+json",
-	"application/vnd.readium.content+json",
-	"application/audiobook+json",
+	mediatype.ReadiumWebpubManifest.String(),
+	mediatype.ReadiumDivinaManifest.String(),
+	mediatype.ReadiumPositionList.String(),
+	mediatype.ReadiumContentDocument.String(),
+	mediatype.ReadiumAudiobookManifest.String(),
 	"font/ttf",
 	"application/ttf",
 	"application/x-ttf",
@@ -50,12 +60,12 @@ func makeRelative(link manifest.Link) manifest.Link {
 }
 
 func conformsToAsMimetype(conformsTo manifest.Profiles) string {
-	mime := "application/webpub+json"
+	mime := mediatype.ReadiumWebpubManifest.String()
 	for _, profile := range conformsTo {
 		if profile == manifest.ProfileDivina {
-			mime = "application/divina+json"
+			mime = mediatype.ReadiumDivinaManifest.String()
 		} else if profile == manifest.ProfileAudiobook {
-			mime = "application/audiobook+json"
+			mime = mediatype.ReadiumAudiobookManifest.String()
 		} else {
 			continue
 		}
@@ -87,4 +97,14 @@ func parseCoding(s string) (coding string) {
 	}
 	coding = strings.ToLower(strings.TrimSpace(s[:p]))
 	return
+}
+
+func convertURLValuesToMap(values url.Values) map[string]string {
+	result := make(map[string]string)
+	for key, val := range values {
+		if len(val) > 0 {
+			result[key] = val[0] // Take the first value for each key
+		}
+	}
+	return result
 }

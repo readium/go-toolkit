@@ -42,13 +42,7 @@ func ParseNavDoc(document *xmlquery.Node, filePath string) map[string]manifest.L
 }
 
 func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]string) ([]string, manifest.LinkList) {
-	typeAttr := ""
-	for _, na := range nav.Attr {
-		if na.NamespaceURI == NamespaceOPS && na.Name.Local == "type" {
-			typeAttr = na.Value
-			break
-		}
-	}
+	typeAttr := SelectNodeAttrNs(nav, NamespaceOPS, "type")
 	if typeAttr == "" {
 		return nil, nil
 	}

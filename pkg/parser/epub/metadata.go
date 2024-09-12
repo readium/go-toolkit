@@ -485,6 +485,7 @@ func (m PubMetadataAdapter) Metadata() manifest.Metadata {
 		Description:        m.Description(),
 		ReadingProgression: m.ReadingProgression(),
 		Presentation:       &presentation,
+		MediaOverlay:       m.MediaOverlay(),
 		BelongsTo:          make(map[string]manifest.Contributors),
 		OtherMetadata:      m.OtherMetadata(),
 
@@ -998,27 +999,42 @@ func (m *PubMetadataAdapter) Presentation() manifest.Presentation {
 	return *m._presentation
 }
 
+func (m *PubMetadataAdapter) MediaOverlay() *manifest.MediaOverlay {
+	activeClass := m.FirstValue(VocabularyMedia + "active-class")
+	playbackActiveClass := m.FirstValue(VocabularyMedia + "playback-active-class")
+
+	if activeClass == "" && playbackActiveClass == "" {
+		return nil
+	}
+	return &manifest.MediaOverlay{
+		ActiveClass:         activeClass,
+		PlaybackActiveClass: playbackActiveClass,
+	}
+}
+
 func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 	if m._otherMetadata == nil {
 		usedProperties := map[string]struct{}{
 			VocabularyMeta + "cover": {}, // EPUB 2 cover meta
 
-			VocabularyDCTerms + "identifier":    {},
-			VocabularyDCTerms + "language":      {},
-			VocabularyDCTerms + "title":         {},
-			VocabularyDCTerms + "date":          {},
-			VocabularyDCTerms + "modified":      {},
-			VocabularyDCTerms + "description":   {},
-			VocabularyDCTerms + "duration":      {},
-			VocabularyDCTerms + "creator":       {},
-			VocabularyDCTerms + "publisher":     {},
-			VocabularyDCTerms + "contributor":   {},
-			VocabularyMedia + "narrator":        {},
-			VocabularyMedia + "duration":        {},
-			VocabularyRendition + "flow":        {},
-			VocabularyRendition + "spread":      {},
-			VocabularyRendition + "orientation": {},
-			VocabularyRendition + "layout":      {},
+			VocabularyDCTerms + "identifier":          {},
+			VocabularyDCTerms + "language":            {},
+			VocabularyDCTerms + "title":               {},
+			VocabularyDCTerms + "date":                {},
+			VocabularyDCTerms + "modified":            {},
+			VocabularyDCTerms + "description":         {},
+			VocabularyDCTerms + "duration":            {},
+			VocabularyDCTerms + "creator":             {},
+			VocabularyDCTerms + "publisher":           {},
+			VocabularyDCTerms + "contributor":         {},
+			VocabularyMedia + "narrator":              {},
+			VocabularyMedia + "duration":              {},
+			VocabularyMedia + "active-class":          {},
+			VocabularyMedia + "playback-active-class": {},
+			VocabularyRendition + "flow":              {},
+			VocabularyRendition + "spread":            {},
+			VocabularyRendition + "orientation":       {},
+			VocabularyRendition + "layout":            {},
 
 			VocabularyDCTerms + "conformsto":          {},
 			VocabularyDCTerms + "conformsTo":          {},
@@ -1047,7 +1063,6 @@ func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 				m._otherMetadata[k] = values
 			}
 		}
-		// m._otherMetadata["presentation"] = m.Presentation()
 	}
 	return m._otherMetadata
 }

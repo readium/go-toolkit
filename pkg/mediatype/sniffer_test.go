@@ -124,14 +124,14 @@ func TestSniffCBZ(t *testing.T) {
 }
 
 func TestSniffDiViNa(t *testing.T) {
-	assert.Equal(t, &Divina, OfExtension("divina"))
-	assert.Equal(t, &Divina, OfString("application/divina+zip"))
+	assert.Equal(t, &ReadiumDivina, OfExtension("divina"))
+	assert.Equal(t, &ReadiumDivina, OfString("application/divina+zip"))
 	// TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
 	// assert.Equal(t, &DIVINA, OfFileOnly("divina-package.unknown"))
 }
 
 func TestSniffDiViNaManifest(t *testing.T) {
-	assert.Equal(t, &DivinaManifest, OfString("application/divina+json"))
+	assert.Equal(t, &ReadiumDivinaManifest, OfString("application/divina+json"))
 	// TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
 	// assert.Equal(t, &DIVINA_MANIFEST, OfFileOnly("divina.json"))
 }
