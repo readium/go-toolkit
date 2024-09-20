@@ -174,6 +174,16 @@ func (d DeobfuscatingResource) StreamCompressed(w io.Writer) (int64, *fetcher.Re
 	return d.ProxyResource.StreamCompressed(w)
 }
 
+// ReadCompressed implements CompressedResource
+func (d DeobfuscatingResource) ReadCompressed(w io.Writer) ([]byte, *fetcher.ResourceError) {
+	_, v := d.obfuscation()
+	if v > 0 {
+		return nil, fetcher.Other(errors.New("cannot read compressed resource when obfuscated"))
+	}
+
+	return d.ProxyResource.ReadCompressed()
+}
+
 func (d DeobfuscatingResource) getHashKeyAdobe() []byte {
 	hexbytes, _ := hex.DecodeString(
 		strings.Replace(

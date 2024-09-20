@@ -164,6 +164,24 @@ func (e gozipArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
 	return io.Copy(w, f)
 }
 
+func (e gozipArchiveEntry) ReadCompressed() ([]byte, error) {
+	if e.file.Method != zip.Deflate {
+		return nil, errors.New("not a compressed resource")
+	}
+	f, err := e.file.OpenRaw()
+	if err != nil {
+		return nil, err
+	}
+
+	compressedData := make([]byte, e.file.CompressedSize64)
+	_, err = io.ReadFull(f, compressedData)
+	if err != nil {
+		return nil, err
+	}
+
+	return compressedData, nil
+}
+
 // An archive from a zip file using go's stdlib
 type gozipArchive struct {
 	zip           *zip.Reader

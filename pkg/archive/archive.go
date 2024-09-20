@@ -59,6 +59,7 @@ type Entry interface {
 	Read(start int64, end int64) ([]byte, error)               // Reads the whole content of this entry, or a portion when [start] or [end] are specified.
 	Stream(w io.Writer, start int64, end int64) (int64, error) // Streams the whole content of this entry to a writer, or a portion when [start] or [end] are specified.
 	StreamCompressed(w io.Writer) (int64, error)               // Streams the compressed content of this entry to a writer.
+	ReadCompressed() ([]byte, error)                           // Reads the compressed content of this entry.
 }
 
 // Represents an immutable archive.
