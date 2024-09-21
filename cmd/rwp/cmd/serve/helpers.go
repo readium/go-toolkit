@@ -74,7 +74,7 @@ func conformsToAsMimetype(conformsTo manifest.Profiles) string {
 	return mime
 }
 
-func supportsDeflate(r *http.Request) bool {
+func supportsEncoding(r *http.Request, encoding string) bool {
 	vv := r.Header.Values("Accept-Encoding")
 	for _, v := range vv {
 		for _, sv := range strings.Split(v, ",") {
@@ -82,7 +82,7 @@ func supportsDeflate(r *http.Request) bool {
 			if coding == "" {
 				continue
 			}
-			if coding == "deflate" {
+			if coding == encoding {
 				return true
 			}
 		}
