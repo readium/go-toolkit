@@ -7,8 +7,8 @@ require (
 	github.com/agext/regexp v1.3.0
 	github.com/andybalholm/cascadia v1.3.2
 	github.com/deckarep/golang-set v1.8.0
-	github.com/gorilla/mux v1.8.1
 	github.com/go-viper/mapstructure/v2 v2.1.0
+	github.com/gorilla/mux v1.8.1
 	github.com/gotd/contrib v0.20.0
 	github.com/pdfcpu/pdfcpu v0.5.0
 	github.com/pkg/errors v0.9.1
@@ -21,7 +21,7 @@ require (
 	github.com/zeebo/xxh3 v1.0.2
 	golang.org/x/exp v0.0.0-20240529005216-23cca8864a10
 	golang.org/x/net v0.29.0
-	golang.org/x/text v0.18.0
+	golang.org/x/text v0.19.0
 )
 
 require (
