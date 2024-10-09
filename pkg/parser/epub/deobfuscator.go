@@ -119,6 +119,12 @@ func (d DeobfuscatingResource) Stream(w io.Writer, start int64, end int64) (int6
 			shasum := sha1.Sum([]byte(d.identifier))
 			obfuscationKey = shasum[:]
 		}
+
+		// If getHashKeyAdobe() is blank, meaning the hex decoding of the UUID failed
+		if len(obfuscationKey) == 0 {
+			return 0, fetcher.Other(errors.New("error deriving font deobfuscation key"))
+		}
+
 		deobfuscateFont(obfuscatedPortion, start, obfuscationKey, v)
 
 		defer pr.Close()
