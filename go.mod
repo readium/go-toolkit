@@ -7,7 +7,7 @@ require (
 	github.com/agext/regexp v1.3.0
 	github.com/andybalholm/cascadia v1.3.2
 	github.com/deckarep/golang-set v1.8.0
-	github.com/go-viper/mapstructure/v2 v2.1.0
+	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/gorilla/mux v1.8.1
 	github.com/gotd/contrib v0.20.0
 	github.com/pdfcpu/pdfcpu v0.5.0
