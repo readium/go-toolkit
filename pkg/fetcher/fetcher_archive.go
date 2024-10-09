@@ -171,6 +171,33 @@ func (r *entryResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
 	return -1, Other(err)
 }
 
+// StreamCompressedGzip implements CompressedResource
+func (r *entryResource) StreamCompressedGzip(w io.Writer) (int64, *ResourceError) {
+	i, err := r.entry.StreamCompressedGzip(w)
+	if err == nil {
+		return i, nil
+	}
+	return -1, Other(err)
+}
+
+// ReadCompressed implements CompressedResource
+func (r *entryResource) ReadCompressed() ([]byte, *ResourceError) {
+	i, err := r.entry.ReadCompressed()
+	if err == nil {
+		return i, nil
+	}
+	return nil, Other(err)
+}
+
+// ReadCompressedGzip implements CompressedResource
+func (r *entryResource) ReadCompressedGzip() ([]byte, *ResourceError) {
+	i, err := r.entry.ReadCompressedGzip()
+	if err == nil {
+		return i, nil
+	}
+	return nil, Other(err)
+}
+
 // Length implements Resource
 func (r *entryResource) Length() (int64, *ResourceError) {
 	return int64(r.entry.Length()), nil

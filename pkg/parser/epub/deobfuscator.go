@@ -119,6 +119,12 @@ func (d DeobfuscatingResource) Stream(w io.Writer, start int64, end int64) (int6
 			shasum := sha1.Sum([]byte(d.identifier))
 			obfuscationKey = shasum[:]
 		}
+
+		// If getHashKeyAdobe() is blank, meaning the hex decoding of the UUID failed
+		if len(obfuscationKey) == 0 {
+			return 0, fetcher.Other(errors.New("error deriving font deobfuscation key"))
+		}
+
 		deobfuscateFont(obfuscatedPortion, start, obfuscationKey, v)
 
 		defer pr.Close()
@@ -172,6 +178,36 @@ func (d DeobfuscatingResource) StreamCompressed(w io.Writer) (int64, *fetcher.Re
 	}
 
 	return d.ProxyResource.StreamCompressed(w)
+}
+
+// StreamCompressedGzip implements CompressedResource
+func (d DeobfuscatingResource) StreamCompressedGzip(w io.Writer) (int64, *fetcher.ResourceError) {
+	_, v := d.obfuscation()
+	if v > 0 {
+		return 0, fetcher.Other(errors.New("cannot stream compressed resource when obfuscated"))
+	}
+
+	return d.ProxyResource.StreamCompressedGzip(w)
+}
+
+// ReadCompressed implements CompressedResource
+func (d DeobfuscatingResource) ReadCompressed() ([]byte, *fetcher.ResourceError) {
+	_, v := d.obfuscation()
+	if v > 0 {
+		return nil, fetcher.Other(errors.New("cannot read compressed resource when obfuscated"))
+	}
+
+	return d.ProxyResource.ReadCompressed()
+}
+
+// ReadCompressedGzip implements CompressedResource
+func (d DeobfuscatingResource) ReadCompressedGzip() ([]byte, *fetcher.ResourceError) {
+	_, v := d.obfuscation()
+	if v > 0 {
+		return nil, fetcher.Other(errors.New("cannot read compressed resource when obfuscated"))
+	}
+
+	return d.ProxyResource.ReadCompressedGzip()
 }
 
 func (d DeobfuscatingResource) getHashKeyAdobe() []byte {

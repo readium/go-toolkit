@@ -256,11 +256,20 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cres, ok := res.(fetcher.CompressedResource)
-	if ok && cres.CompressedAs(archive.CompressionMethodDeflate) && start == 0 && end == 0 && supportsDeflate(r) {
-		// Stream the asset in compressed format
-		w.Header().Set("content-encoding", "deflate")
-		w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength(), 10))
-		_, err = cres.StreamCompressed(w)
+	if ok && cres.CompressedAs(archive.CompressionMethodDeflate) && start == 0 && end == 0 {
+		// Stream the asset in compressed format if supported by the user agent
+		if supportsEncoding(r, "deflate") {
+			w.Header().Set("content-encoding", "deflate")
+			w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength(), 10))
+			_, err = cres.StreamCompressed(w)
+		} else if supportsEncoding(r, "gzip") && l <= archive.GzipMaxLength {
+			w.Header().Set("content-encoding", "gzip")
+			w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength()+archive.GzipWrapperLength, 10))
+			_, err = cres.StreamCompressedGzip(w)
+		} else {
+			// Fall back to normal streaming
+			_, rerr = res.Stream(w, start, end)
+		}
 	} else {
 		// Stream the asset
 		_, rerr = res.Stream(w, start, end)

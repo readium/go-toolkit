@@ -394,6 +394,33 @@ func (r ProxyResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
 	return cres.StreamCompressed(w)
 }
 
+// StreamCompressedGzip implements CompressedResource
+func (r ProxyResource) StreamCompressedGzip(w io.Writer) (int64, *ResourceError) {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return -1, Other(errors.New("resource is not compressed"))
+	}
+	return cres.StreamCompressedGzip(w)
+}
+
+// ReadCompressed implements CompressedResource
+func (r ProxyResource) ReadCompressed() ([]byte, *ResourceError) {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return nil, Other(errors.New("resource is not compressed"))
+	}
+	return cres.ReadCompressed()
+}
+
+// ReadCompressedGzip implements CompressedResource
+func (r ProxyResource) ReadCompressedGzip() ([]byte, *ResourceError) {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return nil, Other(errors.New("resource is not compressed"))
+	}
+	return cres.ReadCompressedGzip()
+}
+
 /**
  * Transforms the bytes of [resource] on-the-fly.
  *
