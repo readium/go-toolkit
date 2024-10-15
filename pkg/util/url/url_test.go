@@ -420,6 +420,10 @@ func TestNormalize(t *testing.T) {
 	u, _ := URLFromString("HTTP://example.com/foo")
 	assert.Equal(t, "http://example.com/foo", u.Normalize().String())
 
+	// Host becomes punycode equivalent.
+	u, _ = URLFromString("http://도메인.com/foo")
+	assert.Equal(t, "http://xn--hq1bm8jm9l.com/foo", u.Normalize().String())
+
 	// Percent encoding of path is normalized.
 	u, _ = URLFromString("HTTP://example.com/c'est%20valide")
 	assert.Equal(t, "http://example.com/c'est%20valide", u.Normalize().String())

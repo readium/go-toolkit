@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
+	"golang.org/x/net/idna"
 )
 
 /*
@@ -302,6 +303,11 @@ func (u AbsoluteURL) Normalize() URL {
 	}
 
 	u.url.Scheme = SchemeFromString(u.url.Scheme).String()
+	asciiHost, err := idna.ToASCII(u.url.Host)
+	if err == nil {
+		u.url.Host = asciiHost
+	}
+
 	return AbsoluteURL{url: u.url, scheme: Scheme(u.url.Scheme)}
 }
 
