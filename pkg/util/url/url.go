@@ -11,11 +11,11 @@ import (
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 )
 
-/**
- * A Uniform Resource Locator.
- *
- * https://url.spec.whatwg.org/
- */
+/*
+A Uniform Resource Locator.
+
+https://url.spec.whatwg.org/
+*/
 type URL interface {
 	Path() string            // Decoded path segments identifying a location.
 	Filename() string        // Decoded filename portion of the URL path.
@@ -364,14 +364,14 @@ func AbsoluteURLFromGo(url gurl.URL) (AbsoluteURL, error) {
 	return AbsoluteURL{url: url, scheme: scheme}, nil
 }
 
-/**
- * According to the EPUB specification, the HREFs in the EPUB package must be valid URLs (so
- * percent-encoded). Unfortunately, many EPUBs don't follow this rule, and use invalid HREFs such
- * as `my chapter.html` or `/dir/my chapter.html`.
- *
- * As a workaround, we assume the HREFs are valid percent-encoded URLs, and fallback to decoded paths
- * if we can't parse the URL.
- */
+/*
+According to the EPUB specification, the HREFs in the EPUB package must be valid URLs (so
+percent-encoded). Unfortunately, many EPUBs don't follow this rule, and use invalid HREFs such
+as `my chapter.html` or `/dir/my chapter.html`.
+
+As a workaround, we assume the HREFs are valid percent-encoded URLs, and fallback to decoded paths
+if we can't parse the URL.
+*/
 func FromEPUBHref(href string) (URL, error) {
 	u, err := URLFromString(href)
 	if err != nil {

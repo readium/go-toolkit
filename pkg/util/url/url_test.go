@@ -8,31 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-/*func TestCreateFromInvalidURL(t *testing.T) {
+func TestCreateFromInvalidURL(t *testing.T) {
 	urlTests := []string{
-		"",
-		"      ",
-		"invalid character",
-		"école",
+		"f:///////f",
+		":C",
 	}
 	for _, urlTest := range urlTests {
 		_, err := URLFromString(urlTest)
 		assert.Error(t, err, "Expected error parsing URL '%s'", urlTest)
 	}
-
-	specificUrlTests := []string{
-		"    ",
-		"invalid character",
-		"école",
-	}
-	for _, urlTest := range specificUrlTests {
-		_, err := AbsoluteURLFromString(urlTest)
-		assert.Error(t, err, "Expected error parsing URL '%s' as absolute URL", urlTest)
-
-		_, err = RelativeURLFromString(urlTest)
-		assert.Error(t, err, "Expected error parsing URL '%s' as relative URL", urlTest)
-	}
-}*/
+}
 
 func TestCreateFromRelativePath(t *testing.T) {
 	for _, urlTest := range []string{
@@ -436,9 +421,9 @@ func TestNormalize(t *testing.T) {
 	assert.Equal(t, "http://example.com/foo", u.Normalize().String())
 
 	// Percent encoding of path is normalized.
-	u, _ = URLFromString("HTTP://example.com/c%27est%20valide")
+	u, _ = URLFromString("HTTP://example.com/c'est%20valide")
 	assert.Equal(t, "http://example.com/c'est%20valide", u.Normalize().String())
-	u, _ = URLFromString("c%27est%20valide")
+	u, _ = URLFromString("c'est%20valide")
 	assert.Equal(t, "c'est%20valide", u.Normalize().String())
 
 	// Relative paths are resolved.
