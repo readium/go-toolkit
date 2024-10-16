@@ -58,7 +58,8 @@ func URLFromGo(url gurl.URL) (URL, error) {
 // Represents an absolute Uniform Resource Locator.
 // RelativeURL implements URL
 type RelativeURL struct {
-	url gurl.URL
+	url        gurl.URL
+	normalized bool
 }
 
 func (u RelativeURL) Path() string {
@@ -86,7 +87,7 @@ func (u RelativeURL) Query() gurl.Values {
 // RemoveQuery implements URL
 func (u RelativeURL) RemoveQuery() URL {
 	u.url.RawQuery = ""
-	return RelativeURL{url: u.url}
+	return RelativeURL{url: u.url, normalized: u.normalized}
 }
 
 // Fragment implements URL
@@ -97,7 +98,7 @@ func (u RelativeURL) Fragment() string {
 // RemoveFragment implements URL
 func (u RelativeURL) RemoveFragment() URL {
 	u.url.Fragment = ""
-	return RelativeURL{url: u.url}
+	return RelativeURL{url: u.url, normalized: u.normalized}
 }
 
 // Resolve implements URL
@@ -160,6 +161,11 @@ func (u RelativeURL) Relativize(url URL) URL {
 
 // Normalize implements URL
 func (u RelativeURL) Normalize() URL {
+	if u.normalized {
+		// Already normalized
+		return u
+	}
+
 	var hadSlash bool
 	if strings.HasSuffix(u.url.Path, "/") {
 		hadSlash = true
@@ -169,7 +175,7 @@ func (u RelativeURL) Normalize() URL {
 		u.url.Path += "/"
 	}
 
-	return RelativeURL{url: u.url}
+	return RelativeURL{url: u.url, normalized: true}
 }
 
 // String implements URL
@@ -200,8 +206,9 @@ func RelativeURLFromGo(url gurl.URL) (RelativeURL, error) {
 }
 
 type AbsoluteURL struct {
-	url    gurl.URL
-	scheme Scheme
+	url        gurl.URL
+	scheme     Scheme
+	normalized bool
 }
 
 // Path implements URL
@@ -230,7 +237,7 @@ func (u AbsoluteURL) Query() gurl.Values {
 // RemoveQuery implements URL
 func (u AbsoluteURL) RemoveQuery() URL {
 	u.url.RawQuery = ""
-	return AbsoluteURL{url: u.url, scheme: u.scheme}
+	return AbsoluteURL{url: u.url, scheme: u.scheme, normalized: u.normalized}
 }
 
 // Fragment implements URL
@@ -241,7 +248,7 @@ func (u AbsoluteURL) Fragment() string {
 // RemoveFragment implements URL
 func (u AbsoluteURL) RemoveFragment() URL {
 	u.url.Fragment = ""
-	return AbsoluteURL{url: u.url, scheme: u.scheme}
+	return AbsoluteURL{url: u.url, scheme: u.scheme, normalized: u.normalized}
 }
 
 // Resolve implements URL
@@ -293,6 +300,11 @@ func (u AbsoluteURL) Relativize(url URL) URL {
 
 // Normalize implements URL
 func (u AbsoluteURL) Normalize() URL {
+	if u.normalized {
+		// Already normalized
+		return u
+	}
+
 	var hadSlash bool
 	if strings.HasSuffix(u.url.Path, "/") {
 		hadSlash = true
@@ -308,7 +320,7 @@ func (u AbsoluteURL) Normalize() URL {
 		u.url.Host = asciiHost
 	}
 
-	return AbsoluteURL{url: u.url, scheme: Scheme(u.url.Scheme)}
+	return AbsoluteURL{url: u.url, scheme: Scheme(u.url.Scheme), normalized: true}
 }
 
 // String implements URL
