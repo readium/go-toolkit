@@ -19,6 +19,7 @@ type A11y struct {
 	AccessModesSufficient [][]A11yPrimaryAccessMode `json:"accessModeSufficient,omitempty"` //  A list of single or combined accessModes that are sufficient to understand all the intellectual content of a resource.
 	Features              []A11yFeature             `json:"feature,omitempty"`              // Content features of the resource, such as accessible media, alternatives and supported enhancements for accessibility.
 	Hazards               []A11yHazard              `json:"hazard,omitempty"`               // A characteristic of the described resource that is physiologically dangerous to some users.
+	Exemptions            []A11yExemption           `json:"exemption,omitempty"`            // Justifications for non-conformance based on exemptions in a given jurisdiction.
 }
 
 // NewA11y creates a new empty A11y.
@@ -29,6 +30,7 @@ func NewA11y() A11y {
 		AccessModesSufficient: [][]A11yPrimaryAccessMode{},
 		Features:              []A11yFeature{},
 		Hazards:               []A11yHazard{},
+		Exemptions:            []A11yExemption{},
 	}
 }
 
@@ -129,6 +131,12 @@ func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
 		return nil, errors.Wrap(err, "failed unmarshalling 'hazard'")
 	}
 	a.Hazards = A11yHazardsFromStrings(hazards)
+
+	examptions, err := parseSliceOrString(rawJSON["exemption"], true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling 'exemption'")
+	}
+	a.Exemptions = A11yExemptionsFromStrings(examptions)
 
 	return a, nil
 }
@@ -275,9 +283,9 @@ const (
 	// The work includes an index to the content.
 	A11yFeatureIndex A11yFeature = "index"
 
-	// The work includes equivalent print page numbers. This setting is most commonly used
-	// with ebooks for which there is a print equivalent.
-	A11yFeaturePrintPageNumbers A11yFeature = "printPageNumbers"
+	// The resource includes a means of navigating to static page break locations.
+	// The most common way of providing page navigation in digital publications is through a page list.
+	A11yFeaturePageNavigation A11yFeature = "pageNavigation"
 
 	// The reading order of the content is clearly defined in the markup
 	// (e.g., figures, sidebars and other secondary content has been marked up to allow it
@@ -430,6 +438,21 @@ const (
 func A11yHazardsFromStrings(strings []string) []A11yHazard {
 	return fromStrings(strings, func(str string) A11yHazard {
 		return A11yHazard(str)
+	})
+}
+
+// A11yExemption is a justification for non-conformance based on an exemption in a given jurisdiction.
+type A11yExemption string
+
+const (
+	A11yExemptionEAASisproportionateBurden A11yExemption = "eaa-disproportionate-burden"
+	A11yExemptionEAAFundamentalAlteration  A11yExemption = "eaa-fundamental-alteration"
+	A11yExemptionEAAMicroenterprise        A11yExemption = "eaa-microenterprise"
+)
+
+func A11yExemptionsFromStrings(strings []string) []A11yExemption {
+	return fromStrings(strings, func(str string) A11yExemption {
+		return A11yExemption(str)
 	})
 }
 
