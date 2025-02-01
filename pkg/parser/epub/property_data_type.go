@@ -15,6 +15,7 @@ var PackageReservedPrefixes = map[string]string{
 	"onix":      VocabularyONIX,
 	"schema":    VocabularySchema,
 	"xsd":       VocabularyXSD,
+	"tdm":       VocabularyTDM,
 }
 
 var ContentReservedPrefixes = map[string]string{

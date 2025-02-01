@@ -328,6 +328,15 @@ func TestMetadataEPUB2Accessibility(t *testing.T) {
 	assert.Nil(t, m.OtherMetadata["accessibility"])
 }
 
+func TestMetadataEPUB2TDM(t *testing.T) {
+	m, err := loadMetadata("tdm-epub2")
+	assert.NoError(t, err)
+	assert.Equal(t, &manifest.TDM{
+		Policy:      "https://provider.com/policies/policy.json",
+		Reservation: manifest.TDMReservationAll,
+	}, m.TDM)
+}
+
 func TestMetadataEPUB3Accessibility(t *testing.T) {
 	m, err := loadMetadata("accessibility-epub3")
 	assert.NoError(t, err)
@@ -349,6 +358,15 @@ func TestMetadataEPUB3Accessibility(t *testing.T) {
 	e.Exemptions = []manifest.A11yExemption{manifest.A11yExemptionEAAMicroenterprise, manifest.A11yExemptionEAAFundamentalAlteration}
 	assert.Equal(t, &e, m.Accessibility)
 	assert.Nil(t, m.OtherMetadata["accessibility"])
+}
+
+func TestMetadataEPUB3TDM(t *testing.T) {
+	m, err := loadMetadata("tdm-epub3")
+	assert.NoError(t, err)
+	assert.Equal(t, &manifest.TDM{
+		Policy:      "https://provider.com/policies/policy.json",
+		Reservation: manifest.TDMReservationAll,
+	}, m.TDM)
 }
 
 func TestMetadataTitleFileAs(t *testing.T) {

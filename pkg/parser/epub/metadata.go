@@ -481,6 +481,7 @@ func (m PubMetadataAdapter) Metadata() manifest.Metadata {
 		LocalizedSortAs:    m.LocalizedSortAs(),
 		LocalizedSubtitle:  m.LocalizedSubtitle(),
 		Accessibility:      m.Accessibility(),
+		TDM:                m.TDM(),
 		Duration:           m.Duration(),
 		Subjects:           m.Subjects(),
 		Description:        m.Description(),
@@ -652,6 +653,25 @@ func (m PubMetadataAdapter) Accessibility() *manifest.A11y {
 		return nil
 	}
 	return &a11y
+}
+
+// https://www.w3.org/community/reports/tdmrep/CG-FINAL-tdmrep-20240510/#sec-epub3
+func (m PubMetadataAdapter) TDM() *manifest.TDM {
+	tdm := &manifest.TDM{}
+	tdm.Policy = m.FirstValue(VocabularyTDM + "policy")
+
+	reservation := m.FirstValue(VocabularyTDM + "reservation")
+	switch reservation {
+	case "1":
+		tdm.Reservation = manifest.TDMReservationAll
+	case "0":
+		tdm.Reservation = manifest.TDMReservationNone
+	}
+
+	if tdm.IsEmpty() {
+		return nil
+	}
+	return tdm
 }
 
 func (m PubMetadataAdapter) a11yConformsTo() []manifest.A11yProfile {

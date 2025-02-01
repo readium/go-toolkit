@@ -32,6 +32,7 @@ const (
 	VocabularyONIX    = "http://www.editeur.org/ONIX/book/codelists/current.html#"
 	VocabularySchema  = "http://schema.org/"
 	VocabularyXSD     = "http://www.w3.org/2001/XMLSchema#"
+	VocabularyTDM     = "http://www.w3.org/ns/tdmrep#"
 
 	VocabularyMSV   = "http://www.idpf.org/epub/vocab/structure/magazine/#"
 	VocabularyPRISM = "http://www.prismstandard.org/specifications/3.0/PRISM_CV_Spec_3.0.htm#"
