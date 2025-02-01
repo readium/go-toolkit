@@ -52,11 +52,14 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 	}
 
 	// Clean up and prepare document
-	validate.XRefTable(ctx.XRefTable)
+	validate.XRefTable(ctx)
 	pdfcpu.OptimizeXRefTable(ctx)
 	ctx.EnsurePageCount()
 
 	m, err := ParseMetadata(ctx, link)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing PDF metadata")
+	}
 
 	// Fallback title
 	if m.Metadata.Title() == "" {

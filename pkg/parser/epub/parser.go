@@ -111,14 +111,13 @@ func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetche
 		if ncxItem == nil {
 			return
 		}
-		ncxPath := packageDocument.Path.Resolve(ncxItem.Href)
-		n, nerr := fetcher.Get(manifest.Link{Href: manifest.NewHREF(ncxPath)}).ReadAsXML(map[string]string{
+		n, nerr := fetcher.Get(manifest.Link{Href: manifest.NewHREF(ncxItem.Href)}).ReadAsXML(map[string]string{
 			NamespaceNCX: "ncx",
 		})
 		if nerr != nil {
 			return
 		}
-		ret = ParseNCX(n, ncxPath)
+		ret = ParseNCX(n, ncxItem.Href)
 	} else {
 		var navItem *Item
 		for _, v := range packageDocument.Manifest {
@@ -135,15 +134,14 @@ func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetche
 		if navItem == nil {
 			return
 		}
-		navPath := packageDocument.Path.Resolve(navItem.Href)
-		n, errx := fetcher.Get(manifest.Link{Href: manifest.NewHREF(navPath)}).ReadAsXML(map[string]string{
+		n, errx := fetcher.Get(manifest.Link{Href: manifest.NewHREF(navItem.Href)}).ReadAsXML(map[string]string{
 			NamespaceXHTML: "html",
 			NamespaceOPS:   "epub",
 		})
 		if errx != nil {
 			return
 		}
-		ret = ParseNavDoc(n, navPath)
+		ret = ParseNavDoc(n, navItem.Href)
 	}
 	return
 }

@@ -175,8 +175,8 @@ func ParsePDFMetadata(ctx *model.Context, m *manifest.Manifest) error {
 			m.Metadata.Modified = modDate
 		}
 	}
-	if ctx.CreationDate != "" && m.Metadata.Published == nil {
-		createDate := extensions.ParseDate(ctx.CreationDate)
+	if ctx.XRefTable.CreationDate != "" && m.Metadata.Published == nil {
+		createDate := extensions.ParseDate(ctx.XRefTable.CreationDate)
 		if createDate != nil {
 			m.Metadata.Published = createDate
 		}
