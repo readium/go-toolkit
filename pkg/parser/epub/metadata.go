@@ -646,6 +646,7 @@ func (m PubMetadataAdapter) Accessibility() *manifest.A11y {
 	a11y.AccessModesSufficient = m.a11yAccessModesSufficient()
 	a11y.Features = m.a11yFeatures()
 	a11y.Hazards = m.a11yHazards()
+	a11y.Exemptions = m.a11yExemptions()
 
 	if a11y.IsEmpty() {
 		return nil
@@ -781,6 +782,15 @@ func (m PubMetadataAdapter) a11yHazards() []manifest.A11yHazard {
 	hazards := make([]manifest.A11yHazard, len(values))
 	for i, v := range values {
 		hazards[i] = manifest.A11yHazard(v)
+	}
+	return hazards
+}
+
+func (m PubMetadataAdapter) a11yExemptions() []manifest.A11yExemption {
+	values := m.Values(VocabularyA11Y + "exemption")
+	hazards := make([]manifest.A11yExemption, len(values))
+	for i, v := range values {
+		hazards[i] = manifest.A11yExemption(v)
 	}
 	return hazards
 }
