@@ -11,24 +11,24 @@ import (
 
 func TestHCFCEmptyWhenFilesInRoot(t *testing.T) {
 	assert.Equal(t, "", hrefCommonFirstComponent(manifest.LinkList{
-		{Href: "/im1.jpg"},
-		{Href: "/im2.jpg"},
-		{Href: "/toc.xml"},
+		{Href: manifest.MustNewHREFFromString("im1.jpg", false)},
+		{Href: manifest.MustNewHREFFromString("im2.jpg", false)},
+		{Href: manifest.MustNewHREFFromString("toc.xml", false)},
 	}), "hrefCommonFirstComponent is empty when files are in the root")
 }
 
 func TestHCFCEmptyWhenFilesInDifferentDirs(t *testing.T) {
 	assert.Equal(t, "", hrefCommonFirstComponent(manifest.LinkList{
-		{Href: "/dir1/im1.jpg"},
-		{Href: "/dir2/im2.jpg"},
-		{Href: "/toc.xml"},
+		{Href: manifest.MustNewHREFFromString("dir1/im1.jpg", false)},
+		{Href: manifest.MustNewHREFFromString("dir2/im2.jpg", false)},
+		{Href: manifest.MustNewHREFFromString("toc.xml", false)},
 	}), "hrefCommonFirstComponent is empty when files are in different directories")
 }
 
 func TestHCFCCorrectWhenSameDir(t *testing.T) {
 	assert.Equal(t, "root", hrefCommonFirstComponent(manifest.LinkList{
-		{Href: "/root/im1.jpg"},
-		{Href: "/root/im2.jpg"},
-		{Href: "/root/xml/toc.xml"},
+		{Href: manifest.MustNewHREFFromString("root/im1.jpg", false)},
+		{Href: manifest.MustNewHREFFromString("root/im2.jpg", false)},
+		{Href: manifest.MustNewHREFFromString("root/xml/toc.xml", false)},
 	}), "hrefCommonFirstComponent is empty when files are in different directories")
 }

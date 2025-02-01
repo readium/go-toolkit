@@ -5,6 +5,7 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +19,7 @@ func loadSmil(name string) (*manifest.GuidedNavigationDocument, error) {
 		return nil, rerr.Cause
 	}
 
-	return ParseSMILDocument(n, "OEBPS/page1.smil")
+	return ParseSMILDocument(n, url.MustURLFromString("OEBPS/page1.smil"))
 }
 
 func TestSMILDocTypicalAudio(t *testing.T) {

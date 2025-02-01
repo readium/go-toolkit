@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
+	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,8 +17,8 @@ func TestLocatorUnmarshalMinimalJSON(t *testing.T) {
 		"type": "text/html"
 	}`), &l))
 	assert.Equal(t, Locator{
-		Href: "http://locator",
-		Type: "text/html",
+		Href:      url.MustURLFromString("http://locator"),
+		MediaType: mediatype.HTML,
 	}, l)
 }
 
@@ -34,8 +36,8 @@ func TestLocatorUnmarshalJSON(t *testing.T) {
 		}
 	}`), &l))
 	assert.Equal(t, Locator{
-		Href:      "http://locator",
-		Type:      "text/html",
+		Href:      url.MustURLFromString("http://locator"),
+		MediaType: mediatype.HTML,
 		Title:     "My Locator",
 		Locations: Locations{Position: extensions.Pointer[uint](42)},
 		Text:      Text{Highlight: "Excerpt"},
@@ -49,8 +51,8 @@ func TestLocatorUnmarshalInvalidJSON(t *testing.T) {
 
 func TestLocatorMinimalJSON(t *testing.T) {
 	s, err := json.Marshal(&Locator{
-		Href: "http://locator",
-		Type: "text/html",
+		Href:      url.MustURLFromString("http://locator"),
+		MediaType: mediatype.HTML,
 	})
 	assert.NoError(t, err)
 	assert.JSONEq(t, `{
@@ -61,9 +63,9 @@ func TestLocatorMinimalJSON(t *testing.T) {
 
 func TestLocatorJSON(t *testing.T) {
 	s, err := json.Marshal(&Locator{
-		Href:  "http://locator",
-		Type:  "text/html",
-		Title: "My Locator",
+		Href:      url.MustURLFromString("http://locator"),
+		MediaType: mediatype.HTML,
+		Title:     "My Locator",
 		Locations: Locations{
 			Position: extensions.Pointer[uint](42),
 		},
@@ -178,10 +180,13 @@ func TestLocationsUnmarshalIgnoresTotalProgressionOutOfRange(t *testing.T) {
 }
 
 func TestLocationsMinimalJSON(t *testing.T) {
-	s, err := json.Marshal(Locator{})
+	s, err := json.Marshal(Locator{
+		Href:      url.MustURLFromString("http://locator"),
+		MediaType: mediatype.HTML,
+	})
 	assert.NoError(t, err)
 	// Note: href and type are not omitted because they are required!
-	assert.JSONEq(t, `{"href":"", "type":""}`, string(s), "JSON objects should be equal")
+	assert.JSONEq(t, `{"href": "http://locator", "type": "text/html"}`, string(s), "JSON objects should be equal")
 }
 
 func TestLocationsJSON(t *testing.T) {
@@ -242,4 +247,54 @@ func TestTextJSON(t *testing.T) {
 		"highlight": "Highlighted text",
 		"after": "Text after"
 	}`, string(s), "JSON objects should be equal")
+}
+
+func TestSubstringFromRange(t *testing.T) {
+	text := Text{
+		Before:    "before",
+		Highlight: "highlight",
+		After:     "after",
+	}
+
+	assert.Equal(t, Text{
+		Before:    "before",
+		Highlight: "h",
+		After:     "ighlightafter",
+	}, text.Substring(0, -1))
+
+	assert.Equal(t, Text{
+		Before:    "before",
+		Highlight: "h",
+		After:     "ighlightafter",
+	}, text.Substring(0, 0))
+
+	assert.Equal(t, Text{
+		Before:    "beforehigh",
+		Highlight: "lig",
+		After:     "htafter",
+	}, text.Substring(4, 6))
+
+	assert.Equal(t, Text{
+		Before:    "before",
+		Highlight: "highlight",
+		After:     "after",
+	}, text.Substring(0, 8))
+
+	assert.Equal(t, Text{
+		Before:    "beforehighli",
+		Highlight: "ght",
+		After:     "after",
+	}, text.Substring(6, 12))
+
+	assert.Equal(t, Text{
+		Before:    "beforehighligh",
+		Highlight: "t",
+		After:     "after",
+	}, text.Substring(8, 12))
+
+	assert.Equal(t, Text{
+		Before:    "beforehighlight",
+		Highlight: "",
+		After:     "after",
+	}, text.Substring(9, 12))
 }

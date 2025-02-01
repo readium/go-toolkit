@@ -1,13 +1,13 @@
 package parser
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,13 +49,14 @@ func TestImageReadingOrderAlphabetical(t *testing.T) {
 		assert.NotNil(t, p)
 		pub := p.Build()
 		assert.NotNil(t, pub)
+		base, _ := url.URLFromDecodedPath("Cory Doctorow's Futuristic Tales of the Here and Now/")
 
 		hrefs := make([]string, 0, len(pub.Manifest.ReadingOrder))
 		for _, roi := range pub.Manifest.ReadingOrder {
-			hrefs = append(hrefs, strings.TrimPrefix(roi.Href, "/Cory Doctorow's Futuristic Tales of the Here and Now"))
+			hrefs = append(hrefs, base.Relativize(roi.URL(nil, nil)).String())
 		}
 		assert.Exactly(t, []string{
-			"/a-fc.jpg", "/x-002.jpg", "/x-003.jpg", "/x-004.jpg",
+			"a-fc.jpg", "x-002.jpg", "x-003.jpg", "x-004.jpg",
 		}, hrefs, "readingOrder should be sorted alphabetically")
 	})
 }
@@ -69,7 +70,8 @@ func TestImageCoverFirstItem(t *testing.T) {
 		coverItem := pub.Manifest.ReadingOrder.FirstWithRel("cover")
 		assert.NotNil(t, coverItem, "readingOrder should have an item with rel=cover")
 
-		assert.Equal(t, "/Cory Doctorow's Futuristic Tales of the Here and Now/a-fc.jpg", coverItem.Href)
+		u, _ := url.URLFromDecodedPath("Cory Doctorow's Futuristic Tales of the Here and Now/a-fc.jpg")
+		assert.Equal(t, manifest.NewHREF(u).String(), coverItem.Href.String())
 	})
 }
 

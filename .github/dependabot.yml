@@ -3,14 +3,22 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: monthly
+    open-pull-requests-limit: 5
 
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: daily
+      interval: monthly
+    open-pull-requests-limit: 5
 
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: daily
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      golang:
+        applies-to: security-updates
+        patterns:
+          - "golang.org*"

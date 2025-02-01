@@ -286,7 +286,7 @@ var cbz_extensions = map[string]struct{}{
 	"jpeg": {}, "png": {}, "tif": {}, "tiff": {}, "webp": {}, "avif": {}, "jxl": {},
 
 	// Metadata
-	"acbf": {}, "xml": {}, "txt": {},
+	"acbf": {}, "xml": {}, "txt": {}, "json": {},
 }
 
 // Authorized extensions for resources in a ZAB archive (Zipped Audio Book).
@@ -348,6 +348,20 @@ func SniffPDF(context SnifferContext) *MediaType {
 	return nil
 }
 
+func SniffKnown(context SnifferContext) *MediaType {
+	for k, v := range knownMatches {
+		if context.HasMediaType(k) {
+			return v
+		}
+		if v.fileExtension != "" {
+			if v.fileExtension != "json" && context.HasFileExtension(v.fileExtension) {
+				return v
+			}
+		}
+	}
+	return nil
+}
+
 func SniffSystem(context SnifferContext) *MediaType {
 	for _, mt := range context.MediaTypes() {
 		mts := mt.String()
@@ -379,9 +393,6 @@ func SniffSystem(context SnifferContext) *MediaType {
 			continue
 		}
 		exr := exts[0]
-		if exr == ".htm" {
-			exr = ".html" // Fix for Go's first html extension being .htm
-		}
 		nm = strings.TrimSuffix(nm, "; charset=utf-8") // Fix for Go assuming file's content is UTF-8
 		if nmt, err := New(nm, "", exr[1:]); err == nil {
 			return &nmt

@@ -13,6 +13,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/xmlquery"
+	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"
 )
 
@@ -72,7 +73,10 @@ func ReadResourceAsString(r Resource) (string, *ResourceError) {
 	if ex != nil {
 		return "", ex
 	}
-	cs := r.Link().MediaType().Charset()
+	var cs encoding.Encoding
+	if r.Link().MediaType != nil {
+		cs = r.Link().MediaType.Charset()
+	}
 	if cs == nil {
 		cs = unicode.UTF8
 	}
@@ -392,6 +396,33 @@ func (r ProxyResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
 		return -1, Other(errors.New("resource is not compressed"))
 	}
 	return cres.StreamCompressed(w)
+}
+
+// StreamCompressedGzip implements CompressedResource
+func (r ProxyResource) StreamCompressedGzip(w io.Writer) (int64, *ResourceError) {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return -1, Other(errors.New("resource is not compressed"))
+	}
+	return cres.StreamCompressedGzip(w)
+}
+
+// ReadCompressed implements CompressedResource
+func (r ProxyResource) ReadCompressed() ([]byte, *ResourceError) {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return nil, Other(errors.New("resource is not compressed"))
+	}
+	return cres.ReadCompressed()
+}
+
+// ReadCompressedGzip implements CompressedResource
+func (r ProxyResource) ReadCompressedGzip() ([]byte, *ResourceError) {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return nil, Other(errors.New("resource is not compressed"))
+	}
+	return cres.ReadCompressedGzip()
 }
 
 /**

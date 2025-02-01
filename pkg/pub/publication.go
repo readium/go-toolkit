@@ -2,11 +2,10 @@ package pub
 
 import (
 	"encoding/json"
-	"path"
-	"strings"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 // The Publication shared model is the entrypoint for all the metadata and services related to a Readium publication.
@@ -14,7 +13,6 @@ type Publication struct {
 	Manifest manifest.Manifest // The manifest holding the publication metadata extracted from the publication file.
 	Fetcher  fetcher.Fetcher   // The underlying fetcher used to read publication resources.
 	// TODO servicesBuilder
-	// TODO positionsFactory
 	services map[string]Service
 }
 
@@ -26,7 +24,7 @@ func (p Publication) ConformsTo(profile manifest.Profile) bool {
 // Finds the first [Link] with the given href in the publication's links.
 // Searches through (in order) the reading order, resources and links recursively following alternate and children links.
 // If there's no match, tries again after removing any query parameter and anchor from the given href.
-func (p Publication) LinkWithHref(href string) *manifest.Link {
+func (p Publication) LinkWithHref(href url.URL) *manifest.Link {
 	return p.Manifest.LinkWithHref(href)
 }
 
@@ -91,32 +89,15 @@ func (p *Publication) Positions() []manifest.Locator {
 }
 
 // The URL where this publication is served, computed from the [Link] with `self` relation.
-func (p Publication) BaseURL() *string {
+func (p Publication) BaseURL() url.URL {
 	lnk := p.Manifest.Links.FirstWithRel("self")
 	if lnk == nil {
 		return nil
 	}
-	dir := path.Dir(lnk.Href)
-	return &dir
-}
-
-// Returns the first existing link matching the given [path].
-func (p Publication) Find(path string) *manifest.Link {
-	link := p.Manifest.Links.FirstWithHref(path)
-	if link == nil {
-		link = p.Manifest.ReadingOrder.FirstWithHref(path)
-		if link == nil {
-			link = p.Manifest.Resources.FirstWithHref(path)
-			if link == nil {
-				return nil
-			}
-		}
+	if !lnk.Href.IsTemplated() {
+		return lnk.URL(nil, nil)
 	}
-
-	if !strings.HasPrefix(link.Href, "/") {
-		link.Href = "/" + link.Href
-	}
-	return link
+	return nil
 }
 
 func (p Publication) FindService(serviceName string) Service {

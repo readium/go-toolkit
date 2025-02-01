@@ -3,13 +3,14 @@ package manifest
 // Readium Guided Navigation Document
 // https://readium.org/guided-navigation/schema/document.schema.json
 type GuidedNavigationDocument struct {
-	Links  []Link                   `json:"links,omitempty"` // References to other resources that are related to the current Guided Navigation Document.
+	Links  LinkList                 `json:"links,omitempty"` // References to other resources that are related to the current Guided Navigation Document.
 	Guided []GuidedNavigationObject `json:"guided"`          // A sequence of resources and/or media fragments into these resources, meant to be presented sequentially to the user.
 }
 
 // Readium Guided Navigation Object
 // https://readium.org/guided-navigation/schema/object.schema.json
 // TODO: Role should be typed
+// TODO: all refs should be url.URL
 type GuidedNavigationObject struct {
 	AudioRef string                   `json:"audioref,omitempty"` // References an audio resource or a fragment of it.
 	ImgRef   string                   `json:"imgref,omitempty"`   // References an image or a fragment of it.

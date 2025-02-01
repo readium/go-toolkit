@@ -41,8 +41,12 @@ func (f *FileFetcher) Links() (manifest.LinkList, error) {
 				return err
 			}
 
+			href, err := manifest.NewHREFFromString(filepath.ToSlash(filepath.Join(href, strings.TrimPrefix(apath, xpath))), false)
+			if err != nil {
+				return err
+			}
 			link := manifest.Link{
-				Href: filepath.ToSlash(filepath.Join(href, strings.TrimPrefix(apath, xpath))),
+				Href: href,
 			}
 
 			f, err := os.Open(apath)
@@ -50,14 +54,14 @@ func (f *FileFetcher) Links() (manifest.LinkList, error) {
 				defer f.Close()
 				mt := mediatype.OfFileOnly(f)
 				if mt != nil {
-					link.Type = mt.String()
+					link.MediaType = mt
 				}
 			} else {
 				ext := filepath.Ext(apath)
 				if ext != "" {
 					mt := mediatype.OfExtension(ext[1:])
 					if mt != nil {
-						link.Type = mt.String()
+						link.MediaType = mt
 					}
 				}
 			}
@@ -73,14 +77,8 @@ func (f *FileFetcher) Links() (manifest.LinkList, error) {
 
 // Get implements Fetcher
 func (f *FileFetcher) Get(link manifest.Link) Resource {
-	linkHref := link.Href
-	if !strings.HasPrefix(linkHref, "/") {
-		linkHref = "/" + linkHref
-	}
+	linkHref := link.Href.String()
 	for itemHref, itemFile := range f.paths {
-		if !strings.HasPrefix(itemHref, "/") {
-			itemHref = "/" + itemHref
-		}
 		if strings.HasPrefix(linkHref, itemHref) {
 			resourceFile := filepath.Join(itemFile, strings.TrimPrefix(linkHref, itemHref))
 			// Make sure that the requested resource is [path] or one of its descendant.

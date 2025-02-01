@@ -7,6 +7,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 // Positions Service for an PDF.
@@ -54,21 +55,23 @@ func (s *PositionsService) computePositions() [][]manifest.Locator {
 	positions := make([][]manifest.Locator, s.pageCount)
 	for i := uint(0); i < s.pageCount; i++ {
 		progression := float64(i) / float64(s.pageCount)
-		typ := s.link.Type
-		if typ == "" {
-			typ = mediatype.PDF.String()
+		typ := s.link.MediaType
+		if typ == nil {
+			typ = &mediatype.PDF
 		}
 		position := i + 1
 		fragment := fmt.Sprintf("page=%d", i+1)
 
+		u := s.link.URL(nil, nil)
+
 		var title string
-		if link := s.tableOfContents.FirstWithHref(s.link.Href + "#" + fragment); link != nil {
+		if link := s.tableOfContents.FirstWithHref(url.MustURLFromString(u.String() + "#" + fragment)); link != nil {
 			title = link.Title
 		}
 
 		positions[i] = []manifest.Locator{{
-			Href: s.link.Href,
-			Type: s.link.Type,
+			Href:      u,
+			MediaType: *typ,
 			Locations: manifest.Locations{
 				Fragments:        []string{fragment},
 				Progression:      &progression,

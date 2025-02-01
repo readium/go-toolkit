@@ -2,19 +2,24 @@ package pub
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
-	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 var GuidedNavigationLink = manifest.Link{
-	Href:      "/~readium/guided-navigation.json{?ref}",
-	Type:      mediatype.ReadiumGuidedNavigationDocument.String(),
-	Templated: true,
+	Href:      manifest.MustNewHREFFromString("~readium/guided-navigation.json{?ref}", true),
+	MediaType: &mediatype.ReadiumGuidedNavigationDocument,
+}
+
+// Pre-cached value of the guided navigation link's path
+var resolvedGuidedNavigation url.URL
+
+func init() {
+	resolvedGuidedNavigation = GuidedNavigationLink.URL(nil, nil)
 }
 
 // GuidedNavigationService implements Service
@@ -26,21 +31,14 @@ type GuidedNavigationService interface {
 }
 
 func GetForGuidedNavigationService(service GuidedNavigationService, link manifest.Link) (fetcher.Resource, bool) {
-	// TODO: this is a shortcut to avoid full href parsing and template expansion
-	// just just to check if the link is the guided navigation link. It should
-	// probably be replaced by something better after the url utilities are updated.
-	link.Href = strings.TrimPrefix(link.Href, "/")
-	if !strings.HasPrefix(link.Href, "~readium/guided-navigation.json") {
+	u := link.URL(nil, nil)
+
+	if u.Path() != resolvedGuidedNavigation.Path() {
+		// Not the guided navigation link
 		return nil, false
 	}
 
-	href := util.NewHREF(link.Href, "")
-	params, err := href.QueryParameters()
-	if err != nil {
-		// Failed parsing query parameters
-		return nil, false
-	}
-	ref := params.Get("ref")
+	ref := u.Raw().Query().Get("ref")
 	if ref == "" {
 		// No ref parameter
 		// TODO: support omission of ref to generate entire doc.
@@ -48,24 +46,22 @@ func GetForGuidedNavigationService(service GuidedNavigationService, link manifes
 		return nil, false
 	}
 
-	// Check if the provided link's href matches the guided navigation link in expanded form
-	expandedLink := GuidedNavigationLink.ExpandTemplate(map[string]string{
+	// Overrride the link's href with the expanded guided navigation link
+	expandedHref := GuidedNavigationLink.URL(nil, map[string]string{
 		"ref": ref,
 	})
-	if link.Href != strings.TrimPrefix(expandedLink.Href, "/") {
-		return nil, false
-	}
+	link.Href = manifest.NewHREF(expandedHref)
 
 	// Check if the referenced resource has a guided navigation document
 	if !service.HasGuideForResource(ref) {
 		return fetcher.NewFailureResource(
-			expandedLink, fetcher.NotFound(
+			link, fetcher.NotFound(
 				errors.New("referenced resource has no associated guided navigation document"),
 			),
 		), true
 	}
 
-	return fetcher.NewBytesResource(expandedLink, func() []byte {
+	return fetcher.NewBytesResource(link, func() []byte {
 		doc, err := service.GuideForResource(ref)
 		if err != nil {
 			// TODO: handle error somehow

@@ -16,7 +16,7 @@ type PublicationCollectionMap map[string][]PublicationCollection
 // https://readium.org/webpub-manifest/schema/subcollection.schema.json
 type PublicationCollection struct {
 	Metadata       map[string]interface{}   `json:"metadata,omitempty"`
-	Links          []Link                   `json:"links,omitempty"`
+	Links          LinkList                 `json:"links,omitempty"`
 	Subcollections PublicationCollectionMap `json:"-"`
 }
 
@@ -36,8 +36,9 @@ func appendPublicationCollectionToJSON(pc PublicationCollectionMap, obj map[stri
 // Parses a [PublicationCollection] from its RWPM JSON representation.
 //
 // TODO log [warnings] ?
-//  The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
-func PublicationCollectionFromJSON(rawJson interface{}, normalizeHref LinkHrefNormalizer) (*PublicationCollection, error) {
+//
+//	The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
+func PublicationCollectionFromJSON(rawJson interface{}) (*PublicationCollection, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -53,7 +54,7 @@ func PublicationCollectionFromJSON(rawJson interface{}, normalizeHref LinkHrefNo
 	case map[string]interface{}:
 		lkz, ok := dd["links"].([]interface{})
 		if ok {
-			links, err = LinksFromJSONArray(lkz, normalizeHref)
+			links, err = LinksFromJSONArray(lkz)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed unmarshalling 'links'")
 			}
@@ -67,12 +68,12 @@ func PublicationCollectionFromJSON(rawJson interface{}, normalizeHref LinkHrefNo
 		delete(dd, "links")
 		delete(dd, "metadata")
 
-		subcollections, err = PublicationCollectionsFromJSON(dd, normalizeHref)
+		subcollections, err = PublicationCollectionsFromJSON(dd)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling subcollections")
 		}
 	case []interface{}:
-		links, err = LinksFromJSONArray(dd, normalizeHref)
+		links, err = LinksFromJSONArray(dd)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling as Link array")
 		}
@@ -97,7 +98,7 @@ func (pc *PublicationCollection) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	fpc, err := PublicationCollectionFromJSON(object, LinkHrefNormalizerIdentity)
+	fpc, err := PublicationCollectionFromJSON(object)
 	if err != nil {
 		return err
 	}
@@ -120,7 +121,7 @@ func (pc PublicationCollection) MarshalJSON() ([]byte, error) {
 // Parses a map of [PublicationCollection] indexed by their roles from its RWPM JSON representation.
 //
 // The [Links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
-func PublicationCollectionsFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormalizer) (PublicationCollectionMap, error) {
+func PublicationCollectionsFromJSON(rawJson map[string]interface{}) (PublicationCollectionMap, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -136,7 +137,7 @@ func PublicationCollectionsFromJSON(rawJson map[string]interface{}, normalizeHre
 		sub := rawJson[role]
 
 		// Parses a list of links or a single collection object.
-		collection, err := PublicationCollectionFromJSON(sub, normalizeHref)
+		collection, err := PublicationCollectionFromJSON(sub)
 		if collection != nil {
 			if _, ok := collections[role]; ok {
 				collections[role] = append(collections[role], *collection)
@@ -147,7 +148,7 @@ func PublicationCollectionsFromJSON(rawJson map[string]interface{}, normalizeHre
 			// Parses a list of collection objects.
 			var newCollections []PublicationCollection
 			for j, v := range subArr {
-				c, err := PublicationCollectionFromJSON(v, normalizeHref)
+				c, err := PublicationCollectionFromJSON(v)
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed unmarshalling PublicationCollection for role %s at position %d", role, j)
 				}
@@ -178,7 +179,7 @@ func (pcm *PublicationCollectionMap) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	fpc, err := PublicationCollectionsFromJSON(object, LinkHrefNormalizerIdentity)
+	fpc, err := PublicationCollectionsFromJSON(object)
 	if err != nil {
 		return err
 	}

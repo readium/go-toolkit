@@ -155,7 +155,7 @@ func toJSONMap(value interface{}) (map[string]interface{}, error) {
 	return object, nil
 }
 
-func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormalizer) (*Metadata, error) {
+func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -222,98 +222,98 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 	metadata.Languages = languages
 
 	// Subjects
-	subjects, err := SubjectFromJSONArray(rawJson["subject"], normalizeHref)
+	subjects, err := SubjectFromJSONArray(rawJson["subject"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'subject'")
 	}
 	metadata.Subjects = subjects
 
 	// Contributors
-	contributors, err := ContributorFromJSONArray(rawJson["contributor"], normalizeHref)
+	contributors, err := ContributorFromJSONArray(rawJson["contributor"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'contributor'")
 	}
 	metadata.Contributors = contributors
 
 	// Publishers
-	contributors, err = ContributorFromJSONArray(rawJson["publisher"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["publisher"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'publisher'")
 	}
 	metadata.Publishers = contributors
 
 	// Imprints
-	contributors, err = ContributorFromJSONArray(rawJson["imprint"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["imprint"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'imprint'")
 	}
 	metadata.Imprints = contributors
 
 	// Authors
-	contributors, err = ContributorFromJSONArray(rawJson["author"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["author"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'author'")
 	}
 	metadata.Authors = contributors
 
 	// Translators
-	contributors, err = ContributorFromJSONArray(rawJson["translator"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["translator"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'translator'")
 	}
 	metadata.Translators = contributors
 
 	// Editors
-	contributors, err = ContributorFromJSONArray(rawJson["editor"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["editor"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'editor'")
 	}
 	metadata.Editors = contributors
 
 	// Artists
-	contributors, err = ContributorFromJSONArray(rawJson["artist"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["artist"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'artist'")
 	}
 	metadata.Artists = contributors
 
 	// Illustrators
-	contributors, err = ContributorFromJSONArray(rawJson["illustrator"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["illustrator"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'illustrator'")
 	}
 	metadata.Illustrators = contributors
 
 	// Letterers
-	contributors, err = ContributorFromJSONArray(rawJson["letterer"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["letterer"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'letterer'")
 	}
 	metadata.Letterers = contributors
 
 	// Pencilers
-	contributors, err = ContributorFromJSONArray(rawJson["penciler"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["penciler"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'penciler'")
 	}
 	metadata.Pencilers = contributors
 
 	// Colorists
-	contributors, err = ContributorFromJSONArray(rawJson["colorist"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["colorist"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'colorist'")
 	}
 	metadata.Colorists = contributors
 
 	// Inkers
-	contributors, err = ContributorFromJSONArray(rawJson["inker"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["inker"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'inker'")
 	}
 	metadata.Inkers = contributors
 
 	// Narrators
-	contributors, err = ContributorFromJSONArray(rawJson["narrator"], normalizeHref)
+	contributors, err = ContributorFromJSONArray(rawJson["narrator"])
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing 'narrator'")
 	}
@@ -343,7 +343,7 @@ func MetadataFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNorm
 			if v == nil {
 				continue
 			}
-			cl, err := ContributorFromJSONArray(v, normalizeHref)
+			cl, err := ContributorFromJSONArray(v)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed parsing 'belongsTo.%s'", k)
 			}
@@ -431,7 +431,7 @@ func (m *Metadata) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	fm, err := MetadataFromJSON(object, LinkHrefNormalizerIdentity)
+	fm, err := MetadataFromJSON(object)
 	if err != nil {
 		return err
 	}

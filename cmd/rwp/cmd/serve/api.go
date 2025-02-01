@@ -24,6 +24,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/readium/go-toolkit/pkg/streamer"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/zeebo/xxh3"
 )
 
@@ -67,32 +68,6 @@ func (s *Server) getPublication(filename string) (*pub.Publication, error) {
 			return nil, errors.Wrap(err, "failed opening "+cp)
 		}
 
-		// TODO: Remove this after we make links relative in the go-toolkit
-		for i, link := range pub.Manifest.Links {
-			pub.Manifest.Links[i] = makeRelative(link)
-		}
-		for i, link := range pub.Manifest.Resources {
-			pub.Manifest.Resources[i] = makeRelative(link)
-		}
-		for i, link := range pub.Manifest.ReadingOrder {
-			pub.Manifest.ReadingOrder[i] = makeRelative(link)
-		}
-		for i, link := range pub.Manifest.TableOfContents {
-			pub.Manifest.TableOfContents[i] = makeRelative(link)
-		}
-		var makeCollectionRelative func(mp manifest.PublicationCollectionMap)
-		makeCollectionRelative = func(mp manifest.PublicationCollectionMap) {
-			for i := range mp {
-				for j := range mp[i] {
-					for k := range mp[i][j].Links {
-						mp[i][j].Links[k] = makeRelative(mp[i][j].Links[k])
-					}
-					makeCollectionRelative(mp[i][j].Subcollections)
-				}
-			}
-		}
-		makeCollectionRelative(pub.Manifest.Subcollections)
-
 		// Cache the publication
 		encPub := &cache.CachedPublication{Publication: pub}
 		s.lfu.Set(cp, encPub)
@@ -122,10 +97,19 @@ func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
 		scheme = "https://"
 	}
 	rPath, _ := s.router.Get("manifest").URLPath("path", vars["path"])
+	conformsTo := conformsToAsMimetype(publication.Manifest.Metadata.ConformsTo)
+
+	selfUrl, err := url.AbsoluteURLFromString(scheme + req.Host + rPath.String())
+	if err != nil {
+		slog.Error("failed creating self URL", "error", err)
+		w.WriteHeader(500)
+		return
+	}
+
 	selfLink := &manifest.Link{
-		Rels: manifest.Strings{"self"},
-		Type: conformsToAsMimetype(publication.Manifest.Metadata.ConformsTo),
-		Href: scheme + req.Host + rPath.String(),
+		Rels:      manifest.Strings{"self"},
+		MediaType: &conformsTo,
+		Href:      manifest.NewHREF(selfUrl),
 	}
 
 	// Marshal the manifest
@@ -155,7 +139,7 @@ func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Add headers
-	w.Header().Set("content-type", conformsToAsMimetype(publication.Manifest.Metadata.ConformsTo)+"; charset=utf-8")
+	w.Header().Set("content-type", conformsTo.String()+"; charset=utf-8")
 	w.Header().Set("cache-control", "private, must-revalidate")
 	w.Header().Set("access-control-allow-origin", "*") // TODO: provide options?
 
@@ -190,9 +174,19 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse asset path from mux vars
+	href, err := url.URLFromDecodedPath(path.Clean(vars["asset"]))
+	if err != nil {
+		slog.Error("failed parsing asset path as URL", "error", err)
+		w.WriteHeader(400)
+		return
+	}
+	rawHref := href.Raw()
+	rawHref.RawQuery = r.URL.Query().Encode() // Add the query parameters of the URL
+	href, _ = url.RelativeURLFromGo(rawHref)  // Turn it back into a go-toolkit relative URL
+
 	// Make sure the asset exists in the publication
-	href := path.Clean(vars["asset"])
-	link := publication.Find(href)
+	link := publication.LinkWithHref(href)
 	if link == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -200,8 +194,8 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	finalLink := *link
 
 	// Expand templated links to include URL query parameters
-	if finalLink.Templated {
-		finalLink = finalLink.ExpandTemplate(convertURLValuesToMap(r.URL.Query()))
+	if finalLink.Href.IsTemplated() {
+		finalLink.Href = manifest.NewHREF(finalLink.URL(nil, convertURLValuesToMap(r.URL.Query())))
 	}
 
 	// Get the asset from the publication
@@ -217,7 +211,7 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Patch mimetype where necessary
-	contentType := link.MediaType().String()
+	contentType := link.MediaType.String()
 	if sub, ok := mimeSubstitutions[contentType]; ok {
 		contentType = sub
 	}
@@ -256,11 +250,20 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cres, ok := res.(fetcher.CompressedResource)
-	if ok && cres.CompressedAs(archive.CompressionMethodDeflate) && start == 0 && end == 0 && supportsDeflate(r) {
-		// Stream the asset in compressed format
-		w.Header().Set("content-encoding", "deflate")
-		w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength(), 10))
-		_, err = cres.StreamCompressed(w)
+	if ok && cres.CompressedAs(archive.CompressionMethodDeflate) && start == 0 && end == 0 {
+		// Stream the asset in compressed format if supported by the user agent
+		if supportsEncoding(r, "deflate") {
+			w.Header().Set("content-encoding", "deflate")
+			w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength(), 10))
+			_, err = cres.StreamCompressed(w)
+		} else if supportsEncoding(r, "gzip") && l <= archive.GzipMaxLength {
+			w.Header().Set("content-encoding", "gzip")
+			w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength()+archive.GzipWrapperLength, 10))
+			_, err = cres.StreamCompressedGzip(w)
+		} else {
+			// Fall back to normal streaming
+			_, rerr = res.Stream(w, start, end)
+		}
 	} else {
 		// Stream the asset
 		_, rerr = res.Stream(w, start, end)

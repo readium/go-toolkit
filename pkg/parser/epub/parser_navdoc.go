@@ -4,11 +4,11 @@ import (
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/readium/xmlquery"
 )
 
-func ParseNavDoc(document *xmlquery.Node, filePath string) map[string]manifest.LinkList {
+func ParseNavDoc(document *xmlquery.Node, filePath url.URL) map[string]manifest.LinkList {
 	ret := make(map[string]manifest.LinkList)
 	docPrefixes := parsePrefixes(SelectNodeAttrNs(document, NamespaceOPS, "prefix"))
 	for k, v := range ContentReservedPrefixes {
@@ -41,7 +41,7 @@ func ParseNavDoc(document *xmlquery.Node, filePath string) map[string]manifest.L
 	return ret
 }
 
-func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]string) ([]string, manifest.LinkList) {
+func parseNavElement(nav *xmlquery.Node, filePath url.URL, prefixMap map[string]string) ([]string, manifest.LinkList) {
 	typeAttr := SelectNodeAttrNs(nav, NamespaceOPS, "type")
 	if typeAttr == "" {
 		return nil, nil
@@ -60,7 +60,7 @@ func parseNavElement(nav *xmlquery.Node, filePath string, prefixMap map[string]s
 	return nil, nil
 }
 
-func parseOlElement(ol *xmlquery.Node, filePath string) manifest.LinkList {
+func parseOlElement(ol *xmlquery.Node, filePath url.URL) manifest.LinkList {
 	if ol == nil {
 		return nil
 	}
@@ -75,7 +75,7 @@ func parseOlElement(ol *xmlquery.Node, filePath string) manifest.LinkList {
 	return links
 }
 
-func parseLiElement(li *xmlquery.Node, filePath string) (link *manifest.Link) {
+func parseLiElement(li *xmlquery.Node, filePath url.URL) (link *manifest.Link) {
 	if li == nil {
 		return nil
 	}
@@ -88,21 +88,21 @@ func parseLiElement(li *xmlquery.Node, filePath string) (link *manifest.Link) {
 		title = strings.TrimSpace(muchSpaceSuchWowMatcher.ReplaceAllString(first.InnerText(), " "))
 	}
 	rawHref := first.SelectAttr("href")
-	href := "#"
+	href := url.MustURLFromString("#")
 	if first.Data == "a" && rawHref != "" {
-		s, err := util.NewHREF(rawHref, filePath).String()
+		s, err := url.FromEPUBHref(rawHref)
 		if err == nil {
-			href = s
+			href = filePath.Resolve(s)
 		}
 	}
 
 	children := parseOlElement(li.SelectElement(NSSelect(NamespaceXHTML, "ol")), filePath)
-	if len(children) == 0 && (href == "#" || title == "") {
+	if len(children) == 0 && (href.String() == "" || title == "") {
 		return nil
 	}
 	return &manifest.Link{
 		Title:    title,
-		Href:     href,
+		Href:     manifest.NewHREF(href),
 		Children: children,
 	}
 }

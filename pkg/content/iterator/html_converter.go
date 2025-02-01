@@ -1,7 +1,7 @@
 package iterator
 
 import (
-	"net/url"
+	nurl "net/url"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -9,7 +9,8 @@ import (
 	"github.com/readium/go-toolkit/pkg/content/element"
 	iutil "github.com/readium/go-toolkit/pkg/internal/util"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -72,14 +73,15 @@ func getAttr(n *html.Node, key string) string {
 	return ""
 }
 
-func srcRelativeToHref(n *html.Node, base string) *string {
+func srcRelativeToHref(n *html.Node, base url.URL) url.URL {
 	if n == nil {
 		return nil
 	}
 
 	if v := getAttr(n, "src"); v != "" {
-		h, _ := util.NewHREF(v, base).String()
-		return &h
+		if u, _ := url.URLFromString(v); u != nil {
+			return base.Resolve(u)
+		}
 	}
 	return nil
 }
@@ -336,10 +338,10 @@ func (c *HTMLConverter) Head(n *html.Node, depth int) {
 				cssSelector = &cs
 			}
 			elementLocator := manifest.Locator{
-				Href:  c.baseLocator.Href,
-				Type:  c.baseLocator.Type,
-				Title: c.baseLocator.Title,
-				Text:  c.baseLocator.Text,
+				Href:      c.baseLocator.Href,
+				MediaType: c.baseLocator.MediaType,
+				Title:     c.baseLocator.Title,
+				Text:      c.baseLocator.Text,
 				Locations: manifest.Locations{
 					OtherLocations: map[string]interface{}{
 						"cssSelector": cssSelector,
@@ -361,7 +363,7 @@ func (c *HTMLConverter) Head(n *html.Node, depth int) {
 					c.elements = append(c.elements, element.NewImageElement(
 						elementLocator,
 						manifest.Link{
-							Href: *href,
+							Href: manifest.NewHREF(href),
 						},
 						"", // FIXME: Get the caption from figcaption
 						atlist,
@@ -372,7 +374,7 @@ func (c *HTMLConverter) Head(n *html.Node, depth int) {
 				var link *manifest.Link
 				if href != nil {
 					link = &manifest.Link{
-						Href: *href,
+						Href: manifest.NewHREF(href),
 					}
 				} else {
 					sourceNodes := childrenOfType(n, atom.Source, 1)
@@ -380,10 +382,12 @@ func (c *HTMLConverter) Head(n *html.Node, depth int) {
 					for _, source := range sourceNodes {
 						if src := srcRelativeToHref(source, c.baseLocator.Href); src != nil {
 							l := manifest.Link{
-								Href: *src,
+								Href: manifest.NewHREF(href),
 							}
 							if typ := getAttr(source, "type"); typ != "" {
-								l.Type = typ
+								if mt, err := mediatype.NewOfString(typ); err == nil {
+									l.MediaType = &mt
+								}
 							}
 							sources = append(sources, l)
 						}
@@ -495,7 +499,7 @@ func (c *HTMLConverter) flushText() {
 				quote := element.Quote{}
 				for _, at := range el.Attr {
 					if at.Key == "cite" {
-						quote.ReferenceURL, _ = url.Parse(at.Val)
+						quote.ReferenceURL, _ = nurl.Parse(at.Val)
 					}
 					if at.Key == "title" {
 						quote.ReferenceTitle = at.Val
@@ -512,9 +516,9 @@ func (c *HTMLConverter) flushText() {
 	}
 	el := element.NewTextElement(
 		manifest.Locator{
-			Href:  c.baseLocator.Href,
-			Type:  c.baseLocator.Type,
-			Title: c.baseLocator.Title,
+			Href:      c.baseLocator.Href,
+			MediaType: c.baseLocator.MediaType,
+			Title:     c.baseLocator.Title,
 			Locations: manifest.Locations{
 				OtherLocations: map[string]interface{}{},
 			},
@@ -563,9 +567,9 @@ func (c *HTMLConverter) flushSegment() {
 		}
 		seg := element.TextSegment{
 			Locator: manifest.Locator{
-				Href:  c.baseLocator.Href,
-				Type:  c.baseLocator.Type,
-				Title: c.baseLocator.Title,
+				Href:      c.baseLocator.Href,
+				MediaType: c.baseLocator.MediaType,
+				Title:     c.baseLocator.Title,
 				Locations: manifest.Locations{
 					// TODO fix: needs to use baseLocator locations too!
 					OtherLocations: map[string]interface{}{},

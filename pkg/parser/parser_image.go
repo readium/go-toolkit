@@ -30,8 +30,10 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	}
 	readingOrder := make(manifest.LinkList, 0, len(links))
 	for _, link := range links {
+		path := link.URL(nil, nil).Path()
+
 		// Filter out all irrelevant files
-		if extensions.IsHiddenOrThumbs(link.Href) || !link.MediaType().IsBitmap() {
+		if extensions.IsHiddenOrThumbs(path) || !link.MediaType.IsBitmap() {
 			continue
 		}
 		readingOrder = append(readingOrder, link)
@@ -43,7 +45,7 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 
 	// Sort in alphabetical order
 	sort.Slice(readingOrder, func(i, j int) bool {
-		return readingOrder[i].Href < readingOrder[j].Href
+		return readingOrder[i].Href.String() < readingOrder[j].Href.String()
 	})
 
 	// Try to figure out the publication's title
@@ -65,7 +67,7 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	}
 
 	builder := pub.NewServicesBuilder(map[string]pub.ServiceFactory{
-		pub.PositionsService_Name: pub.PerResourcePositionsServiceFactory("image/*"),
+		pub.PositionsService_Name: pub.PerResourcePositionsServiceFactory(mediatype.MustNewOfString("image/*")),
 	})
 	return pub.NewBuilder(manifest, fetcher, builder), nil
 }
@@ -81,13 +83,15 @@ func (p ImageParser) accepts(asset asset.PublicationAsset, fetcher fetcher.Fetch
 		return false, err
 	}
 	for _, link := range links {
-		if extensions.IsHiddenOrThumbs(link.Href) {
+		path := link.URL(nil, nil).Path()
+
+		if extensions.IsHiddenOrThumbs(path) {
 			continue
 		}
-		if link.MediaType().IsBitmap() {
+		if link.MediaType.IsBitmap() {
 			continue
 		}
-		fext := filepath.Ext(strings.ToLower(link.Href))
+		fext := filepath.Ext(strings.ToLower(path))
 		if len(fext) > 1 {
 			fext = fext[1:] // Remove "." from extension
 		}

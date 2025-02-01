@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"path"
-	"strings"
 
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -23,17 +22,18 @@ func (f *ArchiveFetcher) Links() (manifest.LinkList, error) {
 	links := make(manifest.LinkList, 0, len(entries))
 	for _, af := range entries {
 		fp := path.Clean(af.Path())
-		if !strings.HasPrefix(fp, "/") {
-			fp = "/" + fp
+		href, err := manifest.NewHREFFromString(fp, false)
+		if err != nil {
+			return nil, err
 		}
 		link := manifest.Link{
-			Href: fp,
+			Href: href,
 		}
 		ext := path.Ext(fp)
 		if ext != "" {
 			mt := mediatype.OfExtension(ext[1:]) // Remove leading "."
 			if mt != nil {
-				link.Type = mt.String()
+				link.MediaType = mt
 			}
 		}
 		links = append(links, link)
@@ -43,7 +43,7 @@ func (f *ArchiveFetcher) Links() (manifest.LinkList, error) {
 
 // Get implements Fetcher
 func (f *ArchiveFetcher) Get(link manifest.Link) Resource {
-	entry, err := f.archive.Entry(strings.TrimPrefix(link.Href, "/"))
+	entry, err := f.archive.Entry(link.Href.String())
 	if err != nil {
 		return NewFailureResource(link, NotFound(err))
 	}
@@ -169,6 +169,33 @@ func (r *entryResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
 		return i, nil
 	}
 	return -1, Other(err)
+}
+
+// StreamCompressedGzip implements CompressedResource
+func (r *entryResource) StreamCompressedGzip(w io.Writer) (int64, *ResourceError) {
+	i, err := r.entry.StreamCompressedGzip(w)
+	if err == nil {
+		return i, nil
+	}
+	return -1, Other(err)
+}
+
+// ReadCompressed implements CompressedResource
+func (r *entryResource) ReadCompressed() ([]byte, *ResourceError) {
+	i, err := r.entry.ReadCompressed()
+	if err == nil {
+		return i, nil
+	}
+	return nil, Other(err)
+}
+
+// ReadCompressedGzip implements CompressedResource
+func (r *entryResource) ReadCompressedGzip() ([]byte, *ResourceError) {
+	i, err := r.entry.ReadCompressedGzip()
+	if err == nil {
+		return i, nil
+	}
+	return nil, Other(err)
 }
 
 // Length implements Resource

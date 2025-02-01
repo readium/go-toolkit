@@ -5,6 +5,8 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +21,7 @@ func loadPackageDoc(name string) (*manifest.Manifest, error) {
 		return nil, rerr.Cause
 	}
 
-	d, err := ParsePackageDocument(n, "OEBPS/content.opf")
+	d, err := ParsePackageDocument(n, url.MustURLFromString("OEBPS/content.opf"))
 	if err != nil {
 		return nil, err
 	}
@@ -114,12 +116,12 @@ func TestPackageDocLinkReadingOrder(t *testing.T) {
 
 	assert.Equal(t, manifest.LinkList{
 		{
-			Href: "/titlepage.xhtml",
-			Type: "application/xhtml+xml",
+			Href:      manifest.MustNewHREFFromString("titlepage.xhtml", false),
+			MediaType: &mediatype.XHTML,
 		},
 		{
-			Href: "/OEBPS/chapter01.xhtml",
-			Type: "application/xhtml+xml",
+			Href:      manifest.MustNewHREFFromString("OEBPS/chapter01.xhtml", false),
+			MediaType: &mediatype.XHTML,
 		},
 	}, p.ReadingOrder)
 }
@@ -128,44 +130,46 @@ func TestPackageDocLinkResources(t *testing.T) {
 	p, err := loadPackageDoc("links")
 	assert.NoError(t, err)
 
+	ft := mediatype.OfString("application/vnd.ms-opentype")
+
 	assert.Equal(t, manifest.LinkList{
 		{
-			Href: "/OEBPS/fonts/MinionPro.otf",
-			Type: "application/vnd.ms-opentype",
+			Href:      manifest.MustNewHREFFromString("OEBPS/fonts/MinionPro.otf", false),
+			MediaType: ft,
 		},
 		{
-			Href: "/OEBPS/nav.xhtml",
-			Type: "application/xhtml+xml",
-			Rels: manifest.Strings{"contents"},
+			Href:      manifest.MustNewHREFFromString("OEBPS/nav.xhtml", false),
+			MediaType: &mediatype.XHTML,
+			Rels:      manifest.Strings{"contents"},
 		},
 		{
-			Href: "/style.css",
-			Type: "text/css",
+			Href:      manifest.MustNewHREFFromString("style.css", false),
+			MediaType: &mediatype.CSS,
 		},
 		{
-			Href: "/OEBPS/chapter02.xhtml",
-			Type: "application/xhtml+xml",
+			Href:      manifest.MustNewHREFFromString("OEBPS/chapter02.xhtml", false),
+			MediaType: &mediatype.XHTML,
 		},
 		{
-			Href: "/OEBPS/chapter01.smil",
-			Type: "application/smil+xml",
+			Href:      manifest.MustNewHREFFromString("OEBPS/chapter01.smil", false),
+			MediaType: &mediatype.SMIL,
 		},
 		{
-			Href:     "/OEBPS/chapter02.smil",
-			Type:     "application/smil+xml",
-			Duration: 1949.0,
+			Href:      manifest.MustNewHREFFromString("OEBPS/chapter02.smil", false),
+			MediaType: &mediatype.SMIL,
+			Duration:  1949.0,
 		},
 		{
-			Href: "/OEBPS/images/alice01a.png",
-			Type: "image/png",
-			Rels: manifest.Strings{"cover"},
+			Href:      manifest.MustNewHREFFromString("OEBPS/images/alice01a.png", false),
+			MediaType: &mediatype.PNG,
+			Rels:      manifest.Strings{"cover"},
 		},
 		{
-			Href: "/OEBPS/images/alice02a.gif",
-			Type: "image/gif",
+			Href:      manifest.MustNewHREFFromString("OEBPS/images/alice02a.gif", false),
+			MediaType: &mediatype.GIF,
 		},
 		{
-			Href: "/OEBPS/nomediatype.txt",
+			Href: manifest.MustNewHREFFromString("OEBPS/nomediatype.txt", false),
 		},
 	}, p.Resources)
 }

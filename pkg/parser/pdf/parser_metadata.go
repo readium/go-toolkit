@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -12,6 +11,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/trimmer-io/go-xmp/xmp"
 )
 
@@ -33,8 +33,8 @@ func loadDecoder(meta pdfcpu.Metadata) (*xmp.Document, []byte, error) {
 func ParseMetadata(ctx *model.Context, link *manifest.Link) (m manifest.Manifest, err error) {
 	if link != nil {
 		m.ReadingOrder = manifest.LinkList{{
-			Href:       strings.TrimPrefix(link.Href, "/"),
-			Type:       mediatype.PDF.String(),
+			Href:       link.Href,
+			MediaType:  &mediatype.PDF,
 			Title:      link.Title,
 			Rels:       link.Rels,
 			Properties: link.Properties,
@@ -175,8 +175,8 @@ func ParsePDFMetadata(ctx *model.Context, m *manifest.Manifest) error {
 			m.Metadata.Modified = modDate
 		}
 	}
-	if ctx.CreationDate != "" && m.Metadata.Published == nil {
-		createDate := extensions.ParseDate(ctx.CreationDate)
+	if ctx.XRefTable.CreationDate != "" && m.Metadata.Published == nil {
+		createDate := extensions.ParseDate(ctx.XRefTable.CreationDate)
 		if createDate != nil {
 			m.Metadata.Published = createDate
 		}
@@ -185,17 +185,17 @@ func ParsePDFMetadata(ctx *model.Context, m *manifest.Manifest) error {
 	// Bookmarks (TOC)
 	if bookmarks, err := pdfcpu.Bookmarks(ctx); err == nil {
 		rootLink := m.ReadingOrder.FirstWithMediaType(&mediatype.PDF)
-		root := ""
-		if rootLink != nil {
-			root = rootLink.Href
-		}
 		var bf func(toc manifest.LinkList, bookmarks []pdfcpu.Bookmark)
 		bf = func(toc manifest.LinkList, bookmarks []pdfcpu.Bookmark) {
 			for _, b := range bookmarks {
 				lnk := manifest.Link{
-					Href:  fmt.Sprintf("%s#page=%d", root, b.PageFrom),
-					Title: b.Title,
-					Type:  mediatype.PDF.String(),
+					Title:     b.Title,
+					MediaType: &mediatype.PDF,
+				}
+				if rootLink == nil {
+					lnk.Href = manifest.NewHREF(url.MustURLFromString(fmt.Sprintf("#page=%d", b.PageFrom)))
+				} else {
+					lnk.Href = manifest.NewHREF(url.MustURLFromString(fmt.Sprintf("%s#page=%d", rootLink.URL(nil, nil).String(), b.PageFrom)))
 				}
 				if len(b.Kids) > 0 {
 					bf(lnk.Children, b.Kids)

@@ -14,8 +14,8 @@ import (
 // TODO content iterator special ~readium link
 
 var ContentLink = manifest.Link{
-	Href: "/~readium/content.json",
-	Type: mediatype.ReadiumContentDocument.String(),
+	Href:      manifest.MustNewHREFFromString("~readium/content.json", false),
+	MediaType: &mediatype.ReadiumContentDocument,
 }
 
 // TODO uri template or something so we're not just dumping entire content

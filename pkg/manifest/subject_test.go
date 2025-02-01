@@ -8,7 +8,7 @@ import (
 )
 
 func TestSubjectUnmarshalJSONString(t *testing.T) {
-	s, err := SubjectFromJSON("Fantasy", nil)
+	s, err := SubjectFromJSON("Fantasy")
 	assert.NoError(t, err)
 
 	assert.Equal(t, &Subject{
@@ -45,14 +45,14 @@ func TestSubjectUnmarshalFullJSON(t *testing.T) {
 		Scheme:          "http://scheme",
 		Code:            "CODE",
 		Links: []Link{
-			{Href: "pub1"},
-			{Href: "pub2"},
+			{Href: MustNewHREFFromString("pub1", false)},
+			{Href: MustNewHREFFromString("pub2", false)},
 		},
 	}, &s, "parsed JSON object should be equal to Subject object")
 }
 
 func TestSubjectUnmarshalNilJSON(t *testing.T) {
-	s, err := SubjectFromJSON(nil, nil)
+	s, err := SubjectFromJSON(nil)
 	assert.NoError(t, err)
 	assert.Nil(t, s)
 }
@@ -82,13 +82,13 @@ func TestSubjectUnmarshalJSONArray(t *testing.T) {
 }
 
 func TestSubjectUnmarshalNilJSONArray(t *testing.T) {
-	ss, err := SubjectFromJSONArray(nil, nil)
+	ss, err := SubjectFromJSONArray(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(ss))
 }
 
 func TestSubjectUnmarshalJSONArrayString(t *testing.T) {
-	ss, err := SubjectFromJSONArray("Fantasy", nil)
+	ss, err := SubjectFromJSONArray("Fantasy")
 	assert.NoError(t, err)
 	assert.Equal(t, []Subject{
 		{LocalizedName: NewLocalizedStringFromString("Fantasy")},
@@ -122,8 +122,8 @@ func TestSubjectFullJSON(t *testing.T) {
 		Scheme:          "http://scheme",
 		Code:            "CODE",
 		Links: []Link{
-			{Href: "pub1"},
-			{Href: "pub2"},
+			{Href: MustNewHREFFromString("pub1", false)},
+			{Href: MustNewHREFFromString("pub2", false)},
 		},
 	})
 	assert.NoError(t, err)

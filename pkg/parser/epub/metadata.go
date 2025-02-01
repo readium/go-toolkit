@@ -8,7 +8,8 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/readium/xmlquery"
 )
 
@@ -20,9 +21,9 @@ type Title struct {
 }
 
 type EPUBLink struct {
-	href       string
+	href       url.URL
 	rels       []string // set
-	mediaType  string
+	mediaType  *mediatype.MediaType
 	refines    string
 	properties []string
 }
@@ -49,7 +50,7 @@ func NewMetadataParser(epubVersion float64, prefixMap map[string]string) Metadat
 	}
 }
 
-func (m MetadataParser) Parse(document *xmlquery.Node, filePath string) *EPUBMetadata {
+func (m MetadataParser) Parse(document *xmlquery.Node, filePath url.URL) *EPUBMetadata {
 	// Init lang
 	if l := document.SelectElement("/" + NSSelect(NamespaceOPF, "package")); l != nil {
 		for _, attr := range l.Attr {
@@ -123,7 +124,7 @@ func (m MetadataParser) language(element *xmlquery.Node) string {
 	return m.metaLanguage
 }
 
-func (m MetadataParser) parseElements(metadataElement *xmlquery.Node, filePath string) ([]MetadataItem, []EPUBLink) {
+func (m MetadataParser) parseElements(metadataElement *xmlquery.Node, filePath url.URL) ([]MetadataItem, []EPUBLink) {
 	var metas []MetadataItem
 	var links []EPUBLink
 
@@ -149,7 +150,7 @@ func (m MetadataParser) parseElements(metadataElement *xmlquery.Node, filePath s
 	return metas, links
 }
 
-func (m MetadataParser) parseLinkElement(element *xmlquery.Node, filePath string) *EPUBLink {
+func (m MetadataParser) parseLinkElement(element *xmlquery.Node, filePath url.URL) *EPUBLink {
 	if element == nil {
 		return nil
 	}
@@ -157,15 +158,15 @@ func (m MetadataParser) parseLinkElement(element *xmlquery.Node, filePath string
 	if href == "" {
 		return nil
 	}
-
-	hr, err := util.NewHREF(href, filePath).String()
+	u, err := url.FromEPUBHref(href)
 	if err != nil {
 		return nil
 	}
+	hr := filePath.Resolve(u)
 
 	link := &EPUBLink{
 		href:      hr,
-		mediaType: element.SelectAttr("media-type"),
+		mediaType: mediatype.MaybeNewOfString(element.SelectAttr("media-type")),
 		refines:   strings.TrimPrefix(element.SelectAttr("refines"), "#"),
 	}
 
@@ -645,6 +646,7 @@ func (m PubMetadataAdapter) Accessibility() *manifest.A11y {
 	a11y.AccessModesSufficient = m.a11yAccessModesSufficient()
 	a11y.Features = m.a11yFeatures()
 	a11y.Hazards = m.a11yHazards()
+	a11y.Exemptions = m.a11yExemptions()
 
 	if a11y.IsEmpty() {
 		return nil
@@ -664,7 +666,7 @@ func (m PubMetadataAdapter) a11yConformsTo() []manifest.A11yProfile {
 	}
 
 	for _, link := range m.Links(VocabularyDCTerms + "conformsTo") {
-		if profile := a11yProfile(link.href); profile != "" {
+		if profile := a11yProfile(link.href.String()); profile != "" {
 			profiles = append(profiles, profile)
 		}
 	}
@@ -711,14 +713,14 @@ func (m PubMetadataAdapter) a11yCertification() *manifest.A11yCertification {
 			c.Credential = items[0].value
 		}
 		if link, ok := m.FirstLinkRefining(VocabularyA11Y+"certifierReport", certifierItem.id); ok {
-			c.Report = link.href
+			c.Report = link.href.String()
 		}
 	} else {
 		c.Credential = m.FirstValue(VocabularyA11Y + "certifierCredential")
 		c.Report = m.FirstValue(VocabularyA11Y + "certifierReport")
 		if c.Report == "" {
 			if link, ok := m.FirstLink(VocabularyA11Y + "certifierReport"); ok {
-				c.Report = link.href
+				c.Report = link.href.String()
 			}
 		}
 	}
@@ -780,6 +782,15 @@ func (m PubMetadataAdapter) a11yHazards() []manifest.A11yHazard {
 	hazards := make([]manifest.A11yHazard, len(values))
 	for i, v := range values {
 		hazards[i] = manifest.A11yHazard(v)
+	}
+	return hazards
+}
+
+func (m PubMetadataAdapter) a11yExemptions() []manifest.A11yExemption {
+	values := m.Values(VocabularyA11Y + "exemption")
+	hazards := make([]manifest.A11yExemption, len(values))
+	for i, v := range values {
+		hazards[i] = manifest.A11yExemption(v)
 	}
 	return hazards
 }

@@ -4,11 +4,11 @@ import (
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/readium/xmlquery"
 )
 
-func ParseNCX(document *xmlquery.Node, filePath string) map[string]manifest.LinkList {
+func ParseNCX(document *xmlquery.Node, filePath url.URL) map[string]manifest.LinkList {
 	toc := document.SelectElement("//" + NSSelect(NamespaceNCX, "navMap"))
 	pageList := document.SelectElement("//" + NSSelect(NamespaceNCX, "pageList"))
 
@@ -29,7 +29,7 @@ func ParseNCX(document *xmlquery.Node, filePath string) map[string]manifest.Link
 	return ret
 }
 
-func parseNavMapElement(element *xmlquery.Node, filePath string) manifest.LinkList {
+func parseNavMapElement(element *xmlquery.Node, filePath url.URL) manifest.LinkList {
 	var links manifest.LinkList
 	for _, el := range element.SelectElements(NSSelect(NamespaceNCX, "navPoint")) {
 		if p := parseNavPointElement(el, filePath); p != nil {
@@ -39,24 +39,24 @@ func parseNavMapElement(element *xmlquery.Node, filePath string) manifest.LinkLi
 	return links
 }
 
-func parsePageListElement(element *xmlquery.Node, filePath string) manifest.LinkList {
+func parsePageListElement(element *xmlquery.Node, filePath url.URL) manifest.LinkList {
 	selectedElements := element.SelectElements(NSSelect(NamespaceNCX, "pageTarget"))
 	links := make([]manifest.Link, 0, len(selectedElements))
 	for _, el := range selectedElements {
 		href := extractHref(el, filePath)
 		title := extractTitle(el)
-		if href == "" || title == "" {
+		if href == nil || title == "" {
 			continue
 		}
 		links = append(links, manifest.Link{
 			Title: title,
-			Href:  href,
+			Href:  manifest.NewHREF(href),
 		})
 	}
 	return links
 }
 
-func parseNavPointElement(element *xmlquery.Node, filePath string) *manifest.Link {
+func parseNavPointElement(element *xmlquery.Node, filePath url.URL) *manifest.Link {
 	title := extractTitle(element)
 	href := extractHref(element, filePath)
 	var children manifest.LinkList
@@ -65,15 +65,15 @@ func parseNavPointElement(element *xmlquery.Node, filePath string) *manifest.Lin
 			children = append(children, *p)
 		}
 	}
-	if len(children) == 0 && (href == "" || title == "") {
+	if len(children) == 0 && (href == nil || title == "") {
 		return nil
 	}
-	if href == "" {
-		href = "#"
+	if href == nil {
+		href = url.MustURLFromString("#")
 	}
 	return &manifest.Link{
 		Title:    title,
-		Href:     href,
+		Href:     manifest.NewHREF(href),
 		Children: children,
 	}
 }
@@ -86,15 +86,18 @@ func extractTitle(element *xmlquery.Node) string {
 	return strings.TrimSpace(muchSpaceSuchWowMatcher.ReplaceAllString(tel.InnerText(), " "))
 }
 
-func extractHref(element *xmlquery.Node, filePath string) string {
+func extractHref(element *xmlquery.Node, filePath url.URL) url.URL {
 	el := element.SelectElement(NSSelect(NamespaceNCX, "content"))
 	if el == nil {
-		return ""
+		return nil
 	}
 	src := el.SelectAttr("src")
 	if src == "" {
-		return ""
+		return nil
 	}
-	s, _ := util.NewHREF(src, filePath).String()
-	return s
+
+	if s, err := url.FromEPUBHref(src); err == nil {
+		return filePath.Resolve(s)
+	}
+	return nil
 }

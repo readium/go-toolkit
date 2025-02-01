@@ -5,24 +5,25 @@ import (
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/stretchr/testify/assert"
 )
 
 var testFileFetcher = &FileFetcher{
 	paths: map[string]string{
-		"/file_href": "./testdata/text.txt",
-		"/dir_href":  "./testdata/directory",
+		"file_href": "./testdata/text.txt",
+		"dir_href":  "./testdata/directory",
 	},
 }
 
 func TestFileFetcherLengthNotFound(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/unknown"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("unknown", false)})
 	_, err := resource.Length()
 	assert.Equal(t, NotFound(err.Cause), err)
 }
 
 func TestFileFetcherReadNotFound(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/unknown"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("unknown", false)})
 	_, err := resource.Read(0, 0)
 	assert.Equal(t, NotFound(err.Cause), err)
 	_, err = resource.Stream(&bytes.Buffer{}, 0, 0)
@@ -30,7 +31,7 @@ func TestFileFetcherReadNotFound(t *testing.T) {
 }
 
 func TestFileFetcherHrefInMap(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/file_href"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("file_href", false)})
 	bin, err := resource.Read(0, 0)
 	if assert.Nil(t, err) {
 		assert.Equal(t, "text", string(bin))
@@ -44,7 +45,7 @@ func TestFileFetcherHrefInMap(t *testing.T) {
 }
 
 func TestFileFetcherDirectoryFile(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/dir_href/text1.txt"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("dir_href/text1.txt", false)})
 	bin, err := resource.Read(0, 0)
 	if assert.Nil(t, err) {
 		assert.Equal(t, "text1", string(bin))
@@ -58,7 +59,7 @@ func TestFileFetcherDirectoryFile(t *testing.T) {
 }
 
 func TestFileFetcherSubdirectoryFile(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/dir_href/subdirectory/text2.txt"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("dir_href/subdirectory/text2.txt", false)})
 	bin, err := resource.Read(0, 0)
 	assert.Nil(t, err)
 	assert.Equal(t, "text2", string(bin))
@@ -71,7 +72,7 @@ func TestFileFetcherSubdirectoryFile(t *testing.T) {
 }
 
 func TestFileFetcherDirectoryNotFound(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/dir_href/subdirectory"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("dir_href/subdirectory", false)})
 	_, err := resource.Read(0, 0)
 	assert.Equal(t, NotFound(err.Cause), err)
 	_, err = resource.Stream(&bytes.Buffer{}, 0, 0)
@@ -79,7 +80,7 @@ func TestFileFetcherDirectoryNotFound(t *testing.T) {
 }
 
 func TestFileFetcherDirectoryTraversalNotFound(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/dir_href/../text.txt"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("dir_href/../text.txt", false)})
 	_, err := resource.Read(0, 0)
 	assert.Equal(t, NotFound(err.Cause), err, "cannot traverse up a directory using '..'")
 	_, err = resource.Stream(&bytes.Buffer{}, 0, 0)
@@ -87,7 +88,7 @@ func TestFileFetcherDirectoryTraversalNotFound(t *testing.T) {
 }
 
 func TestFileFetcherReadRange(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/file_href"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("file_href", false)})
 	bin, err := resource.Read(0, 2)
 	if assert.Nil(t, err) {
 		assert.Equal(t, "tex", string(bin), "read data should be the first three bytes of the file")
@@ -102,7 +103,7 @@ func TestFileFetcherReadRange(t *testing.T) {
 }
 
 func TestFileFetcherTwoRangesSameResource(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/file_href"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("file_href", false)})
 	bin, err := resource.Read(0, 1)
 	if assert.Nil(t, err) {
 		assert.Equal(t, "te", string(bin))
@@ -127,7 +128,7 @@ func TestFileFetcherTwoRangesSameResource(t *testing.T) {
 }
 
 func TestFileFetcherOutOfRangeClamping(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/file_href"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("file_href", false)})
 	bin, err := resource.Read(-5, 60)
 	if assert.Nil(t, err) {
 		assert.Equal(t, "text", string(bin))
@@ -141,7 +142,7 @@ func TestFileFetcherOutOfRangeClamping(t *testing.T) {
 }
 
 func TestFileFetcherDecreasingRange(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/file_href"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("file_href", false)})
 	_, err := resource.Read(60, 20)
 	if assert.Error(t, err) {
 		assert.Equal(t, RangeNotSatisfiable(err.Cause), err, "range isn't satisfiable")
@@ -153,20 +154,20 @@ func TestFileFetcherDecreasingRange(t *testing.T) {
 }
 
 func TestFileFetcherComputingLength(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/file_href"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("file_href", false)})
 	length, err := resource.Length()
 	assert.Nil(t, err)
 	assert.EqualValues(t, 4, length)
 }
 
 func TestFileFetcherDirectoryLengthNotFound(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/dir_href/subdirectory"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("dir_href/subdirectory", false)})
 	_, err := resource.Length()
 	assert.Equal(t, NotFound(err.Cause), err)
 }
 
 func TestFileFetcherFileNotFoundLength(t *testing.T) {
-	resource := testFileFetcher.Get(manifest.Link{Href: "/unknown"})
+	resource := testFileFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("unknown", false)})
 	_, err := resource.Length()
 	assert.Equal(t, NotFound(err.Cause), err)
 }
@@ -176,17 +177,17 @@ func TestFileFetcherLinks(t *testing.T) {
 	assert.Nil(t, err)
 
 	mustContain := manifest.LinkList{{
-		Href: "/dir_href/subdirectory/hello.mp3",
-		Type: "audio/mpeg",
+		Href:      manifest.MustNewHREFFromString("dir_href/subdirectory/hello.mp3", false),
+		MediaType: &mediatype.MP3,
 	}, {
-		Href: "/dir_href/subdirectory/text2.txt",
-		Type: "text/plain",
+		Href:      manifest.MustNewHREFFromString("dir_href/subdirectory/text2.txt", false),
+		MediaType: &mediatype.Text,
 	}, {
-		Href: "/dir_href/text1.txt",
-		Type: "text/plain",
+		Href:      manifest.MustNewHREFFromString("dir_href/text1.txt", false),
+		MediaType: &mediatype.Text,
 	}, {
-		Href: "/file_href",
-		Type: "text/plain",
+		Href:      manifest.MustNewHREFFromString("file_href", false),
+		MediaType: &mediatype.Text,
 	}}
 
 	assert.ElementsMatch(t, mustContain, links)

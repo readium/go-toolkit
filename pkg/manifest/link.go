@@ -2,106 +2,84 @@ package manifest
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/mediatype"
-	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
-
-// Function used to recursively transform the href of a [Link] when parsing its JSON representation.
-type LinkHrefNormalizer func(href string) (string, error)
-
-// Default href normalizer for [Link], doing nothing.
-func LinkHrefNormalizerIdentity(href string) (string, error) {
-	return href, nil
-}
 
 // Link
 // https://github.com/readium/webpub-manifest/blob/master/README.md#24-the-link-object
 // https://github.com/readium/webpub-manifest/blob/master/schema/link.schema.json
 type Link struct {
-	Href       string     `json:"href"`                 // URI or URI template of the linked resource.
-	Type       string     `json:"type,omitempty"`       // MIME type of the linked resource.
-	Templated  bool       `json:"templated,omitempty"`  // Indicates that a URI template is used in href.
-	Title      string     `json:"title,omitempty"`      // Title of the linked resource.
-	Rels       Strings    `json:"rel,omitempty"`        // Relation between the linked resource and its containing collection.
-	Properties Properties `json:"properties,omitempty"` // Properties associated to the linked resource.
-	Height     uint       `json:"height,omitempty"`     // Height of the linked resource in pixels.
-	Width      uint       `json:"width,omitempty"`      // Width of the linked resource in pixels.
-	Bitrate    float64    `json:"bitrate,omitempty"`    // Bitrate of the linked resource in kbps.
-	Duration   float64    `json:"duration,omitempty"`   // Length of the linked resource in seconds.
-	Languages  Strings    `json:"language,omitempty"`   // Expected language of the linked resource (BCP 47 tag).
-	Alternates LinkList   `json:"alternate,omitempty"`  // Alternate resources for the linked resource.
-	Children   LinkList   `json:"children,omitempty"`   // Resources that are children of the linked resource, in the context of a given collection role.
+	Href       HREF                 `json:"href"`                 // URI or URI template of the linked resource.
+	MediaType  *mediatype.MediaType `json:"type,omitempty"`       // MIME type of the linked resource.
+	Title      string               `json:"title,omitempty"`      // Title of the linked resource.
+	Rels       Strings              `json:"rel,omitempty"`        // Relation between the linked resource and its containing collection.
+	Properties Properties           `json:"properties,omitempty"` // Properties associated to the linked resource.
+	Height     uint                 `json:"height,omitempty"`     // Height of the linked resource in pixels.
+	Width      uint                 `json:"width,omitempty"`      // Width of the linked resource in pixels.
+	Bitrate    float64              `json:"bitrate,omitempty"`    // Bitrate of the linked resource in kbps.
+	Duration   float64              `json:"duration,omitempty"`   // Length of the linked resource in seconds.
+	Languages  Strings              `json:"language,omitempty"`   // Expected language of the linked resource (BCP 47 tag).
+	Alternates LinkList             `json:"alternate,omitempty"`  // Alternate resources for the linked resource.
+	Children   LinkList             `json:"children,omitempty"`   // Resources that are children of the linked resource, in the context of a given collection role.
 }
 
-func (l Link) MediaType() mediatype.MediaType {
-	mt := mediatype.OfString(l.Type)
-	if mt == nil {
-		return mediatype.Binary
-	}
-	return *mt
-}
-
-// List of URI template parameter keys, if the [Link] is templated.
-func (l Link) TemplateParameters() []string {
-	if !l.Templated {
-		return nil
-	}
-	return util.NewURITemplate(l.Href).Parameters()
-}
-
-// Expands the HREF by replacing URI template variables by the given parameters.
-func (l Link) ExpandTemplate(parameters map[string]string) Link {
-	l.Href = util.NewURITemplate(l.Href).Expand(parameters)
-	l.Templated = false
-	return l
-}
-
-// Computes an absolute URL to the link, relative to the given [baseUrl].
-// If the link's [href] is already absolute, the [baseUrl] is ignored.
-func (l Link) ToURL(baseURL string) string {
-	href := strings.TrimPrefix(l.Href, "/")
-	if href == "" {
-		return ""
-	}
-	if baseURL == "" {
-		baseURL = "/"
-	}
-	h, _ := util.NewHREF(href, baseURL).PercentEncodedString()
-	return h
+// Returns the URL represented by this link's HREF, resolved to the given [base] URL.
+// If the HREF is a template, the [parameters] are used to expand it according to RFC 6570.
+func (l Link) URL(base url.URL, parameters map[string]string) url.URL {
+	return l.Href.Resolve(base, parameters)
 }
 
 // Creates an [Link] from its RWPM JSON representation.
-func LinkFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormalizer) (*Link, error) {
+func LinkFromJSON(rawJson map[string]interface{}) (*Link, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
 
-	href, ok := rawJson["href"].(string)
+	rawHref, ok := rawJson["href"].(string)
 	if !ok {
 		// Warning: [href] is required
 		return nil, errors.New("'href' is required in link")
 	}
 
-	if normalizeHref == nil {
-		normalizeHref = LinkHrefNormalizerIdentity
-	}
-	href, err := normalizeHref(href)
-	if err != nil {
-		return nil, err
+	templated := parseOptBool(rawJson["templated"])
+	var href HREF
+	var err error
+	if templated {
+		href, err = NewHREFFromString(rawHref, templated)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling 'href' as URL template")
+		}
+	} else {
+		u, err := url.URLFromString(rawHref)
+		if err != nil {
+			u, err = url.URLFromDecodedPath(rawHref)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed unmarshalling 'href' as URL")
+			}
+		}
+		href = NewHREF(u)
 	}
 
 	link := &Link{
-		Href:      href,
-		Type:      parseOptString(rawJson["type"]),
-		Templated: parseOptBool(rawJson["templated"]),
-		Title:     parseOptString(rawJson["title"]),
-		Height:    float64ToUint(parseOptFloat64(rawJson["height"])),
-		Width:     float64ToUint(parseOptFloat64(rawJson["width"])),
-		Bitrate:   float64Positive(parseOptFloat64(rawJson["bitrate"])),
-		Duration:  float64Positive(parseOptFloat64(rawJson["duration"])),
+		Href:     href,
+		Title:    parseOptString(rawJson["title"]),
+		Height:   float64ToUint(parseOptFloat64(rawJson["height"])),
+		Width:    float64ToUint(parseOptFloat64(rawJson["width"])),
+		Bitrate:  float64Positive(parseOptFloat64(rawJson["bitrate"])),
+		Duration: float64Positive(parseOptFloat64(rawJson["duration"])),
+	}
+
+	// Media Type
+	rawType := parseOptString(rawJson["type"])
+	if rawType != "" {
+		mediaType, err := mediatype.NewOfString(rawType)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed unmarshalling 'type' as valid mimetype")
+		}
+		link.MediaType = &mediaType
 	}
 
 	// Properties
@@ -127,7 +105,7 @@ func LinkFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormaliz
 	// Alternates
 	rawAlternates, ok := rawJson["alternate"].([]interface{})
 	if ok {
-		alternates, err := LinksFromJSONArray(rawAlternates, normalizeHref)
+		alternates, err := LinksFromJSONArray(rawAlternates)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling 'alternate'")
 		}
@@ -137,7 +115,7 @@ func LinkFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormaliz
 	// Children
 	rawChildren, ok := rawJson["children"].([]interface{})
 	if ok {
-		children, err := LinksFromJSONArray(rawChildren, normalizeHref)
+		children, err := LinksFromJSONArray(rawChildren)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling 'children'")
 		}
@@ -147,7 +125,7 @@ func LinkFromJSON(rawJson map[string]interface{}, normalizeHref LinkHrefNormaliz
 	return link, nil
 }
 
-func LinksFromJSONArray(rawJsonArray []interface{}, normalizeHref LinkHrefNormalizer) ([]Link, error) {
+func LinksFromJSONArray(rawJsonArray []interface{}) ([]Link, error) {
 	links := make([]Link, 0, len(rawJsonArray))
 	for i, entry := range rawJsonArray {
 		entry, ok := entry.(map[string]interface{})
@@ -155,7 +133,7 @@ func LinksFromJSONArray(rawJsonArray []interface{}, normalizeHref LinkHrefNormal
 			// TODO: Should this be a "warning", an error, or completely ignored?
 			continue
 		}
-		rl, err := LinkFromJSON(entry, normalizeHref)
+		rl, err := LinkFromJSON(entry)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed unmarshalling Link at position %d", i)
 		}
@@ -173,7 +151,7 @@ func (l *Link) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	fl, err := LinkFromJSON(object, LinkHrefNormalizerIdentity)
+	fl, err := LinkFromJSON(object)
 	if err != nil {
 		return err
 	}
@@ -183,12 +161,12 @@ func (l *Link) UnmarshalJSON(b []byte) error {
 
 func (l Link) MarshalJSON() ([]byte, error) {
 	res := make(map[string]interface{})
-	res["href"] = l.Href
-	if l.Type != "" {
-		res["type"] = l.Type
+	res["href"] = l.Href.String()
+	if l.MediaType != nil {
+		res["type"] = l.MediaType.String()
 	}
-	if l.Templated {
-		res["templated"] = l.Templated
+	if l.Href.IsTemplated() {
+		res["templated"] = true
 	}
 	if l.Title != "" {
 		res["title"] = l.Title
@@ -227,42 +205,20 @@ func (l Link) MarshalJSON() ([]byte, error) {
 type LinkList []Link
 
 // Returns the first [Link] with the given [href], or null if not found.
-func (ll LinkList) IndexOfFirstWithHref(href string) int {
+func (ll LinkList) IndexOfFirstWithHref(href url.URL) int {
 	for i, link := range ll {
-		if link.Templated {
-			if strings.TrimPrefix(link.ExpandTemplate(nil).Href, "/") == href {
-				// TODO: remove trimming when href utils are updated
-				return i
-			}
-		}
-		if link.Href == href {
+		if link.URL(nil, nil).Equivalent(href) {
 			return i
-		}
-		for _, alt := range link.Alternates {
-			if alt.Href == href {
-				return i
-			}
 		}
 	}
 	return -1
 }
 
 // Finds the first link matching the given HREF.
-func (ll LinkList) FirstWithHref(href string) *Link {
+func (ll LinkList) FirstWithHref(href url.URL) *Link {
 	for _, link := range ll {
-		if link.Templated {
-			if strings.TrimPrefix(link.ExpandTemplate(nil).Href, "/") == href {
-				// TODO: remove trimming when href utils are updated
-				return &link
-			}
-		}
-		if link.Href == href {
+		if link.URL(nil, nil).Equivalent(href) {
 			return &link
-		}
-		for _, alt := range link.Alternates {
-			if alt.Href == href {
-				return &alt
-			}
 		}
 	}
 	return nil
@@ -284,7 +240,6 @@ func (ll LinkList) FirstWithRel(rel string) *Link {
 func (ll LinkList) FilterByRel(rel string) LinkList {
 	flinks := make([]Link, 0)
 	for _, link := range ll {
-		// TODO should we check alternates?
 		for _, r := range link.Rels {
 			if r == rel {
 				flinks = append(flinks, link)
@@ -297,10 +252,9 @@ func (ll LinkList) FilterByRel(rel string) LinkList {
 // Finds the first link matching the given media type.
 func (ll LinkList) FirstWithMediaType(mt *mediatype.MediaType) *Link {
 	for _, link := range ll {
-		if link.MediaType().Matches(mt) {
+		if link.MediaType.Matches(mt) {
 			return &link
 		}
-		// TODO should we check alternates?
 	}
 	return nil
 }
@@ -309,10 +263,9 @@ func (ll LinkList) FirstWithMediaType(mt *mediatype.MediaType) *Link {
 func (ll LinkList) FilterByMediaType(mt ...*mediatype.MediaType) LinkList {
 	flinks := make([]Link, 0)
 	for _, link := range ll {
-		if link.MediaType().Matches(mt...) {
+		if link.MediaType.Matches(mt...) {
 			flinks = append(flinks, link)
 		}
-		// TODO should we check alternates?
 	}
 	return flinks
 }
@@ -320,10 +273,9 @@ func (ll LinkList) FilterByMediaType(mt ...*mediatype.MediaType) LinkList {
 // Returns whether all the resources in the collection are bitmaps.
 func (ll LinkList) AllAreBitmap() bool {
 	for _, link := range ll {
-		if !link.MediaType().IsBitmap() {
+		if !link.MediaType.IsBitmap() {
 			return false
 		}
-		// TODO should we check alternates?
 	}
 	return true
 }
@@ -331,10 +283,9 @@ func (ll LinkList) AllAreBitmap() bool {
 // Returns whether all the resources in the collection are audio clips.
 func (ll LinkList) AllAreAudio() bool {
 	for _, link := range ll {
-		if !link.MediaType().IsAudio() {
+		if !link.MediaType.IsAudio() {
 			return false
 		}
-		// TODO should we check alternates?
 	}
 	return true
 }
@@ -342,10 +293,9 @@ func (ll LinkList) AllAreAudio() bool {
 // Returns whether all the resources in the collection are video clips.
 func (ll LinkList) AllAreVideo() bool {
 	for _, link := range ll {
-		if !link.MediaType().IsVideo() {
+		if !link.MediaType.IsVideo() {
 			return false
 		}
-		// TODO should we check alternates?
 	}
 	return true
 }
@@ -353,11 +303,9 @@ func (ll LinkList) AllAreVideo() bool {
 // Returns whether all the resources in the collection are bitmaps or video clips.
 func (ll LinkList) AllAreVisual() bool {
 	for _, link := range ll {
-		mt := link.MediaType()
-		if !mt.IsBitmap() && !mt.IsVideo() {
+		if !link.MediaType.IsBitmap() && !link.MediaType.IsVideo() {
 			return false
 		}
-		// TODO should we check alternates?
 	}
 	return true
 }
@@ -365,10 +313,9 @@ func (ll LinkList) AllAreVisual() bool {
 // Returns whether all the resources in the collection are HTML documents.
 func (ll LinkList) AllAreHTML() bool {
 	for _, link := range ll {
-		if !link.MediaType().IsHTML() {
+		if !link.MediaType.IsHTML() {
 			return false
 		}
-		// TODO should we check alternates?
 	}
 	return true
 }
@@ -376,10 +323,20 @@ func (ll LinkList) AllAreHTML() bool {
 // Returns whether all the resources in the collection are matching the given media type.
 func (ll LinkList) AllMatchMediaType(mt ...*mediatype.MediaType) bool {
 	for _, link := range ll {
-		if !link.MediaType().Matches(mt...) {
+		if !link.MediaType.Matches(mt...) {
 			return false
 		}
-		// TODO should we check alternates?
 	}
 	return true
+}
+
+// Returns a list of `Link` after flattening the `children` and `alternates` links of the receiver.
+func (ll LinkList) Flatten() LinkList {
+	links := make(LinkList, 0, len(ll))
+	for _, link := range ll {
+		links = append(links, link)
+		links = append(links, link.Alternates.Flatten()...)
+		links = append(links, link.Children.Flatten()...)
+	}
+	return links
 }

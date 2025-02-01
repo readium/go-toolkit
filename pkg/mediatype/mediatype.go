@@ -43,7 +43,7 @@ func New(str string, name string, extension string) (mt MediaType, err error) {
 	mt.fileExtension = extension
 
 	mtype, params, merr := mime.ParseMediaType(str)
-	if err != nil {
+	if merr != nil {
 		err = merr
 		return
 	}
@@ -107,7 +107,34 @@ func New(str string, name string, extension string) (mt MediaType, err error) {
 // Create a new MediaType solely from a mime string.
 // When an error is returned, do not use the resulting MediaType, as it will be incomplete/invalid
 func NewOfString(str string) (MediaType, error) {
+	if knownMatch, ok := knownMatches[str]; ok {
+		// The string was recognized as a known mimetype.
+		// This not only shortcuts building of the MediaType,
+		// but also ensures that the resulting MediaType is identical
+		// to an expected one in tests, and provides back nice
+		// names and file extensions as properties. We might want
+		// to match more roughly in the future, but for now this works.
+		return *knownMatch, nil
+	}
 	return New(str, "", "")
+}
+
+// Proxy for NewOfString, but panics on error.
+func MustNewOfString(str string) MediaType {
+	mt, err := NewOfString(str)
+	if err != nil {
+		panic(err)
+	}
+	return mt
+}
+
+// Proxy for NewOfString, but returns nil on error.
+func MaybeNewOfString(str string) *MediaType {
+	mt, err := NewOfString(str)
+	if err != nil {
+		return nil
+	}
+	return &mt
 }
 
 // Structured syntax suffix, e.g. `+zip` in `application/epub+zip`.
