@@ -7,26 +7,32 @@ import (
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/readium/xmlquery"
 )
 
-func GetRootFilePath(fetcher fetcher.Fetcher) (string, error) {
-	res := fetcher.Get(manifest.Link{Href: "/META-INF/container.xml"})
+func GetRootFilePath(fetcher fetcher.Fetcher) (url.URL, error) {
+	res := fetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/container.xml", false)})
 	xml, err := res.ReadAsXML(map[string]string{
 		"urn:oasis:names:tc:opendocument:xmlns:container": "cn",
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "failed loading container.xml")
+		return nil, errors.Wrap(err, "failed loading container.xml")
 	}
 	n := xml.SelectElement("/container/rootfiles/rootfile")
 	if n == nil {
-		return "", errors.New("rootfile not found in container")
+		return nil, errors.New("rootfile not found in container")
 	}
 	p := n.SelectAttr("full-path")
 	if p == "" {
-		return "", errors.New("no full-path in rootfile")
+		return nil, errors.New("no full-path in rootfile")
 	}
-	return p, nil
+	u, merr := url.FromEPUBHref(p)
+	if merr != nil {
+		return nil, errors.Wrap(err, "failed parsing rootfile full-path")
+	}
+
+	return u, nil
 }
 
 // TODO: Use updated xpath/xmlquery functions

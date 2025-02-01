@@ -58,7 +58,12 @@ type Entry interface {
 	CompressedAs(compressionMethod CompressionMethod) bool     // Whether the entry is compressed using the given method.
 	Read(start int64, end int64) ([]byte, error)               // Reads the whole content of this entry, or a portion when [start] or [end] are specified.
 	Stream(w io.Writer, start int64, end int64) (int64, error) // Streams the whole content of this entry to a writer, or a portion when [start] or [end] are specified.
-	StreamCompressed(w io.Writer) (int64, error)               // Streams the compressed content of this entry to a writer.
+
+	StreamCompressed(w io.Writer) (int64, error)     // Streams the compressed content of this entry to a writer.
+	StreamCompressedGzip(w io.Writer) (int64, error) // Streams the compressed content of this entry to a writer in a GZIP container.
+	ReadCompressed() ([]byte, error)                 // Reads the compressed content of this entry.
+	ReadCompressedGzip() ([]byte, error)             // Reads the compressed content of this entry inside a GZIP container.
+
 }
 
 // Represents an immutable archive.

@@ -70,13 +70,13 @@ func (a *FileAsset) CreateFetcher(dependencies Dependencies, credentials string)
 		return nil, err
 	}
 	if stat.IsDir() {
-		return fetcher.NewFileFetcher("/", a.filepath), nil
+		return fetcher.NewFileFetcher("", a.filepath), nil
 	} else {
 		af, err := fetcher.NewArchiveFetcherFromPathWithFactory(a.filepath, dependencies.ArchiveFactory)
 		if err == nil {
 			return af, nil
 		}
-		// logrus.Warnf("couldn't open %s as archive: %v", a.filepath, err)
-		return fetcher.NewFileFetcher("/"+a.Name(), a.filepath), nil
+
+		return fetcher.NewFileFetcher(a.Name(), a.filepath), nil
 	}
 }

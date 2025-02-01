@@ -2,28 +2,25 @@ package manifest
 
 import (
 	"encoding/json"
-	"path"
-	"strings"
+	"slices"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/mediatype"
-	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 const WebpubManifestContext = "https://readium.org/webpub-manifest/context.jsonld"
 
 // Manifest Main structure for a publication
 type Manifest struct {
-	Context         Strings  `json:"@context,omitempty"`
-	Metadata        Metadata `json:"metadata"`
-	Links           LinkList `json:"links"`
-	ReadingOrder    LinkList `json:"readingOrder,omitempty"`
-	Resources       LinkList `json:"resources,omitempty"` //Replaces the manifest but less redundant
-	TableOfContents LinkList `json:"toc,omitempty"`
-
-	Subcollections PublicationCollectionMap `json:"-"` //Extension point for collections that shouldn't show up in the manifest
-	// Internal       []Internal                         `json:"-"` // TODO remove
+	Context         Strings                  `json:"@context,omitempty"`
+	Metadata        Metadata                 `json:"metadata"`
+	Links           LinkList                 `json:"links"`
+	ReadingOrder    LinkList                 `json:"readingOrder,omitempty"`
+	Resources       LinkList                 `json:"resources,omitempty"` //Replaces the manifest but less redundant
+	TableOfContents LinkList                 `json:"toc,omitempty"`
+	Subcollections  PublicationCollectionMap `json:"-"` //Extension point for collections that shouldn't show up in the manifest
 }
 
 // Returns whether this manifest conforms to the given Readium Web Publication Profile.
@@ -59,13 +56,76 @@ func (m Manifest) ConformsTo(profile Profile) bool {
 // Finds the first [Link] with the given href in the manifest's links.
 // Searches through (in order) the reading order, resources and links recursively following alternate and children links.
 // If there's no match, tries again after removing any query parameter and anchor from the given href.
-func (m Manifest) LinkWithHref(href string) *Link {
-	var deepLinkWithHref func(ll LinkList, href string) *Link
-	deepLinkWithHref = func(ll LinkList, href string) *Link {
+func (m Manifest) LinkWithHref(href url.URL) *Link {
+	href = href.Normalize() // Normalize HREF here instead of in the loop
+
+	var deepLinkWithHref func(ll LinkList, href url.URL) *Link
+	deepLinkWithHref = func(ll LinkList, href url.URL) *Link {
 		for _, l := range ll {
-			if l.Href == href {
+			nu := l.URL(nil, nil).Normalize() // Normalized version of the href
+
+			if nu.Equivalent(href) {
+				// Exactly equivalent after normalization
 				return &l
 			} else {
+				// Check if they have the same relative path after resolving,
+				// and no fragment, meaning only the query could be different
+				if nu.Path() == href.Path() && href.Fragment() == "" {
+					// Check for a possible fit in a templated href
+					// This is a special fast path for web services accepting arbitrary query parameters in the URL
+					if l.Href.IsTemplated() { // Templated URI
+						if params := l.Href.Parameters(); len(params) > 0 {
+							// At least one parameter in the URI template
+							matches := true
+
+							// Check that every parameter in the URI template is present by key in the query
+							for _, p := range params {
+								if !href.Raw().Query().Has(p) {
+									matches = false
+									break
+								}
+							}
+							if matches {
+								// All template parameters are present in the query parameters
+								return &l
+							}
+						}
+					} else {
+						// Check for a possible fit in an href with query parameters
+						// This is a special fast path for web services accepting arbitrary query parameters in the URL
+						if len(nu.Raw().Query()) > 0 && len(href.Raw().Query()) > 0 {
+							// Both the give href and the one we're checking have query parameters
+							// If the given href has all the key/value pairs in the query that the
+							// one we're checking has, then they're equivalent!
+							matches := true
+							q := href.Raw().Query()
+							for k, v := range nu.Raw().Query() {
+								slices.Sort(v)
+								if qv, ok := q[k]; ok {
+									if len(qv) > 1 {
+										slices.Sort(qv)
+										if !slices.Equal(qv, v) {
+											matches = false
+											break
+										}
+									} else {
+										if qv[0] != v[0] {
+											matches = false
+											break
+										}
+									}
+								} else {
+									matches = false
+									break
+								}
+							}
+							if matches {
+								return &l
+							}
+						}
+					}
+				}
+
 				if link := deepLinkWithHref(l.Alternates, href); link != nil {
 					return link
 				}
@@ -77,7 +137,7 @@ func (m Manifest) LinkWithHref(href string) *Link {
 		return nil
 	}
 
-	find := func(href string) *Link {
+	find := func(href url.URL) *Link {
 		if l := deepLinkWithHref(m.ReadingOrder, href); l != nil {
 			return l
 		}
@@ -93,36 +153,28 @@ func (m Manifest) LinkWithHref(href string) *Link {
 	if l := find(href); l != nil {
 		return l
 	}
-	if l := find(strings.SplitN(strings.SplitN(href, "#", 2)[0], "?", 2)[0]); l != nil {
-		return l
+
+	broaderHref := href.RemoveFragment().RemoveQuery()
+	if !broaderHref.Equivalent(href) {
+		if l := find(broaderHref); l != nil {
+			return l
+		}
 	}
 	return nil
 }
 
 // Finds the first [Link] with the given relation in the manifest's links.
 func (m Manifest) LinkWithRel(rel string) *Link {
-	for _, resource := range m.Resources {
-		for _, resRel := range resource.Rels {
-			if resRel == rel {
-				return &resource
-			}
-		}
+	if rel := m.ReadingOrder.FirstWithRel(rel); rel != nil {
+		return rel
 	}
 
-	for _, item := range m.ReadingOrder {
-		for _, spineRel := range item.Rels {
-			if spineRel == rel {
-				return &item
-			}
-		}
+	if rel := m.Resources.FirstWithRel(rel); rel != nil {
+		return rel
 	}
 
-	for _, link := range m.Links {
-		for _, linkRel := range link.Rels {
-			if linkRel == rel {
-				return &link
-			}
-		}
+	if rel := m.Links.FirstWithRel(rel); rel != nil {
+		return rel
 	}
 
 	return nil
@@ -130,31 +182,14 @@ func (m Manifest) LinkWithRel(rel string) *Link {
 
 // Finds all [Link]s having the given [rel] in the manifest's links.
 func (m Manifest) LinksWithRel(rel string) []Link {
-	var res []Link
+	r1 := m.ReadingOrder.FilterByRel(rel)
+	r2 := m.Resources.FilterByRel(rel)
+	r3 := m.Links.FilterByRel(rel)
 
-	for _, resource := range m.Resources {
-		for _, resRel := range resource.Rels {
-			if resRel == rel {
-				res = append(res, resource)
-			}
-		}
-	}
-
-	for _, item := range m.ReadingOrder {
-		for _, spineRel := range item.Rels {
-			if spineRel == rel {
-				res = append(res, item)
-			}
-		}
-	}
-
-	for _, link := range m.Links {
-		for _, linkRel := range link.Rels {
-			if linkRel == rel {
-				res = append(res, link)
-			}
-		}
-	}
+	res := make([]Link, 0, len(r1)+len(r2)+len(r3))
+	res = append(res, r1...)
+	res = append(res, r2...)
+	res = append(res, r3...)
 
 	return res
 }
@@ -162,24 +197,23 @@ func (m Manifest) LinksWithRel(rel string) []Link {
 // Creates a new [Locator] object from a [Link] to a resource of this manifest.
 // Returns nil if the resource is not found in this manifest.
 func (m Manifest) LocatorFromLink(link Link) *Locator {
-	components := strings.SplitN(link.Href, "#", 2)
-	href := components[0]
-	resourceLink := m.LinkWithHref(href)
+	url := link.URL(nil, nil)
+	fragment := url.Fragment()
+	url = url.RemoveFragment()
+
+	resourceLink := m.LinkWithHref(url)
 	if resourceLink == nil {
 		return nil
 	}
-	if resourceLink.Type == "" {
+	mediaType := resourceLink.MediaType
+	if mediaType == nil {
 		return nil
-	}
-	var fragment string
-	if len(components) > 1 {
-		fragment = components[1]
 	}
 
 	l := &Locator{
-		Href:  href,
-		Type:  resourceLink.Type,
-		Title: resourceLink.Title,
+		Href:      url,
+		MediaType: *mediaType,
+		Title:     resourceLink.Title,
 	}
 
 	if l.Title == "" {
@@ -211,26 +245,10 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	var links []Link
 	var err error
 	if ok {
-		links, err = LinksFromJSONArray(rawLinks, LinkHrefNormalizerIdentity)
+		links, err = LinksFromJSONArray(rawLinks)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling 'links'")
 		}
-	}
-
-	baseURL := "/"
-	if !packaged {
-		self := firstLinkWithRel(links, "self")
-		if self != nil {
-			url := extensions.ToUrlOrNull(self.Href)
-			if url != nil {
-				url.Path = path.Dir(url.Path)
-				baseURL = url.String() + "/"
-			}
-		}
-	}
-
-	normalizeHref := func(href string) (string, error) {
-		return util.NewHREF(href, baseURL).String()
 	}
 
 	manifest := new(Manifest)
@@ -252,14 +270,14 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	if rmt == nil {
 		return nil, errors.New("'metadata' is required")
 	}
-	metadata, err := MetadataFromJSON(rmt, normalizeHref)
+	metadata, err := MetadataFromJSON(rmt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling 'metadata'")
 	}
 	manifest.Metadata = *metadata
 
 	// Links
-	links, err = LinksFromJSONArray(rawLinks, normalizeHref)
+	links, err = LinksFromJSONArray(rawLinks)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling 'links'")
 	}
@@ -287,13 +305,13 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 			return nil, errors.New("Manifest has no valid 'readingOrder' or 'spine'")
 		}
 	}
-	readingOrder, err := LinksFromJSONArray(readingOrderRaw, normalizeHref)
+	readingOrder, err := LinksFromJSONArray(readingOrderRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling reading order")
 	}
 	manifest.ReadingOrder = make(LinkList, 0, len(readingOrder)) // More links with than without mimetypes
 	for _, link := range readingOrder {
-		if link.Type == "" {
+		if link.MediaType == nil {
 			continue
 		}
 		manifest.ReadingOrder = append(manifest.ReadingOrder, link)
@@ -302,13 +320,13 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	// Resources
 	resourcesRaw, ok := rawJson["resources"].([]interface{})
 	if ok {
-		resources, err := LinksFromJSONArray(resourcesRaw, normalizeHref)
+		resources, err := LinksFromJSONArray(resourcesRaw)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling 'resources'")
 		}
 		manifest.Resources = make(LinkList, 0, len(resources)) // More resources with than without mimetypes
 		for _, link := range resources {
-			if link.Type == "" {
+			if link.MediaType == nil {
 				continue
 			}
 			manifest.Resources = append(manifest.Resources, link)
@@ -318,7 +336,7 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	// TOC
 	tocRaw, ok := rawJson["toc"].([]interface{})
 	if ok {
-		toc, err := LinksFromJSONArray(tocRaw, normalizeHref)
+		toc, err := LinksFromJSONArray(tocRaw)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling 'toc'")
 		}
@@ -333,7 +351,7 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	}
 
 	// Parses subcollections from the remaining JSON properties.
-	pcm, err := PublicationCollectionsFromJSON(rawJson, normalizeHref)
+	pcm, err := PublicationCollectionsFromJSON(rawJson)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling remaining manifest data as subcollections of type PublicationCollectionMap")
 	}

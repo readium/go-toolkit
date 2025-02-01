@@ -3,13 +3,14 @@ package epub
 import (
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 type PublicationFactory struct {
 	FallbackTitle   string
 	PackageDocument PackageDocument
 	NavigationData  map[string]manifest.LinkList
-	EncryptionData  map[string]manifest.Encryption
+	EncryptionData  map[url.URL]manifest.Encryption
 	DisplayOptions  map[string]string
 
 	itemById       map[string]Item
@@ -119,9 +120,9 @@ func (f PublicationFactory) Create() manifest.Manifest {
 // Compute a Publication [Link] from an EPUB metadata link
 func mapEPUBLink(link EPUBLink) manifest.Link {
 	l := manifest.Link{
-		Href: link.href,
-		Type: link.mediaType,
-		Rels: link.rels,
+		Href:      manifest.NewHREF(link.href),
+		MediaType: link.mediaType,
+		Rels:      link.rels,
 	}
 
 	var contains []string
@@ -149,8 +150,8 @@ func (f PublicationFactory) computeLink(item Item, fallbackChain []string) manif
 	rels, properties := f.computePropertiesAndRels(item, &itemref)
 
 	ret := manifest.Link{
-		Href:       item.Href,
-		Type:       item.MediaType,
+		Href:       manifest.NewHREF(item.Href),
+		MediaType:  item.MediaType,
 		Rels:       rels,
 		Alternates: f.computeAlternates(item, fallbackChain),
 	}

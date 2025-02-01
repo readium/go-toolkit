@@ -51,21 +51,13 @@ var compressableMimes = []string{
 	"application/vnd.ms-fontobject",
 }
 
-func makeRelative(link manifest.Link) manifest.Link {
-	link.Href = strings.TrimPrefix(link.Href, "/")
-	for i, alt := range link.Alternates {
-		link.Alternates[i].Href = strings.TrimPrefix(alt.Href, "/")
-	}
-	return link
-}
-
-func conformsToAsMimetype(conformsTo manifest.Profiles) string {
-	mime := mediatype.ReadiumWebpubManifest.String()
+func conformsToAsMimetype(conformsTo manifest.Profiles) mediatype.MediaType {
+	mime := mediatype.ReadiumWebpubManifest
 	for _, profile := range conformsTo {
 		if profile == manifest.ProfileDivina {
-			mime = mediatype.ReadiumDivinaManifest.String()
+			mime = mediatype.ReadiumDivinaManifest
 		} else if profile == manifest.ProfileAudiobook {
-			mime = mediatype.ReadiumAudiobookManifest.String()
+			mime = mediatype.ReadiumAudiobookManifest
 		} else {
 			continue
 		}
@@ -74,7 +66,7 @@ func conformsToAsMimetype(conformsTo manifest.Profiles) string {
 	return mime
 }
 
-func supportsDeflate(r *http.Request) bool {
+func supportsEncoding(r *http.Request, encoding string) bool {
 	vv := r.Header.Values("Accept-Encoding")
 	for _, v := range vv {
 		for _, sv := range strings.Split(v, ",") {
@@ -82,7 +74,7 @@ func supportsDeflate(r *http.Request) bool {
 			if coding == "" {
 				continue
 			}
-			if coding == "deflate" {
+			if coding == encoding {
 				return true
 			}
 		}

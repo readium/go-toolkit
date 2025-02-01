@@ -21,7 +21,7 @@ var Sniffers = []Sniffer{
 	SniffLCPLicense,
 	SniffW3CWPUB,
 	SniffWebpub,
-	// Note SniffSystem isn't here!
+	// Note SniffKnown and SniffSystem aren't here!
 }
 
 // Resolves a media type from a sniffer context.
@@ -73,15 +73,21 @@ func of(content SnifferContent, mediaTypes []string, fileExtensions []string, sn
 		}
 	}
 
-	// Falls back on the system-wide registered media types.
-	// Note: This is done after the heavy sniffing of the provided [sniffers], because
-	// otherwise it will detect JSON, XML or ZIP formats before we have a chance of sniffing
-	// their content (for example, for RWPM).
 	context := SnifferContext{
 		content:        content,
 		mediaTypes:     mediaTypes,
 		fileExtensions: fileExtensions,
 	}
+
+	// Check if the media type is within the well-known list
+	// Note: This is done after the heavy sniffing of the provided [sniffers], because
+	// otherwise it will detect JSON, XML or ZIP formats before we have a chance of sniffing
+	// their content (for example, for RWPM).
+	if c := SniffKnown(context); c != nil {
+		return c
+	}
+
+	// Falls back on the system-wide registered media types.
 	if c := SniffSystem(context); c != nil {
 		return c
 	}

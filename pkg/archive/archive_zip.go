@@ -4,11 +4,14 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/flate"
-	"errors"
+	"encoding/binary"
 	"io"
 	"io/fs"
+	"math"
 	"path"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 type gozipArchiveEntry struct {
@@ -162,6 +165,94 @@ func (e gozipArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
 	}
 
 	return io.Copy(w, f)
+}
+
+func (e gozipArchiveEntry) StreamCompressedGzip(w io.Writer) (int64, error) {
+	if e.file.Method != zip.Deflate {
+		return -1, errors.New("not a compressed resource")
+	}
+	if e.file.UncompressedSize64 > math.MaxUint32 {
+		return -1, errors.New("uncompressed size > 2^32 too large for GZIP")
+	}
+	f, err := e.file.OpenRaw()
+	if err != nil {
+		return -1, err
+	}
+
+	// Header
+	buf := [10]byte{0: gzipID1, 1: gzipID2, 2: gzipDeflate, 9: 255}
+	// No extra, no name, no comment, no mod time, no compress level hint, unknown OS
+
+	n, err := w.Write(buf[:10])
+	if err != nil {
+		return -1, errors.Wrap(err, "failed to write GZIP header")
+	}
+
+	nn, err := io.Copy(w, f)
+	if err != nil {
+		return int64(n), errors.Wrap(err, "failed copying deflated bytes")
+	}
+
+	// Trailer
+	binary.LittleEndian.PutUint32(buf[:4], e.file.CRC32)
+	binary.LittleEndian.PutUint32(buf[4:8], uint32(e.file.UncompressedSize64))
+	nnn, err := w.Write(buf[:8])
+	if err != nil {
+		return int64(n) + nn, errors.Wrap(err, "failed writing GZIP trailer")
+	}
+	return int64(n) + nn + int64(nnn), nil
+}
+
+func (e gozipArchiveEntry) ReadCompressed() ([]byte, error) {
+	if e.file.Method != zip.Deflate {
+		return nil, errors.New("not a compressed resource")
+	}
+	f, err := e.file.OpenRaw()
+	if err != nil {
+		return nil, err
+	}
+
+	compressedData := make([]byte, e.file.CompressedSize64)
+	_, err = io.ReadFull(f, compressedData)
+	if err != nil {
+		return nil, err
+	}
+
+	return compressedData, nil
+}
+
+func (e gozipArchiveEntry) ReadCompressedGzip() ([]byte, error) {
+	if e.file.Method != zip.Deflate {
+		return nil, errors.New("not a compressed resource")
+	}
+	if e.file.UncompressedSize64 > math.MaxUint32 {
+		return nil, errors.New("uncompressed size > 2^32 too large for GZIP")
+	}
+	f, err := e.file.OpenRaw()
+	if err != nil {
+		return nil, err
+	}
+
+	compressedData := make([]byte, e.file.CompressedSize64+GzipWrapperLength) // Size of file + header + trailer
+
+	// Deflated data
+	_, err = io.ReadAtLeast(f, compressedData[10:], int(e.file.CompressedSize64))
+	if err != nil {
+		return nil, err
+	}
+
+	// Header
+	compressedData[0] = gzipID1
+	compressedData[1] = gzipID2
+	compressedData[2] = gzipDeflate
+	compressedData[9] = 255
+	// No extra, no name, no comment, no mod time, no compress level hint, unknown OS
+
+	// Trailer
+	binary.LittleEndian.PutUint32(compressedData[10+e.file.CompressedSize64:], e.file.CRC32)
+	binary.LittleEndian.PutUint32(compressedData[10+e.file.CompressedSize64+4:], uint32(e.file.UncompressedSize64))
+
+	return compressedData, nil
 }
 
 // An archive from a zip file using go's stdlib

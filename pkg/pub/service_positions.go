@@ -10,8 +10,8 @@ import (
 )
 
 var PositionsLink = manifest.Link{
-	Href: "/~readium/positions.json",
-	Type: mediatype.ReadiumPositionList.String(),
+	Href:      manifest.MustNewHREFFromString("~readium/positions.json", false),
+	MediaType: &mediatype.ReadiumPositionList,
 }
 
 // PositionsService implements Service
@@ -26,11 +26,11 @@ type PositionsService interface {
 // Simple [PositionsService] which generates one position per [readingOrder] resource.
 type PerResourcePositionsService struct {
 	readingOrder      manifest.LinkList
-	fallbackMediaType string
+	fallbackMediaType mediatype.MediaType
 }
 
 func GetForPositionsService(service PositionsService, link manifest.Link) (fetcher.Resource, bool) {
-	if link.Href != PositionsLink.Href {
+	if !link.URL(nil, nil).Equivalent(PositionsLink.URL(nil, nil)) {
 		return nil, false
 	}
 
@@ -67,14 +67,14 @@ func (s PerResourcePositionsService) PositionsByReadingOrder() [][]manifest.Loca
 	positions := make([][]manifest.Locator, len(s.readingOrder))
 	pageCount := len(s.readingOrder)
 	for i, v := range s.readingOrder {
-		typ := v.Type
-		if typ == "" {
-			typ = s.fallbackMediaType
+		typ := v.MediaType
+		if typ == nil {
+			typ = &s.fallbackMediaType
 		}
 		positions[i] = []manifest.Locator{{
-			Href:  v.Href,
-			Type:  typ,
-			Title: v.Title,
+			Href:      v.Href.Resolve(nil, nil),
+			MediaType: *typ,
+			Title:     v.Title,
 			Locations: manifest.Locations{
 				Position:         extensions.Pointer(uint(i) + 1),
 				TotalProgression: extensions.Pointer(float64(i) / float64(pageCount)),
@@ -84,7 +84,7 @@ func (s PerResourcePositionsService) PositionsByReadingOrder() [][]manifest.Loca
 	return positions
 }
 
-func PerResourcePositionsServiceFactory(fallbackMediaType string) ServiceFactory {
+func PerResourcePositionsServiceFactory(fallbackMediaType mediatype.MediaType) ServiceFactory {
 	return func(context Context) Service {
 		return PerResourcePositionsService{
 			readingOrder:      context.Manifest.ReadingOrder,

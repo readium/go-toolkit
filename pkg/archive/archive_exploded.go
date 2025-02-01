@@ -90,6 +90,18 @@ func (e explodedArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
 	return -1, errors.New("entry is not compressed")
 }
 
+func (e explodedArchiveEntry) StreamCompressedGzip(w io.Writer) (int64, error) {
+	return -1, errors.New("entry is not compressed")
+}
+
+func (e explodedArchiveEntry) ReadCompressed() ([]byte, error) {
+	return nil, errors.New("entry is not compressed")
+}
+
+func (e explodedArchiveEntry) ReadCompressedGzip() ([]byte, error) {
+	return nil, errors.New("entry is not compressed")
+}
+
 // An archive exploded on the file system as a directory.
 type explodedArchive struct {
 	directory string // Directory, already cleaned!

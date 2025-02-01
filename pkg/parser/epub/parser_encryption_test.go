@@ -5,6 +5,7 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,17 +19,23 @@ func loadEncryption(name string) (map[string]manifest.Encryption, error) {
 		return nil, rerr.Cause
 	}
 
-	return ParseEncryption(n), nil
+	enc := ParseEncryption(n)
+	ret := make(map[string]manifest.Encryption)
+	for k, v := range enc {
+		ret[k.String()] = v
+	}
+
+	return ret, nil
 }
 
 var testEncMap = map[string]manifest.Encryption{
-	"/OEBPS/xhtml/chapter01.xhtml": {
+	url.MustURLFromString("OEBPS/xhtml/chapter01.xhtml").String(): {
 		Scheme:         "http://readium.org/2014/01/lcp",
 		OriginalLength: 13291,
 		Algorithm:      "http://www.w3.org/2001/04/xmlenc#aes256-cbc",
 		Compression:    "deflate",
 	},
-	"/OEBPS/xhtml/chapter02.xhtml": {
+	url.MustURLFromString("OEBPS/xhtml/chapter02.xhtml").String(): {
 		Scheme:         "http://readium.org/2014/01/lcp",
 		OriginalLength: 12914,
 		Algorithm:      "http://www.w3.org/2001/04/xmlenc#aes256-cbc",
@@ -52,13 +59,13 @@ func TestEncryptionParserUnknownRetrievalMethod(t *testing.T) {
 	e, err := loadEncryption("unknown-method")
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]manifest.Encryption{
-		"/OEBPS/xhtml/chapter.xhtml": {
+		url.MustURLFromString("OEBPS/images/image.jpeg").String(): {
+			Algorithm: "http://www.w3.org/2001/04/xmlenc#kw-aes128",
+		},
+		url.MustURLFromString("OEBPS/xhtml/chapter.xhtml").String(): {
 			Algorithm:      "http://www.w3.org/2001/04/xmlenc#kw-aes128",
 			Compression:    "deflate",
 			OriginalLength: 12914,
-		},
-		"/OEBPS/images/image.jpeg": {
-			Algorithm: "http://www.w3.org/2001/04/xmlenc#kw-aes128",
 		},
 	}, e)
 }

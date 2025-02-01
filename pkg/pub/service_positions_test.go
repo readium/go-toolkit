@@ -5,6 +5,8 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,12 +17,12 @@ func TestPerResourcePositionsServiceEmptyReadingOrder(t *testing.T) {
 
 func TestPerResourcePositionsServiceSingleReadingOrder(t *testing.T) {
 	service := PerResourcePositionsService{
-		readingOrder: manifest.LinkList{{Href: "res", Type: "image/png"}},
+		readingOrder: manifest.LinkList{{Href: manifest.MustNewHREFFromString("res", false), MediaType: &mediatype.PNG}},
 	}
 
 	assert.Equal(t, []manifest.Locator{{
-		Href: "res",
-		Type: "image/png",
+		Href:      url.MustURLFromString("res"),
+		MediaType: mediatype.PNG,
 		Locations: manifest.Locations{
 			Position:         extensions.Pointer(uint(1)),
 			TotalProgression: extensions.Pointer(float64(0.0)),
@@ -31,33 +33,34 @@ func TestPerResourcePositionsServiceSingleReadingOrder(t *testing.T) {
 func TestPerResourcePositionsServiceMultiReadingOrder(t *testing.T) {
 	service := PerResourcePositionsService{
 		readingOrder: manifest.LinkList{
-			{Href: "res"},
-			{Href: "chap1", Type: "image/png"},
-			{Href: "chap2", Type: "image/png", Title: "Chapter 2"},
+			{Href: manifest.MustNewHREFFromString("res", false)},
+			{Href: manifest.MustNewHREFFromString("chap1", false), MediaType: &mediatype.PNG},
+			{Href: manifest.MustNewHREFFromString("chap2", false), MediaType: &mediatype.PNG, Title: "Chapter 2"},
 		},
+		fallbackMediaType: mediatype.Binary,
 	}
 
 	assert.Equal(t, []manifest.Locator{
 		{
-			Href: "res",
-			Type: "",
+			Href:      url.MustURLFromString("res"),
+			MediaType: mediatype.Binary,
 			Locations: manifest.Locations{
 				Position:         extensions.Pointer(uint(1)),
 				TotalProgression: extensions.Pointer(float64(0.0)),
 			},
 		},
 		{
-			Href: "chap1",
-			Type: "image/png",
+			Href:      url.MustURLFromString("chap1"),
+			MediaType: mediatype.PNG,
 			Locations: manifest.Locations{
 				Position:         extensions.Pointer(uint(2)),
 				TotalProgression: extensions.Pointer(float64(1.0 / 3.0)),
 			},
 		},
 		{
-			Href:  "chap2",
-			Type:  "image/png",
-			Title: "Chapter 2",
+			Href:      url.MustURLFromString("chap2"),
+			MediaType: mediatype.PNG,
+			Title:     "Chapter 2",
 			Locations: manifest.Locations{
 				Position:         extensions.Pointer(uint(3)),
 				TotalProgression: extensions.Pointer(float64(2.0 / 3.0)),
@@ -68,13 +71,14 @@ func TestPerResourcePositionsServiceMultiReadingOrder(t *testing.T) {
 
 func TestPerResourcePositionsServiceMediaTypeFallback(t *testing.T) {
 	service := PerResourcePositionsService{
-		readingOrder:      manifest.LinkList{{Href: "res"}},
-		fallbackMediaType: "image/*",
+		readingOrder:      manifest.LinkList{{Href: manifest.MustNewHREFFromString("res", false)}},
+		fallbackMediaType: mediatype.MustNewOfString("image/*"),
 	}
 
+	mt, _ := mediatype.NewOfString("image/*")
 	assert.Equal(t, []manifest.Locator{{
-		Href: "res",
-		Type: "image/*",
+		Href:      url.MustURLFromString("res"),
+		MediaType: mt,
 		Locations: manifest.Locations{
 			Position:         extensions.Pointer(uint(1)),
 			TotalProgression: extensions.Pointer(float64(0.0)),

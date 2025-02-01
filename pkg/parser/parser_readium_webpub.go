@@ -35,7 +35,7 @@ func (p WebPubParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetche
 
 	var manifestJSON map[string]interface{}
 	if isPackage {
-		res := lFetcher.Get(manifest.Link{Href: "/manifest.json"})
+		res := lFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("manifest.json", false)})
 		mjr, err := res.ReadAsJSON()
 		if err != nil {
 			return nil, err

@@ -2,7 +2,6 @@ package epub
 
 import (
 	"slices"
-	"strings"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -13,24 +12,23 @@ import (
 func MediaOverlayFactory() pub.ServiceFactory {
 	return func(context pub.Context) pub.Service {
 		// Process reading order to find and replace SMIL alternates
-		smilMediatype := mediatype.SMIL.String()
 		smilMap := make(map[string]manifest.Link)
 		var smilIndexes []string
 		for i := range context.Manifest.ReadingOrder {
 			alts := context.Manifest.ReadingOrder[i].Alternates
 			for j := range alts {
 				alt := context.Manifest.ReadingOrder[i].Alternates[j]
-				if alt.Type == smilMediatype {
+				if alt.MediaType.Equal(&mediatype.SMIL) {
 					// SMIL alternate for reading order item found
 
 					// Create a guided navigation link for the SMIL alt
-					// TODO: remove prefix trim when url utils are updated
-					href := strings.TrimPrefix(context.Manifest.ReadingOrder[i].Href, "/")
-					gnLink := pub.GuidedNavigationLink.ExpandTemplate(
+					href := context.Manifest.ReadingOrder[i].Href.String()
+					gnLink := pub.GuidedNavigationLink
+					gnLink.Href = manifest.NewHREF(gnLink.URL(nil,
 						map[string]string{
 							"ref": href,
 						},
-					)
+					))
 
 					// Store the original SMIL alt in an internal map
 					smilMap[href] = alt
@@ -91,7 +89,7 @@ func (s *MediaOverlayService) GuideForResource(href string) (*manifest.GuidedNav
 		}
 
 		// Convert SMIL to guided navigation document
-		doc, err := ParseSMILDocument(n, link.Href)
+		doc, err := ParseSMILDocument(n, link.URL(nil, nil))
 		if err != nil {
 			return nil, err
 		}
@@ -100,16 +98,18 @@ func (s *MediaOverlayService) GuideForResource(href string) (*manifest.GuidedNav
 		// Then enhance the document with additional next/prev links
 		idx := slices.Index(s.originalSmilIndexes, href)
 		if idx > 0 {
-			l := pub.GuidedNavigationLink.ExpandTemplate(map[string]string{
+			l := pub.GuidedNavigationLink
+			l.Href = manifest.NewHREF(l.Href.Resolve(nil, map[string]string{
 				"ref": s.originalSmilIndexes[idx-1],
-			})
+			}))
 			l.Rels = append(l.Rels, "prev")
 			doc.Links = append(doc.Links, l)
 		}
 		if idx < len(s.originalSmilIndexes)-1 {
-			l := pub.GuidedNavigationLink.ExpandTemplate(map[string]string{
+			l := pub.GuidedNavigationLink
+			l.Href = manifest.NewHREF(l.Href.Resolve(nil, map[string]string{
 				"ref": s.originalSmilIndexes[idx+1],
-			})
+			}))
 			l.Rels = append(l.Rels, "next")
 			doc.Links = append(doc.Links, l)
 		}

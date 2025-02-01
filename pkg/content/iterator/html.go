@@ -36,7 +36,7 @@ func NewHTML(resource fetcher.Resource, locator manifest.Locator) *HTMLContentIt
 
 func HTMLFactory() ResourceContentIteratorFactory {
 	return func(resource fetcher.Resource, locator manifest.Locator) Iterator {
-		if resource.Link().MediaType().Matches(&mediatype.HTML, &mediatype.XHTML) {
+		if resource.Link().MediaType.Matches(&mediatype.HTML, &mediatype.XHTML) {
 			return NewHTML(resource, locator)
 		}
 		return nil
@@ -129,7 +129,7 @@ func (it *HTMLContentIterator) elements() (*ParsedElements, error) {
 func (it *HTMLContentIterator) parseElements() (*ParsedElements, error) {
 	raw, rerr := it.resource.ReadAsString()
 	if rerr != nil {
-		return nil, errors.Wrap(rerr, "failed reading HTML string of "+it.resource.Link().Href)
+		return nil, errors.Wrap(rerr, "failed reading HTML string of "+it.resource.Link().Href.String())
 	}
 
 	document, err := html.ParseWithOptions(
@@ -137,12 +137,12 @@ func (it *HTMLContentIterator) parseElements() (*ParsedElements, error) {
 		html.ParseOptionEnableScripting(false),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed parsing HTML of "+it.resource.Link().Href)
+		return nil, errors.Wrap(err, "failed parsing HTML of "+it.resource.Link().Href.String())
 	}
 
 	body := childOfType(document, atom.Body, true)
 	if body == nil {
-		return nil, errors.New("HTML of " + it.resource.Link().Href + " doesn't have a <body>")
+		return nil, errors.New("HTML of " + it.resource.Link().Href.String() + " doesn't have a <body>")
 	}
 
 	contentConverter := HTMLConverter{

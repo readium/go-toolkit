@@ -16,7 +16,7 @@ const ProfileEPUB = Profile("https://readium.org/webpub-manifest/profiles/epub")
 // Profile for audiobooks
 const ProfileAudiobook = Profile("https://readium.org/webpub-manifest/profiles/audiobook")
 
-// Profile for visual narratives (comics, manga and bandes dessinées)
+// Profile for visual narratives (comics, manga, webtoons and bandes dessinées)
 const ProfileDivina = Profile("https://readium.org/webpub-manifest/profiles/divina")
 
 // Profile for PDF documents

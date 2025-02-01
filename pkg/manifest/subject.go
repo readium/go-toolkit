@@ -14,7 +14,7 @@ type Subject struct {
 	LocalizedSortAs *LocalizedString `json:"sortAs,omitempty"`
 	Scheme          string           `json:"scheme,omitempty"`
 	Code            string           `json:"code,omitempty"`
-	Links           []Link           `json:"links,omitempty"`
+	Links           LinkList         `json:"links,omitempty"`
 }
 
 func (s Subject) Name() string {
@@ -31,7 +31,7 @@ func (s Subject) SortAs() string {
 // Parses a [Subject] from its RWPM JSON representation.
 // A subject can be parsed from a single string, or a full-fledged object.
 // The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
-func SubjectFromJSON(rawJson interface{}, normalizeHref LinkHrefNormalizer) (*Subject, error) {
+func SubjectFromJSON(rawJson interface{}) (*Subject, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -67,7 +67,7 @@ func SubjectFromJSON(rawJson interface{}, normalizeHref LinkHrefNormalizer) (*Su
 		// links
 		lln, ok := rjs["links"].([]interface{})
 		if ok {
-			links, err := LinksFromJSONArray(lln, normalizeHref)
+			links, err := LinksFromJSONArray(lln)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed parsing Subject 'links'")
 			}
@@ -82,13 +82,13 @@ func SubjectFromJSON(rawJson interface{}, normalizeHref LinkHrefNormalizer) (*Su
 
 // Creates a list of [Subject] from its RWPM JSON representation.
 // The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
-func SubjectFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNormalizer) ([]Subject, error) {
+func SubjectFromJSONArray(rawJsonArray interface{}) ([]Subject, error) {
 	var subjects []Subject
 	switch rjx := rawJsonArray.(type) {
 	case []interface{}:
 		subjects = make([]Subject, 0, len(rjx))
 		for i, entry := range rjx {
-			rs, err := SubjectFromJSON(entry, normalizeHref)
+			rs, err := SubjectFromJSON(entry)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed unmarshalling Subject at position %d", i)
 			}
@@ -98,7 +98,7 @@ func SubjectFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNormal
 			subjects = append(subjects, *rs)
 		}
 	default:
-		s, err := SubjectFromJSON(rjx, normalizeHref)
+		s, err := SubjectFromJSON(rjx)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,7 @@ func (s *Subject) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	fs, err := SubjectFromJSON(object, LinkHrefNormalizerIdentity)
+	fs, err := SubjectFromJSON(object)
 	if err != nil {
 		return err
 	}

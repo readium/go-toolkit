@@ -6,6 +6,8 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +22,7 @@ func loadMetadata(name string) (*manifest.Metadata, error) {
 		return nil, rerr.Cause
 	}
 
-	d, err := ParsePackageDocument(n, "")
+	d, err := ParsePackageDocument(n, url.MustURLFromString(""))
 	if err != nil {
 		return nil, err
 	}
@@ -321,6 +323,7 @@ func TestMetadataEPUB2Accessibility(t *testing.T) {
 	}
 	e.Features = []manifest.A11yFeature{manifest.A11yFeatureStructuralNavigation, manifest.A11yFeatureAlternativeText}
 	e.Hazards = []manifest.A11yHazard{manifest.A11yHazardMotionSimulation, manifest.A11yHazardNoSoundHazard}
+	e.Exemptions = []manifest.A11yExemption{manifest.A11yExemptionEAAMicroenterprise, manifest.A11yExemptionEAAFundamentalAlteration}
 	assert.Equal(t, &e, m.Accessibility)
 	assert.Nil(t, m.OtherMetadata["accessibility"])
 }
@@ -343,6 +346,7 @@ func TestMetadataEPUB3Accessibility(t *testing.T) {
 	}
 	e.Features = []manifest.A11yFeature{manifest.A11yFeatureStructuralNavigation, manifest.A11yFeatureAlternativeText}
 	e.Hazards = []manifest.A11yHazard{manifest.A11yHazardMotionSimulation, manifest.A11yHazardNoSoundHazard}
+	e.Exemptions = []manifest.A11yExemption{manifest.A11yExemptionEAAMicroenterprise, manifest.A11yExemptionEAAFundamentalAlteration}
 	assert.Equal(t, &e, m.Accessibility)
 	assert.Nil(t, m.OtherMetadata["accessibility"])
 }
@@ -500,9 +504,9 @@ func TestMetadataCoverLink(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := &manifest.Link{
-		Href: "/OEBPS/cover.jpg",
-		Type: "image/jpeg",
-		Rels: []string{"cover"},
+		Href:      manifest.MustNewHREFFromString("OEBPS/cover.jpg", false),
+		MediaType: &mediatype.JPEG,
+		Rels:      []string{"cover"},
 	}
 	assert.Equal(t, m2.Resources.FirstWithRel("cover"), expected)
 	assert.Equal(t, m3.Resources.FirstWithRel("cover"), expected)

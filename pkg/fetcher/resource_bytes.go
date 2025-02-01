@@ -61,11 +61,11 @@ func (r *BytesResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 
 	// Bounds check
 	length := int64(len(r._bytes))
-	if start > (length - 1) {
-		start = length - 1
+	if start > length {
+		start = length
 	}
-	if end > length {
-		end = length
+	if end > (length - 1) {
+		end = length - 1
 	}
 
 	return r._bytes[start : end+1], nil

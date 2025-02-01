@@ -36,10 +36,10 @@ func TestContributorUnmarshalFullJSON(t *testing.T) {
 		Position:        &position,
 		Links: []Link{
 			{
-				Href: "http://link1",
+				Href: MustNewHREFFromString("http://link1", false),
 			},
 			{
-				Href: "http://link2",
+				Href: MustNewHREFFromString("http://link2", false),
 			},
 		},
 	}
@@ -120,12 +120,10 @@ func TestContributorFullJSON(t *testing.T) {
 		Position:        &pos,
 		Links: []Link{
 			{
-				Href:      "http://link1",
-				Templated: true,
+				Href: MustNewHREFFromString("http://link1", true),
 			},
 			{
-				Href:      "http://link2",
-				Templated: false,
+				Href: MustNewHREFFromString("http://link2", false),
 			},
 		},
 	}

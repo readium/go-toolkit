@@ -49,7 +49,7 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 		*mf.Metadata.Presentation.Layout == manifest.EPUBLayoutReflowable {
 		isTextual = true
 		for _, link := range allResources {
-			mt := link.MediaType()
+			mt := link.MediaType
 			if mt.IsAudio() ||
 				mt.IsVideo() ||
 				(mt.IsBitmap() && !extensions.Contains(link.Rels, "cover")) ||
@@ -70,7 +70,7 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 		// audio or video resource (inspect "resources" and "readingOrder" in
 		// RWPM).
 		for _, link := range allResources {
-			if link.MediaType().IsAudio() || link.MediaType().IsVideo() {
+			if link.MediaType.IsAudio() || link.MediaType.IsVideo() {
 				inferredA11y.AccessModes = append(inferredA11y.AccessModes, manifest.A11yAccessModeAuditory)
 				break
 			}
@@ -80,7 +80,7 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 		// or a video resource (inspect "resources" and "readingOrder" in
 		// RWPM).
 		for _, link := range allResources {
-			if link.MediaType().IsBitmap() || link.MediaType().IsVideo() {
+			if link.MediaType.IsBitmap() || link.MediaType.IsVideo() {
 				inferredA11y.AccessModes = append(inferredA11y.AccessModes, manifest.A11yAccessModeVisual)
 				break
 			}
@@ -114,13 +114,13 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 		}
 	}
 
-	if mf.TableOfContents != nil && len(mf.TableOfContents) > 0 {
+	if len(mf.TableOfContents) > 0 {
 		addFeature(manifest.A11yFeatureTableOfContents)
 	}
 
 	if mf.ConformsTo(manifest.ProfileEPUB) {
 		if _, hasPageList := mf.Subcollections["pageList"]; hasPageList {
-			addFeature(manifest.A11yFeaturePrintPageNumbers)
+			addFeature(manifest.A11yFeaturePageNavigation)
 		}
 
 		for _, link := range allResources {
@@ -131,7 +131,7 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 		}
 
 		for _, link := range mf.Resources {
-			if link.MediaType().Matches(&mediatype.SMIL) {
+			if link.MediaType.Matches(&mediatype.SMIL) {
 				addFeature(manifest.A11yFeatureSynchronizedAudioText)
 				break
 			}

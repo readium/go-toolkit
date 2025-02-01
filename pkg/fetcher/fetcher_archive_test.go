@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,13 +16,14 @@ func withArchiveFetcher(t *testing.T, callback func(a *ArchiveFetcher)) {
 }
 
 func TestArchiveFetcherLinks(t *testing.T) {
-	makeTestLink := func(href string, typ string, entryLength uint64, isCompressed bool) struct {
+	makeTestLink := func(href string, typ *mediatype.MediaType, entryLength uint64, isCompressed bool) struct {
 		manifest.Link
 		manifest.Properties
 	} {
+
 		l := manifest.Link{
-			Href: href,
-			Type: typ,
+			Href:      manifest.MustNewHREFFromString(href, false),
+			MediaType: typ,
 		}
 		p := manifest.Properties{
 			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
@@ -39,16 +41,16 @@ func TestArchiveFetcherLinks(t *testing.T) {
 		manifest.Link
 		manifest.Properties
 	}{
-		makeTestLink("/mimetype", "", 20, false),
-		makeTestLink("/EPUB/cover.xhtml", "application/xhtml+xml", 259, true),
-		makeTestLink("/EPUB/css/epub.css", "text/css", 595, true),
-		makeTestLink("/EPUB/css/nav.css", "text/css", 306, true),
-		makeTestLink("/EPUB/images/cover.png", "image/png", 35809, true),
-		makeTestLink("/EPUB/nav.xhtml", "application/xhtml+xml", 2293, true),
-		makeTestLink("/EPUB/package.opf", "application/oebps-package+xml", 773, true),
-		makeTestLink("/EPUB/s04.xhtml", "application/xhtml+xml", 118269, true),
-		makeTestLink("/EPUB/toc.ncx", "application/x-dtbncx+xml", 1697, true),
-		makeTestLink("/META-INF/container.xml", "application/xml", 176, true),
+		makeTestLink("mimetype", nil, 20, false),
+		makeTestLink("EPUB/cover.xhtml", &mediatype.XHTML, 259, true),
+		makeTestLink("EPUB/css/epub.css", &mediatype.CSS, 595, true),
+		makeTestLink("EPUB/css/nav.css", &mediatype.CSS, 306, true),
+		makeTestLink("EPUB/images/cover.png", &mediatype.PNG, 35809, true),
+		makeTestLink("EPUB/nav.xhtml", &mediatype.XHTML, 2293, true),
+		makeTestLink("EPUB/package.opf", &mediatype.OPF, 773, true),
+		makeTestLink("EPUB/s04.xhtml", &mediatype.XHTML, 118269, true),
+		makeTestLink("EPUB/toc.ncx", &mediatype.NCX, 1697, true),
+		makeTestLink("META-INF/container.xml", &mediatype.XML, 176, true),
 	}
 
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
@@ -66,7 +68,7 @@ func TestArchiveFetcherLinks(t *testing.T) {
 
 func TestArchiveFetcherLengthNotFound(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(manifest.Link{Href: "/unknown"})
+		resource := a.Get(manifest.Link{Href: manifest.MustNewHREFFromString("unknown", false)})
 		_, err := resource.Length()
 		assert.Equal(t, NotFound(err.Cause), err)
 	})
@@ -74,7 +76,7 @@ func TestArchiveFetcherLengthNotFound(t *testing.T) {
 
 func TestArchiveFetcherReadNotFound(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(manifest.Link{Href: "/unknown"})
+		resource := a.Get(manifest.Link{Href: manifest.MustNewHREFFromString("unknown", false)})
 		_, err := resource.Read(0, 0)
 		assert.Equal(t, NotFound(err.Cause), err)
 		_, err = resource.Stream(&bytes.Buffer{}, 0, 0)
@@ -84,7 +86,7 @@ func TestArchiveFetcherReadNotFound(t *testing.T) {
 
 func TestArchiveFetcherRead(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(manifest.Link{Href: "/mimetype"})
+		resource := a.Get(manifest.Link{Href: manifest.MustNewHREFFromString("mimetype", false)})
 		bin, err := resource.Read(0, 0)
 		if assert.Nil(t, err) {
 			assert.Equal(t, "application/epub+zip", string(bin))
@@ -100,7 +102,7 @@ func TestArchiveFetcherRead(t *testing.T) {
 
 func TestArchiveFetcherReadRange(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(manifest.Link{Href: "/mimetype"})
+		resource := a.Get(manifest.Link{Href: manifest.MustNewHREFFromString("mimetype", false)})
 		bin, err := resource.Read(0, 10)
 		if assert.Nil(t, err) {
 			assert.Equal(t, "application", string(bin))
@@ -116,7 +118,7 @@ func TestArchiveFetcherReadRange(t *testing.T) {
 
 func TestArchiveFetcherComputingLength(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(manifest.Link{Href: "/mimetype"})
+		resource := a.Get(manifest.Link{Href: manifest.MustNewHREFFromString("mimetype", false)})
 		length, err := resource.Length()
 		assert.Nil(t, err)
 		assert.EqualValues(t, 20, length)
@@ -125,7 +127,7 @@ func TestArchiveFetcherComputingLength(t *testing.T) {
 
 func TestArchiveFetcherDirectoryLengthNotFound(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(manifest.Link{Href: "/EPUB"})
+		resource := a.Get(manifest.Link{Href: manifest.MustNewHREFFromString("EPUB", false)})
 		_, err := resource.Length()
 		assert.Equal(t, NotFound(err.Cause), err)
 	})
@@ -133,7 +135,7 @@ func TestArchiveFetcherDirectoryLengthNotFound(t *testing.T) {
 
 func TestArchiveFetcherFileNotFoundLength(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(manifest.Link{Href: "/unknown"})
+		resource := a.Get(manifest.Link{Href: manifest.MustNewHREFFromString("unknown", false)})
 		_, err := resource.Length()
 		assert.Equal(t, NotFound(err.Cause), err)
 	})
@@ -141,7 +143,7 @@ func TestArchiveFetcherFileNotFoundLength(t *testing.T) {
 
 func TestArchiveFetcherAddsProperties(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
-		resource := a.Get(manifest.Link{Href: "/EPUB/css/epub.css"})
+		resource := a.Get(manifest.Link{Href: manifest.MustNewHREFFromString("EPUB/css/epub.css", false)})
 		assert.Equal(t, manifest.Properties{
 			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
 				"entryLength":       uint64(595),

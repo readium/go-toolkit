@@ -5,16 +5,16 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/drm"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/readium/xmlquery"
 )
 
-func ParseEncryption(document *xmlquery.Node) (ret map[string]manifest.Encryption) {
+func ParseEncryption(document *xmlquery.Node) (ret map[url.URL]manifest.Encryption) {
 	for _, node := range document.SelectElements("//" + NSSelect(NamespaceENC, "EncryptedData")) {
 		u, e := parseEncryptedData(node)
 		if e != nil {
 			if ret == nil {
-				ret = make(map[string]manifest.Encryption)
+				ret = make(map[url.URL]manifest.Encryption)
 			}
 			ret[u] = *e
 		}
@@ -22,14 +22,14 @@ func ParseEncryption(document *xmlquery.Node) (ret map[string]manifest.Encryptio
 	return
 }
 
-func parseEncryptedData(node *xmlquery.Node) (string, *manifest.Encryption) {
+func parseEncryptedData(node *xmlquery.Node) (url.URL, *manifest.Encryption) {
 	cdat := node.SelectElement(NSSelect(NamespaceENC, "CipherData"))
 	if cdat == nil {
-		return "", nil
+		return nil, nil
 	}
 	cipherref := cdat.SelectElement(NSSelect(NamespaceENC, "CipherReference"))
 	if cipherref == nil {
-		return "", nil
+		return nil, nil
 	}
 	resourceURI := cipherref.SelectAttr("URI")
 
@@ -60,7 +60,11 @@ func parseEncryptedData(node *xmlquery.Node) (string, *manifest.Encryption) {
 		}
 	}
 
-	ru, _ := util.NewHREF(resourceURI, "").String()
+	ru, err := url.FromEPUBHref(resourceURI)
+	if err != nil {
+		return nil, nil
+	}
+
 	return ru, ret
 }
 

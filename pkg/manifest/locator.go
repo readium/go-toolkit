@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 // One or more alternative expressions of the location.
@@ -149,6 +151,32 @@ func TextFromJSON(rawJson map[string]interface{}) (t Text) {
 	return
 }
 
+func (t Text) Substring(start, end int64) Text {
+	if t.Highlight == "" {
+		return t
+	}
+
+	length := int64(len(t.Highlight))
+	if start > length-1 {
+		start = length
+	}
+	if start < 0 {
+		start = 0
+	}
+	if end > length-1 {
+		end = length - 1
+	}
+	if end < 0 {
+		end = 0
+	}
+
+	t.Before += t.Highlight[:start]
+	t.After = t.Highlight[end+1:] + t.After
+	t.Highlight = t.Highlight[start : end+1]
+
+	return t
+}
+
 // Locator provides a precise location in a publication in a format that can be stored and shared.
 //
 // There are many different use cases for locators:
@@ -160,11 +188,11 @@ func TextFromJSON(rawJson map[string]interface{}) (t Text) {
 //
 // https://github.com/readium/architecture/tree/master/locators
 type Locator struct {
-	Href      string    `json:"href"`
-	Type      string    `json:"type"`
-	Title     string    `json:"title,omitempty"`
-	Locations Locations `json:"locations,omitempty"`
-	Text      Text      `json:"text,omitempty"`
+	Href      url.URL             `json:"href"`
+	MediaType mediatype.MediaType `json:"type"`
+	Title     string              `json:"title,omitempty"`
+	Locations Locations           `json:"locations,omitempty"`
+	Text      Text                `json:"text,omitempty"`
 }
 
 func LocatorFromJSON(rawJson map[string]interface{}) (Locator, error) {
@@ -172,13 +200,25 @@ func LocatorFromJSON(rawJson map[string]interface{}) (Locator, error) {
 		return Locator{}, nil
 	}
 
+	rawHref := parseOptString(rawJson["href"])
+	rawType := parseOptString(rawJson["type"])
+	if rawHref == "" || rawType == "" {
+		return Locator{}, errors.New("'href' and 'type' are required")
+	}
+
 	locator := Locator{
-		Href:  parseOptString(rawJson["href"]),
-		Type:  parseOptString(rawJson["type"]),
 		Title: parseOptString(rawJson["title"]),
 	}
-	if locator.Href == "" || locator.Type == "" {
-		return Locator{}, errors.New("'href' and 'type' are required")
+
+	url, err := url.URLFromString(rawHref)
+	if err != nil {
+		return Locator{}, errors.Wrap(err, "failed unmarshalling 'href' as URL")
+	}
+	locator.Href = url
+
+	locator.MediaType, err = mediatype.NewOfString(rawType)
+	if err != nil {
+		return Locator{}, errors.Wrap(err, "failed unmarshalling 'type' as valid mimetype")
 	}
 
 	if rawLocations, ok := rawJson["locations"].(map[string]interface{}); ok {
@@ -212,8 +252,14 @@ func (l *Locator) UnmarshalJSON(b []byte) error {
 
 func (l Locator) MarshalJSON() ([]byte, error) {
 	j := make(map[string]interface{})
-	j["href"] = l.Href
-	j["type"] = l.Type
+
+	if l.Href == nil {
+		return nil, errors.New("href is required in Locator")
+	}
+	j["href"] = l.Href.String()
+
+	j["type"] = l.MediaType.String()
+
 	if l.Title != "" {
 		j["title"] = l.Title
 	}

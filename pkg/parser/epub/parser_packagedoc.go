@@ -5,12 +5,13 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/util"
+	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/readium/xmlquery"
 )
 
 type PackageDocument struct {
-	Path               string
+	Path               url.URL
 	EPUBVersion        float64
 	EPUBVersionString  string
 	uniqueIdentifierID string
@@ -19,7 +20,7 @@ type PackageDocument struct {
 	Spine              Spine
 }
 
-func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDocument, error) {
+func ParsePackageDocument(document *xmlquery.Node, filePath url.URL) (*PackageDocument, error) {
 	pkg := document.SelectElement("/" + NSSelect(NamespaceOPF, "package"))
 	if pkg == nil {
 		return nil, errors.New("package root element not found")
@@ -80,29 +81,30 @@ func ParsePackageDocument(document *xmlquery.Node, filePath string) (*PackageDoc
 }
 
 type Item struct {
-	Href         string
+	Href         url.URL
 	ID           string
 	fallback     string
 	mediaOverlay string
-	MediaType    string
+	MediaType    *mediatype.MediaType
 	Properties   []string
 }
 
-func ParseItem(element *xmlquery.Node, filePath string, prefixMap map[string]string) *Item {
+func ParseItem(element *xmlquery.Node, filePath url.URL, prefixMap map[string]string) *Item {
 	rawHref := element.SelectAttr("href")
 	if rawHref == "" {
 		return nil
 	}
-	href, err := util.NewHREF(rawHref, filePath).String()
+	u, err := url.FromEPUBHref(rawHref)
 	if err != nil {
 		return nil
 	}
+	u = filePath.Resolve(u)
 	item := &Item{
-		Href:         href,
+		Href:         u,
 		ID:           element.SelectAttr("id"),
 		fallback:     element.SelectAttr("fallback"),
 		mediaOverlay: element.SelectAttr("media-overlay"),
-		MediaType:    element.SelectAttr("media-type"),
+		MediaType:    mediatype.MaybeNewOfString(element.SelectAttr("media-type")),
 	}
 	pp := parseProperties(element.SelectAttr("properties"))
 	if len(pp) > 0 {

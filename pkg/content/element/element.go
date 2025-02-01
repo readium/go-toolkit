@@ -74,7 +74,6 @@ func (e AudioElement) Locator() manifest.Locator {
 
 // Implements EmbeddedElement
 func (e AudioElement) EmbeddedLink() manifest.Link {
-	e.embeddedLink.Href = strings.TrimPrefix(e.embeddedLink.Href, "/")
 	return e.embeddedLink
 }
 
@@ -115,7 +114,6 @@ func (e VideoElement) Locator() manifest.Locator {
 
 // Implements EmbeddedElement
 func (e VideoElement) EmbeddedLink() manifest.Link {
-	e.embeddedLink.Href = strings.TrimPrefix(e.embeddedLink.Href, "/")
 	return e.embeddedLink
 }
 
@@ -158,7 +156,6 @@ func (e ImageElement) Locator() manifest.Locator {
 
 // Implements EmbeddedElement
 func (e ImageElement) EmbeddedLink() manifest.Link {
-	e.embeddedLink.Href = strings.TrimPrefix(e.embeddedLink.Href, "/")
 	return e.embeddedLink
 }
 

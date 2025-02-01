@@ -121,7 +121,7 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 }
 
 func TestMetadataUnmarshalNilJSON(t *testing.T) {
-	s, err := MetadataFromJSON(nil, nil)
+	s, err := MetadataFromJSON(nil)
 	assert.NoError(t, err)
 	assert.Nil(t, s)
 }

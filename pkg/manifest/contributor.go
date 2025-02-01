@@ -16,7 +16,7 @@ type Contributor struct {
 	Identifier      string           `json:"identifier,omitempty"`     // An unambiguous reference to this contributor.
 	Roles           Strings          `json:"role,omitempty"`           // The roles of the contributor in the making of the publication.
 	Position        *float64         `json:"position,omitempty"`       // The position of the publication in this collection/series, when the contributor represents a collection. TODO validator
-	Links           []Link           `json:"links,omitempty"`          // Used to retrieve similar publications for the given contributor.
+	Links           LinkList         `json:"links,omitempty"`          // Used to retrieve similar publications for the given contributor.
 }
 
 func (c Contributor) Name() string {
@@ -33,7 +33,7 @@ func (c Contributor) SortAs() string {
 // Parses a [Contributor] from its RWPM JSON representation.
 // A contributor can be parsed from a single string, or a full-fledged object.
 // The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
-func ContributorFromJSON(rawJson interface{}, normalizeHref LinkHrefNormalizer) (*Contributor, error) {
+func ContributorFromJSON(rawJson interface{}) (*Contributor, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -75,7 +75,7 @@ func ContributorFromJSON(rawJson interface{}, normalizeHref LinkHrefNormalizer) 
 		// Links
 		rawLinks, ok := dd["links"].([]interface{})
 		if ok {
-			links, err := LinksFromJSONArray(rawLinks, normalizeHref)
+			links, err := LinksFromJSONArray(rawLinks)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed unmarshalling 'links'")
 			}
@@ -97,13 +97,13 @@ func ContributorFromJSON(rawJson interface{}, normalizeHref LinkHrefNormalizer) 
 	return c, nil
 }
 
-func ContributorFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNormalizer) ([]Contributor, error) {
+func ContributorFromJSONArray(rawJsonArray interface{}) ([]Contributor, error) {
 	var contributors []Contributor
 	switch rjx := rawJsonArray.(type) {
 	case []interface{}:
 		contributors = make([]Contributor, 0, len(rjx))
 		for i, entry := range rjx {
-			rc, err := ContributorFromJSON(entry, normalizeHref)
+			rc, err := ContributorFromJSON(entry)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed unmarshalling Contributor at position %d", i)
 			}
@@ -113,7 +113,7 @@ func ContributorFromJSONArray(rawJsonArray interface{}, normalizeHref LinkHrefNo
 			contributors = append(contributors, *rc)
 		}
 	default:
-		c, err := ContributorFromJSON(rjx, normalizeHref)
+		c, err := ContributorFromJSON(rjx)
 		if err != nil {
 			return nil, err
 		}
@@ -139,7 +139,7 @@ func (c *Contributor) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	fc, err := ContributorFromJSON(d, LinkHrefNormalizerIdentity)
+	fc, err := ContributorFromJSON(d)
 	if err != nil {
 		return err
 	}

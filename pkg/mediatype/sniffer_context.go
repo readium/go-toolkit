@@ -95,6 +95,19 @@ func (s SnifferContext) HasMediaType(mediaTypes ...string) bool {
 	return false
 }
 
+// Returns whether this context has any media type with a one of the provided types (the first component of the media type).
+func (s SnifferContext) HasMediaTypeWithType(types ...string) bool {
+	selfMediaTypes := s.MediaTypes()
+	for _, typ := range types {
+		for _, mt := range selfMediaTypes {
+			if mt.Type == typ {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Content as plain text.
 // Extracts the charset parameter from the media type hints to figure out an encoding. Otherwise, UTF-8 is assumed.
 func (s SnifferContext) ContentAsString() (string, error) {

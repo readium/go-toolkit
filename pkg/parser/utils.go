@@ -11,7 +11,7 @@ import (
 func hrefCommonFirstComponent(links manifest.LinkList) string {
 	latest := ""
 	for _, link := range links {
-		normalized := strings.SplitN(strings.TrimPrefix(link.Href, "/"), "/", 2)[0]
+		normalized := strings.SplitN(link.URL(nil, nil).Path(), "/", 2)[0]
 		if latest != "" {
 			if latest != normalized {
 				latest = "" // No distinct prefix
@@ -32,7 +32,7 @@ func guessPublicationTitleFromFileStructure(fetcher fetcher.Fetcher) string { //
 	if commonFirstComponent == "" {
 		return ""
 	}
-	if commonFirstComponent == strings.TrimPrefix("/", links[0].Href) {
+	if commonFirstComponent == links[0].Href.String() {
 		return ""
 	}
 
