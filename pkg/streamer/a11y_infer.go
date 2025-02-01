@@ -114,13 +114,13 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 		}
 	}
 
-	if mf.TableOfContents != nil && len(mf.TableOfContents) > 0 {
+	if len(mf.TableOfContents) > 0 {
 		addFeature(manifest.A11yFeatureTableOfContents)
 	}
 
 	if mf.ConformsTo(manifest.ProfileEPUB) {
 		if _, hasPageList := mf.Subcollections["pageList"]; hasPageList {
-			addFeature(manifest.A11yFeaturePrintPageNumbers)
+			addFeature(manifest.A11yFeaturePageNavigation)
 		}
 
 		for _, link := range allResources {
