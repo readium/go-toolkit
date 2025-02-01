@@ -283,9 +283,9 @@ const (
 	// The work includes an index to the content.
 	A11yFeatureIndex A11yFeature = "index"
 
-	// The work includes equivalent print page numbers. This setting is most commonly used
-	// with ebooks for which there is a print equivalent.
-	A11yFeaturePrintPageNumbers A11yFeature = "printPageNumbers"
+	// The resource includes a means of navigating to static page break locations.
+	// The most common way of providing page navigation in digital publications is through a page list.
+	A11yFeaturePageNavigation A11yFeature = "pageNavigation"
 
 	// The reading order of the content is clearly defined in the markup
 	// (e.g., figures, sidebars and other secondary content has been marked up to allow it

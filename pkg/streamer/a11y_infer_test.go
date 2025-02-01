@@ -295,7 +295,7 @@ func TestInferFeaturePageList(t *testing.T) {
 		},
 		ReadingOrder: []manifest.Link{newLink(mediatype.HTML, "html")},
 	}
-	assertFeature(t, m, manifest.A11yFeaturePrintPageNumbers)
+	assertFeature(t, m, manifest.A11yFeaturePageNavigation)
 }
 
 // If the publication contains any resource with MathML (check for the presence
