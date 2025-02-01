@@ -30,6 +30,7 @@ type Metadata struct {
 	LocalizedSubtitle  *LocalizedString       `json:"subtitle,omitempty"`
 	LocalizedSortAs    *LocalizedString       `json:"sortAs,omitempty"`
 	Accessibility      *A11y                  `json:"accessibility,omitempty"`
+	TDM                *TDM                   `json:"tdm,omitempty"`
 	Modified           *time.Time             `json:"modified,omitempty"`
 	Published          *time.Time             `json:"published,omitempty"`
 	Languages          Strings                `json:"language,omitempty" validate:"BCP47"` // TODO validator
@@ -166,6 +167,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 		return nil, errors.Wrap(err, "failed parsing 'title'")
 	}
 
+	// Accessibility
 	var a11y *A11y
 	if a11yJSON, ok := rawJson["accessibility"].(map[string]interface{}); ok {
 		a11y, err = A11yFromJSON(a11yJSON)
@@ -174,11 +176,21 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 		}
 	}
 
+	// TDMRep (Text & Data Mining Reservation Protocol)
+	var tdm *TDM
+	if tdmJSON, ok := rawJson["tdm"].(map[string]interface{}); ok {
+		tdm, err = TDMFromJSON(tdmJSON)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed parsing 'tdm'")
+		}
+	}
+
 	metadata := &Metadata{
 		Identifier:         parseOptString(rawJson["identifier"]),
 		Type:               parseOptString(rawJson["@type"]),
 		LocalizedTitle:     *title,
 		Accessibility:      a11y,
+		TDM:                tdm,
 		Modified:           parseOptTime(rawJson["modified"]),
 		Published:          parseOptTime(rawJson["published"]),
 		ReadingProgression: ReadingProgression(parseOptString(rawJson["readingProgression"])),
@@ -411,6 +423,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 		"sortAs",
 		"subject",
 		"subtitle",
+		"tdm",
 		"title",
 		"translator",
 	} {
@@ -469,6 +482,9 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	}
 	if m.Accessibility != nil {
 		j["accessibility"] = *m.Accessibility
+	}
+	if m.TDM != nil {
+		j["tdm"] = *m.TDM
 	}
 	if m.Modified != nil {
 		j["modified"] = *m.Modified

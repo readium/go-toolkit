@@ -21,8 +21,8 @@
     <meta name="a11y:certifierCredential" content="DAISY OK"/>
     <meta name="a11y:certifierReport" content="https://example.com/a11y-report/"/>
 
-    <meta property="a11y:exemption">eaa-microenterprise</meta>
-    <meta property="a11y:exemption">eaa-fundamental-alteration</meta>
+    <meta name="a11y:exemption" content="eaa-microenterprise" />
+    <meta name="a11y:exemption" content="eaa-fundamental-alteration" />
   </metadata>
   <manifest>
     <item id="titlepage" href="titlepage.xhtml"/>
