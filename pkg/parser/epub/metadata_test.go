@@ -323,7 +323,7 @@ func TestMetadataEPUB2Accessibility(t *testing.T) {
 	}
 	e.Features = []manifest.A11yFeature{manifest.A11yFeatureStructuralNavigation, manifest.A11yFeatureAlternativeText}
 	e.Hazards = []manifest.A11yHazard{manifest.A11yHazardMotionSimulation, manifest.A11yHazardNoSoundHazard}
-	e.Exemptions = []manifest.A11yExemption{manifest.A11yExemptionEAAMicroenterprise, manifest.A11yExemptionEAAFundamentalAlteration}
+	e.Exemptions = []manifest.A11yExemption{manifest.A11yExemptionEAAMicroenterprise, manifest.A11yExemptionEAAFundamentalAlteration, manifest.A11yExemptionEAADisproportionateBurden}
 	assert.Equal(t, &e, m.Accessibility)
 	assert.Nil(t, m.OtherMetadata["accessibility"])
 }
@@ -355,7 +355,7 @@ func TestMetadataEPUB3Accessibility(t *testing.T) {
 	}
 	e.Features = []manifest.A11yFeature{manifest.A11yFeatureStructuralNavigation, manifest.A11yFeatureAlternativeText}
 	e.Hazards = []manifest.A11yHazard{manifest.A11yHazardMotionSimulation, manifest.A11yHazardNoSoundHazard}
-	e.Exemptions = []manifest.A11yExemption{manifest.A11yExemptionEAAMicroenterprise, manifest.A11yExemptionEAAFundamentalAlteration}
+	e.Exemptions = []manifest.A11yExemption{manifest.A11yExemptionEAAMicroenterprise, manifest.A11yExemptionEAAFundamentalAlteration, manifest.A11yExemptionEAADisproportionateBurden}
 	assert.Equal(t, &e, m.Accessibility)
 	assert.Nil(t, m.OtherMetadata["accessibility"])
 }
