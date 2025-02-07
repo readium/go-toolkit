@@ -445,7 +445,7 @@ func A11yHazardsFromStrings(strings []string) []A11yHazard {
 type A11yExemption string
 
 const (
-	A11yExemptionEAASisproportionateBurden A11yExemption = "eaa-disproportionate-burden"
+	A11yExemptionEAADisproportionateBurden A11yExemption = "eaa-disproportionate-burden"
 	A11yExemptionEAAFundamentalAlteration  A11yExemption = "eaa-fundamental-alteration"
 	A11yExemptionEAAMicroenterprise        A11yExemption = "eaa-microenterprise"
 )

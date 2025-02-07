@@ -808,11 +808,11 @@ func (m PubMetadataAdapter) a11yHazards() []manifest.A11yHazard {
 
 func (m PubMetadataAdapter) a11yExemptions() []manifest.A11yExemption {
 	values := m.Values(VocabularyA11Y + "exemption")
-	hazards := make([]manifest.A11yExemption, len(values))
+	exemptions := make([]manifest.A11yExemption, len(values))
 	for i, v := range values {
-		hazards[i] = manifest.A11yExemption(v)
+		exemptions[i] = manifest.A11yExemption(v)
 	}
-	return hazards
+	return exemptions
 }
 
 func (m *PubMetadataAdapter) seedBelongsToData() {

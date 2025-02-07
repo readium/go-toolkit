@@ -23,6 +23,7 @@
 
     <meta name="a11y:exemption" content="eaa-microenterprise" />
     <meta name="a11y:exemption" content="eaa-fundamental-alteration" />
+    <meta name="a11y:exemption" content="eaa-disproportionate-burden" />
   </metadata>
   <manifest>
     <item id="titlepage" href="titlepage.xhtml"/>
