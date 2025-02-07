@@ -8,6 +8,16 @@ All notable changes to this project will be documented in this file.
 
 None
 
+## [0.7.1] - 2025-02-07
+
+### Added
+
+- Add [TDMRep](https://www.w3.org/community/reports/tdmrep/CG-FINAL-tdmrep-20240510/#sec-epub3) support for EPUB 2 & 3.
+
+### Fixed
+
+- Fix typo in EAA exemption.
+
 ## [0.7.0] - 2025-01-31
 
 ### Added
