@@ -2,8 +2,8 @@ FROM --platform=$BUILDPLATFORM golang:1-bookworm@sha256:3149bc5043fa58cf127fd8db
 ARG BUILDARCH TARGETOS TARGETARCH
 
 # Install GoReleaser
-RUN wget --no-verbose "https://github.com/goreleaser/goreleaser/releases/download/v1.26.2/goreleaser_1.26.2_$BUILDARCH.deb"
-RUN dpkg -i "goreleaser_1.26.2_$BUILDARCH.deb"
+RUN wget --no-verbose "https://github.com/goreleaser/goreleaser/releases/download/v2.7.0/goreleaser_2.7.0_$BUILDARCH.deb"
+RUN dpkg -i "goreleaser_2.7.0_$BUILDARCH.deb"
 
 # Create and change to the app directory.
 WORKDIR /app
