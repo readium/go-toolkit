@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"encoding/json"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -452,11 +453,32 @@ func (m *Metadata) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// If you really don't want the version info in your manifest, you can blank this value.
+var ToolkitVersionKey = "https://github.com/readium/go-toolkit/releases"
+
+const toolkitRepo = "github.com/readium/go-toolkit"
+
 func (m Metadata) MarshalJSON() ([]byte, error) {
 	j := make(map[string]interface{})
 	if m.OtherMetadata != nil {
 		for k, v := range m.OtherMetadata {
 			j[k] = v
+		}
+	}
+
+	if ToolkitVersionKey != "" {
+		if info, ok := debug.ReadBuildInfo(); ok {
+			if info.Main.Path == toolkitRepo {
+				// This is the toolkit itself
+				j[ToolkitVersionKey] = info.Main.Version
+			} else {
+				// This is a module that uses the toolkit
+				for _, dep := range info.Deps {
+					if dep.Path == toolkitRepo {
+						j[ToolkitVersionKey] = dep.Version
+					}
+				}
+			}
 		}
 	}
 
