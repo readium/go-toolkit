@@ -8,6 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func init() {
+	ToolkitVersionKey = "" // Prevent injection of version during testing
+}
+
 func TestMetadataUnmarshalMinimalJSON(t *testing.T) {
 	var m Metadata
 	assert.NoError(t, json.Unmarshal([]byte(`{"title": "Title"}`), &m))

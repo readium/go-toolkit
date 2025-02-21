@@ -3,13 +3,15 @@ package cmd
 import (
 	"os"
 
+	"github.com/readium/go-toolkit/pkg/util/version"
 	"github.com/spf13/cobra"
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "rwp",
-	Short: "Utilities for Readium Web Publications",
+	Use:     "rwp",
+	Short:   "Utilities for Readium Web Publications",
+	Version: version.Version,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
