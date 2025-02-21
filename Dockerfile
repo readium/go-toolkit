@@ -22,7 +22,7 @@ COPY . ./
 # Run goreleaser
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --single-target --id rwp --skip=validate --snapshot --output ./rwp
+    GOOS=$TARGETOS GOARCH=$TARGETARCH GOAMD64=v3 goreleaser build --single-target --id rwp --skip=validate --snapshot --output ./rwp
 
 # Run tests
 # FROM builder AS tester
