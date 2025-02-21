@@ -87,6 +87,24 @@ func TestA11yUnmarshalConformsToArray(t *testing.T) {
 	assert.Equal(t, e, m, "unmarshalled JSON object should be equal to A11y object")
 }
 
+func TestA11ySortConformsTo(t *testing.T) {
+	a := A11yProfileList{
+		EPUBA11y10WCAG20A,
+		EPUBA11y11WCAG22A,
+		EPUBA11y11WCAG20AA,
+		EPUBA11y11WCAG21AA,
+		EPUBA11y11WCAG22AAA,
+	}
+	a.Sort()
+	assert.Equal(t, A11yProfileList{
+		EPUBA11y11WCAG22AAA,
+		EPUBA11y11WCAG22A,
+		EPUBA11y11WCAG21AA,
+		EPUBA11y11WCAG20AA,
+		EPUBA11y10WCAG20A,
+	}, a)
+}
+
 func TestA11yUnmarshalAccessModeSufficientContainingBothStringsAndArrays(t *testing.T) {
 	var m A11y
 	assert.NoError(t, json.Unmarshal([]byte(`{"accessModeSufficient": ["auditory", ["visual", "tactile"], [], "visual"]}`), &m))

@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"encoding/json"
+	"slices"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
@@ -12,7 +13,7 @@ import (
 // https://www.w3.org/2021/a11y-discov-vocab/latest/
 // https://readium.org/webpub-manifest/schema/a11y.schema.json
 type A11y struct {
-	ConformsTo            []A11yProfile             `json:"conformsTo,omitempty"`           // An established standard to which the described resource conforms.
+	ConformsTo            A11yProfileList           `json:"conformsTo,omitempty"`           // An established standard to which the described resource conforms.
 	Certification         *A11yCertification        `json:"certification,omitempty"`        // Certification of accessible publications.
 	Summary               string                    `json:"summary,omitempty"`              // A human-readable summary of specific accessibility features or deficiencies, consistent with the other accessibility metadata but expressing subtleties such as "short descriptions are present but long descriptions will be needed for non-visual users" or "short descriptions are present and no long descriptions are needed."
 	AccessModes           []A11yAccessMode          `json:"accessMode,omitempty"`           // The human sensory perceptual system or cognitive faculty through which a person may process or perceive information.
@@ -25,7 +26,7 @@ type A11y struct {
 // NewA11y creates a new empty A11y.
 func NewA11y() A11y {
 	return A11y{
-		ConformsTo:            []A11yProfile{},
+		ConformsTo:            A11yProfileList{},
 		AccessModes:           []A11yAccessMode{},
 		AccessModesSufficient: [][]A11yPrimaryAccessMode{},
 		Features:              []A11yFeature{},
@@ -47,6 +48,7 @@ func (a *A11y) Merge(other *A11y) {
 	}
 
 	a.ConformsTo = extensions.AppendIfMissing(a.ConformsTo, other.ConformsTo...)
+	a.ConformsTo.Sort()
 
 	if other.Certification != nil {
 		a.Certification = other.Certification
@@ -86,6 +88,7 @@ func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
 		return nil, errors.Wrap(err, "failed unmarshalling 'conformsTo'")
 	}
 	a.ConformsTo = A11yProfilesFromStrings(conformsTo)
+	a.ConformsTo.Sort()
 
 	if certJSON, ok := rawJSON["certification"].(map[string]interface{}); ok {
 		c := A11yCertification{
@@ -171,11 +174,67 @@ const (
 	EPUBA11y10WCAG20AA A11yProfile = "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa"
 	// EPUB Accessibility 1.0 - WCAG 2.0 Level AAA
 	EPUBA11y10WCAG20AAA A11yProfile = "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa"
+	// EPUB Accessibility 1.1 - WCAG 2.0 Level A
+	EPUBA11y11WCAG20A A11yProfile = "https://www.w3.org/TR/epub-a11y-11#wcag-2.0-a"
+	// EPUB Accessibility 1.1 - WCAG 2.0 Level AA
+	EPUBA11y11WCAG20AA A11yProfile = "https://www.w3.org/TR/epub-a11y-11#wcag-2.0-aa"
+	// EPUB Accessibility 1.1 - WCAG 2.0 Level AAA
+	EPUBA11y11WCAG20AAA A11yProfile = "https://www.w3.org/TR/epub-a11y-11#wcag-2.0-aaa"
+	// EPUB Accessibility 1.1 - WCAG 2.1 Level A
+	EPUBA11y11WCAG21A A11yProfile = "https://www.w3.org/TR/epub-a11y-11#wcag-2.1-a"
+	// EPUB Accessibility 1.1 - WCAG 2.1 Level AA
+	EPUBA11y11WCAG21AA A11yProfile = "https://www.w3.org/TR/epub-a11y-11#wcag-2.1-aa"
+	// EPUB Accessibility 1.1 - WCAG 2.1 Level AAA
+	EPUBA11y11WCAG21AAA A11yProfile = "https://www.w3.org/TR/epub-a11y-11#wcag-2.1-aaa"
+	// EPUB Accessibility 1.1 - WCAG 2.2 Level A
+	EPUBA11y11WCAG22A A11yProfile = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-a"
+	// EPUB Accessibility 1.1 - WCAG 2.2 Level AA
+	EPUBA11y11WCAG22AA A11yProfile = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aa"
+	// EPUB Accessibility 1.1 - WCAG 2.2 Level AAA
+	EPUBA11y11WCAG22AAA A11yProfile = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aaa"
 )
+
+// Used for sorting. Make sure to keep it up-to-date with the consts
+var a11yProfileRanking = map[A11yProfile]int{
+	EPUBA11y10WCAG20A:   1,
+	EPUBA11y10WCAG20AA:  2,
+	EPUBA11y10WCAG20AAA: 3,
+	EPUBA11y11WCAG20A:   4,
+	EPUBA11y11WCAG20AA:  5,
+	EPUBA11y11WCAG20AAA: 6,
+	EPUBA11y11WCAG21A:   7,
+	EPUBA11y11WCAG21AA:  8,
+	EPUBA11y11WCAG21AAA: 9,
+	EPUBA11y11WCAG22A:   10,
+	EPUBA11y11WCAG22AA:  11,
+	EPUBA11y11WCAG22AAA: 12,
+}
 
 func A11yProfilesFromStrings(strings []string) []A11yProfile {
 	return fromStrings(strings, func(str string) A11yProfile {
 		return A11yProfile(str)
+	})
+}
+
+func (p A11yProfile) Compare(other A11yProfile) int {
+	// Compare based on the compatibility level
+	if p == other {
+		return 0
+	}
+
+	pRank := a11yProfileRanking[p]
+	oRank := a11yProfileRanking[other]
+	return oRank - pRank
+}
+
+type A11yProfileList []A11yProfile
+
+func (l A11yProfileList) Sort() {
+	if len(l) <= 1 {
+		return
+	}
+	slices.SortFunc(l, func(a, b A11yProfile) int {
+		return a.Compare(b)
 	})
 }
 

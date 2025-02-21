@@ -675,7 +675,7 @@ func (m PubMetadataAdapter) TDM() *manifest.TDM {
 }
 
 func (m PubMetadataAdapter) a11yConformsTo() []manifest.A11yProfile {
-	profiles := []manifest.A11yProfile{}
+	profiles := manifest.A11yProfileList{}
 
 	if items, ok := m.items[VocabularyDCTerms+"conformsto"]; ok {
 		for _, item := range items {
@@ -691,32 +691,41 @@ func (m PubMetadataAdapter) a11yConformsTo() []manifest.A11yProfile {
 		}
 	}
 
+	profiles.Sort()
 	return profiles
 }
 
 func a11yProfile(value string) manifest.A11yProfile {
 	switch value {
-	case "EPUB Accessibility 1.1 - WCAG 2.0 Level A",
-		"http://idpf.org/epub/a11y/accessibility-20170105.html#wcag-a",
+	case "http://idpf.org/epub/a11y/accessibility-20170105.html#wcag-a",
 		"http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a",
 		"https://idpf.org/epub/a11y/accessibility-20170105.html#wcag-a",
 		"https://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a":
 		return manifest.EPUBA11y10WCAG20A
 
-	case "EPUB Accessibility 1.1 - WCAG 2.0 Level AA",
-		"http://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa",
+	case "http://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa",
 		"http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa",
 		"https://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa",
 		"https://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa":
 		return manifest.EPUBA11y10WCAG20AA
 
-	case "EPUB Accessibility 1.1 - WCAG 2.0 Level AAA",
-		"http://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
+	case "http://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
 		"http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
 		"https://idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa",
 		"https://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa":
 		return manifest.EPUBA11y10WCAG20AAA
-
+	case "EPUB Accessibility 1.1 - WCAG 2.0 Level A":
+		return manifest.EPUBA11y11WCAG20A
+	case "EPUB Accessibility 1.1 - WCAG 2.0 Level AA":
+		return manifest.EPUBA11y11WCAG20AA
+	case "EPUB Accessibility 1.1 - WCAG 2.0 Level AAA":
+		return manifest.EPUBA11y11WCAG20AAA
+	case "EPUB Accessibility 1.1 - WCAG 2.1 Level A":
+		return manifest.EPUBA11y11WCAG21A
+	case "EPUB Accessibility 1.1 - WCAG 2.1 Level AA":
+		return manifest.EPUBA11y11WCAG21AA
+	case "EPUB Accessibility 1.1 - WCAG 2.1 Level AAA":
+		return manifest.EPUBA11y11WCAG21AAA
 	default:
 		return ""
 	}

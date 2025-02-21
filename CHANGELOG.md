@@ -6,7 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-None
+### Added
+
+- Support for [EPUB Accessibility 1.1](https://www.w3.org/TR/epub-a11y-11/) conformance values
+
+### Changed
+
+- A11y `conformsTo` values are now sorted from highest to lowest level
 
 ## [0.7.1] - 2025-02-07
 

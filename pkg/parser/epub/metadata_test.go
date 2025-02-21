@@ -309,7 +309,7 @@ func TestMetadataEPUB2Accessibility(t *testing.T) {
 	m, err := loadMetadata("accessibility-epub2")
 	assert.NoError(t, err)
 	e := manifest.NewA11y()
-	e.ConformsTo = []manifest.A11yProfile{manifest.EPUBA11y10WCAG20A}
+	e.ConformsTo = []manifest.A11yProfile{manifest.EPUBA11y11WCAG21AA, manifest.EPUBA11y11WCAG20AAA, manifest.EPUBA11y10WCAG20A}
 	e.Certification = &manifest.A11yCertification{
 		CertifiedBy: "Accessibility Testers Group",
 		Credential:  "DAISY OK",
@@ -341,7 +341,7 @@ func TestMetadataEPUB3Accessibility(t *testing.T) {
 	m, err := loadMetadata("accessibility-epub3")
 	assert.NoError(t, err)
 	e := manifest.NewA11y()
-	e.ConformsTo = []manifest.A11yProfile{manifest.EPUBA11y10WCAG20A}
+	e.ConformsTo = []manifest.A11yProfile{manifest.EPUBA11y11WCAG21AA, manifest.EPUBA11y11WCAG20AAA, manifest.EPUBA11y10WCAG20A}
 	e.Certification = &manifest.A11yCertification{
 		CertifiedBy: "Accessibility Testers Group",
 		Credential:  "DAISY OK",
