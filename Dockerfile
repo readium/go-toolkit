@@ -18,6 +18,7 @@ RUN go mod download
 COPY . ./
 
 RUN git fetch --tags
+RUN git describe --tags --always
 
 # RUN git lfs pull && ls -alh publications
 
