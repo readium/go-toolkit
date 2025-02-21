@@ -1,5 +1,6 @@
 FROM --platform=$BUILDPLATFORM golang:1-bookworm@sha256:3149bc5043fa58cf127fd8db1fdd4e533b6aed5a40d663d4f4ae43d20386665f AS builder
 ARG BUILDARCH TARGETOS TARGETARCH
+ARG NO_SNAPSHOT=false
 
 # Install GoReleaser
 RUN wget --no-verbose "https://github.com/goreleaser/goreleaser/releases/download/v2.7.0/goreleaser_2.7.0_$BUILDARCH.deb"
@@ -17,7 +18,6 @@ RUN go mod download
 # Copy local code to the container image.
 COPY . ./
 
-RUN git fetch --tags
 RUN git describe --tags --always
 
 # RUN git lfs pull && ls -alh publications
@@ -25,7 +25,8 @@ RUN git describe --tags --always
 # Run goreleaser
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH GOAMD64=v3 goreleaser build --single-target --id rwp --skip=validate --snapshot --output ./rwp
+    GOOS=$TARGETOS GOARCH=$TARGETARCH GOAMD64=v3 \
+    goreleaser build --single-target --id rwp --skip=validate $(case "$NO_SNAPSHOT" in yes|true|1) ;; *) echo "--snapshot";; esac) --output ./rwp
 
 # Run tests
 # FROM builder AS tester
