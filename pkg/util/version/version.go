@@ -30,9 +30,8 @@ func init() {
 				}
 			}
 		}
-		if Version == "unknown" {
+		if info.Main.Path == toolkitRepo && Version == "unknown" {
 			// Try instead using vcs info
-
 			vcs := vcsInfo{}
 			for _, v := range info.Settings {
 				switch v.Key {
