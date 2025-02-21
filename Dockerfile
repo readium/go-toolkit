@@ -17,6 +17,8 @@ RUN go mod download
 # Copy local code to the container image.
 COPY . ./
 
+RUN ls -lah
+
 # RUN git lfs pull && ls -alh publications
 
 # Run goreleaser
