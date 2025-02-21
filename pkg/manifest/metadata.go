@@ -2,13 +2,13 @@ package manifest
 
 import (
 	"encoding/json"
-	"runtime/debug"
 	"strings"
 	"time"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/internal/util"
+	"github.com/readium/go-toolkit/pkg/util/version"
 )
 
 // TODO replace with generic
@@ -456,8 +456,6 @@ func (m *Metadata) UnmarshalJSON(b []byte) error {
 // If you really don't want the version info in your manifest, you can blank this value.
 var ToolkitVersionKey = "https://github.com/readium/go-toolkit/releases"
 
-const toolkitRepo = "github.com/readium/go-toolkit"
-
 func (m Metadata) MarshalJSON() ([]byte, error) {
 	j := make(map[string]interface{})
 	if m.OtherMetadata != nil {
@@ -467,19 +465,7 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	}
 
 	if ToolkitVersionKey != "" {
-		if info, ok := debug.ReadBuildInfo(); ok {
-			if info.Main.Path == toolkitRepo {
-				// This is the toolkit itself
-				j[ToolkitVersionKey] = info.Main.Version
-			} else {
-				// This is a module that uses the toolkit
-				for _, dep := range info.Deps {
-					if dep.Path == toolkitRepo {
-						j[ToolkitVersionKey] = dep.Version
-					}
-				}
-			}
-		}
+		j[ToolkitVersionKey] = version.Version
 	}
 
 	if m.Presentation != nil {
