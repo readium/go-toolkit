@@ -16,6 +16,13 @@ builds:
       - linux
       - windows
       - darwin
+    goarch:
+      - '386'
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - '7'
     goamd64:
       - v3
     ldflags:

@@ -25,7 +25,7 @@ RUN git describe --tags --always
 # Run goreleaser
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH GOAMD64=v3 \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH GOAMD64=v3 GOARM=7 \
     goreleaser build --single-target --id rwp --skip=validate $(case "$NO_SNAPSHOT" in yes|true|1) ;; *) echo "--snapshot";; esac) --output ./rwp
 
 # Run tests

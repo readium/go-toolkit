@@ -6,7 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.8.0] - 2025-02-22
+## [0.8.1] - 2025-02-24
+
+### Changed
+
+- Docker containers & releases now properly build ARM (32-bit) images with v7 (not v6) support
+
+## [0.8.0] - 2025-02-24
 
 ### Added
 
