@@ -19,6 +19,7 @@ type Link struct {
 	Properties Properties           `json:"properties,omitempty"` // Properties associated to the linked resource.
 	Height     uint                 `json:"height,omitempty"`     // Height of the linked resource in pixels.
 	Width      uint                 `json:"width,omitempty"`      // Width of the linked resource in pixels.
+	Size       uint                 `json:"size,omitempty"`       // Original size of the resource in bytes.
 	Bitrate    float64              `json:"bitrate,omitempty"`    // Bitrate of the linked resource in kbps.
 	Duration   float64              `json:"duration,omitempty"`   // Length of the linked resource in seconds.
 	Languages  Strings              `json:"language,omitempty"`   // Expected language of the linked resource (BCP 47 tag).
@@ -68,6 +69,7 @@ func LinkFromJSON(rawJson map[string]interface{}) (*Link, error) {
 		Title:    parseOptString(rawJson["title"]),
 		Height:   float64ToUint(parseOptFloat64(rawJson["height"])),
 		Width:    float64ToUint(parseOptFloat64(rawJson["width"])),
+		Size:     float64ToUint(parseOptFloat64(rawJson["size"])),
 		Bitrate:  float64Positive(parseOptFloat64(rawJson["bitrate"])),
 		Duration: float64Positive(parseOptFloat64(rawJson["duration"])),
 	}
@@ -182,6 +184,9 @@ func (l Link) MarshalJSON() ([]byte, error) {
 	}
 	if l.Width > 0 {
 		res["width"] = l.Width
+	}
+	if l.Size > 0 {
+		res["size"] = l.Size
 	}
 	if l.Bitrate > 0 {
 		res["bitrate"] = l.Bitrate
