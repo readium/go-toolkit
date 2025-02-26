@@ -163,7 +163,7 @@ func (s *SnifferContext) ContentAsArchive() (archive.Archive, error) {
 		case SnifferFileContent:
 			{
 				fileSniffer := s.content.(SnifferFileContent)
-				a, err := archive.NewArchiveFactory().Open(fileSniffer.file.Name(), "")
+				a, err := archive.NewArchiveFactory().Open(fileSniffer.Name(), "")
 				if err != nil {
 					return nil, err
 				}

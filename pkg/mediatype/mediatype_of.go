@@ -1,6 +1,7 @@
 package mediatype
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -126,9 +127,18 @@ func OfExtension(extension string) *MediaType {
 }
 
 // Resolves a format from a file
-func OfFile(file *os.File, mediaTypes []string, extensions []string, sniffers []Sniffer) *MediaType {
+func OfFile(file fs.File, mediaTypes []string, extensions []string, sniffers []Sniffer) *MediaType {
 	if file != nil {
-		ext := filepath.Ext(file.Name())
+		var ext string
+		if of, ok := file.(*os.File); ok {
+			ext = filepath.Ext(of.Name())
+		} else {
+			stat, err := file.Stat()
+			if err == nil {
+				ext = filepath.Ext(stat.Name())
+			}
+		}
+
 		if ext != "" {
 			ext = ext[1:] // Remove the leading "."
 			if extensions == nil {
@@ -143,7 +153,7 @@ func OfFile(file *os.File, mediaTypes []string, extensions []string, sniffers []
 }
 
 // Resolves a format from a file, and nothing else
-func OfFileOnly(file *os.File) *MediaType {
+func OfFileOnly(file fs.File) *MediaType {
 	return OfFile(file, nil, nil, Sniffers)
 }
 
