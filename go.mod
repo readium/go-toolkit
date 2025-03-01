@@ -16,7 +16,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/readium/xmlquery v0.0.0-20230106230237-8f493145aef4
 	github.com/relvacode/iso8601 v1.6.0
-	github.com/spf13/cobra v1.8.1
+	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/trimmer-io/go-xmp v1.0.0
 	github.com/vmihailenco/go-tinylfu v0.2.2
