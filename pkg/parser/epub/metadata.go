@@ -205,7 +205,7 @@ func (m MetadataParser) parseMetaElement(element *xmlquery.Node) *MetadataItem {
 			id:       element.SelectAttr("id"),
 		}
 	} else {
-		propName := strings.TrimSpace(element.SelectAttr("property"))
+		propName := strings.TrimSpace(property)
 		if propName == "" {
 			return nil
 		}
@@ -238,7 +238,7 @@ func (m MetadataParser) parseDcElement(element *xmlquery.Node) *MetadataItem {
 	}
 
 	data := strings.ToLower(element.Data)
-	propName := VocabularyDCTerms + data
+	propName := VocabularyDCTerms + element.Data
 	switch data {
 	case "creator":
 		fallthrough
