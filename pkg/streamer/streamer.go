@@ -54,7 +54,7 @@ const (
 
 func New(config Config) Streamer { // TODO contentProtections
 	if config.HttpClient == nil {
-		config.HttpClient = http.DefaultClient
+		config.HttpClient = http.DefaultClient // TODO: better default HTTP client
 	}
 	if config.ArchiveFactory == nil {
 		config.ArchiveFactory = archive.NewArchiveFactory()
@@ -85,6 +85,7 @@ func New(config Config) Streamer { // TODO contentProtections
 func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publication, error) {
 	fetcher, err := a.CreateFetcher(asset.Dependencies{
 		ArchiveFactory: s.archiveFactory,
+		Client:         s.httpClient,
 	}, credentials)
 	if err != nil {
 		return nil, err

@@ -22,6 +22,14 @@ func NewWebPubParser(client *http.Client) WebPubParser {
 	}
 }
 
+func resourceJson(r fetcher.Resource) (map[string]interface{}, *fetcher.ResourceError) {
+	if r, ok := r.(fetcher.StringResource); ok {
+		return r.ReadAsJSON()
+	} else {
+		return fetcher.ReadResourceAsJSON(r)
+	}
+}
+
 // Parse implements PublicationParser
 func (p WebPubParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
 	lFetcher := fetcher
@@ -36,7 +44,7 @@ func (p WebPubParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetche
 	var manifestJSON map[string]interface{}
 	if isPackage {
 		res := lFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("manifest.json", false)})
-		mjr, err := res.ReadAsJSON()
+		mjr, err := resourceJson(res)
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +58,7 @@ func (p WebPubParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetche
 		if len(links) == 0 {
 			return nil, errors.New("links is empty")
 		}
-		mj, rerr := lFetcher.Get(links[0]).ReadAsJSON()
+		mj, rerr := resourceJson(lFetcher.Get(links[0]))
 		if rerr != nil {
 			return nil, rerr.Cause
 		}

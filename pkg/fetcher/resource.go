@@ -10,11 +10,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/xmlquery"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"
+	"google.golang.org/api/googleapi"
 )
 
 /**
@@ -56,16 +59,6 @@ type Resource interface {
 	// Stream the bytes at the given range to a writer.
 	// When start and end are null, the whole content is returned. Out-of-range indexes are clamped to the available length automatically.
 	Stream(w io.Writer, start int64, end int64) (int64, *ResourceError)
-
-	// Reads the full content as a string.
-	// Assumes UTF-8 encoding if no Link charset is given
-	ReadAsString() (string, *ResourceError)
-
-	// Reads the full content as a JSON object.
-	ReadAsJSON() (map[string]interface{}, *ResourceError)
-
-	// Reads the full content as a generic XML document.
-	ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError)
 }
 
 func ReadResourceAsString(r Resource) (string, *ResourceError) {
@@ -88,10 +81,21 @@ func ReadResourceAsString(r Resource) (string, *ResourceError) {
 }
 
 func ReadResourceAsJSON(r Resource) (map[string]interface{}, *ResourceError) {
-	str, ex := r.ReadAsString()
-	if ex != nil {
-		return nil, ex
+	var str string
+	if sr, ok := r.(StringResource); ok {
+		s, ex := sr.ReadAsString()
+		if ex != nil {
+			return nil, ex
+		}
+		str = s
+	} else {
+		s, ex := ReadResourceAsString(r)
+		if ex != nil {
+			return nil, ex
+		}
+		str = s
 	}
+
 	var object map[string]interface{}
 	err := json.Unmarshal([]byte(str), &object)
 	if err != nil {
@@ -243,6 +247,42 @@ func Other(cause error) *ResourceError {
 	}
 }
 
+func AWSErrorToException(err error) *ResourceError {
+	var notFound *types.NotFound
+	var noSuchKey *types.NoSuchKey
+	var noSuchBucket *types.NoSuchBucket
+	var invalidObjectState *types.InvalidObjectState
+	if errors.As(err, &notFound) || errors.As(err, &noSuchKey) || errors.As(err, &noSuchBucket) {
+		return NotFound(err)
+	} else if errors.As(err, &invalidObjectState) {
+		return BadRequest(err)
+	} else {
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			if ae.ErrorCode() == "AccessDenied" {
+				return Forbidden(err)
+			}
+		}
+	}
+
+	return Other(err)
+}
+
+func GCSErrorToException(err error) *ResourceError {
+	if gErr, ok := err.(*googleapi.Error); ok {
+		switch gErr.Code {
+		case http.StatusNotFound:
+			return NotFound(err)
+		case http.StatusForbidden:
+			return Forbidden(err)
+		case http.StatusBadRequest:
+			return BadRequest(err)
+		}
+	}
+
+	return Other(err)
+}
+
 // Convert a Go os error to an exception
 func OsErrorToException(err error) *ResourceError {
 	if os.IsNotExist(err) {
@@ -356,19 +396,31 @@ func (r ProxyResource) Stream(w io.Writer, start int64, end int64) (int64, *Reso
 	return r.Res.Stream(w, start, end)
 }
 
-// ReadAsString implements Resource
+// ReadAsString implements StringResource
 func (r ProxyResource) ReadAsString() (string, *ResourceError) {
-	return r.Res.ReadAsString()
+	if sr, ok := r.Res.(StringResource); ok {
+		return sr.ReadAsString()
+	} else {
+		return ReadResourceAsString(r)
+	}
 }
 
-// ReadAsJSON implements Resource
+// ReadAsJSON implements StringResource
 func (r ProxyResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
-	return r.Res.ReadAsJSON()
+	if sr, ok := r.Res.(StringResource); ok {
+		return sr.ReadAsJSON()
+	} else {
+		return ReadResourceAsJSON(r)
+	}
 }
 
-// ReadAsXML implements Resource
+// ReadAsXML implements StringResource
 func (r ProxyResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
-	return r.Res.ReadAsXML(prefixes)
+	if sr, ok := r.Res.(StringResource); ok {
+		return sr.ReadAsXML(prefixes)
+	} else {
+		return ReadResourceAsXML(r, prefixes)
+	}
 }
 
 // CompressedAs implements CompressedResource
@@ -434,12 +486,282 @@ func (r ProxyResource) ReadCompressedGzip() ([]byte, *ResourceError) {
  */
 type TransformingResource struct {
 	resource   Resource
+	transform  func([]byte) []byte
 	cacheBytes bool
 	_bytes     []byte
 }
 
-// TODO TransformingResource
+func NewTransformingResource(resource Resource, cacheBytes bool, transform func([]byte) []byte) *TransformingResource {
+	return &TransformingResource{
+		resource:   resource,
+		cacheBytes: cacheBytes,
+		transform:  transform,
+	}
+}
 
-// TODO LazyResource
+func (r *TransformingResource) bytes() ([]byte, *ResourceError) {
+	if len(r._bytes) > 0 {
+		return r._bytes, nil
+	}
+	bin, err := r.resource.Read(0, 0)
+	if err != nil {
+		return nil, err
+	}
+	bytes := r.transform(bin)
+	if len(bytes) == 0 {
+		return nil, Other(errors.New("TransformingResource has empty bytes"))
+	}
 
-// TODO BufferingResource
+	if r.cacheBytes {
+		r._bytes = bytes
+	}
+	return bytes, nil
+}
+
+// File implements Resource
+func (r *TransformingResource) File() string {
+	return r.resource.File()
+}
+
+// Close implements Resource
+func (r *TransformingResource) Close() {
+	r.resource.Close()
+}
+
+// Link implements Resource
+func (r *TransformingResource) Link() manifest.Link {
+	return r.resource.Link()
+}
+
+func (r *TransformingResource) Properties() manifest.Properties {
+	return r.resource.Properties()
+}
+
+// Length implements Resource
+func (r *TransformingResource) Length() (int64, *ResourceError) {
+	if r.cacheBytes {
+		return int64(len(r._bytes)), nil
+	}
+	l, ex := r.resource.Length()
+	if ex != nil {
+		return 0, ex
+	}
+	return l, nil
+}
+
+// Read implements Resource
+func (r *TransformingResource) Read(start int64, end int64) ([]byte, *ResourceError) {
+	bytes, err := r.bytes()
+	if err != nil {
+		return nil, err
+	}
+	if start == 0 && end == 0 {
+		return bytes, nil
+	}
+
+	// Bounds check
+	length := int64(len(bytes))
+	if start > length {
+		start = length
+	}
+	if end > (length - 1) {
+		end = length - 1
+	}
+
+	return bytes[start : end+1], nil
+}
+
+// Stream implements Resource
+func (r *TransformingResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	bytes, err := r.bytes()
+	if err != nil {
+		return 0, err
+	}
+	if start == 0 && end == 0 {
+		n, nerr := w.Write(bytes)
+		return int64(n), Other(nerr)
+	}
+
+	// Bounds check
+	length := int64(len(bytes))
+	if start > length {
+		start = length
+	}
+	if end > (length - 1) {
+		end = length - 1
+	}
+
+	n, nerr := w.Write(bytes[start : end+1])
+	return int64(n), Other(nerr)
+}
+
+// ReadAsString implements Resource
+func (r *TransformingResource) ReadAsString() (string, *ResourceError) {
+	bytes, err := r.bytes()
+	if err != nil {
+		return "", err
+	}
+	return NewBytesResource(manifest.Link{}, func() []byte {
+		return bytes
+	}).ReadAsString()
+}
+
+// ReadAsJSON implements Resource
+func (r *TransformingResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
+	bytes, err := r.bytes()
+	if err != nil {
+		return nil, err
+	}
+	return NewBytesResource(manifest.Link{}, func() []byte {
+		return bytes
+	}).ReadAsJSON()
+}
+
+// ReadAsXML implements Resource
+func (r *TransformingResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
+	bytes, err := r.bytes()
+	if err != nil {
+		return nil, err
+	}
+	return NewBytesResource(manifest.Link{}, func() []byte {
+		return bytes
+	}).ReadAsXML(prefixes)
+}
+
+// Wraps a [Resource] which will be created only when first accessing one of its members.
+type LazyResource struct {
+	_resource Resource
+	factory   func() Resource
+}
+
+func NewLazyResource(factory func() Resource) *LazyResource {
+	return &LazyResource{
+		factory: factory,
+	}
+}
+
+func (r *LazyResource) resource() Resource {
+	if r._resource == nil {
+		r._resource = r.factory()
+	}
+	return r._resource
+}
+
+// File implements Resource
+func (r *LazyResource) File() string {
+	return r.resource().File()
+}
+
+// Close implements Resource
+func (r *LazyResource) Close() {
+	if r._resource != nil {
+		r.resource().Close()
+	}
+}
+
+// Link implements Resource
+func (r *LazyResource) Link() manifest.Link {
+	return r.resource().Link()
+}
+
+func (r *LazyResource) Properties() manifest.Properties {
+	return r.resource().Properties()
+}
+
+// Length implements Resource
+func (r *LazyResource) Length() (int64, *ResourceError) {
+	return r.resource().Length()
+}
+
+// Read implements Resource
+func (r *LazyResource) Read(start int64, end int64) ([]byte, *ResourceError) {
+	return r.resource().Read(start, end)
+}
+
+// Stream implements Resource
+func (r *LazyResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	return r.resource().Stream(w, start, end)
+}
+
+// ReadAsString implements Resource
+func (r *LazyResource) ReadAsString() (string, *ResourceError) {
+	if sr, ok := r.resource().(StringResource); ok {
+		return sr.ReadAsString()
+	} else {
+		return ReadResourceAsString(r.resource())
+	}
+}
+
+// ReadAsJSON implements Resource
+func (r *LazyResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
+	if sr, ok := r.resource().(StringResource); ok {
+		return sr.ReadAsJSON()
+	} else {
+		return ReadResourceAsJSON(r.resource())
+	}
+}
+
+// ReadAsXML implements Resource
+func (r *LazyResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
+	if sr, ok := r.resource().(StringResource); ok {
+		return sr.ReadAsXML(prefixes)
+	} else {
+		return ReadResourceAsXML(r.resource(), prefixes)
+	}
+}
+
+// CompressedAs implements CompressedResource
+func (r *LazyResource) CompressedAs(compressionMethod archive.CompressionMethod) bool {
+	cres, ok := r.resource().(CompressedResource)
+	if !ok {
+		return false
+	}
+	return cres.CompressedAs(compressionMethod)
+}
+
+// CompressedLength implements CompressedResource
+func (r *LazyResource) CompressedLength() int64 {
+	cres, ok := r.resource().(CompressedResource)
+	if !ok {
+		return -1
+	}
+	return cres.CompressedLength()
+}
+
+// StreamCompressed implements CompressedResource
+func (r *LazyResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
+	cres, ok := r.resource().(CompressedResource)
+	if !ok {
+		return -1, Other(errors.New("resource is not compressed"))
+	}
+	return cres.StreamCompressed(w)
+}
+
+// StreamCompressedGzip implements CompressedResource
+func (r *LazyResource) StreamCompressedGzip(w io.Writer) (int64, *ResourceError) {
+	cres, ok := r.resource().(CompressedResource)
+	if !ok {
+		return -1, Other(errors.New("resource is not compressed"))
+	}
+	return cres.StreamCompressedGzip(w)
+}
+
+// ReadCompressed implements CompressedResource
+func (r *LazyResource) ReadCompressed() ([]byte, *ResourceError) {
+	cres, ok := r.resource().(CompressedResource)
+	if !ok {
+		return nil, Other(errors.New("resource is not compressed"))
+	}
+	return cres.ReadCompressed()
+}
+
+// ReadCompressedGzip implements CompressedResource
+func (r *LazyResource) ReadCompressedGzip() ([]byte, *ResourceError) {
+	cres, ok := r.resource().(CompressedResource)
+	if !ok {
+		return nil, Other(errors.New("resource is not compressed"))
+	}
+	return cres.ReadCompressedGzip()
+}
+
+// TODO FallbackResource, SynchronizedResource, BufferingResource

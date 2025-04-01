@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"context"
 	"errors"
 	"io"
 	"path"
@@ -8,6 +9,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/readium/xmlquery"
 )
 
@@ -79,12 +81,45 @@ func NewArchiveFetcher(a archive.Archive) *ArchiveFetcher {
 	}
 }
 
-func NewArchiveFetcherFromPath(filepath string) (*ArchiveFetcher, error) {
-	return NewArchiveFetcherFromPathWithFactory(filepath, archive.NewArchiveFactory())
+func NewArchiveFetcherFromPath(path string) (*ArchiveFetcher, error) {
+	return NewArchiveFetcherFromPathWithFactory(path, archive.NewArchiveFactory())
 }
 
 func NewArchiveFetcherFromPathWithFactory(path string, factory archive.ArchiveFactory) (*ArchiveFetcher, error) {
-	a, err := factory.Open(path, "") // TODO password
+	pth, err := url.FromFilepath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	a, err := factory.Open(pth, "")
+	if err != nil {
+		return nil, err
+	}
+	return &ArchiveFetcher{
+		archive: a,
+	}, nil
+}
+
+func NewArchiveFetcherFromURLWithFactory(url url.URL, factory archive.ArchiveFactory) (*ArchiveFetcher, error) {
+	a, err := factory.Open(url, "")
+	if err != nil {
+		return nil, err
+	}
+	return &ArchiveFetcher{
+		archive: a,
+	}, nil
+}
+
+func NewArchiveFetcherFromURLWithFactoryAndContext(ctx context.Context, url url.URL, factory archive.SchemeSpecificArchiveFactory) (*ArchiveFetcher, error) {
+	var a archive.Archive
+	var err error
+	if f, ok := factory.(archive.RemoteArchiveFactory); ok {
+		a, err = f.OpenWithContext(ctx, url, "")
+	} else if f, ok := factory.(archive.ArchiveFactory); ok {
+		a, err = f.Open(url, "")
+	} else {
+		return nil, errors.New("factory does not implement ArchiveFactory or RemoteArchiveFactory")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -203,17 +238,17 @@ func (r *entryResource) Length() (int64, *ResourceError) {
 	return int64(r.entry.Length()), nil
 }
 
-// ReadAsString implements Resource
+// ReadAsString implements StringResource
 func (r *entryResource) ReadAsString() (string, *ResourceError) { // TODO determine how charset is needed
 	return ReadResourceAsString(r)
 }
 
-// ReadAsJSON implements Resource
+// ReadAsJSON implements StringResource
 func (r *entryResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return ReadResourceAsJSON(r)
 }
 
-// ReadAsXML implements Resource
+// ReadAsXML implements StringResource
 func (r *entryResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
 	return ReadResourceAsXML(r, prefixes)
 }

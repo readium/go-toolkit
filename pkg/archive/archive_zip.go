@@ -263,10 +263,12 @@ type gozipArchive struct {
 	minimizeReads bool
 }
 
+// Close implements Archive
 func (a *gozipArchive) Close() {
 	a.closer()
 }
 
+// Entries implements Archive
 func (a *gozipArchive) Entries() []Entry {
 	entries := make([]Entry, 0, len(a.zip.File))
 	for _, f := range a.zip.File {
@@ -287,6 +289,7 @@ func (a *gozipArchive) Entries() []Entry {
 	return entries
 }
 
+// Entry implements Archive
 func (a *gozipArchive) Entry(p string) (Entry, error) {
 	if !fs.ValidPath(p) {
 		return nil, fs.ErrNotExist
@@ -323,6 +326,7 @@ func NewGoZIPArchive(zip *zip.Reader, closer func() error, minimizeReads bool) A
 
 type gozipArchiveFactory struct{}
 
+// Open implements ArchiveFactory
 func (e gozipArchiveFactory) Open(filepath string, password string) (Archive, error) {
 	// Go's built-in zip reader doesn't support passwords.
 	if password != "" {
@@ -336,6 +340,7 @@ func (e gozipArchiveFactory) Open(filepath string, password string) (Archive, er
 	return NewGoZIPArchive(&rc.Reader, rc.Close, false), nil
 }
 
+// OpenBytes implements ArchiveFactory
 func (e gozipArchiveFactory) OpenBytes(data []byte, password string) (Archive, error) {
 	// Go's built-in zip reader doesn't support passwords.
 	if password != "" {
@@ -354,6 +359,7 @@ type ReaderAtCloser interface {
 	io.ReaderAt
 }
 
+// OpenReader implements ArchiveFactory
 func (e gozipArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
 	// Go's built-in zip reader doesn't support passwords.
 	if password != "" {

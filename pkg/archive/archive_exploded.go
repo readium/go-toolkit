@@ -107,10 +107,12 @@ type explodedArchive struct {
 	directory string // Directory, already cleaned!
 }
 
+// Close implements Archive
 func (a explodedArchive) Close() {
 	// Nothing needs to be done
 }
 
+// Entries implements Archive
 func (a explodedArchive) Entries() []Entry {
 	entries := make([]Entry, 0)
 	filepath.WalkDir(a.directory, func(path string, d fs.DirEntry, err error) error {
@@ -131,6 +133,7 @@ func (a explodedArchive) Entries() []Entry {
 	return entries
 }
 
+// Entry implements Archive
 func (a explodedArchive) Entry(path string) (Entry, error) {
 	if !fs.ValidPath(path) {
 		return nil, fs.ErrNotExist
@@ -159,6 +162,7 @@ func NewExplodedArchive(directory string) Archive {
 
 type explodedArchiveFactory struct{}
 
+// Open implements ArchiveFactory
 func (e explodedArchiveFactory) Open(filepath string, password string) (Archive, error) {
 	st, err := os.Stat(filepath)
 	if err != nil {

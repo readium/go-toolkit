@@ -7,6 +7,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/xmlquery"
 )
 
 func MediaOverlayFactory() pub.ServiceFactory {
@@ -79,11 +80,18 @@ func (s *MediaOverlayService) GuideForResource(href string) (*manifest.GuidedNav
 		res := s.fetcher.Get(link)
 		defer res.Close()
 
-		n, rerr := res.ReadAsXML(map[string]string{
+		var n *xmlquery.Node
+		var rerr *fetcher.ResourceError
+		prefixes := map[string]string{
 			NamespaceOPS:   "epub",
 			NamespaceSMIL:  "smil",
 			NamespaceSMIL2: "smil2",
-		})
+		}
+		if r, ok := res.(fetcher.StringResource); ok {
+			n, rerr = r.ReadAsXML(prefixes)
+		} else {
+			n, rerr = fetcher.ReadResourceAsXML(res, prefixes)
+		}
 		if rerr != nil {
 			return nil, rerr.Cause
 		}

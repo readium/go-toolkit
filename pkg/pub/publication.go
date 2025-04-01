@@ -55,7 +55,7 @@ func (p Publication) JSONManifest() (string, error) {
 
 func (p Publication) PositionsFromManifest() []manifest.Locator {
 	// TODO just access the service directly and don't marshal and unmarshal JSON?
-	data, err := p.Get(PositionsLink).ReadAsJSON()
+	data, err := p.Get(PositionsLink).(fetcher.StringResource).ReadAsJSON()
 	if err != nil || data == nil {
 		return []manifest.Locator{}
 	}

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/archive"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"golang.org/x/text/encoding"
 )
 
@@ -163,7 +164,11 @@ func (s *SnifferContext) ContentAsArchive() (archive.Archive, error) {
 		case SnifferFileContent:
 			{
 				fileSniffer := s.content.(SnifferFileContent)
-				a, err := archive.NewArchiveFactory().Open(fileSniffer.Name(), "")
+				u, err := url.FromFilepath(fileSniffer.Name())
+				if err != nil {
+					return nil, err
+				}
+				a, err := archive.NewArchiveFactory().Open(u, "")
 				if err != nil {
 					return nil, err
 				}

@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,9 +12,15 @@ import (
 
 	"log/slog"
 
+	"cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/readium/go-toolkit/cmd/rwp/cmd/serve"
 	"github.com/readium/go-toolkit/pkg/streamer"
 	"github.com/spf13/cobra"
+	"google.golang.org/api/option"
 )
 
 var debugFlag bool
@@ -20,6 +28,16 @@ var debugFlag bool
 var bindAddressFlag string
 
 var bindPortFlag uint16
+
+// Cloud-related flags
+var s3EndpointFlag string
+var s3RegionFlag string
+var s3AccessKeyFlag string
+var s3SecretKeyFlag string
+
+var remoteArchiveTimeoutFlag uint32
+var remoteArchiveCacheSize uint32
+var remoteArchiveCacheCount uint32
 
 var serveCmd = &cobra.Command{
 	Use:   "serve <directory>",
@@ -74,12 +92,61 @@ to the internet except for testing/debugging purposes.`,
 			slog.SetLogLoggerLevel(slog.LevelInfo)
 		}
 
+		// Set up remote publication retrieval clients
+		remote := serve.Remote{}
+
+		// S3
+		options := []func(*config.LoadOptions) error{
+			config.WithRegion(s3RegionFlag),
+			config.WithRequestChecksumCalculation(0),
+			config.WithResponseChecksumValidation(0),
+			// TODO: look into custom HTTP client, user-agent
+		}
+		if s3AccessKeyFlag != "" && s3SecretKeyFlag != "" {
+			options = append(options, config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(s3AccessKeyFlag, s3SecretKeyFlag, "")))
+		}
+		cfg, err := config.LoadDefaultConfig(context.Background(), options...)
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = cfg.Credentials.Retrieve(context.Background())
+		if err == nil {
+			remote.S3 = s3.NewFromConfig(cfg, func(o *s3.Options) {
+				if s3EndpointFlag != "" {
+					o.BaseEndpoint = aws.String(s3EndpointFlag)
+				}
+			})
+		} else {
+			slog.Warn("S3 credentials retrieval failed, S3 support will be disabled", "error", err)
+		}
+
+		// GCS
+		opts := []option.ClientOption{
+			option.WithScopes(storage.ScopeReadOnly),
+			storage.WithJSONReads(),
+			// option.WithUserAgent(TODO),
+			// TODO: look into more efficient transport (HTTP client)
+		}
+		remote.GCS, err = storage.NewClient(context.Background(), opts...)
+		if err != nil {
+			slog.Warn("GCS client creation failed, GCS support will be disabled", "error", err)
+		}
+
+		// TODO: HTTP client customization! auth, optimization etc.
+		remote.HTTP = http.DefaultClient
+
+		// Remote archive streaming tweaks
+		remote.Config.CacheCountThreshold = int64(remoteArchiveCacheCount)
+		remote.Config.CacheSizeThreshold = int64(remoteArchiveCacheSize)
+		remote.Config.Timeout = time.Duration(remoteArchiveTimeoutFlag) * time.Second
+
+		// Create server
 		pubServer := serve.NewServer(serve.ServerConfig{
 			Debug:             debugFlag,
 			BaseDirectory:     path,
 			JSONIndent:        indentFlag,
 			InferA11yMetadata: streamer.InferA11yMetadata(inferA11yFlag),
-		})
+		}, remote)
 
 		bind := fmt.Sprintf("%s:%d", bindAddressFlag, bindPortFlag)
 		httpServer := &http.Server{
@@ -109,4 +176,12 @@ func init() {
 	serveCmd.Flags().Var(&inferA11yFlag, "infer-a11y", "Infer accessibility metadata: no, merged, split")
 	serveCmd.Flags().BoolVarP(&debugFlag, "debug", "d", false, "Enable debug mode")
 
+	serveCmd.Flags().StringVar(&s3EndpointFlag, "s3-endpoint", "", "Custom S3 endpoint URL")
+	serveCmd.Flags().StringVar(&s3RegionFlag, "s3-region", "auto", "S3 region")
+	serveCmd.Flags().StringVar(&s3AccessKeyFlag, "s3-access-key", "", "S3 access key")
+	serveCmd.Flags().StringVar(&s3SecretKeyFlag, "s3-secret-key", "", "S3 secret key")
+
+	serveCmd.Flags().Uint32Var(&remoteArchiveTimeoutFlag, "remote-archive-timeout", 60, "Timeout for remote requests (in seconds)")
+	serveCmd.Flags().Uint32Var(&remoteArchiveCacheSize, "remote-archive-cache-size", 1024*1024, "Max size of items that can be cached (in bytes)")
+	serveCmd.Flags().Uint32Var(&remoteArchiveCacheCount, "remote-archive-cache-count", 64, "Max number of items that can be cached")
 }

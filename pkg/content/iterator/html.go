@@ -14,7 +14,7 @@ import (
 )
 
 type HTMLContentIterator struct {
-	resource        fetcher.Resource
+	resource        fetcher.StringResource
 	locator         manifest.Locator
 	BeforeMaxLength int // Locators will contain a `before` context of up to this amount of characters.
 
@@ -26,7 +26,7 @@ type HTMLContentIterator struct {
 // Iterates an HTML [resource], starting from the given [locator].
 // If you want to start mid-resource, the [locator] must contain a `cssSelector` key in its [Locator.Locations] object.
 // If you want to start from the end of the resource, the [locator] must have a `progression` of 1.0.
-func NewHTML(resource fetcher.Resource, locator manifest.Locator) *HTMLContentIterator {
+func NewHTML(resource fetcher.StringResource, locator manifest.Locator) *HTMLContentIterator {
 	return &HTMLContentIterator{
 		resource:        resource,
 		locator:         locator,
@@ -37,7 +37,9 @@ func NewHTML(resource fetcher.Resource, locator manifest.Locator) *HTMLContentIt
 func HTMLFactory() ResourceContentIteratorFactory {
 	return func(resource fetcher.Resource, locator manifest.Locator) Iterator {
 		if resource.Link().MediaType.Matches(&mediatype.HTML, &mediatype.XHTML) {
-			return NewHTML(resource, locator)
+			if sr, ok := resource.(fetcher.StringResource); ok {
+				return NewHTML(sr, locator)
+			}
 		}
 		return nil
 	}

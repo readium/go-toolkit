@@ -93,17 +93,17 @@ func (r *BytesResource) Stream(w io.Writer, start int64, end int64) (int64, *Res
 	return n, nil
 }
 
-// ReadAsString implements Resource
+// ReadAsString implements StringResource
 func (r *BytesResource) ReadAsString() (string, *ResourceError) {
 	return ReadResourceAsString(r)
 }
 
-// ReadAsJSON implements Resource
+// ReadAsJSON implements StringResource
 func (r *BytesResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
 	return ReadResourceAsJSON(r)
 }
 
-// ReadAsXML implements Resource
+// ReadAsXML implements StringResource
 func (r *BytesResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
 	return ReadResourceAsXML(r, prefixes)
 }

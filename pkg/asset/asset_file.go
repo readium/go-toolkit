@@ -1,47 +1,54 @@
 package asset
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 
+	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 // Represents a publication stored as a file on the local file system.
 type FileAsset struct {
-	filepath       string
+	uri            url.URL
 	mediatype      *mediatype.MediaType
 	knownMediaType *mediatype.MediaType
 	mediaTypeHint  string
 }
 
-func File(filepath string) *FileAsset {
+func File(uri url.URL) *FileAsset {
 	return &FileAsset{
-		filepath: filepath,
+		uri: uri,
 	}
 }
 
 // Creates a [FileAsset] from a [File] and an optional media type, when known.
-func FileWithMediaType(filepath string, mediatype *mediatype.MediaType) *FileAsset {
+func FileWithMediaType(uri url.URL, mediatype *mediatype.MediaType) *FileAsset {
 	return &FileAsset{
-		filepath:       filepath,
+		uri:            uri,
 		knownMediaType: mediatype,
 	}
 }
 
 // Creates a [FileAsset] from a [File] and an optional media type hint.
 // Providing a media type hint will improve performances when sniffing the media type.
-func FileWithMediaTypeHint(filepath string, mediatypeHint string) *FileAsset {
+func FileWithMediaTypeHint(uri url.URL, mediatypeHint string) *FileAsset {
 	return &FileAsset{
-		filepath:      filepath,
+		uri:           uri,
 		mediaTypeHint: mediatypeHint,
 	}
 }
 
 // Name implements PublicationAsset
 func (a *FileAsset) Name() string {
-	return filepath.Base(a.filepath)
+	return a.uri.Filename()
+}
+
+func (a *FileAsset) realPath() string {
+	return filepath.ToSlash(a.uri.Path())
 }
 
 // MediaType implements PublicationAsset
@@ -50,7 +57,7 @@ func (a *FileAsset) MediaType() mediatype.MediaType {
 		if a.knownMediaType != nil {
 			a.mediatype = a.knownMediaType
 		} else {
-			fil, err := os.Open(a.filepath)
+			fil, err := os.Open(a.realPath())
 			if err == nil { // No problem opening the file
 				defer fil.Close()
 				a.mediatype = mediatype.OfFile(fil, []string{a.mediaTypeHint}, nil, mediatype.Sniffers)
@@ -65,18 +72,31 @@ func (a *FileAsset) MediaType() mediatype.MediaType {
 
 // CreateFetcher implements PublicationAsset
 func (a *FileAsset) CreateFetcher(dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
-	stat, err := os.Stat(a.filepath)
+	if u, ok := a.uri.(url.AbsoluteURL); ok && !u.IsFile() {
+		return nil, errors.New("file asset with absolute URL must have file:/// scheme")
+	}
+
+	rfp := a.realPath()
+	stat, err := os.Stat(rfp)
 	if err != nil {
 		return nil, err
 	}
 	if stat.IsDir() {
-		return fetcher.NewFileFetcher("", a.filepath), nil
+		return fetcher.NewFileFetcher("", rfp), nil
 	} else {
-		af, err := fetcher.NewArchiveFetcherFromPathWithFactory(a.filepath, dependencies.ArchiveFactory)
+		factory, ok := dependencies.ArchiveFactory.(archive.SchemeSpecificArchiveFactory)
+		if ok {
+			// If we can narrow down the schemes the factory supports, we enforce it
+			if !factory.CanOpen(url.SchemeFile) {
+				return nil, errors.New("provided ArchiveFactory does not support file scheme")
+			}
+		}
+
+		af, err := fetcher.NewArchiveFetcherFromPathWithFactory(rfp, dependencies.ArchiveFactory)
 		if err == nil {
 			return af, nil
 		}
 
-		return fetcher.NewFileFetcher(a.Name(), a.filepath), nil
+		return fetcher.NewFileFetcher(a.Name(), rfp), nil
 	}
 }
