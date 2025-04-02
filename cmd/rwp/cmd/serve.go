@@ -38,6 +38,7 @@ var s3SecretKeyFlag string
 var remoteArchiveTimeoutFlag uint32
 var remoteArchiveCacheSize uint32
 var remoteArchiveCacheCount uint32
+var remoteArchiveCacheAll uint32
 
 var serveCmd = &cobra.Command{
 	Use:   "serve <directory>",
@@ -139,6 +140,7 @@ to the internet except for testing/debugging purposes.`,
 		remote.Config.CacheCountThreshold = int64(remoteArchiveCacheCount)
 		remote.Config.CacheSizeThreshold = int64(remoteArchiveCacheSize)
 		remote.Config.Timeout = time.Duration(remoteArchiveTimeoutFlag) * time.Second
+		remote.Config.CacheAllThreshold = int64(remoteArchiveCacheAll)
 
 		// Create server
 		pubServer := serve.NewServer(serve.ServerConfig{
@@ -181,7 +183,8 @@ func init() {
 	serveCmd.Flags().StringVar(&s3AccessKeyFlag, "s3-access-key", "", "S3 access key")
 	serveCmd.Flags().StringVar(&s3SecretKeyFlag, "s3-secret-key", "", "S3 secret key")
 
-	serveCmd.Flags().Uint32Var(&remoteArchiveTimeoutFlag, "remote-archive-timeout", 60, "Timeout for remote requests (in seconds)")
-	serveCmd.Flags().Uint32Var(&remoteArchiveCacheSize, "remote-archive-cache-size", 1024*1024, "Max size of items that can be cached (in bytes)")
-	serveCmd.Flags().Uint32Var(&remoteArchiveCacheCount, "remote-archive-cache-count", 64, "Max number of items that can be cached")
+	serveCmd.Flags().Uint32Var(&remoteArchiveTimeoutFlag, "remote-archive-timeout", 60, "Timeout for remote archive requests (in seconds)")
+	serveCmd.Flags().Uint32Var(&remoteArchiveCacheSize, "remote-archive-cache-size", 1024*1024, "Max size of items in an archive that can be cached (in bytes)")
+	serveCmd.Flags().Uint32Var(&remoteArchiveCacheCount, "remote-archive-cache-count", 64, "Max number of items in an archive that can be cached")
+	serveCmd.Flags().Uint32Var(&remoteArchiveCacheAll, "remote-archive-cache-all", 1024*1024, "Archives this size or less (in bytes) will be cached in full")
 }

@@ -85,7 +85,6 @@ func New(config Config) Streamer { // TODO contentProtections
 func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publication, error) {
 	fetcher, err := a.CreateFetcher(asset.Dependencies{
 		ArchiveFactory: s.archiveFactory,
-		Client:         s.httpClient,
 	}, credentials)
 	if err != nil {
 		return nil, err

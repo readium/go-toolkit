@@ -2,6 +2,7 @@ package archive
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/binary"
 	"io"
@@ -17,20 +18,22 @@ import (
 )
 
 type RemoteArchiveConfig struct {
-	Timeout             time.Duration
-	CacheSizeThreshold  int64
-	CacheCountThreshold int64
+	Timeout             time.Duration // Timeout for remote requests to read from the archive
+	CacheAllThreshold   int64         // Threshold for caching the entire ZIP
+	CacheSizeThreshold  int64         // Threshold for caching of a single entry in the ZIP
+	CacheCountThreshold int64         // Threshold for the number of entries in the ZIP to cache
 }
 
 func (c RemoteArchiveConfig) Empty() bool {
-	return c.Timeout == 0 && c.CacheSizeThreshold == 0 && c.CacheCountThreshold == 0
+	return c.Timeout == 0 && c.CacheSizeThreshold == 0 && c.CacheCountThreshold == 0 && c.CacheAllThreshold == 0
 }
 
 func NewDefaultRemoteArchiveConfig() RemoteArchiveConfig {
 	return RemoteArchiveConfig{
 		Timeout:             time.Second * 60, // 1 minute
 		CacheSizeThreshold:  1024 * 1024,      // 1MB
-		CacheCountThreshold: 64,
+		CacheCountThreshold: 32,               // 32 items
+		CacheAllThreshold:   1024 * 1024,      // 1MB
 	}
 }
 
@@ -49,18 +52,24 @@ type readRange struct {
 
 // Read ZIP archives from the a remote location efficiently
 type remoteZIPAdapter struct {
-	rdr      RemoteArchiveReader
-	zipReady bool
-	timeout  time.Duration
+	rdr      RemoteArchiveReader // Remote archive reader
+	zipReady bool                // Is the ZIP file opened by Go's zip reader?
+	timeout  time.Duration       // // Timeout for remote requests to read from the archive
 
-	cacheSizeThreshold  int64
-	cacheCountThreshold int64
-	cachedRanges        []readRange
-	cacheMutex          sync.RWMutex
+	cacheAllThreshold   int64        // Threshold for caching the entire ZIP
+	cacheSizeThreshold  int64        // Threshold for caching of a single entry in the ZIP
+	cacheCountThreshold int64        // Threshold for the number of entries in the ZIP to cache
+	cachedRanges        []readRange  // Cached byte ranges of the ZIP file
+	cacheMutex          sync.RWMutex // Mutex for the cached ranges
+	completeBytes       []byte       // Entire ZIP file in memory
 
 	// No mutex here, because it's only set once during the ZIP opening procedure
 	zipTail     []byte
 	zipTailSize int64
+}
+
+func (r *remoteZIPAdapter) cacheAll() bool {
+	return r.rdr.Size() <= r.cacheAllThreshold
 }
 
 // ReadAt implements io.ReaderAt
@@ -76,6 +85,23 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 	// Limited amount of time to perform the read
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer cancel()
+
+	if r.cacheAll() { // Read from a complete in-memory copy of the publication
+		if len(r.completeBytes) == 0 {
+			rdr, err := r.rdr.ReadRange(ctx, 0, r.rdr.Size())
+			if err != nil {
+				return 0, err
+			}
+			defer rdr.Close()
+			r.completeBytes = make([]byte, r.rdr.Size())
+			n, err := io.ReadFull(rdr, r.completeBytes) // Read the entire object into memory
+			if err != nil {
+				return n, err
+			}
+		}
+		// Perform ReadAt on the in-memory copy of the publication
+		return bytes.NewReader(r.completeBytes).ReadAt(p, off)
+	}
 
 	// Special accomodation to speed up zip reader scanning the end of the file for the central directory
 	if !r.zipReady {
@@ -306,14 +332,18 @@ func newRemoteZIPAdapter(rdr RemoteArchiveReader, config RemoteArchiveConfig) *r
 	if config.Empty() {
 		config = NewDefaultRemoteArchiveConfig()
 	}
-	return &remoteZIPAdapter{
+	r := &remoteZIPAdapter{
 		rdr:                 rdr,
 		timeout:             config.Timeout,
 		cacheSizeThreshold:  config.CacheSizeThreshold,
 		cacheCountThreshold: config.CacheCountThreshold,
-		cachedRanges:        make([]readRange, 0, config.CacheCountThreshold),
-		zipTailSize:         65 * 1024, // // 65KB
+		cacheAllThreshold:   config.CacheAllThreshold,
+		zipTailSize:         65 * 1024, // 65KB
 	}
+	if !r.cacheAll() {
+		r.cachedRanges = make([]readRange, 0, r.cacheCountThreshold)
+	}
+	return r
 }
 
 // S3-specific reader
