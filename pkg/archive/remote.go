@@ -312,6 +312,7 @@ func newRemoteZIPAdapter(rdr RemoteArchiveReader, config RemoteArchiveConfig) *r
 		cacheSizeThreshold:  config.CacheSizeThreshold,
 		cacheCountThreshold: config.CacheCountThreshold,
 		cachedRanges:        make([]readRange, 0, config.CacheCountThreshold),
+		zipTailSize:         65 * 1024, // // 65KB
 	}
 }
 
