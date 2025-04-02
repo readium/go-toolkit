@@ -247,6 +247,19 @@ func Other(cause error) *ResourceError {
 	}
 }
 
+func HTTPStatusToException(status int) *ResourceError {
+	if status == 0 {
+		return nil
+	}
+
+	switch status {
+	case http.StatusOK, http.StatusCreated, http.StatusAccepted, http.StatusPartialContent, http.StatusNoContent, http.StatusResetContent, http.StatusNotModified:
+		return nil
+	default:
+		return NewResourceError(ResourceErrorCode(status))
+	}
+}
+
 func AWSErrorToException(err error) *ResourceError {
 	var notFound *types.NotFound
 	var noSuchKey *types.NoSuchKey

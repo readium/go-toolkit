@@ -215,7 +215,13 @@ func (r *s3Resource) ReadWithContext(ctx context.Context, start int64, end int64
 	}
 	defer output.Body.Close()
 
-	data, err := io.ReadAll(output.Body)
+	var data []byte
+	if output.ContentLength != nil && *output.ContentLength >= 0 {
+		data = make([]byte, *output.ContentLength)
+		_, err = io.ReadFull(output.Body, data)
+	} else {
+		data, err = io.ReadAll(output.Body)
+	}
 	if err != nil {
 		return nil, Other(err)
 	}

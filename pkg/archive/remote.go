@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 type RemoteArchiveConfig struct {
@@ -414,5 +416,54 @@ func RemoteArchiveReaderFromGCS(handle *storage.ObjectHandle, attrs *storage.Obj
 	return &remoteGCSReader{
 		handle: handle,
 		attrs:  attrs,
+	}
+}
+
+// HTTP-specific reader
+type remoteHTTPReader struct {
+	client *http.Client
+	url    string
+	size   int64
+}
+
+func (r remoteHTTPReader) ReadRange(ctx context.Context, offset, length int64) (io.ReadCloser, error) {
+	if offset < 0 {
+		return nil, io.EOF
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.url, nil)
+	if err != nil {
+		return nil, err
+	}
+	var sb strings.Builder
+	sb.WriteString("bytes=")
+	sb.WriteString(strconv.FormatInt(offset, 10))
+	sb.WriteString("-")
+	if length > 0 {
+		sb.WriteString(strconv.FormatInt(offset+length-1, 10))
+	}
+	req.Header.Set("Range", sb.String())
+
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusPartialContent {
+		return nil, errors.New("unexpected HTTP status code: " + strconv.Itoa(resp.StatusCode))
+	}
+
+	// User is responsible for closing the body
+	return resp.Body, nil
+}
+
+func (r remoteHTTPReader) Size() int64 {
+	return r.size
+}
+
+func RemoteArchiveReaderFromHTTP(client *http.Client, url url.AbsoluteURL, size int64) RemoteArchiveReader {
+	return &remoteHTTPReader{
+		client: client,
+		url:    url.String(),
+		size:   size,
 	}
 }

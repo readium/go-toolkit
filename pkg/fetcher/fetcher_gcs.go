@@ -208,7 +208,13 @@ func (r *gcsResource) ReadWithContext(ctx context.Context, start int64, end int6
 	}
 	defer rdr.Close()
 
-	data, err := io.ReadAll(rdr)
+	var data []byte
+	if rdr.Remain() >= 0 {
+		data = make([]byte, rdr.Remain())
+		_, err = io.ReadFull(rdr, data)
+	} else {
+		data, err = io.ReadAll(rdr)
+	}
 	if err != nil {
 		return nil, Other(err)
 	}

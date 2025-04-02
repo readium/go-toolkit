@@ -106,7 +106,14 @@ func (s *Server) getPublication(ctx context.Context, filename string) (*pub.Publ
 				}
 			case url.SchemeHTTP, url.SchemeHTTPS:
 				remote = true
-				return nil, remote, errors.New("HTTP/S not yet implemented ;(")
+				if s.remote.HTTP == nil {
+					return nil, remote, errors.New("HTTP client not configured")
+				}
+				config.ArchiveFactory = archive.NewHTTPArchiveFactory(s.remote.HTTP, archive.NewDefaultRemoteArchiveConfig())
+				pub, err = streamer.New(config).Open(asset.HTTP(ctx, s.remote.HTTP, u), "")
+				if err != nil {
+					return nil, remote, errors.Wrap(err, "failed opening "+u.String())
+				}
 			default:
 				return nil, remote, errors.New("unsupported scheme " + u.Scheme().String())
 			}
@@ -322,7 +329,12 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	normalResponse := func() {
 		if remote {
 			var bin []byte
-			bin, rerr = res.Read(start, end)
+			rres, ok := res.(fetcher.RemoteResource)
+			if ok {
+				bin, rerr = rres.ReadWithContext(r.Context(), start, end)
+			} else {
+				bin, rerr = res.Read(start, end)
+			}
 			if rerr == nil {
 				_, err = w.Write(bin)
 				if err != nil {
@@ -330,7 +342,12 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		} else {
-			_, rerr = res.Stream(w, start, end)
+			rres, ok := res.(fetcher.RemoteResource)
+			if ok {
+				_, rerr = rres.StreamWithContext(r.Context(), w, start, end)
+			} else {
+				_, rerr = res.Stream(w, start, end)
+			}
 		}
 	}
 	if ok && cres.CompressedAs(archive.CompressionMethodDeflate) && start == 0 && end == 0 {
