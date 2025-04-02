@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/readium/go-toolkit/cmd/rwp/cmd/serve"
+	"github.com/readium/go-toolkit/cmd/rwp/cmd/serve/client"
 	"github.com/readium/go-toolkit/pkg/streamer"
 	"github.com/spf13/cobra"
 	"google.golang.org/api/option"
@@ -34,6 +35,8 @@ var s3EndpointFlag string
 var s3RegionFlag string
 var s3AccessKeyFlag string
 var s3SecretKeyFlag string
+
+var httpAuthorizationFlag string
 
 var remoteArchiveTimeoutFlag uint32
 var remoteArchiveCacheSize uint32
@@ -133,8 +136,10 @@ to the internet except for testing/debugging purposes.`,
 			slog.Warn("GCS client creation failed, GCS support will be disabled", "error", err)
 		}
 
-		// TODO: HTTP client customization! auth, optimization etc.
-		remote.HTTP = http.DefaultClient
+		remote.HTTP, err = client.NewHTTPClient(httpAuthorizationFlag)
+		if err != nil {
+			slog.Warn("HTTP client creation failed, HTTP support will be disabled", "error", err)
+		}
 
 		// Remote archive streaming tweaks
 		remote.Config.CacheCountThreshold = int64(remoteArchiveCacheCount)
@@ -182,6 +187,8 @@ func init() {
 	serveCmd.Flags().StringVar(&s3RegionFlag, "s3-region", "auto", "S3 region")
 	serveCmd.Flags().StringVar(&s3AccessKeyFlag, "s3-access-key", "", "S3 access key")
 	serveCmd.Flags().StringVar(&s3SecretKeyFlag, "s3-secret-key", "", "S3 secret key")
+
+	serveCmd.Flags().StringVar(&httpAuthorizationFlag, "http-authorization", "", "HTTP authorization header value (e.g. 'Bearer <token>' or 'Basic <base64-credentials>')")
 
 	serveCmd.Flags().Uint32Var(&remoteArchiveTimeoutFlag, "remote-archive-timeout", 60, "Timeout for remote archive requests (in seconds)")
 	serveCmd.Flags().Uint32Var(&remoteArchiveCacheSize, "remote-archive-cache-size", 1024*1024, "Max size of items in an archive that can be cached (in bytes)")
