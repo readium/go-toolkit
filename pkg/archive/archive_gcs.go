@@ -3,6 +3,7 @@ package archive
 import (
 	"archive/zip"
 	"context"
+	"io"
 
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
@@ -75,5 +76,32 @@ func NewGCSArchiveFactory(client *storage.Client, config RemoteArchiveConfig) GC
 	return GCSArchiveFactory{
 		client: client,
 		config: config,
+	}
+}
+
+// GCS-specific reader
+type remoteGCSReader struct {
+	handle *storage.ObjectHandle
+	attrs  *storage.ObjectAttrs
+}
+
+func (r remoteGCSReader) ReadRange(ctx context.Context, offset, length int64) (io.ReadCloser, error) {
+	rdr, err := r.handle.NewRangeReader(ctx, offset, length)
+	if err != nil {
+		return nil, err
+	}
+
+	// User is responsible for closing the reader
+	return rdr, nil
+}
+
+func (r remoteGCSReader) Size() int64 {
+	return r.attrs.Size
+}
+
+func RemoteArchiveReaderFromGCS(handle *storage.ObjectHandle, attrs *storage.ObjectAttrs) RemoteArchiveReader {
+	return &remoteGCSReader{
+		handle: handle,
+		attrs:  attrs,
 	}
 }

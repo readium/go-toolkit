@@ -6,17 +6,10 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
-	"net/http"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
-	"cloud.google.com/go/storage"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/pkg/errors"
-	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 type RemoteArchiveConfig struct {
@@ -346,124 +339,4 @@ func newRemoteZIPAdapter(rdr RemoteArchiveReader, config RemoteArchiveConfig) *r
 		r.cachedRanges = make([]readRange, 0, r.cacheCountThreshold)
 	}
 	return r
-}
-
-// S3-specific reader
-type remoteS3Reader struct {
-	client *s3.Client
-	input  s3.GetObjectInput
-	head   s3.HeadObjectOutput
-}
-
-func (r remoteS3Reader) ReadRange(ctx context.Context, offset, length int64) (io.ReadCloser, error) {
-	if offset < 0 {
-		return nil, io.EOF
-	}
-
-	var sb strings.Builder
-	sb.WriteString("bytes=")
-	sb.WriteString(strconv.FormatInt(offset, 10))
-	sb.WriteString("-")
-	if length >= 0 {
-		sb.WriteString(strconv.FormatInt(offset+length-1, 10))
-	}
-	r.input.Range = aws.String(sb.String())
-	result, err := r.client.GetObject(ctx, &r.input)
-	if err != nil {
-		return nil, err
-	}
-
-	// User is responsible for closing the body
-	return result.Body, nil
-}
-
-func (r remoteS3Reader) Size() int64 {
-	if r.head.ContentLength != nil {
-		return *r.head.ContentLength
-	}
-	return 0
-}
-
-func RemoteArchiveReaderFromS3(client *s3.Client, output s3.HeadObjectOutput, input s3.GetObjectInput) RemoteArchiveReader {
-	return &remoteS3Reader{
-		client: client,
-		input:  input,
-		head:   output,
-	}
-}
-
-// GCS-specific reader
-type remoteGCSReader struct {
-	handle *storage.ObjectHandle
-	attrs  *storage.ObjectAttrs
-}
-
-func (r remoteGCSReader) ReadRange(ctx context.Context, offset, length int64) (io.ReadCloser, error) {
-	rdr, err := r.handle.NewRangeReader(ctx, offset, length)
-	if err != nil {
-		return nil, err
-	}
-
-	// User is responsible for closing the reader
-	return rdr, nil
-}
-
-func (r remoteGCSReader) Size() int64 {
-	return r.attrs.Size
-}
-
-func RemoteArchiveReaderFromGCS(handle *storage.ObjectHandle, attrs *storage.ObjectAttrs) RemoteArchiveReader {
-	return &remoteGCSReader{
-		handle: handle,
-		attrs:  attrs,
-	}
-}
-
-// HTTP-specific reader
-type remoteHTTPReader struct {
-	client *http.Client
-	url    string
-	size   int64
-}
-
-func (r remoteHTTPReader) ReadRange(ctx context.Context, offset, length int64) (io.ReadCloser, error) {
-	if offset < 0 {
-		return nil, io.EOF
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.url, nil)
-	if err != nil {
-		return nil, err
-	}
-	var sb strings.Builder
-	sb.WriteString("bytes=")
-	sb.WriteString(strconv.FormatInt(offset, 10))
-	sb.WriteString("-")
-	if length > 0 {
-		sb.WriteString(strconv.FormatInt(offset+length-1, 10))
-	}
-	req.Header.Set("Range", sb.String())
-
-	resp, err := r.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusPartialContent {
-		return nil, errors.New("unexpected HTTP status code: " + strconv.Itoa(resp.StatusCode))
-	}
-
-	// User is responsible for closing the body
-	return resp.Body, nil
-}
-
-func (r remoteHTTPReader) Size() int64 {
-	return r.size
-}
-
-func RemoteArchiveReaderFromHTTP(client *http.Client, url url.AbsoluteURL, size int64) RemoteArchiveReader {
-	return &remoteHTTPReader{
-		client: client,
-		url:    url.String(),
-		size:   size,
-	}
 }
