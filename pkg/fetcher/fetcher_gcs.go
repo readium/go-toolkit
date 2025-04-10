@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http"
 	"path"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 )
 
@@ -237,4 +239,19 @@ func (r *gcsResource) Length(ctx context.Context) (int64, *ResourceError) {
 		return 0, rerr
 	}
 	return attrs.Size, nil
+}
+
+func GCSErrorToException(err error) *ResourceError {
+	if gErr, ok := err.(*googleapi.Error); ok {
+		switch gErr.Code {
+		case http.StatusNotFound:
+			return NotFound(err)
+		case http.StatusForbidden:
+			return Forbidden(err)
+		case http.StatusBadRequest:
+			return BadRequest(err)
+		}
+	}
+
+	return Other(err)
 }

@@ -10,6 +10,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
@@ -253,4 +255,25 @@ func (r *s3Resource) Length(ctx context.Context) (int64, *ResourceError) {
 		return 0, Other(errors.New("object does not have length"))
 	}
 	return *head.ContentLength, nil
+}
+
+func AWSErrorToException(err error) *ResourceError {
+	var notFound *types.NotFound
+	var noSuchKey *types.NoSuchKey
+	var noSuchBucket *types.NoSuchBucket
+	var invalidObjectState *types.InvalidObjectState
+	if errors.As(err, &notFound) || errors.As(err, &noSuchKey) || errors.As(err, &noSuchBucket) {
+		return NotFound(err)
+	} else if errors.As(err, &invalidObjectState) {
+		return BadRequest(err)
+	} else {
+		var ae smithy.APIError
+		if errors.As(err, &ae) {
+			if ae.ErrorCode() == "AccessDenied" {
+				return Forbidden(err)
+			}
+		}
+	}
+
+	return Other(err)
 }

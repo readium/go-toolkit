@@ -11,14 +11,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/aws/smithy-go"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/xmlquery"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"
-	"google.golang.org/api/googleapi"
 )
 
 /**
@@ -236,55 +233,6 @@ func Other(cause error) *ResourceError {
 		Code:  CodeInternalServerError,
 		Cause: cause,
 	}
-}
-
-func HTTPStatusToException(status int) *ResourceError {
-	if status == 0 {
-		return nil
-	}
-
-	switch status {
-	case http.StatusOK, http.StatusCreated, http.StatusAccepted, http.StatusPartialContent, http.StatusNoContent, http.StatusResetContent, http.StatusNotModified:
-		return nil
-	default:
-		return NewResourceError(ResourceErrorCode(status))
-	}
-}
-
-func AWSErrorToException(err error) *ResourceError {
-	var notFound *types.NotFound
-	var noSuchKey *types.NoSuchKey
-	var noSuchBucket *types.NoSuchBucket
-	var invalidObjectState *types.InvalidObjectState
-	if errors.As(err, &notFound) || errors.As(err, &noSuchKey) || errors.As(err, &noSuchBucket) {
-		return NotFound(err)
-	} else if errors.As(err, &invalidObjectState) {
-		return BadRequest(err)
-	} else {
-		var ae smithy.APIError
-		if errors.As(err, &ae) {
-			if ae.ErrorCode() == "AccessDenied" {
-				return Forbidden(err)
-			}
-		}
-	}
-
-	return Other(err)
-}
-
-func GCSErrorToException(err error) *ResourceError {
-	if gErr, ok := err.(*googleapi.Error); ok {
-		switch gErr.Code {
-		case http.StatusNotFound:
-			return NotFound(err)
-		case http.StatusForbidden:
-			return Forbidden(err)
-		case http.StatusBadRequest:
-			return BadRequest(err)
-		}
-	}
-
-	return Other(err)
 }
 
 // Convert a Go os error to an exception
