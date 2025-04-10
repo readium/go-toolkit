@@ -122,7 +122,7 @@ func (r *httpResource) size(ctx context.Context) (int64, *ResourceError) {
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			return 0, HTTPStatusToException(resp.StatusCode)
+			return 0, httpStatusToException(resp.StatusCode)
 		}
 
 		// HTTP server *must* support byte range requests
@@ -172,7 +172,7 @@ func (r *httpResource) Read(ctx context.Context, start int64, end int64) ([]byte
 		return nil, Other(err)
 	}
 	if resp.StatusCode != http.StatusPartialContent {
-		ex := HTTPStatusToException(resp.StatusCode)
+		ex := httpStatusToException(resp.StatusCode)
 		if ex == nil {
 			return nil, Other(errors.New("unexpected HTTP status code: " + strconv.Itoa(resp.StatusCode)))
 		}
@@ -219,7 +219,7 @@ func (r *httpResource) Stream(ctx context.Context, w io.Writer, start int64, end
 		return -1, Other(err)
 	}
 	if resp.StatusCode != http.StatusPartialContent {
-		ex := HTTPStatusToException(resp.StatusCode)
+		ex := httpStatusToException(resp.StatusCode)
 		if ex == nil {
 			return -1, Other(errors.New("unexpected HTTP status code: " + strconv.Itoa(resp.StatusCode)))
 		}
@@ -243,7 +243,7 @@ func (r *httpResource) Length(ctx context.Context) (int64, *ResourceError) {
 	return size, nil
 }
 
-func HTTPStatusToException(status int) *ResourceError {
+func httpStatusToException(status int) *ResourceError {
 	if status == 0 {
 		return nil
 	}

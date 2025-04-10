@@ -170,7 +170,7 @@ func (r *s3Resource) head(ctx context.Context) (*s3.HeadObjectOutput, *ResourceE
 			Key:    &r.key,
 		})
 		if err != nil {
-			return nil, AWSErrorToException(err)
+			return nil, awsErrorToException(err)
 		}
 		r.cachedHead = head
 	}
@@ -197,7 +197,7 @@ func (r *s3Resource) Read(ctx context.Context, start int64, end int64) ([]byte, 
 
 	output, err := r.client.GetObject(ctx, r.object())
 	if err != nil {
-		return nil, AWSErrorToException(err)
+		return nil, awsErrorToException(err)
 	}
 	defer output.Body.Close()
 
@@ -234,7 +234,7 @@ func (r *s3Resource) Stream(ctx context.Context, w io.Writer, start int64, end i
 
 	output, err := r.client.GetObject(ctx, obj)
 	if err != nil {
-		return -1, AWSErrorToException(err)
+		return -1, awsErrorToException(err)
 	}
 	defer output.Body.Close()
 
@@ -257,7 +257,7 @@ func (r *s3Resource) Length(ctx context.Context) (int64, *ResourceError) {
 	return *head.ContentLength, nil
 }
 
-func AWSErrorToException(err error) *ResourceError {
+func awsErrorToException(err error) *ResourceError {
 	var notFound *types.NotFound
 	var noSuchKey *types.NoSuchKey
 	var noSuchBucket *types.NoSuchBucket

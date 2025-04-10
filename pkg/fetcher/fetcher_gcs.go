@@ -169,7 +169,7 @@ func (r *gcsResource) attrs(ctx context.Context) (*storage.ObjectAttrs, *Resourc
 	if r.cachedAttrs == nil {
 		head, err := r.handle.Attrs(ctx)
 		if err != nil {
-			return nil, GCSErrorToException(err)
+			return nil, gcsErrorToException(err)
 		}
 		r.cachedAttrs = head
 	}
@@ -190,7 +190,7 @@ func (r *gcsResource) Read(ctx context.Context, start int64, end int64) ([]byte,
 		rdr, err = r.handle.NewRangeReader(ctx, start, end-start+1)
 	}
 	if err != nil {
-		return nil, GCSErrorToException(err)
+		return nil, gcsErrorToException(err)
 	}
 	defer rdr.Close()
 
@@ -221,7 +221,7 @@ func (r *gcsResource) Stream(ctx context.Context, w io.Writer, start int64, end 
 		rdr, err = r.handle.NewRangeReader(ctx, start, end-start+1)
 	}
 	if err != nil {
-		return -1, GCSErrorToException(err)
+		return -1, gcsErrorToException(err)
 	}
 	defer rdr.Close()
 
@@ -241,7 +241,7 @@ func (r *gcsResource) Length(ctx context.Context) (int64, *ResourceError) {
 	return attrs.Size, nil
 }
 
-func GCSErrorToException(err error) *ResourceError {
+func gcsErrorToException(err error) *ResourceError {
 	if gErr, ok := err.(*googleapi.Error); ok {
 		switch gErr.Code {
 		case http.StatusNotFound:
