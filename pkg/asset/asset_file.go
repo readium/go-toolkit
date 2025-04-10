@@ -1,6 +1,7 @@
 package asset
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -52,7 +53,7 @@ func (a *FileAsset) realPath() string {
 }
 
 // MediaType implements PublicationAsset
-func (a *FileAsset) MediaType() mediatype.MediaType {
+func (a *FileAsset) MediaType(ctx context.Context) mediatype.MediaType {
 	if a.mediatype == nil {
 		if a.knownMediaType != nil {
 			a.mediatype = a.knownMediaType
@@ -60,7 +61,7 @@ func (a *FileAsset) MediaType() mediatype.MediaType {
 			fil, err := os.Open(a.realPath())
 			if err == nil { // No problem opening the file
 				defer fil.Close()
-				a.mediatype = mediatype.OfFile(fil, []string{a.mediaTypeHint}, nil, mediatype.Sniffers)
+				a.mediatype = mediatype.OfFile(ctx, fil, []string{a.mediaTypeHint}, nil, mediatype.Sniffers)
 			}
 			if a.mediatype == nil { // Still nothing found
 				a.mediatype = &mediatype.Binary
@@ -71,7 +72,7 @@ func (a *FileAsset) MediaType() mediatype.MediaType {
 }
 
 // CreateFetcher implements PublicationAsset
-func (a *FileAsset) CreateFetcher(dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
+func (a *FileAsset) CreateFetcher(ctx context.Context, dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
 	if u, ok := a.uri.(url.AbsoluteURL); ok && !u.IsFile() {
 		return nil, errors.New("file asset with absolute URL must have file:/// scheme")
 	}
@@ -92,7 +93,7 @@ func (a *FileAsset) CreateFetcher(dependencies Dependencies, credentials string)
 			}
 		}
 
-		af, err := fetcher.NewArchiveFetcherFromPathWithFactory(rfp, dependencies.ArchiveFactory)
+		af, err := fetcher.NewArchiveFetcherFromPathWithFactory(ctx, rfp, dependencies.ArchiveFactory)
 		if err == nil {
 			return af, nil
 		}

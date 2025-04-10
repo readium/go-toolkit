@@ -1,6 +1,7 @@
 package iterator
 
 import (
+	"context"
 	"strings"
 
 	"github.com/andybalholm/cascadia"
@@ -14,7 +15,7 @@ import (
 )
 
 type HTMLContentIterator struct {
-	resource        fetcher.StringResource
+	resource        fetcher.Resource
 	locator         manifest.Locator
 	BeforeMaxLength int // Locators will contain a `before` context of up to this amount of characters.
 
@@ -26,7 +27,7 @@ type HTMLContentIterator struct {
 // Iterates an HTML [resource], starting from the given [locator].
 // If you want to start mid-resource, the [locator] must contain a `cssSelector` key in its [Locator.Locations] object.
 // If you want to start from the end of the resource, the [locator] must have a `progression` of 1.0.
-func NewHTML(resource fetcher.StringResource, locator manifest.Locator) *HTMLContentIterator {
+func NewHTML(resource fetcher.Resource, locator manifest.Locator) *HTMLContentIterator {
 	return &HTMLContentIterator{
 		resource:        resource,
 		locator:         locator,
@@ -37,20 +38,18 @@ func NewHTML(resource fetcher.StringResource, locator manifest.Locator) *HTMLCon
 func HTMLFactory() ResourceContentIteratorFactory {
 	return func(resource fetcher.Resource, locator manifest.Locator) Iterator {
 		if resource.Link().MediaType.Matches(&mediatype.HTML, &mediatype.XHTML) {
-			if sr, ok := resource.(fetcher.StringResource); ok {
-				return NewHTML(sr, locator)
-			}
+			return NewHTML(resource, locator)
 		}
 		return nil
 	}
 }
 
-func (it *HTMLContentIterator) HasPrevious() (bool, error) {
+func (it *HTMLContentIterator) HasPrevious(ctx context.Context) (bool, error) {
 	if it.currentElement != nil && it.currentElement.Delta == -1 {
 		return true, nil
 	}
 
-	elements, err := it.elements()
+	elements, err := it.elements(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -81,12 +80,12 @@ func (it *HTMLContentIterator) Previous() element.Element {
 	return el
 }
 
-func (it *HTMLContentIterator) HasNext() (bool, error) {
+func (it *HTMLContentIterator) HasNext(ctx context.Context) (bool, error) {
 	if it.currentElement != nil && it.currentElement.Delta == 1 {
 		return true, nil
 	}
 
-	elements, err := it.elements()
+	elements, err := it.elements(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -117,9 +116,9 @@ func (it *HTMLContentIterator) Next() element.Element {
 	return el
 }
 
-func (it *HTMLContentIterator) elements() (*ParsedElements, error) {
+func (it *HTMLContentIterator) elements(ctx context.Context) (*ParsedElements, error) {
 	if it.parsedElements == nil {
-		elements, err := it.parseElements()
+		elements, err := it.parseElements(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -128,8 +127,8 @@ func (it *HTMLContentIterator) elements() (*ParsedElements, error) {
 	return it.parsedElements, nil
 }
 
-func (it *HTMLContentIterator) parseElements() (*ParsedElements, error) {
-	raw, rerr := it.resource.ReadAsString()
+func (it *HTMLContentIterator) parseElements(ctx context.Context) (*ParsedElements, error) {
+	raw, rerr := fetcher.ReadResourceAsString(ctx, it.resource)
 	if rerr != nil {
 		return nil, errors.Wrap(rerr, "failed reading HTML string of "+it.resource.Link().Href.String())
 	}

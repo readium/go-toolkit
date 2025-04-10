@@ -16,9 +16,8 @@ import (
 
 // Represents a publication stored on an Amazon S3-compatible remote server.
 type HTTPAsset struct {
-	context context.Context
-	url     url.AbsoluteURL
-	client  *http.Client
+	url    url.AbsoluteURL
+	client *http.Client
 
 	mediatype      *mediatype.MediaType
 	knownMediaType *mediatype.MediaType
@@ -27,19 +26,17 @@ type HTTPAsset struct {
 	contentType string
 }
 
-func HTTP(context context.Context, client *http.Client, url url.AbsoluteURL) *HTTPAsset {
+func HTTP(client *http.Client, url url.AbsoluteURL) *HTTPAsset {
 	return &HTTPAsset{
-		client:  client,
-		context: context,
-		url:     url,
+		client: client,
+		url:    url,
 	}
 }
 
 // Creates a [HTTPAsset] from a [File] and an optional media type, when known.
-func HTTPWithMediaType(context context.Context, client *http.Client, url url.AbsoluteURL, mediatype *mediatype.MediaType) *HTTPAsset {
+func HTTPWithMediaType(client *http.Client, url url.AbsoluteURL, mediatype *mediatype.MediaType) *HTTPAsset {
 	return &HTTPAsset{
 		client:         client,
-		context:        context,
 		url:            url,
 		knownMediaType: mediatype,
 	}
@@ -50,12 +47,12 @@ func (a *HTTPAsset) Name() string {
 	return path.Base(a.url.Path())
 }
 
-func (a *HTTPAsset) head() error {
+func (a *HTTPAsset) head(ctx context.Context) error {
 	if a.fileSize > 0 {
 		return nil
 	}
 
-	req, err := http.NewRequestWithContext(a.context, http.MethodHead, a.url.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, a.url.String(), nil)
 	if err != nil {
 		return err
 	}
@@ -92,12 +89,12 @@ func (a *HTTPAsset) head() error {
 }
 
 // MediaType implements PublicationAsset
-func (a *HTTPAsset) MediaType() mediatype.MediaType {
+func (a *HTTPAsset) MediaType(ctx context.Context) mediatype.MediaType {
 	if a.mediatype == nil {
 		if a.knownMediaType != nil {
 			a.mediatype = a.knownMediaType
 		} else {
-			if err := a.head(); err == nil {
+			if err := a.head(ctx); err == nil {
 				// Note how we are *not* using the file contents to sniff the media type.
 				// We want to avoid unecessary requests at all costs.
 				if a.contentType != "" {
@@ -115,17 +112,17 @@ func (a *HTTPAsset) MediaType() mediatype.MediaType {
 }
 
 // CreateFetcher implements PublicationAsset
-func (a *HTTPAsset) CreateFetcher(dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
+func (a *HTTPAsset) CreateFetcher(ctx context.Context, dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
 	// We can't determine if the provided path is a directory or not unless it ends in a "/"
 	// because we can't expect HTTP servers to be listing directory indexes, and even then we
 	// couldn't distinguish between a directory listing and a file. So no "/" is always a file.
 	isDir := strings.HasSuffix(a.url.Path(), "/")
 
-	if isDir || !a.MediaType().IsZIP() {
+	if isDir || !a.MediaType(ctx).IsZIP() {
 		base := ""
 		if !isDir {
 			// There's some problem checking for the file's existance
-			if err := a.head(); err != nil {
+			if err := a.head(ctx); err != nil {
 				return nil, err
 			}
 
@@ -142,6 +139,6 @@ func (a *HTTPAsset) CreateFetcher(dependencies Dependencies, credentials string)
 			return nil, errors.New("provided ArchiveFactory does not support HTTP or HTTPS scheme")
 		}
 
-		return fetcher.NewArchiveFetcherFromURLWithFactoryAndContext(a.context, a.url, factory)
+		return fetcher.NewArchiveFetcherFromURLWithFactoryAndContext(ctx, a.url, factory)
 	}
 }

@@ -1,28 +1,22 @@
 package epub
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
+	ftchr "github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/readium/xmlquery"
 )
 
-func resourceXml(r fetcher.Resource, prefixes map[string]string) (*xmlquery.Node, *fetcher.ResourceError) {
-	if rr, ok := r.(fetcher.StringResource); ok {
-		return rr.ReadAsXML(prefixes)
-	} else {
-		return fetcher.ReadResourceAsXML(r, prefixes)
-	}
-}
+func GetRootFilePath(ctx context.Context, fetcher fetcher.Fetcher) (url.URL, error) {
+	res := fetcher.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/container.xml", false)})
 
-func GetRootFilePath(fetcher fetcher.Fetcher) (url.URL, error) {
-	res := fetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/container.xml", false)})
-
-	xml, err := resourceXml(res, map[string]string{
+	xml, err := ftchr.ReadResourceAsXML(ctx, res, map[string]string{
 		"urn:oasis:names:tc:opendocument:xmlns:container": "cn",
 	})
 	if err != nil {

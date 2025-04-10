@@ -18,8 +18,8 @@ type HTTPArchiveFactory struct {
 	config RemoteArchiveConfig
 }
 
-// Open implements RemoteArchiveFactory
-func (e HTTPArchiveFactory) OpenWithContext(ctx context.Context, location url.URL, password string) (Archive, error) {
+// Open implements ArchiveFactory
+func (e HTTPArchiveFactory) Open(ctx context.Context, location url.URL, password string) (Archive, error) {
 	// Go's built-in zip reader doesn't support passwords.
 	if password != "" {
 		return nil, errors.New("password-protected archives not supported")
@@ -76,19 +76,14 @@ func (e HTTPArchiveFactory) CanOpen(scheme url.Scheme) bool {
 	return scheme == url.SchemeHTTP || scheme == url.SchemeHTTPS
 }
 
-// Open implements ArchiveFactory
-func (e HTTPArchiveFactory) Open(location url.URL, password string) (Archive, error) {
-	return nil, errors.New("HTTP archives must be opened with OpenWithContext")
-}
-
 // OpenBytes implements ArchiveFactory
-func (e HTTPArchiveFactory) OpenBytes(data []byte, password string) (Archive, error) {
-	return nil, errors.New("HTTP archives must be opened with OpenWithContext")
+func (e HTTPArchiveFactory) OpenBytes(ctx context.Context, data []byte, password string) (Archive, error) {
+	return nil, errors.New("HTTP archives must be opened with Open")
 }
 
 // OpenReader implements ArchiveFactory
-func (e HTTPArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
-	return nil, errors.New("HTTP archives must be opened with OpenWithContext")
+func (e HTTPArchiveFactory) OpenReader(ctx context.Context, reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
+	return nil, errors.New("HTTP archives must be opened with Open")
 }
 
 func NewHTTPArchiveFactory(client *http.Client, config RemoteArchiveConfig) HTTPArchiveFactory {

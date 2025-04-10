@@ -1,6 +1,8 @@
 package iterator
 
 import (
+	"context"
+
 	"github.com/readium/go-toolkit/pkg/content/element"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -28,8 +30,8 @@ func NewPublicationContent(manifest manifest.Manifest, fetcher fetcher.Fetcher, 
 	}
 }
 
-func (it *PublicationContentIterator) HasPrevious() (bool, error) {
-	e, err := it.nextIn(Backward)
+func (it *PublicationContentIterator) HasPrevious(ctx context.Context) (bool, error) {
+	e, err := it.nextIn(ctx, Backward)
 	if err != nil {
 		return false, err
 	}
@@ -44,8 +46,8 @@ func (it *PublicationContentIterator) Previous() element.Element {
 	return it.currentElement.El
 }
 
-func (it *PublicationContentIterator) HasNext() (bool, error) {
-	e, err := it.nextIn(Foward)
+func (it *PublicationContentIterator) HasNext(ctx context.Context) (bool, error) {
+	e, err := it.nextIn(ctx, Foward)
 	if err != nil {
 		return false, err
 	}
@@ -60,20 +62,20 @@ func (it *PublicationContentIterator) Next() element.Element {
 	return it.currentElement.El
 }
 
-func (it *PublicationContentIterator) nextIn(direction Direction) (*ElementInDirection, error) {
-	iterator := it.currentIterator()
+func (it *PublicationContentIterator) nextIn(ctx context.Context, direction Direction) (*ElementInDirection, error) {
+	iterator := it.currentIterator(ctx)
 	if iterator == nil {
 		return nil, nil
 	}
 
-	content, err := iterator.NextContentIn(direction)
+	content, err := iterator.NextContentIn(ctx, direction)
 	if err != nil {
 		return nil, err
 	}
 	if content == nil {
-		if ni := it.nextIteratorIn(direction, iterator.index); ni != nil {
+		if ni := it.nextIteratorIn(ctx, direction, iterator.index); ni != nil {
 			it._currentIterator = ni
-			return it.nextIn(direction)
+			return it.nextIn(ctx, direction)
 		}
 		return nil, nil
 	}
@@ -84,34 +86,34 @@ func (it *PublicationContentIterator) nextIn(direction Direction) (*ElementInDir
 }
 
 // Returns the [Iterator] for the current [Resource] in the reading order.
-func (it *PublicationContentIterator) currentIterator() *IndexedIterator {
+func (it *PublicationContentIterator) currentIterator(ctx context.Context) *IndexedIterator {
 	if it._currentIterator == nil {
-		it._currentIterator = it.initialIterator()
+		it._currentIterator = it.initialIterator(ctx)
 	}
 	return it._currentIterator
 }
 
 // Returns the first iterator starting at [startLocator] or the beginning of the publication.
-func (it *PublicationContentIterator) initialIterator() *IndexedIterator {
+func (it *PublicationContentIterator) initialIterator(ctx context.Context) *IndexedIterator {
 	var index int
 	var ii *IndexedIterator
 	if it.startLocator != nil {
 		if i := it.manifest.ReadingOrder.IndexOfFirstWithHref(it.startLocator.Href); i > 0 {
 			index = i
 		}
-		ii = it.loadIteratorAt(index, *it.startLocator)
+		ii = it.loadIteratorAt(ctx, index, *it.startLocator)
 	} else {
-		ii = it.loadIteratorAtProgression(index, 0)
+		ii = it.loadIteratorAtProgression(ctx, index, 0)
 	}
 
 	if ii == nil {
-		return it.nextIteratorIn(Foward, index)
+		return it.nextIteratorIn(ctx, Foward, index)
 	}
 	return ii
 }
 
 // Returns the next resource iterator in the given [direction], starting from [fromIndex]
-func (it *PublicationContentIterator) nextIteratorIn(direction Direction, fromIndex int) *IndexedIterator {
+func (it *PublicationContentIterator) nextIteratorIn(ctx context.Context, direction Direction, fromIndex int) *IndexedIterator {
 	index := fromIndex + direction.Delta()
 	if index < 0 || index >= len(it.manifest.ReadingOrder) {
 		return nil
@@ -122,17 +124,17 @@ func (it *PublicationContentIterator) nextIteratorIn(direction Direction, fromIn
 		progression = 1
 	}
 
-	if it := it.loadIteratorAtProgression(index, progression); it != nil {
+	if it := it.loadIteratorAtProgression(ctx, index, progression); it != nil {
 		return it
 	}
-	return it.nextIteratorIn(direction, index)
+	return it.nextIteratorIn(ctx, direction, index)
 }
 
 // Loads the iterator at the given [index] in the reading order.
 // The [locator] will be used to compute the starting [Locator] for the iterator.
-func (it *PublicationContentIterator) loadIteratorAt(index int, locator manifest.Locator) *IndexedIterator {
+func (it *PublicationContentIterator) loadIteratorAt(ctx context.Context, index int, locator manifest.Locator) *IndexedIterator {
 	link := it.manifest.ReadingOrder[index]
-	resource := it.fetcher.Get(link)
+	resource := it.fetcher.Get(ctx, link)
 
 	for _, factory := range it.resourceContentIteratorFactories {
 		res := factory(resource, locator)
@@ -145,12 +147,12 @@ func (it *PublicationContentIterator) loadIteratorAt(index int, locator manifest
 
 // Loads the iterator at the given [index] in the reading order.
 // The [progression] will be used to build a locator and call [loadIteratorAt].
-func (it *PublicationContentIterator) loadIteratorAtProgression(index int, progression float64) *IndexedIterator {
+func (it *PublicationContentIterator) loadIteratorAtProgression(ctx context.Context, index int, progression float64) *IndexedIterator {
 	link := it.manifest.ReadingOrder[index]
 	locator := it.manifest.LocatorFromLink(link)
 	if locator == nil {
 		return nil
 	}
 	locator.Locations.Progression = &progression
-	return it.loadIteratorAt(index, *locator)
+	return it.loadIteratorAt(ctx, index, *locator)
 }

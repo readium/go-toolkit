@@ -13,7 +13,6 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
-	"github.com/readium/xmlquery"
 )
 
 type S3Fetcher struct {
@@ -38,12 +37,7 @@ func NewS3Fetcher(href string, client *s3.Client, bucket, key string) *S3Fetcher
 }
 
 // Links implements Fetcher
-func (f *S3Fetcher) Links() (manifest.LinkList, error) {
-	return f.LinksWithContext(context.Background())
-}
-
-// LinksWithContext implements RemoteFetcher
-func (f *S3Fetcher) LinksWithContext(ctx context.Context) (manifest.LinkList, error) {
+func (f *S3Fetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 	if len(f.cachedLinks) > 0 {
 		return f.cachedLinks, nil
 	}
@@ -111,12 +105,7 @@ func (f *S3Fetcher) LinksWithContext(ctx context.Context) (manifest.LinkList, er
 }
 
 // Get implements Fetcher
-func (f *S3Fetcher) Get(link manifest.Link) Resource {
-	return f.GetWithContext(context.Background(), link)
-}
-
-// GetWithContext implements RemoteFetcher
-func (f *S3Fetcher) GetWithContext(ctx context.Context, link manifest.Link) Resource {
+func (f *S3Fetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	linkHref := link.Href.String()
 	if strings.HasPrefix(linkHref, f.href) {
 		resourceFile := path.Join(f.key, strings.TrimPrefix(linkHref, f.href))
@@ -187,12 +176,7 @@ func (r *s3Resource) head(ctx context.Context) (*s3.HeadObjectOutput, *ResourceE
 }
 
 // Read implements Resource
-func (r *s3Resource) Read(start int64, end int64) ([]byte, *ResourceError) {
-	return r.ReadWithContext(context.Background(), start, end)
-}
-
-// ReadWithContext implements RemoteResource
-func (r *s3Resource) ReadWithContext(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
+func (r *s3Resource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
 	if end < start {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
@@ -229,12 +213,7 @@ func (r *s3Resource) ReadWithContext(ctx context.Context, start int64, end int64
 }
 
 // Stream implements Resource
-func (r *s3Resource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
-	return r.StreamWithContext(context.Background(), w, start, end)
-}
-
-// StreamWithContext implements RemoteResource
-func (r *s3Resource) StreamWithContext(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
+func (r *s3Resource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
 	if end < start {
 		return -1, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
@@ -265,12 +244,7 @@ func (r *s3Resource) StreamWithContext(ctx context.Context, w io.Writer, start i
 }
 
 // Length implements Resource
-func (r *s3Resource) Length() (int64, *ResourceError) {
-	return r.LengthWithContext(context.Background())
-}
-
-// LengthWithContext implements RemoteResource
-func (r *s3Resource) LengthWithContext(ctx context.Context) (int64, *ResourceError) {
+func (r *s3Resource) Length(ctx context.Context) (int64, *ResourceError) {
 	head, rerr := r.head(ctx)
 	if rerr != nil {
 		return 0, rerr
@@ -279,22 +253,4 @@ func (r *s3Resource) LengthWithContext(ctx context.Context) (int64, *ResourceErr
 		return 0, Other(errors.New("object does not have length"))
 	}
 	return *head.ContentLength, nil
-}
-
-// ReadAsString implements StringResource
-// Note that it doesn't have context
-func (r *s3Resource) ReadAsString() (string, *ResourceError) {
-	return ReadResourceAsString(r)
-}
-
-// ReadAsJSON implements StringResource
-// Note that it doesn't have context
-func (r *s3Resource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
-	return ReadResourceAsJSON(r)
-}
-
-// ReadAsXML implements StringResource
-// Note that it doesn't have context
-func (r *s3Resource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r, prefixes)
 }

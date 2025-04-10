@@ -13,7 +13,6 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
-	"github.com/readium/xmlquery"
 )
 
 type HTTPFetcher struct {
@@ -34,12 +33,7 @@ func NewHTTPFetcher(href string, client *http.Client, url url.AbsoluteURL) *HTTP
 }
 
 // Links implements Fetcher
-func (f *HTTPFetcher) Links() (manifest.LinkList, error) {
-	return f.LinksWithContext(context.Background())
-}
-
-// LinksWithContext implements RemoteFetcher
-func (f *HTTPFetcher) LinksWithContext(ctx context.Context) (manifest.LinkList, error) {
+func (f *HTTPFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 	// It's impossible to determine what the items in a folder are on a remote HTTP server
 	// This limits the parsers' abilities to realize that a folder is a certain type of publication
 	if strings.HasSuffix(f.url.Path(), "/") {
@@ -67,12 +61,7 @@ func (f *HTTPFetcher) LinksWithContext(ctx context.Context) (manifest.LinkList, 
 }
 
 // Get implements Fetcher
-func (f *HTTPFetcher) Get(link manifest.Link) Resource {
-	return f.GetWithContext(context.Background(), link)
-}
-
-// GetWithContext implements RemoteFetcher
-func (f *HTTPFetcher) GetWithContext(ctx context.Context, link manifest.Link) Resource {
+func (f *HTTPFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	linkHref := link.Href.String()
 	if strings.HasPrefix(linkHref, f.href) {
 		rurl, err := url.RelativeURLFromString(strings.TrimPrefix(linkHref, f.href))
@@ -158,12 +147,7 @@ func (r *httpResource) size(ctx context.Context) (int64, *ResourceError) {
 }
 
 // Read implements Resource
-func (r *httpResource) Read(start int64, end int64) ([]byte, *ResourceError) {
-	return r.ReadWithContext(context.Background(), start, end)
-}
-
-// ReadWithContext implements RemoteResource
-func (r *httpResource) ReadWithContext(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
+func (r *httpResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
 	if end < start {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
@@ -210,12 +194,7 @@ func (r *httpResource) ReadWithContext(ctx context.Context, start int64, end int
 }
 
 // Stream implements Resource
-func (r *httpResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
-	return r.StreamWithContext(context.Background(), w, start, end)
-}
-
-// StreamWithContext implements RemoteResource
-func (r *httpResource) StreamWithContext(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
+func (r *httpResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
 	if end < start {
 		return -1, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
@@ -256,33 +235,10 @@ func (r *httpResource) StreamWithContext(ctx context.Context, w io.Writer, start
 }
 
 // Length implements Resource
-func (r *httpResource) Length() (int64, *ResourceError) {
-	return r.LengthWithContext(context.Background())
-}
-
-// LengthWithContext implements RemoteResource
-func (r *httpResource) LengthWithContext(ctx context.Context) (int64, *ResourceError) {
+func (r *httpResource) Length(ctx context.Context) (int64, *ResourceError) {
 	size, rerr := r.size(ctx)
 	if rerr != nil {
 		return 0, rerr
 	}
 	return size, nil
-}
-
-// ReadAsString implements StringResource
-// Note that it doesn't have context
-func (r *httpResource) ReadAsString() (string, *ResourceError) {
-	return ReadResourceAsString(r)
-}
-
-// ReadAsJSON implements StringResource
-// Note that it doesn't have context
-func (r *httpResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
-	return ReadResourceAsJSON(r)
-}
-
-// ReadAsXML implements StringResource
-// Note that it doesn't have context
-func (r *httpResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r, prefixes)
 }

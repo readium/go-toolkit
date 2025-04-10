@@ -11,7 +11,6 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
-	"github.com/readium/xmlquery"
 	"google.golang.org/api/iterator"
 )
 
@@ -35,12 +34,7 @@ func NewGCSFetcher(href string, client *storage.Client, handle *storage.ObjectHa
 }
 
 // Links implements Fetcher
-func (f *GCSFetcher) Links() (manifest.LinkList, error) {
-	return f.LinksWithContext(context.Background())
-}
-
-// LinksWithContext implements RemoteFetcher
-func (f *GCSFetcher) LinksWithContext(ctx context.Context) (manifest.LinkList, error) {
+func (f *GCSFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 	if len(f.cachedLinks) > 0 {
 		return f.cachedLinks, nil
 	}
@@ -125,12 +119,7 @@ func (f *GCSFetcher) LinksWithContext(ctx context.Context) (manifest.LinkList, e
 }
 
 // Get implements Fetcher
-func (f *GCSFetcher) Get(link manifest.Link) Resource {
-	return f.GetWithContext(context.Background(), link)
-}
-
-// GetWithContext implements RemoteFetcher
-func (f *GCSFetcher) GetWithContext(ctx context.Context, link manifest.Link) Resource {
+func (f *GCSFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	linkHref := link.Href.String()
 	if strings.HasPrefix(linkHref, f.href) {
 		resourceFile := path.Join(f.handle.ObjectName(), strings.TrimPrefix(linkHref, f.href))
@@ -186,12 +175,7 @@ func (r *gcsResource) attrs(ctx context.Context) (*storage.ObjectAttrs, *Resourc
 }
 
 // Read implements Resource
-func (r *gcsResource) Read(start int64, end int64) ([]byte, *ResourceError) {
-	return r.ReadWithContext(context.Background(), start, end)
-}
-
-// ReadWithContext implements RemoteResource
-func (r *gcsResource) ReadWithContext(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
+func (r *gcsResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
 	if end < start {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
@@ -222,12 +206,7 @@ func (r *gcsResource) ReadWithContext(ctx context.Context, start int64, end int6
 }
 
 // Stream implements Resource
-func (r *gcsResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
-	return r.StreamWithContext(context.Background(), w, start, end)
-}
-
-// StreamWithContext implements RemoteResource
-func (r *gcsResource) StreamWithContext(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
+func (r *gcsResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
 	if end < start {
 		return -1, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
@@ -252,33 +231,10 @@ func (r *gcsResource) StreamWithContext(ctx context.Context, w io.Writer, start 
 }
 
 // Length implements Resource
-func (r *gcsResource) Length() (int64, *ResourceError) {
-	return r.LengthWithContext(context.Background())
-}
-
-// LengthWithContext implements RemoteResource
-func (r *gcsResource) LengthWithContext(ctx context.Context) (int64, *ResourceError) {
+func (r *gcsResource) Length(ctx context.Context) (int64, *ResourceError) {
 	attrs, rerr := r.attrs(ctx)
 	if rerr != nil {
 		return 0, rerr
 	}
 	return attrs.Size, nil
-}
-
-// ReadAsString implements StringResource
-// Note that it doesn't have context
-func (r *gcsResource) ReadAsString() (string, *ResourceError) {
-	return ReadResourceAsString(r)
-}
-
-// ReadAsJSON implements StringResource
-// Note that it doesn't have context
-func (r *gcsResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
-	return ReadResourceAsJSON(r)
-}
-
-// ReadAsXML implements StringResource
-// Note that it doesn't have context
-func (r *gcsResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r, prefixes)
 }

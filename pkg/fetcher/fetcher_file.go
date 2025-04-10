@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"context"
 	"errors"
 	"io"
 	"io/fs"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
-	"github.com/readium/xmlquery"
 )
 
 // Provides access to resources on the local file system.
@@ -22,7 +22,7 @@ type FileFetcher struct {
 }
 
 // Links implements Fetcher
-func (f *FileFetcher) Links() (manifest.LinkList, error) {
+func (f *FileFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 	links := make(manifest.LinkList, 0)
 	for href, xpath := range f.paths {
 		axpath, err := filepath.Abs(xpath)
@@ -54,7 +54,7 @@ func (f *FileFetcher) Links() (manifest.LinkList, error) {
 			f, err := os.Open(apath)
 			if err == nil {
 				defer f.Close()
-				mt := mediatype.OfFileOnly(f)
+				mt := mediatype.OfFileOnly(ctx, f)
 				if mt != nil {
 					link.MediaType = mt
 				}
@@ -78,7 +78,7 @@ func (f *FileFetcher) Links() (manifest.LinkList, error) {
 }
 
 // Get implements Fetcher
-func (f *FileFetcher) Get(link manifest.Link) Resource {
+func (f *FileFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	linkHref := link.Href.String()
 	for itemHref, itemFile := range f.paths {
 		if strings.HasPrefix(linkHref, itemHref) {
@@ -172,7 +172,7 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 }
 
 // Read implements Resource
-func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceError) {
+func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
 	if end < start {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
@@ -205,7 +205,7 @@ func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 }
 
 // Stream implements Resource
-func (r *FileResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
 	if end < start {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
 		return -1, err
@@ -236,7 +236,7 @@ func (r *FileResource) Stream(w io.Writer, start int64, end int64) (int64, *Reso
 }
 
 // Length implements Resource
-func (r *FileResource) Length() (int64, *ResourceError) {
+func (r *FileResource) Length(ctx context.Context) (int64, *ResourceError) {
 	f, ex := r.open()
 	if ex != nil {
 		return 0, ex
@@ -246,21 +246,6 @@ func (r *FileResource) Length() (int64, *ResourceError) {
 		return 0, Other(err)
 	}
 	return fi.Size(), nil
-}
-
-// ReadAsString implements StringResource
-func (r *FileResource) ReadAsString() (string, *ResourceError) {
-	return ReadResourceAsString(r)
-}
-
-// ReadAsJSON implements StringResource
-func (r *FileResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
-	return ReadResourceAsJSON(r)
-}
-
-// ReadAsXML implements StringResource
-func (r *FileResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r, prefixes)
 }
 
 func NewFileResource(link manifest.Link, abspath string) *FileResource {

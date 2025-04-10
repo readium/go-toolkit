@@ -1,6 +1,8 @@
 package epub
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/content/iterator"
@@ -25,21 +27,21 @@ func NewParser(strategy ReflowableStrategy) Parser {
 }
 
 // Parse implements PublicationParser
-func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Builder, error) {
+func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Builder, error) {
 	fallbackTitle := asset.Name()
 
-	if !asset.MediaType().Equal(&mediatype.EPUB) {
+	if !asset.MediaType(ctx).Equal(&mediatype.EPUB) {
 		return nil, nil
 	}
 
-	opfPath, err := GetRootFilePath(f)
+	opfPath, err := GetRootFilePath(ctx, f)
 	if err != nil {
 		return nil, err
 	}
 
 	// Detect DRM
 
-	opfXmlDocument, errx := resourceXml(f.Get(manifest.Link{Href: manifest.NewHREF(opfPath)}), map[string]string{
+	opfXmlDocument, errx := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(opfPath)}), map[string]string{
 		NamespaceOPF:                         "opf",
 		NamespaceDC:                          "dc",
 		VocabularyDCTerms:                    "dcterms",
@@ -57,9 +59,9 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 	manifest := PublicationFactory{
 		FallbackTitle:   fallbackTitle,
 		PackageDocument: *packageDocument,
-		NavigationData:  parseNavigationData(*packageDocument, f),
-		EncryptionData:  parseEncryptionData(f),
-		DisplayOptions:  parseDisplayOptions(f),
+		NavigationData:  parseNavigationData(ctx, *packageDocument, f),
+		EncryptionData:  parseEncryptionData(ctx, f),
+		DisplayOptions:  parseDisplayOptions(ctx, f),
 	}.Create()
 
 	ffetcher := f
@@ -77,8 +79,8 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 	return pub.NewBuilder(manifest, ffetcher, builder), nil
 }
 
-func parseEncryptionData(fetcher fetcher.Fetcher) (ret map[url.URL]manifest.Encryption) {
-	n, err := resourceXml(fetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/encryption.xml", false)}), map[string]string{
+func parseEncryptionData(ctx context.Context, f fetcher.Fetcher) (ret map[url.URL]manifest.Encryption) {
+	n, err := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/encryption.xml", false)}), map[string]string{
 		NamespaceENC:  "enc",
 		NamespaceSIG:  "ds",
 		NamespaceCOMP: "comp",
@@ -89,7 +91,7 @@ func parseEncryptionData(fetcher fetcher.Fetcher) (ret map[url.URL]manifest.Encr
 	return ParseEncryption(n)
 }
 
-func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetcher) (ret map[string]manifest.LinkList) {
+func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f fetcher.Fetcher) (ret map[string]manifest.LinkList) {
 	ret = make(map[string]manifest.LinkList)
 	if packageDocument.EPUBVersion < 3.0 {
 		var ncxItem *Item
@@ -111,7 +113,7 @@ func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetche
 		if ncxItem == nil {
 			return
 		}
-		n, nerr := resourceXml(fetcher.Get(manifest.Link{Href: manifest.NewHREF(ncxItem.Href)}), map[string]string{
+		n, nerr := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(ncxItem.Href)}), map[string]string{
 			NamespaceNCX: "ncx",
 		})
 		if nerr != nil {
@@ -134,7 +136,7 @@ func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetche
 		if navItem == nil {
 			return
 		}
-		n, errx := resourceXml(fetcher.Get(manifest.Link{Href: manifest.NewHREF(navItem.Href)}), map[string]string{
+		n, errx := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(navItem.Href)}), map[string]string{
 			NamespaceXHTML: "html",
 			NamespaceOPS:   "epub",
 		})
@@ -146,11 +148,11 @@ func parseNavigationData(packageDocument PackageDocument, fetcher fetcher.Fetche
 	return
 }
 
-func parseDisplayOptions(fetcher fetcher.Fetcher) (ret map[string]string) {
+func parseDisplayOptions(ctx context.Context, f fetcher.Fetcher) (ret map[string]string) {
 	ret = make(map[string]string)
-	displayOptionsXml, err := resourceXml(fetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/com.apple.ibooks.display-options.xml", false)}), nil)
+	displayOptionsXml, err := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/com.apple.ibooks.display-options.xml", false)}), nil)
 	if err != nil {
-		displayOptionsXml, err = resourceXml(fetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/com.kobobooks.display-options.xml", false)}), nil)
+		displayOptionsXml, err = fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/com.kobobooks.display-options.xml", false)}), nil)
 		if err != nil {
 			return
 		}

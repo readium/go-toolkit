@@ -1,6 +1,7 @@
 package mediatype
 
 import (
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -157,7 +158,7 @@ func (s SnifferContext) ContentAsXML() *XMLNode {
 
 // Content as an Archive instance.
 // Warning: Archive is only supported for a local file, for now.
-func (s *SnifferContext) ContentAsArchive() (archive.Archive, error) {
+func (s *SnifferContext) ContentAsArchive(ctx context.Context) (archive.Archive, error) {
 	if !s._loadedContentAsArchive {
 		s._loadedContentAsArchive = true
 		switch s.content.(type) {
@@ -168,7 +169,7 @@ func (s *SnifferContext) ContentAsArchive() (archive.Archive, error) {
 				if err != nil {
 					return nil, err
 				}
-				a, err := archive.NewArchiveFactory().Open(u, "")
+				a, err := archive.NewArchiveFactory().Open(ctx, u, "")
 				if err != nil {
 					return nil, err
 				}
@@ -177,7 +178,7 @@ func (s *SnifferContext) ContentAsArchive() (archive.Archive, error) {
 		case SnifferBytesContent:
 			{
 				fileSniffer := s.content.(SnifferBytesContent)
-				a, err := archive.NewArchiveFactory().OpenBytes(fileSniffer.bytes, "")
+				a, err := archive.NewArchiveFactory().OpenBytes(ctx, fileSniffer.bytes, "")
 				if err != nil {
 					return nil, err
 				}
@@ -278,8 +279,8 @@ func (s SnifferContext) ContainsJSONKeys(keys ...string) bool {
 }
 
 // Returns whether an Archive entry exists in this file.
-func (s SnifferContext) ContainsArchiveEntryAt(path string) bool {
-	a, err := s.ContentAsArchive()
+func (s SnifferContext) ContainsArchiveEntryAt(ctx context.Context, path string) bool {
+	a, err := s.ContentAsArchive(ctx)
 	if err != nil {
 		return false
 	}
@@ -291,8 +292,8 @@ func (s SnifferContext) ContainsArchiveEntryAt(path string) bool {
 }
 
 // Returns the Archive entry data at the given [path] in this file.
-func (s SnifferContext) ReadArchiveEntryAt(path string) []byte {
-	a, err := s.ContentAsArchive()
+func (s SnifferContext) ReadArchiveEntryAt(ctx context.Context, path string) []byte {
+	a, err := s.ContentAsArchive(ctx)
 	if err != nil {
 		return nil
 	}

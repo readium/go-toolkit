@@ -10,17 +10,13 @@ import (
 )
 
 type ArchiveFactory interface {
-	Open(location url.URL, password string) (Archive, error)                                            // Opens an archive from a location.
-	OpenBytes(data []byte, password string) (Archive, error)                                            // Opens an archive from a [data] slice.
-	OpenReader(reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) // Opens an archive from a reader.
+	Open(ctx context.Context, location url.URL, password string) (Archive, error)                                            // Opens an archive from a location.
+	OpenBytes(ctx context.Context, data []byte, password string) (Archive, error)                                            // Opens an archive from a [data] slice.
+	OpenReader(ctx context.Context, reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) // Opens an archive from a reader.
 }
 
 type SchemeSpecificArchiveFactory interface {
 	CanOpen(url.Scheme) bool // Whether this factory can open the given scheme.
-}
-
-type RemoteArchiveFactory interface {
-	OpenWithContext(ctx context.Context, location url.URL, password string) (Archive, error) // Opens an archive from a location, using ctx.
 }
 
 type DefaultArchiveFactory struct {
@@ -29,7 +25,7 @@ type DefaultArchiveFactory struct {
 }
 
 // Open implements ArchiveFactory
-func (e DefaultArchiveFactory) Open(location url.URL, password string) (Archive, error) {
+func (e DefaultArchiveFactory) Open(ctx context.Context, location url.URL, password string) (Archive, error) {
 	u := url.BaseFile.Resolve(location).(url.AbsoluteURL)
 	if u.Scheme() != url.SchemeFile {
 		return nil, errors.New("unsupported scheme " + u.Scheme().String())
@@ -47,7 +43,7 @@ func (e DefaultArchiveFactory) Open(location url.URL, password string) (Archive,
 }
 
 // OpenBytes implements ArchiveFactory
-func (e DefaultArchiveFactory) OpenBytes(data []byte, password string) (Archive, error) {
+func (e DefaultArchiveFactory) OpenBytes(ctx context.Context, data []byte, password string) (Archive, error) {
 	if data == nil {
 		return nil, errors.New("archive is nil")
 	}
@@ -55,7 +51,7 @@ func (e DefaultArchiveFactory) OpenBytes(data []byte, password string) (Archive,
 }
 
 // OpenBytes implements ArchiveFactory
-func (e DefaultArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
+func (e DefaultArchiveFactory) OpenReader(ctx context.Context, reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
 	if reader == nil {
 		return nil, errors.New("archive is nil")
 	}

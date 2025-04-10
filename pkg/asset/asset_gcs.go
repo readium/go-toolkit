@@ -16,9 +16,8 @@ import (
 
 // Represents a publication stored on an Amazon S3-compatible remote server.
 type GCSAsset struct {
-	context context.Context
-	uri     url.AbsoluteURL
-	client  *storage.Client
+	uri    url.AbsoluteURL
+	client *storage.Client
 
 	mediatype      *mediatype.MediaType
 	knownMediaType *mediatype.MediaType
@@ -27,19 +26,17 @@ type GCSAsset struct {
 	attrs *storage.ObjectAttrs
 }
 
-func GCS(context context.Context, client *storage.Client, uri url.AbsoluteURL) *GCSAsset {
+func GCS(client *storage.Client, uri url.AbsoluteURL) *GCSAsset {
 	return &GCSAsset{
-		client:  client,
-		context: context,
-		uri:     uri,
+		client: client,
+		uri:    uri,
 	}
 }
 
 // Creates a [S3Asset] from a [File] and an optional media type, when known.
-func GCSWithMediaType(context context.Context, client *storage.Client, uri url.AbsoluteURL, mediatype *mediatype.MediaType) *GCSAsset {
+func GCSWithMediaType(client *storage.Client, uri url.AbsoluteURL, mediatype *mediatype.MediaType) *GCSAsset {
 	return &GCSAsset{
 		client:         client,
-		context:        context,
 		uri:            uri,
 		knownMediaType: mediatype,
 	}
@@ -54,7 +51,7 @@ func (a *GCSAsset) handle() (*storage.ObjectHandle, error) {
 	return a.uri.ToGSObject(a.client)
 }
 
-func (a *GCSAsset) head() error {
+func (a *GCSAsset) head(ctx context.Context) error {
 	if a.attrs != nil {
 		return nil
 	}
@@ -62,17 +59,17 @@ func (a *GCSAsset) head() error {
 	if err != nil {
 		return err
 	}
-	a.attrs, err = handle.Attrs(a.context)
+	a.attrs, err = handle.Attrs(ctx)
 	return err
 }
 
 // MediaType implements PublicationAsset
-func (a *GCSAsset) MediaType() mediatype.MediaType {
+func (a *GCSAsset) MediaType(ctx context.Context) mediatype.MediaType {
 	if a.mediatype == nil {
 		if a.knownMediaType != nil {
 			a.mediatype = a.knownMediaType
 		} else {
-			if err := a.head(); err == nil {
+			if err := a.head(ctx); err == nil {
 				// Note how we are *not* using the file contents to sniff the media type.
 				// We want to avoid unecessary requests at all costs.
 				if a.attrs.ContentType != "" {
@@ -90,7 +87,7 @@ func (a *GCSAsset) MediaType() mediatype.MediaType {
 }
 
 // CreateFetcher implements PublicationAsset
-func (a *GCSAsset) CreateFetcher(dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
+func (a *GCSAsset) CreateFetcher(ctx context.Context, dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
 	handle, err := a.handle()
 	if err != nil {
 		return nil, err
@@ -105,7 +102,7 @@ func (a *GCSAsset) CreateFetcher(dependencies Dependencies, credentials string) 
 			isDir = true
 		} else {
 			// Not sure if it's a folder or a file, need to check
-			it := a.client.Bucket(handle.BucketName()).Objects(a.context, &storage.Query{
+			it := a.client.Bucket(handle.BucketName()).Objects(ctx, &storage.Query{
 				Prefix:    handle.ObjectName() + "/",
 				Delimiter: "/",
 			})
@@ -121,11 +118,11 @@ func (a *GCSAsset) CreateFetcher(dependencies Dependencies, credentials string) 
 		a.isDir = &isDir
 	}
 
-	if isDir || !a.MediaType().IsZIP() {
+	if isDir || !a.MediaType(ctx).IsZIP() {
 		base := ""
 		if !isDir {
 			// There's some problem checking for the file's existance
-			if err = a.head(); err != nil {
+			if err = a.head(ctx); err != nil {
 				return nil, err
 			}
 
@@ -142,6 +139,6 @@ func (a *GCSAsset) CreateFetcher(dependencies Dependencies, credentials string) 
 			return nil, errors.New("provided ArchiveFactory does not support GS scheme")
 		}
 
-		return fetcher.NewArchiveFetcherFromURLWithFactoryAndContext(a.context, a.uri, factory)
+		return fetcher.NewArchiveFetcherFromURLWithFactoryAndContext(ctx, a.uri, factory)
 	}
 }

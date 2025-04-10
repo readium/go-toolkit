@@ -15,8 +15,8 @@ type GCSArchiveFactory struct {
 	config RemoteArchiveConfig
 }
 
-// Open implements RemoteArchiveFactory
-func (e GCSArchiveFactory) OpenWithContext(ctx context.Context, location url.URL, password string) (Archive, error) {
+// Open implements ArchiveFactory
+func (e GCSArchiveFactory) Open(ctx context.Context, location url.URL, password string) (Archive, error) {
 	// Go's built-in zip reader doesn't support passwords.
 	if password != "" {
 		return nil, errors.New("password-protected archives not supported")
@@ -57,19 +57,14 @@ func (e GCSArchiveFactory) CanOpen(scheme url.Scheme) bool {
 	return scheme == url.SchemeGS
 }
 
-// Open implements ArchiveFactory
-func (e GCSArchiveFactory) Open(location url.URL, password string) (Archive, error) {
-	return nil, errors.New("GCS archives must be opened with OpenWithContext")
-}
-
 // OpenBytes implements ArchiveFactory
-func (e GCSArchiveFactory) OpenBytes(data []byte, password string) (Archive, error) {
-	return nil, errors.New("GCS archives must be opened with OpenWithContext")
+func (e GCSArchiveFactory) OpenBytes(ctx context.Context, data []byte, password string) (Archive, error) {
+	return nil, errors.New("GCS archives must be opened with Open")
 }
 
 // OpenReader implements ArchiveFactory
-func (e GCSArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
-	return nil, errors.New("GCS archives must be opened with OpenWithContext")
+func (e GCSArchiveFactory) OpenReader(ctx context.Context, reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
+	return nil, errors.New("GCS archives must be opened with Open")
 }
 
 func NewGCSArchiveFactory(client *storage.Client, config RemoteArchiveConfig) GCSArchiveFactory {

@@ -18,8 +18,8 @@ type S3ArchiveFactory struct {
 	config RemoteArchiveConfig
 }
 
-// Open implements RemoteArchiveFactory
-func (e S3ArchiveFactory) OpenWithContext(ctx context.Context, location url.URL, password string) (Archive, error) {
+// Open implements ArchiveFactory
+func (e S3ArchiveFactory) Open(ctx context.Context, location url.URL, password string) (Archive, error) {
 	// Go's built-in zip reader doesn't support passwords.
 	if password != "" {
 		return nil, errors.New("password-protected archives not supported")
@@ -63,19 +63,14 @@ func (e S3ArchiveFactory) CanOpen(scheme url.Scheme) bool {
 	return scheme == url.SchemeS3
 }
 
-// Open implements ArchiveFactory
-func (e S3ArchiveFactory) Open(location url.URL, password string) (Archive, error) {
-	return nil, errors.New("S3 archives must be opened with OpenWithContext")
-}
-
 // OpenBytes implements ArchiveFactory
-func (e S3ArchiveFactory) OpenBytes(data []byte, password string) (Archive, error) {
-	return nil, errors.New("S3 archives must be opened with OpenWithContext")
+func (e S3ArchiveFactory) OpenBytes(ctx context.Context, data []byte, password string) (Archive, error) {
+	return nil, errors.New("S3 archives must be opened with Open")
 }
 
 // OpenReader implements ArchiveFactory
-func (e S3ArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
-	return nil, errors.New("S3 archives must be opened with OpenWithContext")
+func (e S3ArchiveFactory) OpenReader(ctx context.Context, reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
+	return nil, errors.New("S3 archives must be opened with Open")
 }
 
 func NewS3ArchiveFactory(client *s3.Client, config RemoteArchiveConfig) S3ArchiveFactory {

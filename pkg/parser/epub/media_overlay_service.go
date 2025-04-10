@@ -1,13 +1,13 @@
 package epub
 
 import (
+	"context"
 	"slices"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
-	"github.com/readium/xmlquery"
 )
 
 func MediaOverlayFactory() pub.ServiceFactory {
@@ -74,24 +74,17 @@ func (s *MediaOverlayService) HasGuideForResource(href string) bool {
 	return ok
 }
 
-func (s *MediaOverlayService) GuideForResource(href string) (*manifest.GuidedNavigationDocument, error) {
+func (s *MediaOverlayService) GuideForResource(ctx context.Context, href string) (*manifest.GuidedNavigationDocument, error) {
 	// Check if the provided resource has a guided navigation document
 	if link, ok := s.originalSmilAlternates[href]; ok {
-		res := s.fetcher.Get(link)
+		res := s.fetcher.Get(ctx, link)
 		defer res.Close()
 
-		var n *xmlquery.Node
-		var rerr *fetcher.ResourceError
-		prefixes := map[string]string{
+		n, rerr := fetcher.ReadResourceAsXML(ctx, res, map[string]string{
 			NamespaceOPS:   "epub",
 			NamespaceSMIL:  "smil",
 			NamespaceSMIL2: "smil2",
-		}
-		if r, ok := res.(fetcher.StringResource); ok {
-			n, rerr = r.ReadAsXML(prefixes)
-		} else {
-			n, rerr = fetcher.ReadResourceAsXML(res, prefixes)
-		}
+		})
 		if rerr != nil {
 			return nil, rerr.Cause
 		}
@@ -126,6 +119,6 @@ func (s *MediaOverlayService) GuideForResource(href string) (*manifest.GuidedNav
 	return nil, nil
 }
 
-func (s *MediaOverlayService) Get(link manifest.Link) (fetcher.Resource, bool) {
-	return pub.GetForGuidedNavigationService(s, link)
+func (s *MediaOverlayService) Get(ctx context.Context, link manifest.Link) (fetcher.Resource, bool) {
+	return pub.GetForGuidedNavigationService(ctx, s, link)
 }

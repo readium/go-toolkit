@@ -15,9 +15,8 @@ import (
 
 // Represents a publication stored on an Amazon S3-compatible remote server.
 type S3Asset struct {
-	context context.Context
-	uri     url.AbsoluteURL
-	client  *s3.Client
+	uri    url.AbsoluteURL
+	client *s3.Client
 
 	mediatype      *mediatype.MediaType
 	knownMediaType *mediatype.MediaType
@@ -26,19 +25,17 @@ type S3Asset struct {
 	headData *s3.HeadObjectOutput
 }
 
-func S3(context context.Context, client *s3.Client, uri url.AbsoluteURL) *S3Asset {
+func S3(client *s3.Client, uri url.AbsoluteURL) *S3Asset {
 	return &S3Asset{
-		client:  client,
-		context: context,
-		uri:     uri,
+		client: client,
+		uri:    uri,
 	}
 }
 
 // Creates a [S3Asset] from a [File] and an optional media type, when known.
-func S3WithMediaType(context context.Context, client *s3.Client, uri url.AbsoluteURL, mediatype *mediatype.MediaType) *S3Asset {
+func S3WithMediaType(client *s3.Client, uri url.AbsoluteURL, mediatype *mediatype.MediaType) *S3Asset {
 	return &S3Asset{
 		client:         client,
-		context:        context,
 		uri:            uri,
 		knownMediaType: mediatype,
 	}
@@ -53,7 +50,7 @@ func (a *S3Asset) object() (*s3.GetObjectInput, error) {
 	return a.uri.ToS3Object()
 }
 
-func (a *S3Asset) head() error {
+func (a *S3Asset) head(ctx context.Context) error {
 	if a.headData != nil {
 		return nil
 	}
@@ -61,7 +58,7 @@ func (a *S3Asset) head() error {
 	if err != nil {
 		return err
 	}
-	output, err := a.client.HeadObject(a.context, &s3.HeadObjectInput{
+	output, err := a.client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: obj.Bucket,
 		Key:    obj.Key,
 	})
@@ -73,12 +70,12 @@ func (a *S3Asset) head() error {
 }
 
 // MediaType implements PublicationAsset
-func (a *S3Asset) MediaType() mediatype.MediaType {
+func (a *S3Asset) MediaType(ctx context.Context) mediatype.MediaType {
 	if a.mediatype == nil {
 		if a.knownMediaType != nil {
 			a.mediatype = a.knownMediaType
 		} else {
-			if err := a.head(); err == nil {
+			if err := a.head(ctx); err == nil {
 				// Note how we are *not* using the file contents to sniff the media type.
 				// We want to avoid unecessary requests at all costs.
 				if a.headData.ContentType != nil {
@@ -96,7 +93,7 @@ func (a *S3Asset) MediaType() mediatype.MediaType {
 }
 
 // CreateFetcher implements PublicationAsset
-func (a *S3Asset) CreateFetcher(dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
+func (a *S3Asset) CreateFetcher(ctx context.Context, dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
 	obj, err := a.object()
 	if err != nil {
 		return nil, err
@@ -113,7 +110,7 @@ func (a *S3Asset) CreateFetcher(dependencies Dependencies, credentials string) (
 			// Not sure if it's a folder or a file, need to check
 			prefix := *obj.Key + "/"
 			max := int32(1)
-			out, err := a.client.ListObjectsV2(a.context, &s3.ListObjectsV2Input{
+			out, err := a.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 				Bucket:  obj.Bucket,
 				Prefix:  &prefix,
 				MaxKeys: &max,
@@ -128,11 +125,11 @@ func (a *S3Asset) CreateFetcher(dependencies Dependencies, credentials string) (
 		a.isDir = &isDir
 	}
 
-	if isDir || !a.MediaType().IsZIP() {
+	if isDir || !a.MediaType(ctx).IsZIP() {
 		base := ""
 		if !isDir {
 			// There's some problem checking for the file's existance
-			if err = a.head(); err != nil {
+			if err = a.head(ctx); err != nil {
 				return nil, err
 			}
 
@@ -149,7 +146,7 @@ func (a *S3Asset) CreateFetcher(dependencies Dependencies, credentials string) (
 			return nil, errors.New("provided ArchiveFactory does not support S3 scheme")
 		}
 
-		return fetcher.NewArchiveFetcherFromURLWithFactoryAndContext(a.context, a.uri, factory)
+		return fetcher.NewArchiveFetcherFromURLWithFactoryAndContext(ctx, a.uri, factory)
 	}
 
 }

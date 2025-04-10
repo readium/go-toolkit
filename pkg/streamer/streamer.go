@@ -1,6 +1,7 @@
 package streamer
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -82,8 +83,8 @@ func New(config Config) Streamer { // TODO contentProtections
 }
 
 // Parses a [Publication] from the given asset.
-func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publication, error) {
-	fetcher, err := a.CreateFetcher(asset.Dependencies{
+func (s Streamer) Open(ctx context.Context, a asset.PublicationAsset, credentials string) (*pub.Publication, error) {
+	fetcher, err := a.CreateFetcher(ctx, asset.Dependencies{
 		ArchiveFactory: s.archiveFactory,
 	}, credentials)
 	if err != nil {
@@ -94,7 +95,7 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 
 	var builder *pub.Builder
 	for _, parser := range s.parsers {
-		pb, err := parser.Parse(a, fetcher)
+		pb, err := parser.Parse(ctx, a, fetcher)
 		if err != nil {
 			fetcher.Close()
 			return nil, errors.Wrap(err, "failed parsing asset")
@@ -116,7 +117,7 @@ func (s Streamer) Open(a asset.PublicationAsset, credentials string) (*pub.Publi
 	s.inferA11yMetadataInPublication(pub)
 
 	if s.inferPageCount && pub.Manifest.Metadata.NumberOfPages == nil {
-		pageCount := uint(len(pub.Positions()))
+		pageCount := uint(len(pub.Positions(ctx)))
 		if pageCount > 0 {
 			pub.Manifest.Metadata.NumberOfPages = &pageCount
 		}

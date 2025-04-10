@@ -1,6 +1,7 @@
 package content
 
 import (
+	"context"
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/content/element"
@@ -8,19 +9,19 @@ import (
 )
 
 type Content interface {
-	Text(separator *string) (string, error) // Extracts the full raw text, or returns null if no text content can be found.
-	Iterator() iterator.Iterator            // Creates a new iterator for this content.
-	Elements() ([]element.Element, error)   // Returns all the elements as a list.
+	Text(ctx context.Context, separator *string) (string, error) // Extracts the full raw text, or returns null if no text content can be found.
+	Iterator() iterator.Iterator                                 // Creates a new iterator for this content.
+	Elements(ctx context.Context) ([]element.Element, error)     // Returns all the elements as a list.
 }
 
 // Extracts the full raw text, or returns null if no text content can be found.
-func ContentText(content Content, separator *string) (string, error) {
+func ContentText(ctx context.Context, content Content, separator *string) (string, error) {
 	sep := "\n"
 	if separator != nil {
 		sep = *separator
 	}
 	var sb strings.Builder
-	els, err := content.Elements()
+	els, err := content.Elements(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -36,11 +37,11 @@ func ContentText(content Content, separator *string) (string, error) {
 	return strings.TrimSuffix(sb.String(), sep), nil
 }
 
-func ContentElements(content Content) ([]element.Element, error) {
+func ContentElements(ctx context.Context, content Content) ([]element.Element, error) {
 	var elements []element.Element
 	it := content.Iterator()
 	for {
-		hasNext, err := it.HasNext()
+		hasNext, err := it.HasNext(ctx)
 		if err != nil {
 			return nil, err
 		}
