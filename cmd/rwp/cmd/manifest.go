@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/streamer"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/spf13/cobra"
 )
 
@@ -53,11 +55,15 @@ Examples:
 		// occurs.
 		cmd.SilenceUsage = true
 
-		path := filepath.Clean(args[0])
+		path, err := url.FromFilepath(filepath.Clean(args[0]))
+		if err != nil {
+			return fmt.Errorf("failed creating URL from filepath: %w", err)
+		}
 		pub, err := streamer.New(streamer.Config{
 			InferA11yMetadata: streamer.InferA11yMetadata(inferA11yFlag),
 			InferPageCount:    inferPageCountFlag,
 		}).Open(
+			context.TODO(),
 			asset.File(path), "",
 		)
 		if err != nil {

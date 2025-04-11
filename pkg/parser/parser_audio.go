@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"errors"
 	"path/filepath"
 	"sort"
@@ -19,12 +20,12 @@ import (
 type AudioParser struct{}
 
 // Parse implements PublicationParser
-func (p AudioParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
-	if !p.accepts(asset, fetcher) {
+func (p AudioParser) Parse(ctx context.Context, asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
+	if !p.accepts(ctx, asset, fetcher) {
 		return nil, nil
 	}
 
-	links, err := fetcher.Links()
+	links, err := fetcher.Links(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +55,7 @@ func (p AudioParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	})
 
 	// Try to figure out the publication's title
-	title := guessPublicationTitleFromFileStructure(fetcher)
+	title := guessPublicationTitleFromFileStructure(ctx, fetcher)
 	if title == "" {
 		title = asset.Name()
 	}
@@ -80,11 +81,11 @@ var allowed_extensions_audio = map[string]struct{}{
 	"ogg": {}, "oga": {}, "mogg": {}, "opus": {}, "wav": {}, "webm": {},
 }
 
-func (p AudioParser) accepts(asset asset.PublicationAsset, fetcher fetcher.Fetcher) bool {
-	if asset.MediaType().Equal(&mediatype.ZAB) {
+func (p AudioParser) accepts(ctx context.Context, asset asset.PublicationAsset, fetcher fetcher.Fetcher) bool {
+	if asset.MediaType(ctx).Equal(&mediatype.ZAB) {
 		return true
 	}
-	links, err := fetcher.Links()
+	links, err := fetcher.Links(ctx)
 	if err != nil {
 		// TODO log
 		return false

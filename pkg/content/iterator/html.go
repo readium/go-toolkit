@@ -1,6 +1,7 @@
 package iterator
 
 import (
+	"context"
 	"strings"
 
 	"github.com/andybalholm/cascadia"
@@ -43,12 +44,12 @@ func HTMLFactory() ResourceContentIteratorFactory {
 	}
 }
 
-func (it *HTMLContentIterator) HasPrevious() (bool, error) {
+func (it *HTMLContentIterator) HasPrevious(ctx context.Context) (bool, error) {
 	if it.currentElement != nil && it.currentElement.Delta == -1 {
 		return true, nil
 	}
 
-	elements, err := it.elements()
+	elements, err := it.elements(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -79,12 +80,12 @@ func (it *HTMLContentIterator) Previous() element.Element {
 	return el
 }
 
-func (it *HTMLContentIterator) HasNext() (bool, error) {
+func (it *HTMLContentIterator) HasNext(ctx context.Context) (bool, error) {
 	if it.currentElement != nil && it.currentElement.Delta == 1 {
 		return true, nil
 	}
 
-	elements, err := it.elements()
+	elements, err := it.elements(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -115,9 +116,9 @@ func (it *HTMLContentIterator) Next() element.Element {
 	return el
 }
 
-func (it *HTMLContentIterator) elements() (*ParsedElements, error) {
+func (it *HTMLContentIterator) elements(ctx context.Context) (*ParsedElements, error) {
 	if it.parsedElements == nil {
-		elements, err := it.parseElements()
+		elements, err := it.parseElements(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -126,8 +127,8 @@ func (it *HTMLContentIterator) elements() (*ParsedElements, error) {
 	return it.parsedElements, nil
 }
 
-func (it *HTMLContentIterator) parseElements() (*ParsedElements, error) {
-	raw, rerr := it.resource.ReadAsString()
+func (it *HTMLContentIterator) parseElements(ctx context.Context) (*ParsedElements, error) {
+	raw, rerr := fetcher.ReadResourceAsString(ctx, it.resource)
 	if rerr != nil {
 		return nil, errors.Wrap(rerr, "failed reading HTML string of "+it.resource.Link().Href.String())
 	}
