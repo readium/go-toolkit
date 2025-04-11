@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/base64"
@@ -115,7 +116,7 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 	if link.MediaType != nil {
 		mt = link.MediaType
 	} else {
-		mt = mediatype.OfFileOnly(file)
+		mt = mediatype.OfFileOnly(context.TODO(), file)
 		if mt == nil {
 			return nil, nil, errors.New("file has unknown media type")
 		}

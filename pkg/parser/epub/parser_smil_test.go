@@ -1,6 +1,7 @@
 package epub
 
 import (
+	"context"
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -9,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func loadSmil(name string) (*manifest.GuidedNavigationDocument, error) {
-	n, rerr := fetcher.NewFileResource(manifest.Link{}, "./testdata/smil/"+name+".smil").ReadAsXML(map[string]string{
+func loadSmil(ctx context.Context, name string) (*manifest.GuidedNavigationDocument, error) {
+	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/smil/"+name+".smil"), map[string]string{
 		NamespaceOPS:   "epub",
 		NamespaceSMIL:  "smil",
 		NamespaceSMIL2: "smil2",
@@ -23,7 +24,7 @@ func loadSmil(name string) (*manifest.GuidedNavigationDocument, error) {
 }
 
 func TestSMILDocTypicalAudio(t *testing.T) {
-	doc, err := loadSmil("audio1")
+	doc, err := loadSmil(t.Context(), "audio1")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -37,13 +38,13 @@ func TestSMILDocTypicalAudio(t *testing.T) {
 func TestSMILW3Examples(t *testing.T) {
 	// Examples from the EPUB Media Overlay spec from W3
 	for _, v := range []string{"w3-2", "w3-3", "w3-4", "w3-8", "w3-10"} {
-		_, err := loadSmil(v)
+		_, err := loadSmil(t.Context(), v)
 		assert.NoError(t, err)
 	}
 }
 
 func TestSMILClipBoundaries(t *testing.T) {
-	doc, err := loadSmil("audio-clip")
+	doc, err := loadSmil(t.Context(), "audio-clip")
 	if !assert.NoError(t, err) {
 		return
 	}
