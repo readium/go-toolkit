@@ -44,33 +44,35 @@ func (p *ImageProperties) EnhanceLink(link *manifest.Link) {
 	link.Height = uint(p.Height)
 	link.Width = uint(p.Width)
 	link.Size = uint(p.Size)
+
+	hashes := make(manifest.HashList, 0, 4)
 	if link.Properties == nil {
 		link.Properties = manifest.Properties{}
+	} else if existingHashes := link.Properties.Hash(); len(existingHashes) > 0 {
+		hashes = existingHashes
 	}
+	hashes = append(hashes, manifest.HashValue{
+		Algorithm: manifest.HashAlgorithmSHA256,
+		Value:     base64.StdEncoding.EncodeToString(p.Hashes.Sha256),
+	}, manifest.HashValue{
+		Algorithm: manifest.HashAlgorithmMD5,
+		Value:     base64.StdEncoding.EncodeToString(p.Hashes.Md5),
+	})
 
-	// TODO: more sophisticated handling of pre-existing values, conversion to dedicated struct like encryption is
-	hashes := []map[string]string{
-		{
-			"algorithm": "sha256",
-			"value":     base64.StdEncoding.EncodeToString(p.Hashes.Sha256),
-		},
-		{
-			"algorithm": "md5",
-			"value":     base64.StdEncoding.EncodeToString(p.Hashes.Md5),
-		},
-	}
 	if len(p.Hashes.PhashDCT) > 0 {
-		hashes = append(hashes, map[string]string{
-			"algorithm": "phash-dct",
-			"value":     base64.StdEncoding.EncodeToString(p.Hashes.PhashDCT),
+		hashes = append(hashes, manifest.HashValue{
+			Algorithm: manifest.HashAlgorithmPhashDCT,
+			Value:     base64.StdEncoding.EncodeToString(p.Hashes.PhashDCT),
 		})
 	}
 	if len(p.Hashes.BlurHash) > 0 {
-		hashes = append(hashes, map[string]string{
-			"algorithm": "https://blurha.sh",
-			"value":     p.Hashes.BlurHash,
+		hashes = append(hashes, manifest.HashValue{
+			Algorithm: "https://blurha.sh",
+			Value:     p.Hashes.BlurHash,
 		})
 	}
+	hashes.Deduplicate()
+
 	link.Properties["hash"] = hashes
 	link.Properties["animated"] = p.Animated
 }
@@ -87,7 +89,6 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 		if of, ok := file.(io.ReadSeeker); ok {
 			of.Seek(0, 0)
 		} else {
-			file.Close()
 			file, err = system.Open(path)
 			if err != nil {
 				return err
@@ -138,7 +139,12 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 			hf = heif.Open(of)
 		} else {
 			// Fall back to reading the file into memory
-			buf, err := fs.ReadFile(system, path)
+			stat, err := file.Stat()
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "failed statting AVIF file")
+			}
+			buf := make([]byte, stat.Size())
+			_, err = io.ReadFull(file, buf)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "failed reading AVIF file into memory")
 			}
@@ -237,7 +243,7 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 		}
 		hashVisually(pi.Frames[0].Image)
 	} else if mt.Equal(&mediatype.AVIF) {
-		// Not sure how to determine if an AVIF is animated!
+		// Not sure how to determine if an AVIF is animated. Very rare
 		if visualHash {
 			return nil, nil, errors.New("AVIF perceptual hash is not yet supported")
 		}
