@@ -127,8 +127,8 @@ func LinkFromJSON(rawJson map[string]interface{}) (*Link, error) {
 	return link, nil
 }
 
-func LinksFromJSONArray(rawJsonArray []interface{}) ([]Link, error) {
-	links := make([]Link, 0, len(rawJsonArray))
+func LinksFromJSONArray(rawJsonArray []interface{}) (LinkList, error) {
+	links := make(LinkList, 0, len(rawJsonArray))
 	for i, entry := range rawJsonArray {
 		entry, ok := entry.(map[string]interface{})
 		if !ok {
@@ -243,7 +243,7 @@ func (ll LinkList) FirstWithRel(rel string) *Link {
 
 // Finds all the links with the given relation.
 func (ll LinkList) FilterByRel(rel string) LinkList {
-	flinks := make([]Link, 0)
+	flinks := make(LinkList, 0)
 	for _, link := range ll {
 		for _, r := range link.Rels {
 			if r == rel {
@@ -266,7 +266,7 @@ func (ll LinkList) FirstWithMediaType(mt *mediatype.MediaType) *Link {
 
 // Finds all the links matching any of the given media types.
 func (ll LinkList) FilterByMediaType(mt ...*mediatype.MediaType) LinkList {
-	flinks := make([]Link, 0)
+	flinks := make(LinkList, 0)
 	for _, link := range ll {
 		if link.MediaType.Matches(mt...) {
 			flinks = append(flinks, link)
