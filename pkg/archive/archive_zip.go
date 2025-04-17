@@ -97,12 +97,13 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 			return nil, err
 		}
 	}
-	data := make([]byte, min(end-start+1, int64(e.file.UncompressedSize64)))
-	_, err = io.ReadFull(f, data)
-	if err != nil {
-		return nil, err
+	data := make([]byte, end-start+1)
+	n, err := f.Read(data)
+	if n > 0 && err == io.EOF {
+		// Not EOF error if some data was read
+		err = nil
 	}
-	return data, nil
+	return data[:n], err
 }
 
 func (e gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, error) {
@@ -149,10 +150,11 @@ func (e gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, e
 		}
 	}
 	n, err := io.CopyN(w, f, end-start+1)
-	if err != nil && err != io.EOF {
-		return n, err
+	if n > 0 && err == io.EOF {
+		// Not EOF error if some data was read
+		err = nil
 	}
-	return n, nil
+	return n, err
 }
 
 func (e gozipArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
