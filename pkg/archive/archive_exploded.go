@@ -55,10 +55,7 @@ func (e explodedArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	}
 	data := make([]byte, end-start+1)
 	n, err := f.Read(data)
-	if err != nil {
-		return nil, err
-	}
-	return data[:n], nil
+	return data[:n], err
 }
 
 func (e explodedArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, error) {
