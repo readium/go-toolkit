@@ -4,6 +4,9 @@ import "github.com/pkg/errors"
 
 type HashAlgorithm string
 
+// The following hashes keys are reserved for future use, but not necessarily supported by the toolkit.
+// If you are using a hash algorithm not listed here, it's better to use a URI, such as `https://blurha.sh`.
+// If there's an algorithm you think should be recognized, let us know.
 const (
 	HashAlgorithmBlake2b  HashAlgorithm = "blake2b"
 	HashAlgorithmBlake2s  HashAlgorithm = "blake2s"
