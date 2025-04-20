@@ -51,11 +51,11 @@ type Resource interface {
 	Length(ctx context.Context) (int64, *ResourceError)
 
 	// Reads the bytes at the given range.
-	// When start and end are null, the whole content is returned. Out-of-range indexes are clamped to the available length automatically.
+	// When start and end are zero, the whole content is returned. Out-of-range indexes are clamped to the available length automatically.
 	Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError)
 
 	// Stream the bytes at the given range to a writer.
-	// When start and end are null, the whole content is returned. Out-of-range indexes are clamped to the available length automatically.
+	// When start and end are zero, the whole content is returned. Out-of-range indexes are clamped to the available length automatically.
 	Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError)
 }
 

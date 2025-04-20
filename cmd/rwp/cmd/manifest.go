@@ -3,11 +3,15 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/analyzer"
 	"github.com/readium/go-toolkit/pkg/asset"
+	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/streamer"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/spf13/cobra"
@@ -21,6 +25,14 @@ var inferA11yFlag InferA11yMetadata
 
 // Infer the number of pages from the generated position list.
 var inferPageCountFlag bool
+
+/*var inferIgnoreImageHashesFlag []string
+
+var inferIgnoreImageDirectoryFlag string*/
+
+var hash []string
+
+var inspectImagesFlag bool
 
 var manifestCmd = &cobra.Command{
 	Use:   "manifest <pub-path>",
@@ -70,6 +82,27 @@ Examples:
 			return fmt.Errorf("failed opening %s: %w", path, err)
 		}
 
+		if inspectImagesFlag {
+			hashAlgorithms := make([]manifest.HashAlgorithm, len(hash))
+			for i, h := range hash {
+				hashAlgorithms[i] = manifest.HashAlgorithm(h)
+			}
+			inspector := &ImageInspector{
+				Algorithms: hashAlgorithms,
+				Filesystem: fetcher.ToFS(context.TODO(), pub.Fetcher),
+			}
+
+			// Inspect publication files and overwrite the links
+			pub.Manifest.ReadingOrder = pub.Manifest.ReadingOrder.Copy(inspector)
+			if inspector.Error() != nil {
+				return fmt.Errorf("failed inspecting images in reading order: %w", inspector.Error())
+			}
+			pub.Manifest.Resources = pub.Manifest.Resources.Copy(inspector)
+			if inspector.Error() != nil {
+				return fmt.Errorf("failed inspecting images in resources: %w", inspector.Error())
+			}
+		}
+
 		var jsonBytes []byte
 		if indentFlag == "" {
 			jsonBytes, err = json.Marshal(pub.Manifest)
@@ -90,6 +123,10 @@ func init() {
 	manifestCmd.Flags().StringVarP(&indentFlag, "indent", "i", "", "Indentation used to pretty-print")
 	manifestCmd.Flags().Var(&inferA11yFlag, "infer-a11y", "Infer accessibility metadata: no, merged, split")
 	manifestCmd.Flags().BoolVar(&inferPageCountFlag, "infer-page-count", false, "Infer the number of pages from the generated position list.")
+	manifestCmd.Flags().StringSliceVar(&hash, "hash", []string{string(manifest.HashAlgorithmSHA256), string(manifest.HashAlgorithmMD5)}, "Hashes to use when enhancing links, such as with image inspection. Note visual hashes are more computationally expensive. Acceptable values: sha256,md5,phash-dct,https://blurha.sh")
+	manifestCmd.Flags().BoolVar(&inspectImagesFlag, "inspect-images", false, "Inspect images in the manifest. Their links will be enhanced with size, width and height, and hashes")
+	// manifestCmd.Flags().StringSliceVar(&inferIgnoreImageHashesFlag, "infer-a11y-ignore-image-hashes", nil, "Ignore the given hashes when inferring textual accessibility. Hashes are in the format <algorithm>:<base64 value>, separated by commas.")
+	// manifestCmd.Flags().StringVar(&inferIgnoreImageDirectoryFlag, "infer-a11y-ignore-image-dir", "", "Ignore the images in a given directory when inferring textual accessibility.")
 }
 
 type InferA11yMetadata streamer.InferA11yMetadata
@@ -126,4 +163,46 @@ func (e *InferA11yMetadata) Set(v string) error {
 // Type is only used in help text.
 func (e *InferA11yMetadata) Type() string {
 	return "string"
+}
+
+type ImageInspector struct {
+	Filesystem fs.FS
+	Algorithms []manifest.HashAlgorithm
+	err        error
+}
+
+func (n *ImageInspector) Error() error {
+	return n.err
+}
+
+// TransformHREF implements ManifestTransformer
+func (n *ImageInspector) TransformHREF(href manifest.HREF) manifest.HREF {
+	// Identity
+	return href
+}
+
+// TransformLink implements ManifestTransformer
+func (n *ImageInspector) TransformLink(link manifest.Link) manifest.Link {
+	if n.err != nil || link.MediaType == nil || !link.MediaType.IsBitmap() {
+		return link
+	}
+
+	newLink, err := analyzer.Image(n.Filesystem, link, n.Algorithms)
+	if err != nil {
+		n.err = errors.Wrap(err, "failed inspecting image "+link.Href.String())
+		return link
+	}
+	return *newLink
+}
+
+// TransformManifest implements ManifestTransformer
+func (n *ImageInspector) TransformManifest(manifest manifest.Manifest) manifest.Manifest {
+	// Identity
+	return manifest
+}
+
+// TransformMetadata implements ManifestTransformer
+func (n *ImageInspector) TransformMetadata(metadata manifest.Metadata) manifest.Metadata {
+	// Identity
+	return metadata
 }

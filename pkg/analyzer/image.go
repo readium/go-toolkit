@@ -22,9 +22,12 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"go4.org/media/heif"
+	"golang.org/x/exp/slices"
 	"golang.org/x/image/riff"
 	"golang.org/x/image/webp"
 )
+
+const blurHashAlgorithm = "https://blurha.sh"
 
 type ImageProperties struct {
 	Size     uint64
@@ -51,14 +54,19 @@ func (p *ImageProperties) EnhanceLink(link *manifest.Link) {
 	} else if existingHashes := link.Properties.Hash(); len(existingHashes) > 0 {
 		hashes = existingHashes
 	}
-	hashes = append(hashes, manifest.HashValue{
-		Algorithm: manifest.HashAlgorithmSHA256,
-		Value:     base64.StdEncoding.EncodeToString(p.Hashes.Sha256),
-	}, manifest.HashValue{
-		Algorithm: manifest.HashAlgorithmMD5,
-		Value:     base64.StdEncoding.EncodeToString(p.Hashes.Md5),
-	})
 
+	if len(p.Hashes.Sha256) > 0 {
+		hashes = append(hashes, manifest.HashValue{
+			Algorithm: manifest.HashAlgorithmSHA256,
+			Value:     base64.StdEncoding.EncodeToString(p.Hashes.Sha256),
+		})
+	}
+	if len(p.Hashes.Md5) > 0 {
+		hashes = append(hashes, manifest.HashValue{
+			Algorithm: manifest.HashAlgorithmMD5,
+			Value:     base64.StdEncoding.EncodeToString(p.Hashes.Md5),
+		})
+	}
 	if len(p.Hashes.PhashDCT) > 0 {
 		hashes = append(hashes, manifest.HashValue{
 			Algorithm: manifest.HashAlgorithmPhashDCT,
@@ -67,7 +75,7 @@ func (p *ImageProperties) EnhanceLink(link *manifest.Link) {
 	}
 	if len(p.Hashes.BlurHash) > 0 {
 		hashes = append(hashes, manifest.HashValue{
-			Algorithm: "https://blurha.sh",
+			Algorithm: blurHashAlgorithm,
 			Value:     p.Hashes.BlurHash,
 		})
 	}
@@ -77,11 +85,27 @@ func (p *ImageProperties) EnhanceLink(link *manifest.Link) {
 	link.Properties["animated"] = p.Animated
 }
 
-func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *ImageProperties, error) {
+func hasVisualAlgorithm(hashes []manifest.HashAlgorithm) bool {
+	visualHash := false
+	for _, hash := range hashes {
+		switch hash {
+		case manifest.HashAlgorithmPhashDCT, blurHashAlgorithm:
+			visualHash = true
+		default:
+			continue
+		}
+		if visualHash {
+			break
+		}
+	}
+	return visualHash
+}
+
+func Image(system fs.FS, link manifest.Link, algorithms []manifest.HashAlgorithm) (*manifest.Link, error) {
 	path := link.Href.String()
 	file, err := system.Open(path)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer file.Close()
 
@@ -99,10 +123,10 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 
 	stat, err := file.Stat()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if stat.IsDir() {
-		return nil, nil, errors.New("must be a file, not a directory")
+		return nil, errors.New("must be a file, not a directory")
 	}
 
 	p := &ImageProperties{
@@ -110,7 +134,7 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 		ModTime: stat.ModTime(),
 	}
 	if p.Size == 0 {
-		return nil, nil, errors.New("file is empty")
+		return nil, errors.New("file is empty")
 	}
 
 	var mt *mediatype.MediaType
@@ -119,16 +143,16 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 	} else {
 		mt = mediatype.OfFileOnly(context.TODO(), file)
 		if mt == nil {
-			return nil, nil, errors.New("file has unknown media type")
+			return nil, errors.New("file has unknown media type")
 		}
 	}
 	if !mt.IsBitmap() {
-		return nil, nil, errors.New("file is not a bitmap image")
+		return nil, errors.New("file is not a bitmap image")
 	}
 	// Reopen because the sniffer may have read the file
 	err = reopen()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed reopening file")
+		return nil, errors.Wrap(err, "failed reopening file")
 	}
 
 	// Gather image width/height, and weed out unsuppored formats
@@ -141,22 +165,22 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 			// Fall back to reading the file into memory
 			stat, err := file.Stat()
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "failed statting AVIF file")
+				return nil, errors.Wrap(err, "failed statting AVIF file")
 			}
 			buf := make([]byte, stat.Size())
 			_, err = io.ReadFull(file, buf)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "failed reading AVIF file into memory")
+				return nil, errors.Wrap(err, "failed reading AVIF file into memory")
 			}
 			hf = heif.Open(bytes.NewReader(buf))
 		}
 		pi, err := hf.PrimaryItem()
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed decoding supposed AVIF file metadata")
+			return nil, errors.Wrap(err, "failed decoding supposed AVIF file metadata")
 		}
 		w, h, ok := pi.VisualDimensions()
 		if !ok {
-			return nil, nil, errors.New("failed reading AVIF image dimensions")
+			return nil, errors.New("failed reading AVIF image dimensions")
 		}
 		iconfig.Width = w
 		iconfig.Height = h
@@ -164,47 +188,48 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 		magicBytes := make([]byte, 12)
 		_, err = io.ReadFull(file, magicBytes)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed reading JXL file for magic numbers")
+			return nil, errors.Wrap(err, "failed reading JXL file for magic numbers")
 		}
 		jxlCodestream := []byte{0xFF, 0x0A}
 		jxlBmff := []byte{0x00, 0x00, 0x00, 0x0C, 0x4A, 0x58, 0x4C, 0x20, 0x0D, 0x0A, 0x87, 0x0A}
 		if !bytes.Equal(magicBytes[:2], jxlCodestream) && !bytes.Equal(magicBytes, jxlBmff) {
-			return nil, nil, errors.New("supposed JXL file is invalid")
+			return nil, errors.New("supposed JXL file is invalid")
 		}
-		return nil, nil, errors.New("JXL file format is currently unsupported")
+		return nil, errors.New("JXL file format is currently unsupported")
 	} else {
 		var format string
 		iconfig, format, err = image.DecodeConfig(file)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed decoding image metadata")
+			return nil, errors.Wrap(err, "failed decoding image metadata")
 		}
 
 		// Special case for animated PNG which gets registered by the apng package
 		if format == "apng" {
 			if !mt.Equal(&mediatype.PNG) {
-				return nil, nil, errors.New("file mediatype not equal to decoded image format")
+				return nil, errors.New("file mediatype not equal to decoded image format")
 			}
 		} else {
 			imt := mediatype.OfExtension(format)
 			if imt == nil {
-				return nil, nil, errors.New("failed determining mediatype from image format \"" + format + "\"")
+				return nil, errors.New("failed determining mediatype from image format \"" + format + "\"")
 			}
 			if !mt.Equal(imt) {
-				return nil, nil, errors.New("file mediatype not equal to decoded image format")
+				return nil, errors.New("file mediatype not equal to decoded image format")
 			}
 		}
 	}
 	p.Width = uint32(iconfig.Width)
 	p.Height = uint32(iconfig.Height)
 	if p.Width == 0 || p.Height == 0 {
-		return nil, nil, errors.New("image has zero width or height")
+		return nil, errors.New("image has zero width or height")
 	}
 
 	// Decoder the image so the animation can be checked, and the perceptual hash calculated
 	err = reopen()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed reopening file")
+		return nil, errors.Wrap(err, "failed reopening file")
 	}
+	visualHash := hasVisualAlgorithm(algorithms)
 	hashVisually := func(img image.Image) {
 		if !visualHash {
 			return
@@ -216,18 +241,21 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 			img = imaging.Resize(img, 128, 0, imaging.Lanczos)
 		}
 
-		// Create phash and put it in a byte array
-		p.Hashes.PhashDCT = make([]byte, 8)
-		binary.BigEndian.PutUint64(p.Hashes.PhashDCT, phash.DTC(img))
-
-		// Create the blurhash
-		blurhash, _ := blurhash.Encode(5, 5, img)
-		p.Hashes.BlurHash = blurhash
+		if slices.Contains(algorithms, manifest.HashAlgorithmPhashDCT) {
+			// Create phash and put it in a byte array
+			p.Hashes.PhashDCT = make([]byte, 8)
+			binary.BigEndian.PutUint64(p.Hashes.PhashDCT, phash.DTC(img))
+		}
+		if slices.Contains(algorithms, blurHashAlgorithm) {
+			// Create the blurhash
+			blurhash, _ := blurhash.Encode(5, 5, img)
+			p.Hashes.BlurHash = blurhash
+		}
 	}
 	if mt.Equal(&mediatype.GIF) {
 		gi, err := gif.DecodeAll(file)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed decoding GIF file")
+			return nil, errors.Wrap(err, "failed decoding GIF file")
 		}
 		if len(gi.Image) > 1 {
 			p.Animated = true
@@ -236,7 +264,7 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 	} else if mt.Equal(&mediatype.PNG) {
 		pi, err := apng.DecodeAll(file)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed decoding (A)PNG file")
+			return nil, errors.Wrap(err, "failed decoding (A)PNG file")
 		}
 		if len(pi.Frames) > 1 {
 			p.Animated = true
@@ -245,22 +273,22 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 	} else if mt.Equal(&mediatype.AVIF) {
 		// Not sure how to determine if an AVIF is animated. Very rare
 		if visualHash {
-			return nil, nil, errors.New("AVIF perceptual hash is not yet supported")
+			return nil, errors.New("AVIF perceptual hash is not yet supported")
 		}
 	} else if mt.Equal(&mediatype.WEBP) {
 		var wi image.Image
 		if _, ok := file.(io.ReadSeeker); ok {
 			p.Animated, err = isWEBPAnimated(file)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "failed checking if WEBP file is animated")
+				return nil, errors.Wrap(err, "failed checking if WEBP file is animated")
 			}
 			if visualHash {
 				if p.Animated {
-					return nil, nil, errors.New("perceptual hash of animated WEBP is not yet supported")
+					return nil, errors.New("perceptual hash of animated WEBP is not yet supported")
 				}
 				err = reopen()
 				if err != nil {
-					return nil, nil, errors.Wrap(err, "failed reopening file")
+					return nil, errors.Wrap(err, "failed reopening file")
 				}
 				wi, err = webp.Decode(file)
 			}
@@ -269,23 +297,23 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 			buf := make([]byte, p.Size)
 			_, err = io.ReadFull(file, buf)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "failed reading WEBP file into memory")
+				return nil, errors.Wrap(err, "failed reading WEBP file into memory")
 			}
 			r := bytes.NewReader(buf)
 			p.Animated, err = isWEBPAnimated(r)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "failed checking if WEBP file is animated")
+				return nil, errors.Wrap(err, "failed checking if WEBP file is animated")
 			}
 			if visualHash {
 				if p.Animated {
-					return nil, nil, errors.New("perceptual hash of animated WEBP is not yet supported")
+					return nil, errors.New("perceptual hash of animated WEBP is not yet supported")
 				}
 				r.Seek(0, 0)
 				wi, err = webp.Decode(r)
 			}
 		}
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed decoding WEBP file")
+			return nil, errors.Wrap(err, "failed decoding WEBP file")
 		}
 		if visualHash {
 			hashVisually(wi)
@@ -294,7 +322,7 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 		// Any other format can be generically decoded since it doesn't support animation
 		img, _, err := image.Decode(file)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed decoding image file")
+			return nil, errors.Wrap(err, "failed decoding image file")
 		}
 		hashVisually(img)
 	}
@@ -302,19 +330,36 @@ func Image(system fs.FS, link manifest.Link, visualHash bool) (*manifest.Link, *
 	// Now compute the cryptographic hashes
 	err = reopen()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed reopening file")
+		return nil, errors.Wrap(err, "failed reopening file")
 	}
+
+	// TODO: rewrite more cleanly
 	s2hash := sha256.New()
 	mdhash := md5.New()
-	mw := io.MultiWriter(s2hash, mdhash)
-	if _, err := io.Copy(mw, file); err != nil {
-		panic(err)
+	if slices.Contains(algorithms, manifest.HashAlgorithmSHA256) && slices.Contains(algorithms, manifest.HashAlgorithmMD5) {
+		mw := io.MultiWriter(s2hash, mdhash)
+		if _, err := io.Copy(mw, file); err != nil {
+			return nil, errors.Wrap(err, "failed computing SHA256 and MD5 hashes")
+		}
+		p.Hashes.Sha256 = s2hash.Sum(nil)
+		p.Hashes.Md5 = mdhash.Sum(nil)
+	} else {
+		if slices.Contains(algorithms, manifest.HashAlgorithmSHA256) {
+			if _, err := io.Copy(s2hash, file); err != nil {
+				return nil, errors.Wrap(err, "failed computing SHA256 hash")
+			}
+			p.Hashes.Sha256 = s2hash.Sum(nil)
+		}
+		if slices.Contains(algorithms, manifest.HashAlgorithmMD5) {
+			if _, err := io.Copy(mdhash, file); err != nil {
+				return nil, errors.Wrap(err, "failed computing MD5 hash")
+			}
+			p.Hashes.Md5 = mdhash.Sum(nil)
+		}
 	}
-	p.Hashes.Sha256 = s2hash.Sum(nil)
-	p.Hashes.Md5 = mdhash.Sum(nil)
 
 	p.EnhanceLink(&link)
-	return &link, p, nil
+	return &link, nil
 }
 
 func isWEBPAnimated(file io.Reader) (bool, error) {
