@@ -1,13 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/cmd/rwp/cmd/helpers"
 	"github.com/readium/go-toolkit/pkg/asset"
+	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/streamer"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/spf13/cobra"
 )
 
@@ -15,10 +20,18 @@ import (
 var indentFlag string
 
 // Infer accessibility metadata.
-var inferA11yFlag InferA11yMetadata
+var inferA11yFlag helpers.InferA11yMetadata
 
 // Infer the number of pages from the generated position list.
 var inferPageCountFlag bool
+
+/*var inferIgnoreImageHashesFlag []string
+
+var inferIgnoreImageDirectoryFlag string*/
+
+var hash []string
+
+var inspectImagesFlag bool
 
 var manifestCmd = &cobra.Command{
 	Use:   "manifest <pub-path>",
@@ -53,15 +66,40 @@ Examples:
 		// occurs.
 		cmd.SilenceUsage = true
 
-		path := filepath.Clean(args[0])
+		path, err := url.FromFilepath(filepath.Clean(args[0]))
+		if err != nil {
+			return fmt.Errorf("failed creating URL from filepath: %w", err)
+		}
 		pub, err := streamer.New(streamer.Config{
 			InferA11yMetadata: streamer.InferA11yMetadata(inferA11yFlag),
 			InferPageCount:    inferPageCountFlag,
 		}).Open(
+			context.TODO(),
 			asset.File(path), "",
 		)
 		if err != nil {
 			return fmt.Errorf("failed opening %s: %w", path, err)
+		}
+
+		if inspectImagesFlag {
+			hashAlgorithms := make([]manifest.HashAlgorithm, len(hash))
+			for i, h := range hash {
+				hashAlgorithms[i] = manifest.HashAlgorithm(h)
+			}
+			inspector := &helpers.ImageInspector{
+				Algorithms: hashAlgorithms,
+				Filesystem: fetcher.ToFS(context.TODO(), pub.Fetcher),
+			}
+
+			// Inspect publication files and overwrite the links
+			pub.Manifest.ReadingOrder = pub.Manifest.ReadingOrder.Copy(inspector)
+			if inspector.Error() != nil {
+				return fmt.Errorf("failed inspecting images in reading order: %w", inspector.Error())
+			}
+			pub.Manifest.Resources = pub.Manifest.Resources.Copy(inspector)
+			if inspector.Error() != nil {
+				return fmt.Errorf("failed inspecting images in resources: %w", inspector.Error())
+			}
 		}
 
 		var jsonBytes []byte
@@ -84,40 +122,8 @@ func init() {
 	manifestCmd.Flags().StringVarP(&indentFlag, "indent", "i", "", "Indentation used to pretty-print")
 	manifestCmd.Flags().Var(&inferA11yFlag, "infer-a11y", "Infer accessibility metadata: no, merged, split")
 	manifestCmd.Flags().BoolVar(&inferPageCountFlag, "infer-page-count", false, "Infer the number of pages from the generated position list.")
-}
-
-type InferA11yMetadata streamer.InferA11yMetadata
-
-// String is used both by fmt.Print and by Cobra in help text
-func (e *InferA11yMetadata) String() string {
-	if e == nil {
-		return "no"
-	}
-	switch *e {
-	case InferA11yMetadata(streamer.InferA11yMetadataMerged):
-		return "merged"
-	case InferA11yMetadata(streamer.InferA11yMetadataSplit):
-		return "split"
-	default:
-		return "no"
-	}
-}
-
-func (e *InferA11yMetadata) Set(v string) error {
-	switch v {
-	case "no":
-		*e = InferA11yMetadata(streamer.InferA11yMetadataNo)
-	case "merged":
-		*e = InferA11yMetadata(streamer.InferA11yMetadataMerged)
-	case "split":
-		*e = InferA11yMetadata(streamer.InferA11yMetadataSplit)
-	default:
-		return errors.New(`must be one of "no", "merged", or "split"`)
-	}
-	return nil
-}
-
-// Type is only used in help text.
-func (e *InferA11yMetadata) Type() string {
-	return "string"
+	manifestCmd.Flags().StringSliceVar(&hash, "hash", []string{string(manifest.HashAlgorithmSHA256), string(manifest.HashAlgorithmMD5)}, "Hashes to use when enhancing links, such as with image inspection. Note visual hashes are more computationally expensive. Acceptable values: sha256,md5,phash-dct,https://blurha.sh")
+	manifestCmd.Flags().BoolVar(&inspectImagesFlag, "inspect-images", false, "Inspect images in the manifest. Their links will be enhanced with size, width and height, and hashes")
+	// manifestCmd.Flags().StringSliceVar(&inferIgnoreImageHashesFlag, "infer-a11y-ignore-image-hashes", nil, "Ignore the given hashes when inferring textual accessibility. Hashes are in the format <algorithm>:<base64 value>, separated by commas.")
+	// manifestCmd.Flags().StringVar(&inferIgnoreImageDirectoryFlag, "infer-a11y-ignore-image-dir", "", "Ignore the images in a given directory when inferring textual accessibility.")
 }

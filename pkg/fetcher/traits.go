@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"context"
 	"io"
 
 	"github.com/readium/go-toolkit/pkg/archive"
@@ -8,9 +9,9 @@ import (
 
 type CompressedResource interface {
 	CompressedAs(compressionMethod archive.CompressionMethod) bool
-	CompressedLength() int64
-	StreamCompressed(w io.Writer) (int64, *ResourceError)
-	StreamCompressedGzip(w io.Writer) (int64, *ResourceError)
-	ReadCompressed() ([]byte, *ResourceError)
-	ReadCompressedGzip() ([]byte, *ResourceError)
+	CompressedLength(ctx context.Context) int64
+	StreamCompressed(ctx context.Context, w io.Writer) (int64, *ResourceError)
+	StreamCompressedGzip(ctx context.Context, w io.Writer) (int64, *ResourceError)
+	ReadCompressed(ctx context.Context) ([]byte, *ResourceError)
+	ReadCompressedGzip(ctx context.Context) ([]byte, *ResourceError)
 }
