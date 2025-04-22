@@ -166,7 +166,7 @@ func TestLinkUnmarshalJSONArray(t *testing.T) {
 func TestLinkUnmarshalJSONNilArray(t *testing.T) {
 	ll, err := LinksFromJSONArray(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, []Link{}, ll)
+	assert.Equal(t, LinkList{}, ll)
 }
 
 func TestLinkUnmarshalJSONArrayRefusesInvalidLinks(t *testing.T) {

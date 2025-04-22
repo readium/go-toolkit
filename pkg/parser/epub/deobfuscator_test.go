@@ -16,7 +16,7 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 	t.Log(href)
 
 	// Cleartext font
-	clean, err := ft.Get(manifest.Link{Href: manifest.MustNewHREFFromString("deobfuscation/cut-cut.woff", false)}).Read(start, end)
+	clean, err := ft.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString("deobfuscation/cut-cut.woff", false)}).Read(t.Context(), start, end)
 	if !assert.Nil(t, err) {
 		assert.NoError(t, err.Cause)
 		f(nil, nil)
@@ -34,7 +34,7 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 			},
 		}
 	}
-	obfu, err := NewDeobfuscator(identifier).Transform(ft.Get(link)).Read(start, end)
+	obfu, err := NewDeobfuscator(identifier).Transform(ft.Get(t.Context(), link)).Read(t.Context(), start, end)
 	if !assert.Nil(t, err) {
 		assert.NoError(t, err.Cause)
 		f(nil, nil)
@@ -43,7 +43,7 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 	f(clean, obfu)
 
 	bbuff := new(bytes.Buffer)
-	_, err = NewDeobfuscator(identifier).Transform(ft.Get(link)).Stream(bbuff, start, end)
+	_, err = NewDeobfuscator(identifier).Transform(ft.Get(t.Context(), link)).Stream(t.Context(), bbuff, start, end)
 	if !assert.Nil(t, err) {
 		assert.NoError(t, err.Cause)
 		f(nil, nil)

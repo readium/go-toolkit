@@ -1,6 +1,7 @@
 package epub
 
 import (
+	"context"
 	"math"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -31,13 +32,13 @@ func (s *PositionsService) Links() manifest.LinkList {
 	return manifest.LinkList{pub.PositionsLink}
 }
 
-func (s *PositionsService) Get(link manifest.Link) (fetcher.Resource, bool) {
-	return pub.GetForPositionsService(s, link)
+func (s *PositionsService) Get(ctx context.Context, link manifest.Link) (fetcher.Resource, bool) {
+	return pub.GetForPositionsService(ctx, s, link)
 }
 
 // Positions implements pub.PositionsService
-func (s *PositionsService) Positions() []manifest.Locator {
-	poss := s.PositionsByReadingOrder()
+func (s *PositionsService) Positions(ctx context.Context) []manifest.Locator {
+	poss := s.PositionsByReadingOrder(ctx)
 	positions := make([]manifest.Locator, 0, len(poss)) // At least 1 link per RO element
 	for _, v := range poss {
 		positions = append(positions, v...)
@@ -46,14 +47,14 @@ func (s *PositionsService) Positions() []manifest.Locator {
 }
 
 // PositionsByReadingOrder implements PositionsService
-func (s *PositionsService) PositionsByReadingOrder() [][]manifest.Locator {
+func (s *PositionsService) PositionsByReadingOrder(ctx context.Context) [][]manifest.Locator {
 	if len(s.positions) == 0 {
-		s.positions = s.computePositions()
+		s.positions = s.computePositions(ctx)
 	}
 	return s.positions
 }
 
-func (s *PositionsService) computePositions() [][]manifest.Locator {
+func (s *PositionsService) computePositions(ctx context.Context) [][]manifest.Locator {
 	var lastPositionOfPreviousResource uint
 	positions := make([][]manifest.Locator, len(s.readingOrder))
 	for i, link := range s.readingOrder {
@@ -61,7 +62,7 @@ func (s *PositionsService) computePositions() [][]manifest.Locator {
 		if s.presentation.LayoutOf(link) == manifest.EPUBLayoutFixed {
 			lpositions = s.createFixed(link, lastPositionOfPreviousResource)
 		} else {
-			lpositions = s.createReflowable(link, lastPositionOfPreviousResource, s.fetcher)
+			lpositions = s.createReflowable(ctx, link, lastPositionOfPreviousResource, s.fetcher)
 		}
 		if len(lpositions) > 0 {
 			pos := lpositions[len(lpositions)-1].Locations.Position
@@ -93,8 +94,8 @@ func (s *PositionsService) createFixed(link manifest.Link, startPosition uint) [
 	return []manifest.Locator{s.createLocator(link, 0, startPosition+1)}
 }
 
-func (s *PositionsService) createReflowable(link manifest.Link, startPosition uint, fetcher fetcher.Fetcher) []manifest.Locator {
-	resource := fetcher.Get(link)
+func (s *PositionsService) createReflowable(ctx context.Context, link manifest.Link, startPosition uint, fetcher fetcher.Fetcher) []manifest.Locator {
+	resource := fetcher.Get(ctx, link)
 	defer resource.Close()
 	positionCount := s.reflowableStrategy.PositionCount(resource)
 
@@ -154,13 +155,13 @@ type OriginalLength struct {
 }
 
 // PositionCount implements ReflowableStrategy
-func (l OriginalLength) PositionCount(resource fetcher.Resource) uint {
+func (l OriginalLength) PositionCount(ctx context.Context, resource fetcher.Resource) uint {
 	var length int64
 	lnk := resource.Link()
 	if enc := lnk.Properties.Encryption(); enc != nil {
 		length = enc.OriginalLength
 	} else {
-		length, _ = resource.Length()
+		length, _ = resource.Length(ctx)
 	}
 
 	return uint(math.Min(math.Ceil(float64(length)/float64(l.PageLength)), 1))

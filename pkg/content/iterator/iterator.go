@@ -1,20 +1,24 @@
 package iterator
 
-import "github.com/readium/go-toolkit/pkg/content/element"
+import (
+	"context"
+
+	"github.com/readium/go-toolkit/pkg/content/element"
+)
 
 // Iterates through a list of [Element] items asynchronously.
 // [hasNext] and [hasPrevious] refer to the last element computed by a previous call to any of both methods.
 // TODO: It's based on a kotlin iterator, maybe we can make this more of something for go?
 type Iterator interface {
-	HasNext() (bool, error)     // Returns true if the iterator has a next element
-	Next() element.Element      // Retrieves the element computed by a preceding call to [hasNext]. Panics if [hasNext] was not invoked.
-	HasPrevious() (bool, error) // Returns true if the iterator has a previous element
-	Previous() element.Element  // Retrieves the element computed by a preceding call to [hasPrevious]. Panics if [hasNext] was not invoked.
+	HasNext(ctx context.Context) (bool, error)     // Returns true if the iterator has a next element
+	Next() element.Element                         // Retrieves the element computed by a preceding call to [hasNext]. Panics if [hasNext] was not invoked.
+	HasPrevious(ctx context.Context) (bool, error) // Returns true if the iterator has a previous element
+	Previous() element.Element                     // Retrieves the element computed by a preceding call to [hasPrevious]. Panics if [hasNext] was not invoked.
 }
 
 // Moves to the next item and returns it, or nil if we reached the end.
-func ItNextOrNil(it Iterator) (element.Element, error) {
-	b, err := it.HasNext()
+func ItNextOrNil(ctx context.Context, it Iterator) (element.Element, error) {
+	b, err := it.HasNext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -25,8 +29,8 @@ func ItNextOrNil(it Iterator) (element.Element, error) {
 }
 
 // Moves to the previous item and returns it, or nil if we reached the beginning.
-func ItPreviousOrNil(it Iterator) (element.Element, error) {
-	b, err := it.HasPrevious()
+func ItPreviousOrNil(ctx context.Context, it Iterator) (element.Element, error) {
+	b, err := it.HasPrevious(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +46,11 @@ type IndexedIterator struct {
 	iterator Iterator
 }
 
-func (it *IndexedIterator) NextContentIn(direction Direction) (element.Element, error) {
+func (it *IndexedIterator) NextContentIn(ctx context.Context, direction Direction) (element.Element, error) {
 	if direction == Foward {
-		return ItNextOrNil(it.iterator)
+		return ItNextOrNil(ctx, it.iterator)
 	} else {
-		return ItPreviousOrNil(it.iterator)
+		return ItPreviousOrNil(ctx, it.iterator)
 	}
 }
 

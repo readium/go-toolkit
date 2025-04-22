@@ -1,7 +1,7 @@
 package mediatype
 
 import (
-	"io/ioutil"
+	"io"
 	"mime"
 	"os"
 	"path/filepath"
@@ -45,7 +45,7 @@ func TestSnifferFromFile(t *testing.T) {
 func TestSnifferFromBytes(t *testing.T) {
 	testAudiobook, err := os.Open(filepath.Join("testdata", "audiobook.json"))
 	assert.NoError(t, err)
-	testAudiobookBytes, err := ioutil.ReadAll(testAudiobook)
+	testAudiobookBytes, err := io.ReadAll(testAudiobook)
 	testAudiobook.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, &ReadiumAudiobookManifest, MediaTypeOfBytesOnly(testAudiobookBytes))
@@ -56,23 +56,23 @@ func TestSnifferFromFile(t *testing.T) {
 	testCbz, err := os.Open(filepath.Join("testdata", "cbz.unknown"))
 	assert.NoError(t, err)
 	defer testCbz.Close()
-	assert.Equal(t, &CBZ, OfFileOnly(testCbz), "test CBZ should be identified by heavy Sniffer")
+	assert.Equal(t, &CBZ, OfFileOnly(t.Context(), testCbz), "test CBZ should be identified by heavy Sniffer")
 }
 
 func TestSnifferFromBytes(t *testing.T) {
 	testCbz, err := os.Open(filepath.Join("testdata", "cbz.unknown"))
 	assert.NoError(t, err)
-	testCbzBytes, err := ioutil.ReadAll(testCbz)
+	testCbzBytes, err := io.ReadAll(testCbz)
 	testCbz.Close()
 	assert.NoError(t, err)
-	assert.Equal(t, &CBZ, OfBytesOnly(testCbzBytes), "test CBZ's bytes should be identified by heavy Sniffer")
+	assert.Equal(t, &CBZ, OfBytesOnly(t.Context(), testCbzBytes), "test CBZ's bytes should be identified by heavy Sniffer")
 }
 
 func TestSnifferUnknownFormat(t *testing.T) {
 	assert.Nil(t, OfString("invalid"), "\"invalid\" MediaType should be unsniffable")
 	unknownFile, err := os.Open(filepath.Join("testdata", "unknown"))
 	assert.NoError(t, err)
-	assert.Nil(t, OfFileOnly(unknownFile), "MediaType of unknown file should be unsniffable")
+	assert.Nil(t, OfFileOnly(t.Context(), unknownFile), "MediaType of unknown file should be unsniffable")
 }
 
 func TestSnifferValidMediaTypeFallback(t *testing.T) {
@@ -120,7 +120,7 @@ func TestSniffCBZ(t *testing.T) {
 	testCbz, err := os.Open(filepath.Join("testdata", "cbz.unknown"))
 	assert.NoError(t, err)
 	defer testCbz.Close()
-	assert.Equal(t, &CBZ, OfFileOnly(testCbz))
+	assert.Equal(t, &CBZ, OfFileOnly(t.Context(), testCbz))
 }
 
 func TestSniffDiViNa(t *testing.T) {
@@ -143,7 +143,7 @@ func TestSniffEPUB(t *testing.T) {
 	testEpub, err := os.Open(filepath.Join("testdata", "epub.unknown"))
 	assert.NoError(t, err)
 	defer testEpub.Close()
-	assert.Equal(t, &EPUB, OfFileOnly(testEpub))
+	assert.Equal(t, &EPUB, OfFileOnly(t.Context(), testEpub))
 }
 
 func TestSniffGIF(t *testing.T) {
@@ -159,7 +159,7 @@ func TestSniffHTML(t *testing.T) {
 	testHtml, err := os.Open(filepath.Join("testdata", "html.unknown"))
 	assert.NoError(t, err)
 	defer testHtml.Close()
-	assert.Equal(t, &HTML, OfFileOnly(testHtml))
+	assert.Equal(t, &HTML, OfFileOnly(t.Context(), testHtml))
 }
 
 func TestSniffXHTML(t *testing.T) {
@@ -170,7 +170,7 @@ func TestSniffXHTML(t *testing.T) {
 	testXHtml, err := os.Open(filepath.Join("testdata", "xhtml.unknown"))
 	assert.NoError(t, err)
 	defer testXHtml.Close()
-	assert.Equal(t, &XHTML, OfFileOnly(testXHtml))
+	assert.Equal(t, &XHTML, OfFileOnly(t.Context(), testXHtml))
 }
 
 func TestSniffJPEG(t *testing.T) {
@@ -194,7 +194,7 @@ func TestSniffOPDS1Feed(t *testing.T) {
 	testOPDS1Feed, err := os.Open(filepath.Join("testdata", "opds1-feed.unknown"))
 	assert.NoError(t, err)
 	defer testOPDS1Feed.Close()
-	assert.Equal(t, &OPDS1, OfFileOnly(testOPDS1Feed))
+	assert.Equal(t, &OPDS1, OfFileOnly(t.Context(), testOPDS1Feed))
 }
 
 func TestSniffOPDS1Entry(t *testing.T) {
@@ -203,7 +203,7 @@ func TestSniffOPDS1Entry(t *testing.T) {
 	testOPDS1Entry, err := os.Open(filepath.Join("testdata", "opds1-entry.unknown"))
 	assert.NoError(t, err)
 	defer testOPDS1Entry.Close()
-	assert.Equal(t, &OPDS1Entry, OfFileOnly(testOPDS1Entry))
+	assert.Equal(t, &OPDS1Entry, OfFileOnly(t.Context(), testOPDS1Entry))
 }
 
 func TestSniffOPDS2Feed(t *testing.T) {
@@ -276,7 +276,7 @@ func TestSniffLCPLicenseDocument(t *testing.T) {
 	testLCPLicenseDoc, err := os.Open(filepath.Join("testdata", "lcpl.unknown"))
 	assert.NoError(t, err)
 	defer testLCPLicenseDoc.Close()
-	assert.Equal(t, &LCPLicenseDocument, OfFileOnly(testLCPLicenseDoc))
+	assert.Equal(t, &LCPLicenseDocument, OfFileOnly(t.Context(), testLCPLicenseDoc))
 }
 
 func TestSniffLPF(t *testing.T) {
@@ -286,12 +286,12 @@ func TestSniffLPF(t *testing.T) {
 	testLPF1, err := os.Open(filepath.Join("testdata", "lpf.unknown"))
 	assert.NoError(t, err)
 	defer testLPF1.Close()
-	assert.Equal(t, &LPF, OfFileOnly(testLPF1))
+	assert.Equal(t, &LPF, OfFileOnly(t.Context(), testLPF1))
 
 	testLPF2, err := os.Open(filepath.Join("testdata", "lpf-index-html.unknown"))
 	assert.NoError(t, err)
 	defer testLPF2.Close()
-	assert.Equal(t, &LPF, OfFileOnly(testLPF2))
+	assert.Equal(t, &LPF, OfFileOnly(t.Context(), testLPF2))
 }
 
 func TestSniffPDF(t *testing.T) {
@@ -301,7 +301,7 @@ func TestSniffPDF(t *testing.T) {
 	testPDF, err := os.Open(filepath.Join("testdata", "pdf.unknown"))
 	assert.NoError(t, err)
 	defer testPDF.Close()
-	assert.Equal(t, &PDF, OfFileOnly(testPDF))
+	assert.Equal(t, &PDF, OfFileOnly(t.Context(), testPDF))
 }
 
 func TestSniffPNG(t *testing.T) {
@@ -340,7 +340,7 @@ func TestSniffW3CWPUBManifest(t *testing.T) {
 	testW3CWPUB, err := os.Open(filepath.Join("testdata", "w3c-wpub.json"))
 	assert.NoError(t, err)
 	defer testW3CWPUB.Close()
-	assert.Equal(t, &W3CWPUBManifest, OfFileOnly(testW3CWPUB))
+	assert.Equal(t, &W3CWPUBManifest, OfFileOnly(t.Context(), testW3CWPUB))
 }
 
 func TestSniffZAB(t *testing.T) {
@@ -349,7 +349,7 @@ func TestSniffZAB(t *testing.T) {
 	testZAB, err := os.Open(filepath.Join("testdata", "zab.unknown"))
 	assert.NoError(t, err)
 	defer testZAB.Close()
-	assert.Equal(t, &ZAB, OfFileOnly(testZAB))
+	assert.Equal(t, &ZAB, OfFileOnly(t.Context(), testZAB))
 }
 
 func TestSniffJSON(t *testing.T) {
@@ -359,7 +359,7 @@ func TestSniffJSON(t *testing.T) {
 	testJSON, err := os.Open(filepath.Join("testdata", "any.json"))
 	assert.NoError(t, err)
 	defer testJSON.Close()
-	assert.Equal(t, &JSON, OfFileOnly(testJSON))
+	assert.Equal(t, &JSON, OfFileOnly(t.Context(), testJSON))
 }
 
 func TestSniffSystemMediaTypes(t *testing.T) {

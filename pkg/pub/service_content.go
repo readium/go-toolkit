@@ -1,6 +1,7 @@
 package pub
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/readium/go-toolkit/pkg/content"
@@ -34,12 +35,12 @@ type DefaultContentService struct {
 	resourceContentIteratorFactories []iterator.ResourceContentIteratorFactory
 }
 
-func GetForContentService(service ContentService, link manifest.Link) (fetcher.Resource, bool) {
+func GetForContentService(ctx context.Context, service ContentService, link manifest.Link) (fetcher.Resource, bool) {
 	if link.Href != ContentLink.Href {
 		return nil, false
 	}
 
-	elements, err := content.ContentElements(service.Content(nil))
+	elements, err := content.ContentElements(ctx, service.Content(nil))
 	if err != nil {
 		return fetcher.NewFailureResource(ContentLink, fetcher.Other(err)), false
 	}
@@ -57,8 +58,8 @@ func (s DefaultContentService) Links() manifest.LinkList {
 	return manifest.LinkList{ContentLink}
 }
 
-func (s DefaultContentService) Get(link manifest.Link) (fetcher.Resource, bool) {
-	return GetForContentService(s, link)
+func (s DefaultContentService) Get(ctx context.Context, link manifest.Link) (fetcher.Resource, bool) {
+	return GetForContentService(ctx, s, link)
 }
 
 func (s DefaultContentService) Content(start *manifest.Locator) content.Content {
@@ -84,12 +85,12 @@ func (c contentImplementation) Iterator() iterator.Iterator {
 	)
 }
 
-func (c contentImplementation) Elements() ([]element.Element, error) {
-	return content.ContentElements(c)
+func (c contentImplementation) Elements(ctx context.Context) ([]element.Element, error) {
+	return content.ContentElements(ctx, c)
 }
 
-func (c contentImplementation) Text(separator *string) (string, error) {
-	return content.ContentText(c, separator)
+func (c contentImplementation) Text(ctx context.Context, separator *string) (string, error) {
+	return content.ContentText(ctx, c, separator)
 }
 
 func DefaultContentServiceFactory(resourceContentIteratorFactories []iterator.ResourceContentIteratorFactory) ServiceFactory {

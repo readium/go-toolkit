@@ -1,6 +1,7 @@
 package pub
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -53,9 +54,9 @@ func (p Publication) JSONManifest() (string, error) {
 	return string(bin), nil
 }
 
-func (p Publication) PositionsFromManifest() []manifest.Locator {
+func (p Publication) PositionsFromManifest(ctx context.Context) []manifest.Locator {
 	// TODO just access the service directly and don't marshal and unmarshal JSON?
-	data, err := p.Get(PositionsLink).ReadAsJSON()
+	data, err := fetcher.ReadResourceAsJSON(ctx, p.Get(ctx, PositionsLink))
 	if err != nil || data == nil {
 		return []manifest.Locator{}
 	}
@@ -64,6 +65,9 @@ func (p Publication) PositionsFromManifest() []manifest.Locator {
 		return []manifest.Locator{}
 	}
 	positions, ok := rawPositions.([]map[string]interface{})
+	if !ok {
+		return []manifest.Locator{}
+	}
 	locators := make([]manifest.Locator, len(positions))
 	for i, rl := range positions {
 		locator, _ := manifest.LocatorFromJSON(rl)
@@ -72,20 +76,20 @@ func (p Publication) PositionsFromManifest() []manifest.Locator {
 	return locators
 }
 
-func (p Publication) PositionsByReadingOrder() [][]manifest.Locator {
+func (p Publication) PositionsByReadingOrder(ctx context.Context) [][]manifest.Locator {
 	service := p.FindService(PositionsService_Name)
 	if service == nil {
 		return nil
 	}
-	return service.(PositionsService).PositionsByReadingOrder()
+	return service.(PositionsService).PositionsByReadingOrder(ctx)
 }
 
-func (p *Publication) Positions() []manifest.Locator {
+func (p *Publication) Positions(ctx context.Context) []manifest.Locator {
 	service := p.FindService(PositionsService_Name)
 	if service == nil {
 		return nil
 	}
-	return service.(PositionsService).Positions()
+	return service.(PositionsService).Positions(ctx)
 }
 
 // The URL where this publication is served, computed from the [Link] with `self` relation.
@@ -122,13 +126,13 @@ func (p Publication) FindServices(serviceName string) []Service {
 }
 
 // Returns the resource targeted by the given non-templated [link].
-func (p Publication) Get(link manifest.Link) fetcher.Resource {
+func (p Publication) Get(ctx context.Context, link manifest.Link) fetcher.Resource {
 	for _, service := range p.services {
-		if l, ok := service.Get(link); ok {
+		if l, ok := service.Get(ctx, link); ok {
 			return l
 		}
 	}
-	return p.Fetcher.Get(link)
+	return p.Fetcher.Get(ctx, link)
 }
 
 // Free up resources associated with the publication
