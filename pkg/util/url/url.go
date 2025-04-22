@@ -355,6 +355,11 @@ func (u AbsoluteURL) IsFile() bool {
 	return u.scheme.IsFile()
 }
 
+// Indicates whether this URL points to a cloud resource.
+func (u AbsoluteURL) IsCloud() bool {
+	return u.scheme.IsCloud()
+}
+
 // Converts the URL to a filepath, if it's a file URL.
 func (u AbsoluteURL) ToFilepath() string {
 	if !u.IsFile() {

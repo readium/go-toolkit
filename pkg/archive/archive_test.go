@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +27,8 @@ var entryList = []string{
 func withArchives(t *testing.T, callback func(archive Archive)) {
 	for _, archivePath := range archives {
 		t.Log(archivePath)
-		archive, err := DefaultArchiveFactory{}.Open(archivePath, "")
+		u, _ := url.FromFilepath(archivePath)
+		archive, err := DefaultArchiveFactory{}.Open(t.Context(), u, "")
 		assert.NoError(t, err)
 		callback(archive)
 	}

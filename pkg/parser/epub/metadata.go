@@ -240,11 +240,7 @@ func (m MetadataParser) parseDcElement(element *xmlquery.Node) *MetadataItem {
 	data := strings.ToLower(element.Data)
 	propName := VocabularyDCTerms + element.Data
 	switch data {
-	case "creator":
-		fallthrough
-	case "contributor":
-		fallthrough
-	case "publisher":
+	case "creator", "contributor", "publisher":
 		c := m.contributorWithLegacyAttr(element, propName, propValue)
 		return &c
 	case "date":
@@ -1068,9 +1064,7 @@ func (m *PubMetadataAdapter) Presentation() manifest.Presentation {
 			spread = manifest.SpreadNone
 		case "landscape":
 			spread = manifest.SpreadLandscape
-		case "portrait":
-			fallthrough
-		case "both":
+		case "portrait", "both":
 			spread = manifest.SpreadBoth
 		}
 		m._presentation.Spread = &spread

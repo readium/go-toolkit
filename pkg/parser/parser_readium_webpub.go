@@ -1,11 +1,12 @@
 package parser
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/asset"
-	"github.com/readium/go-toolkit/pkg/fetcher"
+	ftchr "github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
@@ -23,9 +24,9 @@ func NewWebPubParser(client *http.Client) WebPubParser {
 }
 
 // Parse implements PublicationParser
-func (p WebPubParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
+func (p WebPubParser) Parse(ctx context.Context, asset asset.PublicationAsset, fetcher ftchr.Fetcher) (*pub.Builder, error) {
 	lFetcher := fetcher
-	mediaType := asset.MediaType()
+	mediaType := asset.MediaType(ctx)
 
 	if !isMediatypeReadiumWebPubProfile(mediaType) {
 		return nil, nil
@@ -35,22 +36,22 @@ func (p WebPubParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetche
 
 	var manifestJSON map[string]interface{}
 	if isPackage {
-		res := lFetcher.Get(manifest.Link{Href: manifest.MustNewHREFFromString("manifest.json", false)})
-		mjr, err := res.ReadAsJSON()
+		res := lFetcher.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("manifest.json", false)})
+		mjr, err := ftchr.ReadResourceAsJSON(ctx, res)
 		if err != nil {
 			return nil, err
 		}
 		manifestJSON = mjr
 	} else {
 		// For a single manifest file, reads the first (and only) file in the fetcher.
-		links, err := lFetcher.Links()
+		links, err := lFetcher.Links(ctx)
 		if err != nil {
 			return nil, err
 		}
 		if len(links) == 0 {
 			return nil, errors.New("links is empty")
 		}
-		mj, rerr := lFetcher.Get(links[0]).ReadAsJSON()
+		mj, rerr := ftchr.ReadResourceAsJSON(ctx, lFetcher.Get(ctx, links[0]))
 		if rerr != nil {
 			return nil, rerr.Cause
 		}

@@ -1,6 +1,7 @@
 package epub
 
 import (
+	"context"
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -9,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func loadEncryption(name string) (map[string]manifest.Encryption, error) {
-	n, rerr := fetcher.NewFileResource(manifest.Link{}, "./testdata/encryption/encryption-"+name+".xml").ReadAsXML(map[string]string{
+func loadEncryption(ctx context.Context, name string) (map[string]manifest.Encryption, error) {
+	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/encryption/encryption-"+name+".xml"), map[string]string{
 		NamespaceENC:  "enc",
 		NamespaceSIG:  "ds",
 		NamespaceCOMP: "comp",
@@ -44,19 +45,19 @@ var testEncMap = map[string]manifest.Encryption{
 }
 
 func TestEncryptionParserNamespacePrefixes(t *testing.T) {
-	e, err := loadEncryption("lcp-prefixes")
+	e, err := loadEncryption(t.Context(), "lcp-prefixes")
 	assert.NoError(t, err)
 	assert.Equal(t, testEncMap, e)
 }
 
 func TestEncryptionParserDefaultNamespaces(t *testing.T) {
-	e, err := loadEncryption("lcp-xmlns")
+	e, err := loadEncryption(t.Context(), "lcp-xmlns")
 	assert.NoError(t, err)
 	assert.Equal(t, testEncMap, e)
 }
 
 func TestEncryptionParserUnknownRetrievalMethod(t *testing.T) {
-	e, err := loadEncryption("unknown-method")
+	e, err := loadEncryption(t.Context(), "unknown-method")
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]manifest.Encryption{
 		url.MustURLFromString("OEBPS/images/image.jpeg").String(): {

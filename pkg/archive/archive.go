@@ -1,15 +1,22 @@
 package archive
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
+
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 type ArchiveFactory interface {
-	Open(filepath string, password string) (Archive, error)                                             // Opens an archive from a local [file].
-	OpenBytes(data []byte, password string) (Archive, error)                                            // Opens an archive from a [data] slice.
-	OpenReader(reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) // Opens an archive from a reader.
+	Open(ctx context.Context, location url.URL, password string) (Archive, error)                                            // Opens an archive from a location.
+	OpenBytes(ctx context.Context, data []byte, password string) (Archive, error)                                            // Opens an archive from a [data] slice.
+	OpenReader(ctx context.Context, reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) // Opens an archive from a reader.
+}
+
+type SchemeSpecificArchiveFactory interface {
+	CanOpen(url.Scheme) bool // Whether this factory can open the given scheme.
 }
 
 type DefaultArchiveFactory struct {
@@ -18,20 +25,25 @@ type DefaultArchiveFactory struct {
 }
 
 // Open implements ArchiveFactory
-func (e DefaultArchiveFactory) Open(filepath string, password string) (Archive, error) {
-	st, err := os.Stat(filepath)
+func (e DefaultArchiveFactory) Open(ctx context.Context, location url.URL, password string) (Archive, error) {
+	u := url.BaseFile.Resolve(location).(url.AbsoluteURL)
+	if u.Scheme() != url.SchemeFile {
+		return nil, errors.New("unsupported scheme " + u.Scheme().String())
+	}
+
+	st, err := os.Stat(u.Path())
 	if err != nil {
 		return nil, err
 	}
 	if st.IsDir() {
-		return e.explodedFactory.Open(filepath, password)
+		return e.explodedFactory.Open(u.Path(), password)
 	} else {
-		return e.gozipFactory.Open(filepath, password)
+		return e.gozipFactory.Open(u.Path(), password)
 	}
 }
 
 // OpenBytes implements ArchiveFactory
-func (e DefaultArchiveFactory) OpenBytes(data []byte, password string) (Archive, error) {
+func (e DefaultArchiveFactory) OpenBytes(ctx context.Context, data []byte, password string) (Archive, error) {
 	if data == nil {
 		return nil, errors.New("archive is nil")
 	}
@@ -39,11 +51,16 @@ func (e DefaultArchiveFactory) OpenBytes(data []byte, password string) (Archive,
 }
 
 // OpenBytes implements ArchiveFactory
-func (e DefaultArchiveFactory) OpenReader(reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
+func (e DefaultArchiveFactory) OpenReader(ctx context.Context, reader ReaderAtCloser, size int64, password string, minimizeReads bool) (Archive, error) {
 	if reader == nil {
 		return nil, errors.New("archive is nil")
 	}
 	return e.gozipFactory.OpenReader(reader, size, password, minimizeReads)
+}
+
+// CanOpenScheme implements SchemeSpecificArchiveFactory
+func (e DefaultArchiveFactory) CanOpenScheme(scheme url.Scheme) bool {
+	return scheme == url.SchemeFile
 }
 
 func NewArchiveFactory() DefaultArchiveFactory {
@@ -63,7 +80,6 @@ type Entry interface {
 	StreamCompressedGzip(w io.Writer) (int64, error) // Streams the compressed content of this entry to a writer in a GZIP container.
 	ReadCompressed() ([]byte, error)                 // Reads the compressed content of this entry.
 	ReadCompressedGzip() ([]byte, error)             // Reads the compressed content of this entry inside a GZIP container.
-
 }
 
 // Represents an immutable archive.
