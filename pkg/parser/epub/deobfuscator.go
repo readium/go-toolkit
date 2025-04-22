@@ -1,6 +1,7 @@
 package epub
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"io"
@@ -47,10 +48,10 @@ func (d DeobfuscatingResource) obfuscation() (string, int64) {
 	return algorithm, v
 }
 
-func (d DeobfuscatingResource) Read(start, end int64) ([]byte, *fetcher.ResourceError) {
+func (d DeobfuscatingResource) Read(ctx context.Context, start, end int64) ([]byte, *fetcher.ResourceError) {
 	algorithm, v := d.obfuscation()
 	if v > 0 {
-		data, err := d.ProxyResource.Read(start, end)
+		data, err := d.ProxyResource.Read(ctx, start, end)
 		if err != nil {
 			return nil, err
 		}
@@ -67,15 +68,15 @@ func (d DeobfuscatingResource) Read(start, end int64) ([]byte, *fetcher.Resource
 	}
 
 	// Algorithm not in known, so skip deobfuscation
-	return d.ProxyResource.Read(start, end)
+	return d.ProxyResource.Read(ctx, start, end)
 }
 
-func (d DeobfuscatingResource) Stream(w io.Writer, start int64, end int64) (int64, *fetcher.ResourceError) {
+func (d DeobfuscatingResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *fetcher.ResourceError) {
 	algorithm, v := d.obfuscation()
 	if v > 0 {
 		if start >= v {
 			// We're past the obfuscated part, just proxy it
-			return d.ProxyResource.Stream(w, start, end)
+			return d.ProxyResource.Stream(ctx, w, start, end)
 		}
 
 		// Create a pipe to proxy the stream for deobfuscation
@@ -83,7 +84,7 @@ func (d DeobfuscatingResource) Stream(w io.Writer, start int64, end int64) (int6
 
 		// Start piping the resource's stream in a goroutine
 		go func() {
-			_, err := d.ProxyResource.Stream(pw, start, end)
+			_, err := d.ProxyResource.Stream(ctx, pw, start, end)
 			if err != nil {
 				pw.CloseWithError(err)
 			} else {
@@ -147,7 +148,7 @@ func (d DeobfuscatingResource) Stream(w io.Writer, start int64, end int64) (int6
 	}
 
 	// Algorithm not in known, so skip deobfuscation
-	return d.ProxyResource.Stream(w, start, end)
+	return d.ProxyResource.Stream(ctx, w, start, end)
 }
 
 // CompressedAs implements CompressedResource
@@ -161,53 +162,53 @@ func (d DeobfuscatingResource) CompressedAs(compressionMethod archive.Compressio
 }
 
 // CompressedLength implements CompressedResource
-func (d DeobfuscatingResource) CompressedLength() int64 {
+func (d DeobfuscatingResource) CompressedLength(ctx context.Context) int64 {
 	_, v := d.obfuscation()
 	if v > 0 {
 		return -1
 	}
 
-	return d.ProxyResource.CompressedLength()
+	return d.ProxyResource.CompressedLength(ctx)
 }
 
 // StreamCompressed implements CompressedResource
-func (d DeobfuscatingResource) StreamCompressed(w io.Writer) (int64, *fetcher.ResourceError) {
+func (d DeobfuscatingResource) StreamCompressed(ctx context.Context, w io.Writer) (int64, *fetcher.ResourceError) {
 	_, v := d.obfuscation()
 	if v > 0 {
 		return 0, fetcher.Other(errors.New("cannot stream compressed resource when obfuscated"))
 	}
 
-	return d.ProxyResource.StreamCompressed(w)
+	return d.ProxyResource.StreamCompressed(ctx, w)
 }
 
 // StreamCompressedGzip implements CompressedResource
-func (d DeobfuscatingResource) StreamCompressedGzip(w io.Writer) (int64, *fetcher.ResourceError) {
+func (d DeobfuscatingResource) StreamCompressedGzip(ctx context.Context, w io.Writer) (int64, *fetcher.ResourceError) {
 	_, v := d.obfuscation()
 	if v > 0 {
 		return 0, fetcher.Other(errors.New("cannot stream compressed resource when obfuscated"))
 	}
 
-	return d.ProxyResource.StreamCompressedGzip(w)
+	return d.ProxyResource.StreamCompressedGzip(ctx, w)
 }
 
 // ReadCompressed implements CompressedResource
-func (d DeobfuscatingResource) ReadCompressed() ([]byte, *fetcher.ResourceError) {
+func (d DeobfuscatingResource) ReadCompressed(ctx context.Context) ([]byte, *fetcher.ResourceError) {
 	_, v := d.obfuscation()
 	if v > 0 {
 		return nil, fetcher.Other(errors.New("cannot read compressed resource when obfuscated"))
 	}
 
-	return d.ProxyResource.ReadCompressed()
+	return d.ProxyResource.ReadCompressed(ctx)
 }
 
 // ReadCompressedGzip implements CompressedResource
-func (d DeobfuscatingResource) ReadCompressedGzip() ([]byte, *fetcher.ResourceError) {
+func (d DeobfuscatingResource) ReadCompressedGzip(ctx context.Context) ([]byte, *fetcher.ResourceError) {
 	_, v := d.obfuscation()
 	if v > 0 {
 		return nil, fetcher.Other(errors.New("cannot read compressed resource when obfuscated"))
 	}
 
-	return d.ProxyResource.ReadCompressedGzip()
+	return d.ProxyResource.ReadCompressedGzip(ctx)
 }
 
 func (d DeobfuscatingResource) getHashKeyAdobe() []byte {

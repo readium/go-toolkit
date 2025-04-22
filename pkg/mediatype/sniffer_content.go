@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"io/fs"
 	"os"
 )
 
@@ -14,10 +15,12 @@ type SnifferContent interface {
 
 // Used to sniff a local file.
 type SnifferFileContent struct {
-	file *os.File
+	file   fs.File
+	name   *string
+	buffer []byte
 }
 
-func NewSnifferFileContent(file *os.File) SnifferFileContent {
+func NewSnifferFileContent(file fs.File) SnifferFileContent {
 	return SnifferFileContent{file: file}
 }
 
@@ -25,7 +28,6 @@ const MaxReadSize = 5 * 1024 * 1024 // 5MB
 
 // Read implements SnifferContent
 func (s SnifferFileContent) Read() []byte {
-	s.file.Seek(0, io.SeekStart)
 	info, err := s.file.Stat()
 	if err != nil {
 		return nil
@@ -33,18 +35,58 @@ func (s SnifferFileContent) Read() []byte {
 	if info.Size() > MaxReadSize {
 		return nil
 	}
-	data := make([]byte, info.Size())
-	_, err = s.file.Read(data)
-	if err != nil && err != io.EOF {
-		return nil
+
+	if of, ok := s.file.(io.ReadSeeker); ok {
+		of.Seek(0, io.SeekStart)
+		data := make([]byte, info.Size())
+		_, err = s.file.Read(data)
+		if err != nil && err != io.EOF {
+			return nil
+		}
+		return data
+	} else {
+		if s.buffer == nil {
+			s.buffer = make([]byte, info.Size())
+			_, err = s.file.Read(s.buffer)
+			if err != nil && err != io.EOF {
+				return nil
+			}
+		}
+		return s.buffer
 	}
-	return data
 }
 
 // Stream implements SnifferContent
 func (s SnifferFileContent) Stream() io.Reader {
-	s.file.Seek(0, io.SeekStart)
-	return bufio.NewReader(s.file)
+	if of, ok := s.file.(*os.File); ok {
+		of.Seek(0, io.SeekStart)
+		return bufio.NewReader(s.file)
+	} else {
+		if r := s.Read(); r != nil {
+			return bytes.NewReader(r)
+		}
+		return nil
+	}
+}
+
+func (s *SnifferFileContent) Name() string {
+	if s.name != nil {
+		return *s.name
+	}
+
+	if of, ok := s.file.(*os.File); ok {
+		name := of.Name()
+		s.name = &name
+		return name
+	} else {
+		info, err := s.file.Stat()
+		if err != nil {
+			return ""
+		}
+		name := info.Name()
+		s.name = &name
+		return name
+	}
 }
 
 // Used to sniff a byte array.

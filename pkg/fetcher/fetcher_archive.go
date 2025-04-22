@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"context"
 	"errors"
 	"io"
 	"path"
@@ -8,7 +9,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
-	"github.com/readium/xmlquery"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 // Provides access to entries of an archive.
@@ -17,7 +18,7 @@ type ArchiveFetcher struct {
 }
 
 // Links implements Fetcher
-func (f *ArchiveFetcher) Links() (manifest.LinkList, error) {
+func (f *ArchiveFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 	entries := f.archive.Entries()
 	links := make(manifest.LinkList, 0, len(entries))
 	for _, af := range entries {
@@ -42,7 +43,7 @@ func (f *ArchiveFetcher) Links() (manifest.LinkList, error) {
 }
 
 // Get implements Fetcher
-func (f *ArchiveFetcher) Get(link manifest.Link) Resource {
+func (f *ArchiveFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	entry, err := f.archive.Entry(link.Href.String())
 	if err != nil {
 		return NewFailureResource(link, NotFound(err))
@@ -79,12 +80,43 @@ func NewArchiveFetcher(a archive.Archive) *ArchiveFetcher {
 	}
 }
 
-func NewArchiveFetcherFromPath(filepath string) (*ArchiveFetcher, error) {
-	return NewArchiveFetcherFromPathWithFactory(filepath, archive.NewArchiveFactory())
+func NewArchiveFetcherFromPath(ctx context.Context, path string) (*ArchiveFetcher, error) {
+	return NewArchiveFetcherFromPathWithFactory(ctx, path, archive.NewArchiveFactory())
 }
 
-func NewArchiveFetcherFromPathWithFactory(path string, factory archive.ArchiveFactory) (*ArchiveFetcher, error) {
-	a, err := factory.Open(path, "") // TODO password
+func NewArchiveFetcherFromPathWithFactory(ctx context.Context, path string, factory archive.ArchiveFactory) (*ArchiveFetcher, error) {
+	pth, err := url.FromFilepath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	a, err := factory.Open(ctx, pth, "")
+	if err != nil {
+		return nil, err
+	}
+	return &ArchiveFetcher{
+		archive: a,
+	}, nil
+}
+
+func NewArchiveFetcherFromURLWithFactory(ctx context.Context, url url.URL, factory archive.ArchiveFactory) (*ArchiveFetcher, error) {
+	a, err := factory.Open(ctx, url, "")
+	if err != nil {
+		return nil, err
+	}
+	return &ArchiveFetcher{
+		archive: a,
+	}, nil
+}
+
+func NewArchiveFetcherFromURLWithFactoryAndContext(ctx context.Context, url url.URL, factory archive.SchemeSpecificArchiveFactory) (*ArchiveFetcher, error) {
+	var a archive.Archive
+	var err error
+	if f, ok := factory.(archive.ArchiveFactory); ok {
+		a, err = f.Open(ctx, url, "")
+	} else {
+		return nil, errors.New("factory does not implement ArchiveFactory")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +153,7 @@ func (r *entryResource) Properties() manifest.Properties {
 }
 
 // Read implements Resource
-func (r *entryResource) Read(start int64, end int64) ([]byte, *ResourceError) {
+func (r *entryResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
 	data, err := r.entry.Read(start, end)
 	if err == nil {
 		return data, nil
@@ -137,7 +169,7 @@ func (r *entryResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 }
 
 // Stream implements Resource
-func (r *entryResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+func (r *entryResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
 	n, err := r.entry.Stream(w, start, end)
 	if err == nil {
 		return n, nil
@@ -158,12 +190,12 @@ func (r *entryResource) CompressedAs(compressionMethod archive.CompressionMethod
 }
 
 // CompressedLength implements CompressedResource
-func (r *entryResource) CompressedLength() int64 {
+func (r *entryResource) CompressedLength(ctx context.Context) int64 {
 	return int64(r.entry.CompressedLength())
 }
 
 // StreamCompressed implements CompressedResource
-func (r *entryResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
+func (r *entryResource) StreamCompressed(ctx context.Context, w io.Writer) (int64, *ResourceError) {
 	i, err := r.entry.StreamCompressed(w)
 	if err == nil {
 		return i, nil
@@ -172,7 +204,7 @@ func (r *entryResource) StreamCompressed(w io.Writer) (int64, *ResourceError) {
 }
 
 // StreamCompressedGzip implements CompressedResource
-func (r *entryResource) StreamCompressedGzip(w io.Writer) (int64, *ResourceError) {
+func (r *entryResource) StreamCompressedGzip(ctx context.Context, w io.Writer) (int64, *ResourceError) {
 	i, err := r.entry.StreamCompressedGzip(w)
 	if err == nil {
 		return i, nil
@@ -181,7 +213,7 @@ func (r *entryResource) StreamCompressedGzip(w io.Writer) (int64, *ResourceError
 }
 
 // ReadCompressed implements CompressedResource
-func (r *entryResource) ReadCompressed() ([]byte, *ResourceError) {
+func (r *entryResource) ReadCompressed(ctx context.Context) ([]byte, *ResourceError) {
 	i, err := r.entry.ReadCompressed()
 	if err == nil {
 		return i, nil
@@ -190,7 +222,7 @@ func (r *entryResource) ReadCompressed() ([]byte, *ResourceError) {
 }
 
 // ReadCompressedGzip implements CompressedResource
-func (r *entryResource) ReadCompressedGzip() ([]byte, *ResourceError) {
+func (r *entryResource) ReadCompressedGzip(ctx context.Context) ([]byte, *ResourceError) {
 	i, err := r.entry.ReadCompressedGzip()
 	if err == nil {
 		return i, nil
@@ -199,21 +231,6 @@ func (r *entryResource) ReadCompressedGzip() ([]byte, *ResourceError) {
 }
 
 // Length implements Resource
-func (r *entryResource) Length() (int64, *ResourceError) {
+func (r *entryResource) Length(ctx context.Context) (int64, *ResourceError) {
 	return int64(r.entry.Length()), nil
-}
-
-// ReadAsString implements Resource
-func (r *entryResource) ReadAsString() (string, *ResourceError) { // TODO determine how charset is needed
-	return ReadResourceAsString(r)
-}
-
-// ReadAsJSON implements Resource
-func (r *entryResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
-	return ReadResourceAsJSON(r)
-}
-
-// ReadAsXML implements Resource
-func (r *entryResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r, prefixes)
 }

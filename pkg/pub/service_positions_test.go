@@ -12,7 +12,7 @@ import (
 
 func TestPerResourcePositionsServiceEmptyReadingOrder(t *testing.T) {
 	service := PerResourcePositionsService{}
-	assert.Equal(t, 0, len(service.Positions()))
+	assert.Equal(t, 0, len(service.Positions(t.Context())))
 }
 
 func TestPerResourcePositionsServiceSingleReadingOrder(t *testing.T) {
@@ -27,7 +27,7 @@ func TestPerResourcePositionsServiceSingleReadingOrder(t *testing.T) {
 			Position:         extensions.Pointer(uint(1)),
 			TotalProgression: extensions.Pointer(float64(0.0)),
 		},
-	}}, service.Positions())
+	}}, service.Positions(t.Context()))
 }
 
 func TestPerResourcePositionsServiceMultiReadingOrder(t *testing.T) {
@@ -66,7 +66,7 @@ func TestPerResourcePositionsServiceMultiReadingOrder(t *testing.T) {
 				TotalProgression: extensions.Pointer(float64(2.0 / 3.0)),
 			},
 		},
-	}, service.Positions())
+	}, service.Positions(t.Context()))
 }
 
 func TestPerResourcePositionsServiceMediaTypeFallback(t *testing.T) {
@@ -83,5 +83,5 @@ func TestPerResourcePositionsServiceMediaTypeFallback(t *testing.T) {
 			Position:         extensions.Pointer(uint(1)),
 			TotalProgression: extensions.Pointer(float64(0.0)),
 		},
-	}}, service.Positions())
+	}}, service.Positions(t.Context()))
 }

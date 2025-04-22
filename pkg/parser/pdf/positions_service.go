@@ -1,6 +1,7 @@
 package pdf
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -24,13 +25,13 @@ func (s *PositionsService) Links() manifest.LinkList {
 	return manifest.LinkList{pub.PositionsLink}
 }
 
-func (s *PositionsService) Get(link manifest.Link) (fetcher.Resource, bool) {
-	return pub.GetForPositionsService(s, link)
+func (s *PositionsService) Get(ctx context.Context, link manifest.Link) (fetcher.Resource, bool) {
+	return pub.GetForPositionsService(ctx, s, link)
 }
 
 // Positions implements pub.PositionsService
-func (s *PositionsService) Positions() []manifest.Locator {
-	poss := s.PositionsByReadingOrder()
+func (s *PositionsService) Positions(ctx context.Context) []manifest.Locator {
+	poss := s.PositionsByReadingOrder(ctx)
 	var positions []manifest.Locator
 	for _, v := range poss {
 		positions = append(positions, v...)
@@ -39,7 +40,7 @@ func (s *PositionsService) Positions() []manifest.Locator {
 }
 
 // PositionsByReadingOrder implements PositionsService
-func (s *PositionsService) PositionsByReadingOrder() [][]manifest.Locator {
+func (s *PositionsService) PositionsByReadingOrder(ctx context.Context) [][]manifest.Locator {
 	if len(s.positions) == 0 {
 		s.positions = s.computePositions()
 	}

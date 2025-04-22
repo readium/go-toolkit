@@ -342,6 +342,12 @@ const (
 	// The work includes an index to the content.
 	A11yFeatureIndex A11yFeature = "index"
 
+	// The resource includes static page markers, such as those identified by the doc-pagebreak role.
+	// This value is most commonly used with ebooks for which there is a statically paginated
+	// equivalent, such as a print edition, but it is not required that the page markers correspond
+	// to another work. The markers may exist solely to facilitate navigation in purely digital works.
+	A11yFeaturePageBreakMarkers A11yFeature = "pageBreakMarkers"
+
 	// The resource includes a means of navigating to static page break locations.
 	// The most common way of providing page navigation in digital publications is through a page list.
 	A11yFeaturePageNavigation A11yFeature = "pageNavigation"

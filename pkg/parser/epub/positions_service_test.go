@@ -8,7 +8,7 @@ import (
 
 func TestEPUBPositionsServiceEmptyReadingOrder(t *testing.T) {
 	service := PositionsService{}
-	assert.Equal(t, 0, len(service.Positions()))
+	assert.Equal(t, 0, len(service.Positions(t.Context())))
 }
 
 // TODO replicate `createService` tester from Kotlin
