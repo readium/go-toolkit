@@ -3,8 +3,8 @@ package epub
 import (
 	"strconv"
 
-	"github.com/readium/go-toolkit/pkg/drm"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/protection"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/readium/xmlquery"
 )
@@ -45,7 +45,7 @@ func parseEncryptedData(node *xmlquery.Node) (url.URL, *manifest.Encryption) {
 	}
 
 	if retrievalMethod == "license.lcpl#/encryption/content_key" {
-		ret.Scheme = drm.SchemeLCP
+		ret.Scheme = protection.SchemeLCP
 	}
 
 	if encryptionmethod := node.SelectElement(NSSelect(NamespaceENC, "EncryptionMethod")); encryptionmethod != nil {

@@ -19,6 +19,7 @@ type Link struct {
 	Properties Properties           `json:"properties,omitempty"` // Properties associated to the linked resource.
 	Height     uint                 `json:"height,omitempty"`     // Height of the linked resource in pixels.
 	Width      uint                 `json:"width,omitempty"`      // Width of the linked resource in pixels.
+	Size       uint                 `json:"size,omitempty"`       // Original size of the resource in bytes.
 	Bitrate    float64              `json:"bitrate,omitempty"`    // Bitrate of the linked resource in kbps.
 	Duration   float64              `json:"duration,omitempty"`   // Length of the linked resource in seconds.
 	Languages  Strings              `json:"language,omitempty"`   // Expected language of the linked resource (BCP 47 tag).
@@ -68,6 +69,7 @@ func LinkFromJSON(rawJson map[string]interface{}) (*Link, error) {
 		Title:    parseOptString(rawJson["title"]),
 		Height:   float64ToUint(parseOptFloat64(rawJson["height"])),
 		Width:    float64ToUint(parseOptFloat64(rawJson["width"])),
+		Size:     float64ToUint(parseOptFloat64(rawJson["size"])),
 		Bitrate:  float64Positive(parseOptFloat64(rawJson["bitrate"])),
 		Duration: float64Positive(parseOptFloat64(rawJson["duration"])),
 	}
@@ -125,8 +127,8 @@ func LinkFromJSON(rawJson map[string]interface{}) (*Link, error) {
 	return link, nil
 }
 
-func LinksFromJSONArray(rawJsonArray []interface{}) ([]Link, error) {
-	links := make([]Link, 0, len(rawJsonArray))
+func LinksFromJSONArray(rawJsonArray []interface{}) (LinkList, error) {
+	links := make(LinkList, 0, len(rawJsonArray))
 	for i, entry := range rawJsonArray {
 		entry, ok := entry.(map[string]interface{})
 		if !ok {
@@ -183,6 +185,9 @@ func (l Link) MarshalJSON() ([]byte, error) {
 	if l.Width > 0 {
 		res["width"] = l.Width
 	}
+	if l.Size > 0 {
+		res["size"] = l.Size
+	}
 	if l.Bitrate > 0 {
 		res["bitrate"] = l.Bitrate
 	}
@@ -238,7 +243,7 @@ func (ll LinkList) FirstWithRel(rel string) *Link {
 
 // Finds all the links with the given relation.
 func (ll LinkList) FilterByRel(rel string) LinkList {
-	flinks := make([]Link, 0)
+	flinks := make(LinkList, 0)
 	for _, link := range ll {
 		for _, r := range link.Rels {
 			if r == rel {
@@ -261,7 +266,7 @@ func (ll LinkList) FirstWithMediaType(mt *mediatype.MediaType) *Link {
 
 // Finds all the links matching any of the given media types.
 func (ll LinkList) FilterByMediaType(mt ...*mediatype.MediaType) LinkList {
-	flinks := make([]Link, 0)
+	flinks := make(LinkList, 0)
 	for _, link := range ll {
 		if link.MediaType.Matches(mt...) {
 			flinks = append(flinks, link)

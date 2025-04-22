@@ -1,6 +1,8 @@
 package pdf
 
 import (
+	"context"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
@@ -25,14 +27,14 @@ func init() {
 }
 
 // Parse implements PublicationParser
-func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Builder, error) {
+func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Builder, error) {
 	fallbackTitle := asset.Name()
 
-	if !asset.MediaType().Equal(&mediatype.PDF) {
+	if !asset.MediaType(ctx).Equal(&mediatype.PDF) {
 		return nil, nil
 	}
 
-	links, err := f.Links()
+	links, err := f.Links(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to fetch links")
 	}
@@ -46,17 +48,17 @@ func (p Parser) Parse(asset asset.PublicationAsset, f fetcher.Fetcher) (*pub.Bui
 
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationRelaxed
-	ctx, err := pdfcpu.Read(fetcher.NewResourceReadSeeker(f.Get(*link)), conf)
+	c, err := pdfcpu.Read(fetcher.NewResourceReadSeeker(f.Get(ctx, *link)), conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed opening PDF")
 	}
 
 	// Clean up and prepare document
-	validate.XRefTable(ctx)
-	pdfcpu.OptimizeXRefTable(ctx)
-	ctx.EnsurePageCount()
+	validate.XRefTable(c)
+	pdfcpu.OptimizeXRefTable(c)
+	c.EnsurePageCount()
 
-	m, err := ParseMetadata(ctx, link)
+	m, err := ParseMetadata(c, link)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing PDF metadata")
 	}

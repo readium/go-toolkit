@@ -2,11 +2,11 @@ package fetcher
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/xmlquery"
 )
 
 // BytesResource is a Resource serving a lazy-loaded bytes buffer.
@@ -35,8 +35,8 @@ func (r *BytesResource) Properties() manifest.Properties {
 }
 
 // Length implements Resource
-func (r *BytesResource) Length() (int64, *ResourceError) {
-	bin, err := r.Read(0, 0)
+func (r *BytesResource) Length(ctx context.Context) (int64, *ResourceError) {
+	bin, err := r.Read(ctx, 0, 0)
 	if err != nil {
 		return 0, err
 	}
@@ -44,7 +44,7 @@ func (r *BytesResource) Length() (int64, *ResourceError) {
 }
 
 // Read implements Resource
-func (r *BytesResource) Read(start int64, end int64) ([]byte, *ResourceError) {
+func (r *BytesResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
 	if end < start {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
 		return nil, err
@@ -72,7 +72,7 @@ func (r *BytesResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 }
 
 // Stream implements Resource
-func (r *BytesResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+func (r *BytesResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
 	if end < start {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
 		return -1, err
@@ -91,21 +91,6 @@ func (r *BytesResource) Stream(w io.Writer, start int64, end int64) (int64, *Res
 		return n, Other(err)
 	}
 	return n, nil
-}
-
-// ReadAsString implements Resource
-func (r *BytesResource) ReadAsString() (string, *ResourceError) {
-	return ReadResourceAsString(r)
-}
-
-// ReadAsJSON implements Resource
-func (r *BytesResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
-	return ReadResourceAsJSON(r)
-}
-
-// ReadAsXML implements Resource
-func (r *BytesResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r, prefixes)
 }
 
 // NewBytesResource creates a new BytesResources from a lazy loader callback.

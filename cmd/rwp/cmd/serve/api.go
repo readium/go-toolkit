@@ -2,6 +2,7 @@ package serve
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"log/slog"
@@ -52,29 +53,80 @@ func (s *Server) demoList(w http.ResponseWriter, req *http.Request) {
 	enc.Encode(files)
 }
 
-func (s *Server) getPublication(filename string) (*pub.Publication, error) {
+func (s *Server) getPublication(ctx context.Context, filename string) (*pub.Publication, bool, error) {
 	fpath, err := base64.RawURLEncoding.DecodeString(filename)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
+	loc, err := url.URLFromString(string(fpath))
+	if err != nil {
+		return nil, false, errors.Wrap(err, "failed creating URL from filepath")
+	}
+	u := url.BaseFile.Resolve(loc).(url.AbsoluteURL) // Turn relative filepaths into file:/// URLs
 
-	cp := filepath.Clean(string(fpath))
-	dat, ok := s.lfu.Get(cp)
+	dat, ok := s.lfu.Get(u.String())
 	if !ok {
-		pub, err := streamer.New(streamer.Config{
+		var pub *pub.Publication
+		var remote bool
+		config := streamer.Config{
 			InferA11yMetadata: s.config.InferA11yMetadata,
-		}).Open(asset.File(filepath.Join(s.config.BaseDirectory, cp)), "")
-		if err != nil {
-			return nil, errors.Wrap(err, "failed opening "+cp)
+			HttpClient:        s.remote.HTTP,
+		}
+		if u.IsFile() {
+			path, err := url.FromFilepath(filepath.Join(s.config.BaseDirectory, path.Clean(u.Path())))
+			if err != nil {
+				return nil, remote, errors.Wrap(err, "failed creating URL from filepath")
+			}
+
+			pub, err = streamer.New(config).Open(ctx, asset.File(path), "")
+			if err != nil {
+				return nil, remote, errors.Wrap(err, "failed opening "+path.String())
+			}
+		} else {
+			switch u.Scheme() {
+			case url.SchemeS3:
+				remote = true
+				if s.remote.S3 == nil {
+					return nil, remote, errors.New("S3 client not configured")
+				}
+				config.ArchiveFactory = archive.NewS3ArchiveFactory(s.remote.S3, archive.NewDefaultRemoteArchiveConfig())
+				pub, err = streamer.New(config).Open(ctx, asset.S3(s.remote.S3, u), "")
+				if err != nil {
+					return nil, remote, errors.Wrap(err, "failed opening "+u.String())
+				}
+			case url.SchemeGS:
+				remote = true
+				if s.remote.GCS == nil {
+					return nil, remote, errors.New("GCS client not configured")
+				}
+				config.ArchiveFactory = archive.NewGCSArchiveFactory(s.remote.GCS, archive.NewDefaultRemoteArchiveConfig())
+				pub, err = streamer.New(config).Open(ctx, asset.GCS(s.remote.GCS, u), "")
+				if err != nil {
+					return nil, remote, errors.Wrap(err, "failed opening "+u.String())
+				}
+			case url.SchemeHTTP, url.SchemeHTTPS:
+				remote = true
+				if s.remote.HTTP == nil {
+					return nil, remote, errors.New("HTTP client not configured")
+				}
+				config.ArchiveFactory = archive.NewHTTPArchiveFactory(s.remote.HTTP, archive.NewDefaultRemoteArchiveConfig())
+				pub, err = streamer.New(config).Open(ctx, asset.HTTP(s.remote.HTTP, u), "")
+				if err != nil {
+					return nil, remote, errors.Wrap(err, "failed opening "+u.String())
+				}
+			default:
+				return nil, remote, errors.New("unsupported scheme " + u.Scheme().String())
+			}
 		}
 
 		// Cache the publication
-		encPub := &cache.CachedPublication{Publication: pub}
-		s.lfu.Set(cp, encPub)
+		encPub := cache.EncapsulatePublication(pub, remote)
+		s.lfu.Set(u.String(), encPub)
 
-		return encPub.Publication, nil
+		return encPub.Publication, remote, nil
 	}
-	return dat.(*cache.CachedPublication).Publication, nil
+	cp := dat.(*cache.CachedPublication)
+	return cp.Publication, cp.Remote, nil
 }
 
 func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
@@ -82,10 +134,13 @@ func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
 	filename := vars["path"]
 
 	// Load the publication
-	publication, err := s.getPublication(filename)
+	publication, _, err := s.getPublication(req.Context(), filename)
 	if err != nil {
 		slog.Error("failed opening publication", "error", err)
 		w.WriteHeader(500)
+		if s.config.Debug {
+			w.Write([]byte(err.Error()))
+		}
 		return
 	}
 
@@ -103,6 +158,9 @@ func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		slog.Error("failed creating self URL", "error", err)
 		w.WriteHeader(500)
+		if s.config.Debug {
+			w.Write([]byte(err.Error()))
+		}
 		return
 	}
 
@@ -117,6 +175,9 @@ func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		slog.Error("failed marshalling manifest JSON", "error", err)
 		w.WriteHeader(500)
+		if s.config.Debug {
+			w.Write([]byte(err.Error()))
+		}
 		return
 	}
 
@@ -127,6 +188,9 @@ func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			slog.Error("failed writing manifest JSON to buffer", "error", err)
 			w.WriteHeader(500)
+			if s.config.Debug {
+				w.Write([]byte(err.Error()))
+			}
 			return
 		}
 	} else {
@@ -134,6 +198,9 @@ func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			slog.Error("failed indenting manifest JSON", "error", err)
 			w.WriteHeader(500)
+			if s.config.Debug {
+				w.Write([]byte(err.Error()))
+			}
 			return
 		}
 	}
@@ -158,6 +225,9 @@ func (s *Server) getManifest(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		slog.Error("failed writing manifest JSON to response writer", "error", err)
 		w.WriteHeader(500)
+		if s.config.Debug {
+			w.Write([]byte(err.Error()))
+		}
 		return
 	}
 }
@@ -167,10 +237,13 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	filename := vars["path"]
 
 	// Load the publication
-	publication, err := s.getPublication(filename)
+	publication, remote, err := s.getPublication(r.Context(), filename)
 	if err != nil {
 		slog.Error("failed opening publication", "error", err)
 		w.WriteHeader(500)
+		if s.config.Debug {
+			w.Write([]byte(err.Error()))
+		}
 		return
 	}
 
@@ -179,6 +252,9 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("failed parsing asset path as URL", "error", err)
 		w.WriteHeader(400)
+		if s.config.Debug {
+			w.Write([]byte(err.Error()))
+		}
 		return
 	}
 	rawHref := href.Raw()
@@ -199,11 +275,11 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the asset from the publication
-	res := publication.Get(finalLink)
+	res := publication.Get(r.Context(), finalLink)
 	defer res.Close()
 
 	// Get asset length in bytes
-	l, rerr := res.Length()
+	l, rerr := res.Length(r.Context())
 	if rerr != nil {
 		w.WriteHeader(rerr.HTTPStatus())
 		w.Write([]byte(rerr.Error()))
@@ -250,27 +326,69 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cres, ok := res.(fetcher.CompressedResource)
+	normalResponse := func() {
+		if remote {
+			var bin []byte
+			bin, rerr = res.Read(r.Context(), start, end)
+			if rerr == nil {
+				_, err = w.Write(bin)
+				if err != nil {
+					rerr = fetcher.Other(err)
+				}
+			}
+		} else {
+			_, rerr = res.Stream(r.Context(), w, start, end)
+		}
+	}
 	if ok && cres.CompressedAs(archive.CompressionMethodDeflate) && start == 0 && end == 0 {
 		// Stream the asset in compressed format if supported by the user agent
 		if supportsEncoding(r, "deflate") {
-			w.Header().Set("content-encoding", "deflate")
-			w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength(), 10))
-			_, err = cres.StreamCompressed(w)
+			headers := func() {
+				w.Header().Set("content-encoding", "deflate")
+				w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength(r.Context()), 10))
+			}
+			if remote {
+				var bin []byte
+				bin, rerr = cres.ReadCompressed(r.Context())
+				if rerr == nil {
+					headers()
+					_, err = w.Write(bin)
+					if err != nil {
+						rerr = fetcher.Other(err)
+					}
+				}
+			} else {
+				headers()
+				_, rerr = cres.StreamCompressed(r.Context(), w)
+			}
 		} else if supportsEncoding(r, "gzip") && l <= archive.GzipMaxLength {
-			w.Header().Set("content-encoding", "gzip")
-			w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength()+archive.GzipWrapperLength, 10))
-			_, err = cres.StreamCompressedGzip(w)
+			headers := func() {
+				w.Header().Set("content-encoding", "gzip")
+				w.Header().Set("content-length", strconv.FormatInt(cres.CompressedLength(r.Context())+archive.GzipWrapperLength, 10))
+			}
+			if remote {
+				var bin []byte
+				bin, rerr = cres.ReadCompressedGzip(r.Context())
+				if rerr == nil {
+					headers()
+					_, err = w.Write(bin)
+					if err != nil {
+						rerr = fetcher.Other(err)
+					}
+				}
+			} else {
+				headers()
+				_, rerr = cres.StreamCompressedGzip(r.Context(), w)
+			}
 		} else {
-			// Fall back to normal streaming
-			_, rerr = res.Stream(w, start, end)
+			normalResponse()
 		}
 	} else {
-		// Stream the asset
-		_, rerr = res.Stream(w, start, end)
+		normalResponse()
 	}
 
 	if rerr != nil {
-		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
+		if errors.Is(rerr.Cause, syscall.EPIPE) || errors.Is(rerr.Cause, syscall.ECONNRESET) {
 			// Ignore client errors
 			return
 		}
