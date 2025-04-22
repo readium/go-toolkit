@@ -493,9 +493,7 @@ func (c *HTMLConverter) flushText() {
 				bestRole = element.Heading{Level: 5}
 			case atom.H6:
 				bestRole = element.Heading{Level: 6}
-			case atom.Blockquote:
-				fallthrough
-			case atom.Q:
+			case atom.Blockquote, atom.Q:
 				quote := element.Quote{}
 				for _, at := range el.Attr {
 					if at.Key == "cite" {

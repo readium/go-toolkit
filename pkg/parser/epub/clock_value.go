@@ -62,9 +62,7 @@ func parseTimecount(value float64, metric string) *float64 {
 	case "min":
 		value *= 60
 		return &value
-	case "s":
-		fallthrough
-	case "":
+	case "s", "":
 		return &value
 	case "ms":
 		value /= 1000
