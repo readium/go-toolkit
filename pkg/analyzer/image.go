@@ -29,7 +29,7 @@ import (
 
 const blurHashAlgorithm = "https://blurha.sh"
 
-type ImageProperties struct {
+type imageProperties struct {
 	Size     uint64
 	ModTime  time.Time
 	Width    uint32
@@ -43,7 +43,7 @@ type ImageProperties struct {
 	}
 }
 
-func (p *ImageProperties) EnhanceLink(link *manifest.Link) {
+func (p *imageProperties) EnhanceLink(link *manifest.Link) {
 	link.Height = uint(p.Height)
 	link.Width = uint(p.Width)
 	link.Size = uint(p.Size)
@@ -101,6 +101,13 @@ func hasVisualAlgorithm(hashes []manifest.HashAlgorithm) bool {
 	return visualHash
 }
 
+// Image inspects an image located in the provided filesystem, using the provided link's [manifest.HREF]
+// as a path. Additional properties from the link, such as the [mediatype.MediaType], may be used, and should
+// be included. A copy of the provided link will be returned, with the `size`, `width`, `height` and
+// `properties.animated` attributes set. A slice of [manifest.HashAlgorithm] can be provided, in which case
+// the returned link will also have `properties.hash` set with the computed hashes. Currently, the supported
+// algorithms are: [manifest.HashAlgorithmSHA256], [manifest.HashAlgorithmMD5], [manifest.HashAlgorithmPhashDCT],
+// and `https://blurha.sh` (BlurHash). The latter two are visual hashes, which are more computationally expensive.
 func Image(system fs.FS, link manifest.Link, algorithms []manifest.HashAlgorithm) (*manifest.Link, error) {
 	path := link.Href.String()
 	file, err := system.Open(path)
@@ -129,7 +136,7 @@ func Image(system fs.FS, link manifest.Link, algorithms []manifest.HashAlgorithm
 		return nil, errors.New("must be a file, not a directory")
 	}
 
-	p := &ImageProperties{
+	p := &imageProperties{
 		Size:    uint64(stat.Size()),
 		ModTime: stat.ModTime(),
 	}
