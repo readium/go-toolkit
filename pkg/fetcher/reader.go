@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"context"
 	"errors"
 )
 
@@ -34,7 +35,7 @@ func (rs *ResourceReadSeeker) Seek(offset int64, whence int) (int64, error) {
 		return rs.offset, nil
 	case 2:
 		if rs.length == 0 {
-			length, errx := rs.r.Length()
+			length, errx := rs.r.Length(context.TODO())
 			if errx != nil {
 				return 0, errx
 			}
@@ -52,7 +53,7 @@ func (rs *ResourceReadSeeker) Seek(offset int64, whence int) (int64, error) {
 
 // Seek implements io.ReadSeeker
 func (rs *ResourceReadSeeker) Read(p []byte) (n int, err error) {
-	bin, errx := rs.r.Read(rs.offset, rs.offset+int64(len(p)))
+	bin, errx := rs.r.Read(context.TODO(), rs.offset, rs.offset+int64(len(p)))
 	if errx != nil {
 		err = errx
 		return

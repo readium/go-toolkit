@@ -1,6 +1,7 @@
 package epub
 
 import (
+	"context"
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -10,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func loadPackageDoc(name string) (*manifest.Manifest, error) {
-	n, rerr := fetcher.NewFileResource(manifest.Link{}, "./testdata/package/"+name+".opf").ReadAsXML(map[string]string{
+func loadPackageDoc(ctx context.Context, name string) (*manifest.Manifest, error) {
+	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/package/"+name+".opf"), map[string]string{
 		NamespaceOPF:                         "opf",
 		NamespaceDC:                          "dc",
 		VocabularyDCTerms:                    "dcterms",
@@ -35,31 +36,31 @@ func loadPackageDoc(name string) (*manifest.Manifest, error) {
 }
 
 func TestPackageDocReadingProgressionNoneIsAuto(t *testing.T) {
-	p, err := loadPackageDoc("progression-none")
+	p, err := loadPackageDoc(t.Context(), "progression-none")
 	assert.NoError(t, err)
 	assert.Equal(t, manifest.Auto, p.Metadata.ReadingProgression)
 }
 
 func TestPackageDocPageProgression(t *testing.T) {
-	p, err := loadPackageDoc("progression-default")
+	p, err := loadPackageDoc(t.Context(), "progression-default")
 	assert.NoError(t, err)
 	assert.Equal(t, manifest.Auto, p.Metadata.ReadingProgression)
 }
 
 func TestPackageDocPageProgressionLTR(t *testing.T) {
-	p, err := loadPackageDoc("progression-ltr")
+	p, err := loadPackageDoc(t.Context(), "progression-ltr")
 	assert.NoError(t, err)
 	assert.Equal(t, manifest.LTR, p.Metadata.ReadingProgression)
 }
 
 func TestPackageDocPageProgressionRTL(t *testing.T) {
-	p, err := loadPackageDoc("progression-rtl")
+	p, err := loadPackageDoc(t.Context(), "progression-rtl")
 	assert.NoError(t, err)
 	assert.Equal(t, manifest.RTL, p.Metadata.ReadingProgression)
 }
 
 func TestPackageDocLinkPropertiesContains(t *testing.T) {
-	p, err := loadPackageDoc("links-properties")
+	p, err := loadPackageDoc(t.Context(), "links-properties")
 	assert.NoError(t, err)
 	ro := p.ReadingOrder
 	assert.Equal(t, []string{"mathml"}, ro[0].Properties.Contains())
@@ -70,7 +71,7 @@ func TestPackageDocLinkPropertiesContains(t *testing.T) {
 }
 
 func TestPackageDocLinkPropertiesRels(t *testing.T) {
-	p, err := loadPackageDoc("links-properties")
+	p, err := loadPackageDoc(t.Context(), "links-properties")
 	assert.NoError(t, err)
 	ro := p.ReadingOrder
 	assert.Equal(t, manifest.Strings{"cover"}, p.Resources[0].Rels)
@@ -82,7 +83,7 @@ func TestPackageDocLinkPropertiesRels(t *testing.T) {
 }
 
 func TestPackageDocLinkPropertiesPresentation(t *testing.T) {
-	p, err := loadPackageDoc("links-properties")
+	p, err := loadPackageDoc(t.Context(), "links-properties")
 	assert.NoError(t, err)
 	ro := p.ReadingOrder
 	assert.Equal(t, ro[0].Properties.Layout(), manifest.EPUBLayoutFixed)
@@ -111,7 +112,7 @@ func TestPackageDocLinkPropertiesPresentation(t *testing.T) {
 }
 
 func TestPackageDocLinkReadingOrder(t *testing.T) {
-	p, err := loadPackageDoc("links")
+	p, err := loadPackageDoc(t.Context(), "links")
 	assert.NoError(t, err)
 
 	assert.Equal(t, manifest.LinkList{
@@ -127,7 +128,7 @@ func TestPackageDocLinkReadingOrder(t *testing.T) {
 }
 
 func TestPackageDocLinkResources(t *testing.T) {
-	p, err := loadPackageDoc("links")
+	p, err := loadPackageDoc(t.Context(), "links")
 	assert.NoError(t, err)
 
 	ft := mediatype.OfString("application/vnd.ms-opentype")
@@ -175,7 +176,7 @@ func TestPackageDocLinkResources(t *testing.T) {
 }
 
 /*func TestPackageDocLinkFallbacksMappedToAlternates(t *testing.T) {
-	p, err := loadPackageDoc("fallbacks")
+	p, err := loadPackageDoc(t.Context(), "fallbacks")
 	assert.NoError(t, err)
 
 	assert.Equal(t, manifest.LinkList{}, p.Resources)
@@ -183,7 +184,7 @@ func TestPackageDocLinkResources(t *testing.T) {
 }*/
 
 func TestPackageDocLinkFallbacksCircularDependencies(t *testing.T) {
-	_, err := loadPackageDoc("fallbacks-termination")
+	_, err := loadPackageDoc(t.Context(), "fallbacks-termination")
 	assert.NoError(t, err)
 	// t.Logf("%+v\n", p)
 }

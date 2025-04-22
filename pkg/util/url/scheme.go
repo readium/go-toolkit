@@ -15,24 +15,14 @@ const (
 	SchemeFile  Scheme = "file"
 )
 
+var (
+	BaseFile, _ = AbsoluteURLFromString("file:///")
+)
+
 func SchemeFromString(s string) Scheme {
 	s = strings.ToLower(s)
 	switch s {
-	case "http":
-		fallthrough
-	case "https":
-		fallthrough
-	case "data":
-		fallthrough
-	case "ftp":
-		fallthrough
-	case "s3":
-		fallthrough
-	case "gs":
-		fallthrough
-	case "opds":
-		fallthrough
-	case "file":
+	case "http", "https", "data", "ftp", "s3", "gs", "opds", "file":
 		return Scheme(s)
 	default:
 		// Not a known scheme.

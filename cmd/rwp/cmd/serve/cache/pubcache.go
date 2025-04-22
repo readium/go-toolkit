@@ -7,11 +7,11 @@ import (
 // CachedPublication implements Evictable
 type CachedPublication struct {
 	*pub.Publication
+	Remote bool
 }
 
-func EncapsulatePublication(pub *pub.Publication) *CachedPublication {
-	cp := &CachedPublication{pub}
-	return cp
+func EncapsulatePublication(pub *pub.Publication, remote bool) *CachedPublication {
+	return &CachedPublication{pub, remote}
 }
 
 func (cp *CachedPublication) OnEvict() {

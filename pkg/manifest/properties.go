@@ -129,6 +129,25 @@ func (p Properties) Contains() []string {
 	return cv // Maybe TODO: it's a set
 }
 
+func (p Properties) Hash() HashList {
+	if p == nil {
+		return nil
+	}
+	v, ok := p["hash"]
+	if !ok {
+		return nil
+	}
+	cv, ok := v.([]interface{})
+	if !ok {
+		return nil
+	}
+	hashes, err := HashListFromJSONArray(cv)
+	if err != nil {
+		return nil
+	}
+	return hashes
+}
+
 func PropertiesFromJSON(rawJson interface{}) (Properties, error) {
 	if rawJson == nil {
 		return make(Properties), nil
