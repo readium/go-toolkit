@@ -12,12 +12,13 @@ import (
 )
 
 func withImageParser(t *testing.T, filepath string, f func(*pub.Builder)) {
-	a := asset.File(filepath)
-	fet, err := a.CreateFetcher(asset.Dependencies{
+	u, _ := url.FromFilepath(filepath)
+	a := asset.File(u)
+	fet, err := a.CreateFetcher(t.Context(), asset.Dependencies{
 		ArchiveFactory: archive.NewArchiveFactory(),
 	}, "")
 	assert.NoError(t, err)
-	p, err := ImageParser{}.Parse(a, fet)
+	p, err := ImageParser{}.Parse(t.Context(), a, fet)
 	assert.NoError(t, err)
 	f(p)
 }

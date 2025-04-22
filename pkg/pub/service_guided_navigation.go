@@ -1,6 +1,7 @@
 package pub
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/pkg/errors"
@@ -26,11 +27,11 @@ func init() {
 // Provides a way to access guided navigation documents for resources of a [Publication].
 type GuidedNavigationService interface {
 	Service
-	GuideForResource(href string) (*manifest.GuidedNavigationDocument, error)
+	GuideForResource(ctx context.Context, href string) (*manifest.GuidedNavigationDocument, error)
 	HasGuideForResource(href string) bool
 }
 
-func GetForGuidedNavigationService(service GuidedNavigationService, link manifest.Link) (fetcher.Resource, bool) {
+func GetForGuidedNavigationService(ctx context.Context, service GuidedNavigationService, link manifest.Link) (fetcher.Resource, bool) {
 	u := link.URL(nil, nil)
 
 	if u.Path() != resolvedGuidedNavigation.Path() {
@@ -62,7 +63,7 @@ func GetForGuidedNavigationService(service GuidedNavigationService, link manifes
 	}
 
 	return fetcher.NewBytesResource(link, func() []byte {
-		doc, err := service.GuideForResource(ref)
+		doc, err := service.GuideForResource(ctx, ref)
 		if err != nil {
 			// TODO: handle error somehow
 			return nil

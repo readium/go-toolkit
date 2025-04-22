@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"errors"
 	"path/filepath"
 	"sort"
@@ -19,12 +20,12 @@ import (
 type ImageParser struct{}
 
 // Parse implements PublicationParser
-func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
-	if ok, err := p.accepts(asset, fetcher); err != nil || !ok {
+func (p ImageParser) Parse(ctx context.Context, asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
+	if ok, err := p.accepts(ctx, asset, fetcher); err != nil || !ok {
 		return nil, err
 	}
 
-	links, err := fetcher.Links()
+	links, err := fetcher.Links(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +50,7 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 	})
 
 	// Try to figure out the publication's title
-	title := guessPublicationTitleFromFileStructure(fetcher)
+	title := guessPublicationTitleFromFileStructure(ctx, fetcher)
 	if title == "" {
 		title = asset.Name()
 	}
@@ -74,11 +75,11 @@ func (p ImageParser) Parse(asset asset.PublicationAsset, fetcher fetcher.Fetcher
 
 var allowed_extensions_image = map[string]struct{}{"acbf": {}, "xml": {}, "txt": {}, "json": {}}
 
-func (p ImageParser) accepts(asset asset.PublicationAsset, fetcher fetcher.Fetcher) (bool, error) {
-	if asset.MediaType().Equal(&mediatype.CBZ) || asset.MediaType().Equal(&mediatype.CBR) {
+func (p ImageParser) accepts(ctx context.Context, asset asset.PublicationAsset, fetcher fetcher.Fetcher) (bool, error) {
+	if asset.MediaType(ctx).Equal(&mediatype.CBZ) || asset.MediaType(ctx).Equal(&mediatype.CBR) {
 		return true, nil
 	}
-	links, err := fetcher.Links()
+	links, err := fetcher.Links(ctx)
 	if err != nil {
 		return false, err
 	}

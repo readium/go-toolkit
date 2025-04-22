@@ -1,6 +1,7 @@
 package epub
 
 import (
+	"context"
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -9,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func loadNavDoc(name string) (map[string]manifest.LinkList, error) {
-	n, rerr := fetcher.NewFileResource(manifest.Link{}, "./testdata/navdoc/"+name+".xhtml").ReadAsXML(map[string]string{
+func loadNavDoc(ctx context.Context, name string) (map[string]manifest.LinkList, error) {
+	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/navdoc/"+name+".xhtml"), map[string]string{
 		NamespaceXHTML: "html",
 		NamespaceOPS:   "epub",
 	})
@@ -22,7 +23,7 @@ func loadNavDoc(name string) (map[string]manifest.LinkList, error) {
 }
 
 func TestNavDocParserNondirectDescendantOfBody(t *testing.T) {
-	n, err := loadNavDoc("nav-section")
+	n, err := loadNavDoc(t.Context(), "nav-section")
 	assert.NoError(t, err)
 	assert.Equal(t, manifest.LinkList{
 		{
@@ -33,7 +34,7 @@ func TestNavDocParserNondirectDescendantOfBody(t *testing.T) {
 }
 
 func TestNavDocParserNewlinesTrimmedFromTitle(t *testing.T) {
-	n, err := loadNavDoc("nav-titles")
+	n, err := loadNavDoc(t.Context(), "nav-titles")
 	assert.NoError(t, err)
 	assert.Contains(t, n["toc"], manifest.Link{
 		Title: "A link with new lines splitting the text",
@@ -42,7 +43,7 @@ func TestNavDocParserNewlinesTrimmedFromTitle(t *testing.T) {
 }
 
 func TestNavDocParserSpacesTrimmedFromTitle(t *testing.T) {
-	n, err := loadNavDoc("nav-titles")
+	n, err := loadNavDoc(t.Context(), "nav-titles")
 	assert.NoError(t, err)
 	assert.Contains(t, n["toc"], manifest.Link{
 		Title: "A link with ignorable spaces",
@@ -51,7 +52,7 @@ func TestNavDocParserSpacesTrimmedFromTitle(t *testing.T) {
 }
 
 func TestNavDocParserNestestHTMLElementsAllowedInTitle(t *testing.T) {
-	n, err := loadNavDoc("nav-titles")
+	n, err := loadNavDoc(t.Context(), "nav-titles")
 	assert.NoError(t, err)
 	assert.Contains(t, n["toc"], manifest.Link{
 		Title: "A link with nested HTML elements",
@@ -60,7 +61,7 @@ func TestNavDocParserNestestHTMLElementsAllowedInTitle(t *testing.T) {
 }
 
 func TestNavDocParserEntryWithoutTitleOrChildrenIgnored(t *testing.T) {
-	n, err := loadNavDoc("nav-titles")
+	n, err := loadNavDoc(t.Context(), "nav-titles")
 	assert.NoError(t, err)
 	assert.NotContains(t, n["toc"], manifest.Link{
 		Title: "",
@@ -69,7 +70,7 @@ func TestNavDocParserEntryWithoutTitleOrChildrenIgnored(t *testing.T) {
 }
 
 func TestNavDocParserEntryWithoutLinkOrChildrenIgnored(t *testing.T) {
-	n, err := loadNavDoc("nav-titles")
+	n, err := loadNavDoc(t.Context(), "nav-titles")
 	assert.NoError(t, err)
 	assert.NotContains(t, n["toc"], manifest.Link{
 		Title: "An unlinked element without children must be ignored",
@@ -78,7 +79,7 @@ func TestNavDocParserEntryWithoutLinkOrChildrenIgnored(t *testing.T) {
 }
 
 func TestNavDocParserHierarchicalItemsNotAllowed(t *testing.T) {
-	n, err := loadNavDoc("nav-children")
+	n, err := loadNavDoc(t.Context(), "nav-children")
 	assert.NoError(t, err)
 	assert.Equal(t, manifest.LinkList{
 		{Title: "Introduction", Href: manifest.MustNewHREFFromString("OEBPS/xhtml/introduction.xhtml", false)},
@@ -102,13 +103,13 @@ func TestNavDocParserHierarchicalItemsNotAllowed(t *testing.T) {
 }
 
 func TestNavDocParserEmptyDocAccepted(t *testing.T) {
-	n, err := loadNavDoc("nav-empty")
+	n, err := loadNavDoc(t.Context(), "nav-empty")
 	assert.NoError(t, err)
 	assert.Empty(t, n["toc"])
 }
 
 func TestNavDocParserTOC(t *testing.T) {
-	n, err := loadNavDoc("nav-complex")
+	n, err := loadNavDoc(t.Context(), "nav-complex")
 	assert.NoError(t, err)
 	assert.Equal(t, manifest.LinkList{
 		{Title: "Chapter 1", Href: manifest.MustNewHREFFromString("OEBPS/xhtml/chapter1.xhtml", false)},
@@ -117,7 +118,7 @@ func TestNavDocParserTOC(t *testing.T) {
 }
 
 func TestNavDocParserPageList(t *testing.T) {
-	n, err := loadNavDoc("nav-complex")
+	n, err := loadNavDoc(t.Context(), "nav-complex")
 	assert.NoError(t, err)
 	assert.Equal(t, manifest.LinkList{
 		{Title: "1", Href: manifest.MustNewHREFFromString("OEBPS/xhtml/chapter1.xhtml#page1", false)},

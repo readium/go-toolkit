@@ -1,26 +1,28 @@
 package fetcher
 
 import (
+	"context"
 	"errors"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"weak"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
-	"github.com/readium/xmlquery"
 )
 
 // Provides access to resources on the local file system.
 type FileFetcher struct {
 	paths     map[string]string
-	resources []Resource // This is weak on mobile
+	resources []weak.Pointer[FileResource]
 }
 
 // Links implements Fetcher
-func (f *FileFetcher) Links() (manifest.LinkList, error) {
+func (f *FileFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 	links := make(manifest.LinkList, 0)
 	for href, xpath := range f.paths {
 		axpath, err := filepath.Abs(xpath)
@@ -29,7 +31,7 @@ func (f *FileFetcher) Links() (manifest.LinkList, error) {
 		}
 
 		err = filepath.WalkDir(xpath, func(apath string, d fs.DirEntry, err error) error {
-			if d == nil { // xpath is afile
+			if d == nil { // xpath is a file
 				fi, err := os.Stat(xpath)
 				if err != nil {
 					return err
@@ -52,7 +54,7 @@ func (f *FileFetcher) Links() (manifest.LinkList, error) {
 			f, err := os.Open(apath)
 			if err == nil {
 				defer f.Close()
-				mt := mediatype.OfFileOnly(f)
+				mt := mediatype.OfFileOnly(ctx, f)
 				if mt != nil {
 					link.MediaType = mt
 				}
@@ -76,7 +78,7 @@ func (f *FileFetcher) Links() (manifest.LinkList, error) {
 }
 
 // Get implements Fetcher
-func (f *FileFetcher) Get(link manifest.Link) Resource {
+func (f *FileFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	linkHref := link.Href.String()
 	for itemHref, itemFile := range f.paths {
 		if strings.HasPrefix(linkHref, itemHref) {
@@ -92,7 +94,7 @@ func (f *FileFetcher) Get(link manifest.Link) Resource {
 			}
 			if strings.HasPrefix(rapath, iapath) {
 				resource := NewFileResource(link, resourceFile)
-				f.resources = append(f.resources, resource)
+				f.resources = append(f.resources, weak.Make(resource))
 				return resource
 			}
 		}
@@ -102,8 +104,11 @@ func (f *FileFetcher) Get(link manifest.Link) Resource {
 
 // Close implements Fetcher
 func (f *FileFetcher) Close() {
+	// Safety mechanism to cleanup any os.File handles still open
 	for _, res := range f.resources {
-		res.Close()
+		if r := res.Value(); r != nil {
+			r.Close()
+		}
 	}
 	f.resources = nil
 }
@@ -126,6 +131,7 @@ func (r *FileResource) Link() manifest.Link {
 	return r.link
 }
 
+// Properties implements Resource
 func (r *FileResource) Properties() manifest.Properties {
 	return manifest.Properties{}
 }
@@ -159,14 +165,16 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 		return nil, NotFound(errors.New("is a directory"))
 	}
 	r.file = f
+	runtime.AddCleanup(r, func(f *os.File) {
+		f.Close()
+	}, f)
 	return f, nil
 }
 
 // Read implements Resource
-func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceError) {
+func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
 	if end < start {
-		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
-		return nil, err
+		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
 	f, ex := r.open()
 	if ex != nil {
@@ -197,7 +205,7 @@ func (r *FileResource) Read(start int64, end int64) ([]byte, *ResourceError) {
 }
 
 // Stream implements Resource
-func (r *FileResource) Stream(w io.Writer, start int64, end int64) (int64, *ResourceError) {
+func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
 	if end < start {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
 		return -1, err
@@ -228,7 +236,7 @@ func (r *FileResource) Stream(w io.Writer, start int64, end int64) (int64, *Reso
 }
 
 // Length implements Resource
-func (r *FileResource) Length() (int64, *ResourceError) {
+func (r *FileResource) Length(ctx context.Context) (int64, *ResourceError) {
 	f, ex := r.open()
 	if ex != nil {
 		return 0, ex
@@ -238,21 +246,6 @@ func (r *FileResource) Length() (int64, *ResourceError) {
 		return 0, Other(err)
 	}
 	return fi.Size(), nil
-}
-
-// ReadAsString implements Resource
-func (r *FileResource) ReadAsString() (string, *ResourceError) {
-	return ReadResourceAsString(r)
-}
-
-// ReadAsJSON implements Resource
-func (r *FileResource) ReadAsJSON() (map[string]interface{}, *ResourceError) {
-	return ReadResourceAsJSON(r)
-}
-
-// ReadAsXML implements Resource
-func (r *FileResource) ReadAsXML(prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
-	return ReadResourceAsXML(r, prefixes)
 }
 
 func NewFileResource(link manifest.Link, abspath string) *FileResource {

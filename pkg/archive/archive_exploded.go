@@ -55,10 +55,7 @@ func (e explodedArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	}
 	data := make([]byte, end-start+1)
 	n, err := f.Read(data)
-	if err != nil {
-		return nil, err
-	}
-	return data[:n], nil
+	return data[:n], err
 }
 
 func (e explodedArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, error) {
@@ -107,10 +104,12 @@ type explodedArchive struct {
 	directory string // Directory, already cleaned!
 }
 
+// Close implements Archive
 func (a explodedArchive) Close() {
 	// Nothing needs to be done
 }
 
+// Entries implements Archive
 func (a explodedArchive) Entries() []Entry {
 	entries := make([]Entry, 0)
 	filepath.WalkDir(a.directory, func(path string, d fs.DirEntry, err error) error {
@@ -131,6 +130,7 @@ func (a explodedArchive) Entries() []Entry {
 	return entries
 }
 
+// Entry implements Archive
 func (a explodedArchive) Entry(path string) (Entry, error) {
 	if !fs.ValidPath(path) {
 		return nil, fs.ErrNotExist
@@ -159,6 +159,7 @@ func NewExplodedArchive(directory string) Archive {
 
 type explodedArchiveFactory struct{}
 
+// Open implements ArchiveFactory
 func (e explodedArchiveFactory) Open(filepath string, password string) (Archive, error) {
 	st, err := os.Stat(filepath)
 	if err != nil {
