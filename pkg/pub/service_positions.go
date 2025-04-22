@@ -1,6 +1,7 @@
 package pub
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -18,8 +19,8 @@ var PositionsLink = manifest.Link{
 // Provides a list of discrete locations in the publication, no matter what the original format is.
 type PositionsService interface {
 	Service
-	PositionsByReadingOrder() [][]manifest.Locator // Returns the list of all the positions in the publication, grouped by the resource reading order index.
-	Positions() []manifest.Locator                 // Returns the list of all the positions in the publication. (flattening of PositionsByReadingOrder)
+	PositionsByReadingOrder(ctx context.Context) [][]manifest.Locator // Returns the list of all the positions in the publication, grouped by the resource reading order index.
+	Positions(ctx context.Context) []manifest.Locator                 // Returns the list of all the positions in the publication. (flattening of PositionsByReadingOrder)
 }
 
 // PerResourcePositionsService implements PositionsService
@@ -29,13 +30,13 @@ type PerResourcePositionsService struct {
 	fallbackMediaType mediatype.MediaType
 }
 
-func GetForPositionsService(service PositionsService, link manifest.Link) (fetcher.Resource, bool) {
+func GetForPositionsService(ctx context.Context, service PositionsService, link manifest.Link) (fetcher.Resource, bool) {
 	if !link.URL(nil, nil).Equivalent(PositionsLink.URL(nil, nil)) {
 		return nil, false
 	}
 
 	return fetcher.NewBytesResource(PositionsLink, func() []byte {
-		positions := service.Positions()
+		positions := service.Positions(ctx)
 		bin, _ := json.Marshal(map[string]interface{}{
 			"total":     len(positions),
 			"positions": positions,
@@ -50,12 +51,12 @@ func (s PerResourcePositionsService) Links() manifest.LinkList {
 	return manifest.LinkList{PositionsLink}
 }
 
-func (s PerResourcePositionsService) Get(link manifest.Link) (fetcher.Resource, bool) {
-	return GetForPositionsService(s, link)
+func (s PerResourcePositionsService) Get(ctx context.Context, link manifest.Link) (fetcher.Resource, bool) {
+	return GetForPositionsService(ctx, s, link)
 }
 
-func (s PerResourcePositionsService) Positions() []manifest.Locator {
-	poss := s.PositionsByReadingOrder()
+func (s PerResourcePositionsService) Positions(ctx context.Context) []manifest.Locator {
+	poss := s.PositionsByReadingOrder(ctx)
 	positions := make([]manifest.Locator, len(poss))
 	for i, v := range poss {
 		positions[i] = v[0] // Always just one element
@@ -63,7 +64,7 @@ func (s PerResourcePositionsService) Positions() []manifest.Locator {
 	return positions
 }
 
-func (s PerResourcePositionsService) PositionsByReadingOrder() [][]manifest.Locator {
+func (s PerResourcePositionsService) PositionsByReadingOrder(ctx context.Context) [][]manifest.Locator {
 	positions := make([][]manifest.Locator, len(s.readingOrder))
 	pageCount := len(s.readingOrder)
 	for i, v := range s.readingOrder {

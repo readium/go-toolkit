@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -23,8 +24,8 @@ func hrefCommonFirstComponent(links manifest.LinkList) string {
 	return latest
 }
 
-func guessPublicationTitleFromFileStructure(fetcher fetcher.Fetcher) string { // TODO test for this
-	links, err := fetcher.Links()
+func guessPublicationTitleFromFileStructure(ctx context.Context, fetcher fetcher.Fetcher) string { // TODO test for this
+	links, err := fetcher.Links(ctx)
 	if err != nil || len(links) == 0 {
 		return ""
 	}

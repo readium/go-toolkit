@@ -1,8 +1,8 @@
-package drm
+package protection
 
-// TODO DRM class
 const (
-	SchemeLCP = "http://readium.org/2014/01/lcp"
+	SchemeLCP   = "http://readium.org/2014/01/lcp"
+	SchemeAdept = "http://ns.adobe.com/adept"
 )
 
 // TODO replace with ContentProtection API

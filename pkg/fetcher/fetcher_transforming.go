@@ -1,6 +1,10 @@
 package fetcher
 
-import "github.com/readium/go-toolkit/pkg/manifest"
+import (
+	"context"
+
+	"github.com/readium/go-toolkit/pkg/manifest"
+)
 
 // Transforms the resources' content of a child fetcher using a list of [ResourceTransformer] functions.
 type TransformingFetcher struct {
@@ -9,13 +13,13 @@ type TransformingFetcher struct {
 }
 
 // Links implements Fetcher
-func (f *TransformingFetcher) Links() (manifest.LinkList, error) {
-	return f.fetcher.Links()
+func (f *TransformingFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
+	return f.fetcher.Links(ctx)
 }
 
 // Get implements Fetcher
-func (f *TransformingFetcher) Get(link manifest.Link) Resource {
-	resource := f.fetcher.Get(link)
+func (f *TransformingFetcher) Get(ctx context.Context, link manifest.Link) Resource {
+	resource := f.fetcher.Get(ctx, link)
 	for _, transformer := range f.transformers {
 		resource = transformer(resource)
 	}

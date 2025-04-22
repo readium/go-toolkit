@@ -104,5 +104,8 @@ func (h HREF) String() string {
 	if h.IsTemplated() {
 		return h.template
 	}
+	if h.href == nil {
+		return ""
+	}
 	return h.href.String()
 }
