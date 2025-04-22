@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"path/filepath"
 
 	"github.com/pkg/errors"
-	"github.com/readium/go-toolkit/pkg/analyzer"
+	"github.com/readium/go-toolkit/cmd/rwp/cmd/helpers"
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -21,7 +20,7 @@ import (
 var indentFlag string
 
 // Infer accessibility metadata.
-var inferA11yFlag InferA11yMetadata
+var inferA11yFlag helpers.InferA11yMetadata
 
 // Infer the number of pages from the generated position list.
 var inferPageCountFlag bool
@@ -87,7 +86,7 @@ Examples:
 			for i, h := range hash {
 				hashAlgorithms[i] = manifest.HashAlgorithm(h)
 			}
-			inspector := &ImageInspector{
+			inspector := &helpers.ImageInspector{
 				Algorithms: hashAlgorithms,
 				Filesystem: fetcher.ToFS(context.TODO(), pub.Fetcher),
 			}
@@ -127,82 +126,4 @@ func init() {
 	manifestCmd.Flags().BoolVar(&inspectImagesFlag, "inspect-images", false, "Inspect images in the manifest. Their links will be enhanced with size, width and height, and hashes")
 	// manifestCmd.Flags().StringSliceVar(&inferIgnoreImageHashesFlag, "infer-a11y-ignore-image-hashes", nil, "Ignore the given hashes when inferring textual accessibility. Hashes are in the format <algorithm>:<base64 value>, separated by commas.")
 	// manifestCmd.Flags().StringVar(&inferIgnoreImageDirectoryFlag, "infer-a11y-ignore-image-dir", "", "Ignore the images in a given directory when inferring textual accessibility.")
-}
-
-type InferA11yMetadata streamer.InferA11yMetadata
-
-// String is used both by fmt.Print and by Cobra in help text
-func (e *InferA11yMetadata) String() string {
-	if e == nil {
-		return "no"
-	}
-	switch *e {
-	case InferA11yMetadata(streamer.InferA11yMetadataMerged):
-		return "merged"
-	case InferA11yMetadata(streamer.InferA11yMetadataSplit):
-		return "split"
-	default:
-		return "no"
-	}
-}
-
-func (e *InferA11yMetadata) Set(v string) error {
-	switch v {
-	case "no":
-		*e = InferA11yMetadata(streamer.InferA11yMetadataNo)
-	case "merged":
-		*e = InferA11yMetadata(streamer.InferA11yMetadataMerged)
-	case "split":
-		*e = InferA11yMetadata(streamer.InferA11yMetadataSplit)
-	default:
-		return errors.New(`must be one of "no", "merged", or "split"`)
-	}
-	return nil
-}
-
-// Type is only used in help text.
-func (e *InferA11yMetadata) Type() string {
-	return "string"
-}
-
-type ImageInspector struct {
-	Filesystem fs.FS
-	Algorithms []manifest.HashAlgorithm
-	err        error
-}
-
-func (n *ImageInspector) Error() error {
-	return n.err
-}
-
-// TransformHREF implements ManifestTransformer
-func (n *ImageInspector) TransformHREF(href manifest.HREF) manifest.HREF {
-	// Identity
-	return href
-}
-
-// TransformLink implements ManifestTransformer
-func (n *ImageInspector) TransformLink(link manifest.Link) manifest.Link {
-	if n.err != nil || link.MediaType == nil || !link.MediaType.IsBitmap() {
-		return link
-	}
-
-	newLink, err := analyzer.Image(n.Filesystem, link, n.Algorithms)
-	if err != nil {
-		n.err = errors.Wrap(err, "failed inspecting image "+link.Href.String())
-		return link
-	}
-	return *newLink
-}
-
-// TransformManifest implements ManifestTransformer
-func (n *ImageInspector) TransformManifest(manifest manifest.Manifest) manifest.Manifest {
-	// Identity
-	return manifest
-}
-
-// TransformMetadata implements ManifestTransformer
-func (n *ImageInspector) TransformMetadata(metadata manifest.Metadata) manifest.Metadata {
-	// Identity
-	return metadata
 }
