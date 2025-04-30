@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 
-- The `cmd` folder has been removed, along with the `rwp` command and its command-line utilities including the web server. Please use [https://github.com/readium/cli](the new Readium CLI repo) as a replacement. The docker build and executable releases are also now migrated to that repository, and the `rwp` verbiage is now `readium`.
+- The `cmd` folder has been removed, along with the `rwp` command and its command-line utilities including the web server. Please use [the new Readium CLI repo](https://github.com/readium/cli) as a replacement. The docker build and executable releases are also now migrated to that repository, and the `rwp` verbiage is now `readium`.
 
 ### Added
 
