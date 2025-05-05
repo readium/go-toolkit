@@ -3,11 +3,11 @@ module github.com/readium/go-toolkit
 go 1.24.0
 
 require (
-	cloud.google.com/go/storage v1.51.0
+	cloud.google.com/go/storage v1.52.0
 	github.com/agext/regexp v1.3.0
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/aws/aws-sdk-go-v2 v1.36.3
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.2
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.3
 	github.com/aws/smithy-go v1.22.3
 	github.com/azr/phash v0.2.0
 	github.com/bbrks/go-blurhash v1.1.1
@@ -15,7 +15,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/kettek/apng v0.0.0-20220823221153-ff692776a607
-	github.com/pdfcpu/pdfcpu v0.9.1
+	github.com/pdfcpu/pdfcpu v0.10.2
 	github.com/pkg/errors v0.9.1
 	github.com/readium/xmlquery v0.0.0-20230106230237-8f493145aef4
 	github.com/relvacode/iso8601 v1.6.0
@@ -46,7 +46,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.34 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.34 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.7.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.7.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.15 // indirect
 	github.com/azr/gift v1.1.2 // indirect
@@ -64,6 +64,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/hhrutter/lzw v1.0.0 // indirect
+	github.com/hhrutter/pkcs7 v0.2.0 // indirect
 	github.com/hhrutter/tiff v1.0.2 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
