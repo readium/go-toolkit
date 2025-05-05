@@ -1,10 +1,13 @@
 package streamer
 
 import (
+	"context"
 	"testing"
 
+	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +30,8 @@ func TestReturnsAdditionalInferredA11yMetadata(t *testing.T) {
 	inferreddA11y.AccessModes = []manifest.A11yAccessMode{manifest.A11yAccessModeTextual}
 	inferreddA11y.AccessModesSufficient = [][]manifest.A11yPrimaryAccessMode{{manifest.A11yPrimaryAccessModeTextual}}
 
-	res := inferA11yMetadataFromManifest(m)
+	res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
+	assert.NoError(t, err)
 	assert.Equal(t, &inferreddA11y, res)
 
 	// Original manifest should not be modified.
@@ -57,7 +61,8 @@ func TestInferVisualAccessMode(t *testing.T) {
 
 func assertAccessMode(t *testing.T, accessMode manifest.A11yAccessMode, extension string, mt mediatype.MediaType) {
 	testManifest := func(m manifest.Manifest) {
-		res := inferA11yMetadataFromManifest(m)
+		res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
+		assert.NoError(t, err)
 		assert.NotNil(t, res)
 		assert.Contains(t, res.AccessModes, accessMode)
 	}
@@ -82,7 +87,8 @@ func TestInferTextualAccessModeAndAccessModeSufficientFromProfile(t *testing.T) 
 				Accessibility: &a11y,
 			},
 		}
-		res := inferA11yMetadataFromManifest(m)
+		res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
+		assert.NoError(t, err)
 		assert.NotNil(t, res)
 		assert.Contains(t, res.AccessModes, manifest.A11yAccessModeTextual)
 		assert.Contains(t, res.AccessModesSufficient, []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual})
@@ -97,7 +103,8 @@ func TestInferTextualAccessModeAndAccessModeSufficientFromProfile(t *testing.T) 
 // (inspect "resources" and "readingOrder" in RWPM)
 func TestInferTextualAccessModeAndAccessModeSufficientFromLackOfMedia(t *testing.T) {
 	testManifest := func(contains bool, m manifest.Manifest) {
-		res := inferA11yMetadataFromManifest(m)
+		res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
+		assert.NoError(t, err)
 		assert.NotNil(t, res)
 		ams := []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual}
 
@@ -166,17 +173,62 @@ func TestDontInferTextualAccessModeAndAccessModeSufficientFromLackOfMediaForFXL(
 		TableOfContents: []manifest.Link{newLink(mediatype.HTML, "html")},
 	}
 
-	res := inferA11yMetadataFromManifest(m)
+	res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
+	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	ams := []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual}
 	assert.NotContains(t, res.AccessModes, manifest.A11yAccessModeTextual)
 	assert.NotContains(t, res.AccessModesSufficient, ams)
 }
 
+func TestInferTextualAccessModeWithIgnoredImages(t *testing.T) {
+	testHash := manifest.HashList{
+		manifest.HashValue{
+			Algorithm: manifest.HashAlgorithmSHA256,
+			Value:     "nzGm6cNL7fAadGSoFdtLzg/Z3MFqe3/fiWUZF9CPAKY=",
+		},
+	}
+	l := newLink(mediatype.PNG, "png")
+	l.Properties = manifest.Properties{
+		"hash": testHash,
+	}
+
+	cover := newLink(mediatype.JPEG, "jpg")
+	cover.Rels = manifest.Strings{"cover"}
+
+	m := manifest.Manifest{
+		Metadata: manifest.Metadata{
+			ConformsTo:   manifest.Profiles{manifest.ProfileEPUB},
+			Presentation: newEPUBPresentation(manifest.EPUBLayoutReflowable),
+		},
+		ReadingOrder: []manifest.Link{
+			newLink(mediatype.HTML, "html"),
+		},
+		Resources: []manifest.Link{
+			cover,
+			l,
+		},
+	}
+	f := fetcher.NewFileFetcher("file.png", "testdata/file.png")
+
+	res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, f, nil), nil)
+	assert.NoError(t, err)
+	assert.NotContains(t, res.AccessModes, manifest.A11yAccessModeTextual)
+	assert.Contains(t, res.AccessModes, manifest.A11yAccessModeVisual)
+	assert.NotContains(t, res.AccessModesSufficient, []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual})
+
+	res, err = inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, f, nil), testHash)
+	assert.NoError(t, err)
+	assert.Contains(t, res.AccessModes, manifest.A11yAccessModeTextual)
+	assert.Contains(t, res.AccessModes, manifest.A11yAccessModeVisual)
+	assert.Contains(t, res.AccessModesSufficient, []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual})
+}
+
 // If the publication contains only references to audio resources (inspect "resources" and "readingOrder" in RWPM)
 func TestInferAuditoryAccessModeSufficient(t *testing.T) {
 	testManifest := func(contains bool, m manifest.Manifest) {
-		res := inferA11yMetadataFromManifest(m)
+		res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
+		assert.NoError(t, err)
 		if res == nil && !contains {
 			return
 		}
@@ -222,7 +274,8 @@ func TestInferAuditoryAccessModeSufficient(t *testing.T) {
 // If the publication contains only references to image or video resources (inspect "resources" and "readingOrder" in RWPM)
 func TestInferVisualAccessModeSufficient(t *testing.T) {
 	testManifest := func(contains bool, m manifest.Manifest) {
-		res := inferA11yMetadataFromManifest(m)
+		res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
+		assert.NoError(t, err)
 		if res == nil && !contains {
 			return
 		}
@@ -335,7 +388,8 @@ func TestInferFeatureDisplayTransformability(t *testing.T) {
 			ReadingOrder: []manifest.Link{newLink(mediatype.HTML, "html")},
 		}
 
-		res := inferA11yMetadataFromManifest(m)
+		res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
+		assert.NoError(t, err)
 		assert.NotNil(t, res)
 		if contains {
 			assert.Contains(t, res.Features, manifest.A11yFeatureDisplayTransformability)
@@ -365,7 +419,8 @@ func TestInferFeatureSynchronizedAudioText(t *testing.T) {
 }
 
 func assertFeature(t *testing.T, m manifest.Manifest, feature manifest.A11yFeature) {
-	res := inferA11yMetadataFromManifest(m)
+	res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
+	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Contains(t, res.Features, feature)
 }

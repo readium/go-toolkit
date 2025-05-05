@@ -22,10 +22,11 @@ import (
 // ones. This can also be used to provide an alternative configuration of a
 // default parser.
 type Streamer struct {
-	parsers           []parser.PublicationParser
-	inferA11yMetadata InferA11yMetadata
-	inferPageCount    bool
-	archiveFactory    archive.ArchiveFactory
+	parsers            []parser.PublicationParser
+	inferA11yMetadata  InferA11yMetadata
+	inferPageCount     bool
+	inferIgnoredImages manifest.HashList
+	archiveFactory     archive.ArchiveFactory
 	// TODO pdfFactory
 	httpClient *http.Client
 	// onCreatePublication
@@ -36,6 +37,7 @@ type Config struct {
 	IgnoreDefaultParsers bool                       // When true, only parsers provided in parsers will be used.
 	InferA11yMetadata    InferA11yMetadata          // When not empty, additional accessibility metadata will be infered from the manifest.
 	InferPageCount       bool                       // When true, will infer `Metadata.NumberOfPages` from the generated position list.
+	InferIgnoredImages   manifest.HashList          // An optional list of hashes of images, to use in finding images that can be ignored when inferring accessibility metadata.
 	ArchiveFactory       archive.ArchiveFactory     // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
 	HttpClient           *http.Client               // Service performing HTTP requests.
 }
@@ -114,7 +116,11 @@ func (s Streamer) Open(ctx context.Context, a asset.PublicationAsset, credential
 
 	pub := builder.Build()
 
-	s.inferA11yMetadataInPublication(pub)
+	err = s.inferA11yMetadataInPublication(ctx, pub)
+	if err != nil {
+		fetcher.Close()
+		return nil, errors.Wrap(err, "failed inferring accessibility metadata in publication")
+	}
 
 	if s.inferPageCount && pub.Manifest.Metadata.NumberOfPages == nil {
 		pageCount := uint(len(pub.Positions(ctx)))
@@ -126,13 +132,16 @@ func (s Streamer) Open(ctx context.Context, a asset.PublicationAsset, credential
 	return pub, nil
 }
 
-func (s *Streamer) inferA11yMetadataInPublication(pub *pub.Publication) {
+func (s *Streamer) inferA11yMetadataInPublication(ctx context.Context, pub *pub.Publication) error {
 	if s.inferA11yMetadata == InferA11yMetadataNo {
-		return
+		return nil
 	}
-	inferredA11y := inferA11yMetadataFromManifest(pub.Manifest)
+	inferredA11y, err := inferA11yMetadataInPublicationManifest(ctx, pub, s.inferIgnoredImages)
+	if err != nil {
+		return errors.Wrap(err, "failed inferring accessibility metadata in publication manifest")
+	}
 	if inferredA11y == nil {
-		return
+		return nil
 	}
 
 	switch s.inferA11yMetadata {
@@ -147,6 +156,7 @@ func (s *Streamer) inferA11yMetadataInPublication(pub *pub.Publication) {
 		pub.Manifest.Metadata.SetOtherMetadata(manifest.InferredAccessibilityMetadataKey, inferredA11y)
 
 	case InferA11yMetadataNo:
-		return
+		return nil
 	}
+	return nil
 }
