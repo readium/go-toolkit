@@ -3,7 +3,7 @@ module github.com/readium/go-toolkit
 go 1.24.0
 
 require (
-	cloud.google.com/go/storage v1.51.0
+	cloud.google.com/go/storage v1.52.0
 	github.com/agext/regexp v1.3.0
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/aws/aws-sdk-go-v2 v1.36.3
