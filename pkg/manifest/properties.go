@@ -102,11 +102,18 @@ func (p Properties) Layout() EPUBLayout {
 }
 
 func (p Properties) Encryption() *Encryption {
-	mp, ok := p.Get("encrypted").(map[string]interface{})
+	v := p.Get("encrypted")
+	if v == nil {
+		return nil
+	}
+	if enc, ok := v.(Encryption); ok {
+		// Is already an Encryption struct
+		return &enc
+	}
+	mp, ok := v.(map[string]interface{})
 	if mp == nil || !ok {
 		return nil
 	}
-
 	enc, err := EncryptionFromJSON(mp)
 	if err != nil {
 		return nil
@@ -115,11 +122,8 @@ func (p Properties) Encryption() *Encryption {
 }
 
 func (p Properties) Contains() []string {
-	if p == nil {
-		return nil
-	}
-	v, ok := p["contains"]
-	if !ok {
+	v := p.Get("contains")
+	if v == nil {
 		return nil
 	}
 	cv, ok := v.([]string)
@@ -130,12 +134,13 @@ func (p Properties) Contains() []string {
 }
 
 func (p Properties) Hash() HashList {
-	if p == nil {
+	v := p.Get("hash")
+	if v == nil {
 		return nil
 	}
-	v, ok := p["hash"]
-	if !ok {
-		return nil
+	if hl, ok := v.(HashList); ok {
+		// Is already a HashList
+		return hl
 	}
 	cv, ok := v.([]interface{})
 	if !ok {
