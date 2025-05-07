@@ -360,7 +360,7 @@ func InspectImage(system fs.FS, link manifest.Link, algorithms []manifest.HashAl
 	// TODO: rewrite more cleanly
 	s2hash := sha256.New()
 	mdhash := md5.New()
-	if slices.Contains(neededAlgorithms, manifest.HashAlgorithmSHA256) && slices.Contains(algorithms, manifest.HashAlgorithmMD5) {
+	if slices.Contains(neededAlgorithms, manifest.HashAlgorithmSHA256) && slices.Contains(neededAlgorithms, manifest.HashAlgorithmMD5) {
 		mw := io.MultiWriter(s2hash, mdhash)
 		if _, err := io.Copy(mw, file); err != nil {
 			return nil, errors.Wrap(err, "failed computing SHA256 and MD5 hashes")
