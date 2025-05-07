@@ -81,7 +81,7 @@ func (p *imageProperties) EnhanceLink(link *manifest.Link) {
 	}
 	hashes.Deduplicate()
 
-	link.Properties["hash"] = hashes
+	link.Properties["hash"] = hashes.ToJSONArray()
 	link.Properties["animated"] = p.Animated
 }
 

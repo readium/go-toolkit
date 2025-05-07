@@ -106,10 +106,6 @@ func (p Properties) Encryption() *Encryption {
 	if v == nil {
 		return nil
 	}
-	if enc, ok := v.(Encryption); ok {
-		// Is already an Encryption struct
-		return &enc
-	}
 	mp, ok := v.(map[string]interface{})
 	if mp == nil || !ok {
 		return nil
@@ -137,10 +133,6 @@ func (p Properties) Hash() HashList {
 	v := p.Get("hash")
 	if v == nil {
 		return nil
-	}
-	if hl, ok := v.(HashList); ok {
-		// Is already a HashList
-		return hl
 	}
 	cv, ok := v.([]interface{})
 	if !ok {

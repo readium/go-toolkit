@@ -90,3 +90,14 @@ func HashListFromJSONArray(rawJsonArray []interface{}) (HashList, error) {
 	}
 	return hashes, nil
 }
+
+func (h HashList) ToJSONArray() []interface{} {
+	jsonArray := make([]interface{}, 0, len(h))
+	for _, hash := range h {
+		jsonArray = append(jsonArray, map[string]interface{}{
+			"algorithm": hash.Algorithm,
+			"value":     hash.Value,
+		})
+	}
+	return jsonArray
+}
