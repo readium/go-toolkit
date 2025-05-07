@@ -190,7 +190,7 @@ func TestInferTextualAccessModeWithIgnoredImages(t *testing.T) {
 	}
 	l := newLink(mediatype.PNG, "png")
 	l.Properties = manifest.Properties{
-		"hash": testHash,
+		"hash": testHash.ToJSONArray(),
 	}
 
 	cover := newLink(mediatype.JPEG, "jpg")
