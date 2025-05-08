@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
-## [0.9.1] - 2025-05-05
+## [0.10.0] - 2025-05-08
 
 ### Added
 
@@ -16,6 +16,11 @@ All notable changes to this project will be documented in this file.
 
 - Renamed `analyzer.Image` to `analyzer.InspectImage`
 - Slight adjustments to behavior of manifest properties functions
+
+### Fixed
+
+- Adds missing switch cases for WCAG 2.2 strings when inferring accessibility
+- Pick up a11y metadata that's nested (due to `refines` property) in OPF `meta` elements
 
 ## [0.9.0] - 2025-04-30
 
