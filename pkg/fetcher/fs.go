@@ -106,6 +106,14 @@ func (f *fsResource) Read(b []byte) (int, error) {
 		}
 		return len(bin), rerr
 	}
+	// Out-of-range indexes are clamped to the available length automatically when calling `Read`
+	// That means we need to find the EOF ourselves by comparing the length requested and returned
+	if len(bin) < len(b) {
+		if len(bin) > 0 {
+			copy(b, bin)
+		}
+		return len(bin), io.EOF
+	}
 	return copy(b, bin), nil
 }
 
@@ -165,7 +173,7 @@ func (f fsFetcher) Open(name string) (fs.File, error) {
 	return &fsResource{r: r, ctx: f.ctx}, nil
 }
 
-// Turn a [Fetcher] into a [fs.FS] filesystem
+// Turn a [Fetcher] into a [fs.FS] virtual filesystem
 func ToFS(ctx context.Context, f Fetcher) fsFetcher {
 	return fsFetcher{f, ctx}
 }

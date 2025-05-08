@@ -1,6 +1,10 @@
 package manifest
 
-import "github.com/pkg/errors"
+import (
+	"crypto/subtle"
+
+	"github.com/pkg/errors"
+)
 
 type HashAlgorithm string
 
@@ -10,6 +14,7 @@ type HashAlgorithm string
 const (
 	HashAlgorithmBlake2b  HashAlgorithm = "blake2b"
 	HashAlgorithmBlake2s  HashAlgorithm = "blake2s"
+	HashAlgorithmBlake3   HashAlgorithm = "blake3"
 	HashAlgorithmSHA512   HashAlgorithm = "sha512"
 	HashAlgorithmSHA256   HashAlgorithm = "sha256"
 	HashAlgorithmSHA1     HashAlgorithm = "sha1"
@@ -24,7 +29,30 @@ type HashValue struct {
 	Value     string        `json:"value"`
 }
 
+func (h HashValue) String() string {
+	return string(h.Algorithm) + ":" + h.Value
+}
+
+func (h HashValue) Equal(other HashValue) bool {
+	if h.Algorithm != other.Algorithm {
+		return false
+	}
+
+	// Cast the strings to []byte because we don't have a standard encoding to decode from for the values
+	// We should probably decide on one, such as base64 std encoding
+	return subtle.ConstantTimeCompare([]byte(h.Value), []byte(other.Value)) == 1
+}
+
 type HashList []HashValue
+
+func (h HashList) Find(algorithm HashAlgorithm) (HashValue, bool) {
+	for _, hash := range h {
+		if hash.Algorithm == algorithm {
+			return hash, true
+		}
+	}
+	return HashValue{}, false
+}
 
 func (h HashList) Value(algorithm HashAlgorithm) (string, bool) {
 	for _, hash := range h {
@@ -61,4 +89,15 @@ func HashListFromJSONArray(rawJsonArray []interface{}) (HashList, error) {
 		hashes = append(hashes, hashValue)
 	}
 	return hashes, nil
+}
+
+func (h HashList) ToJSONArray() []interface{} {
+	jsonArray := make([]interface{}, 0, len(h))
+	for _, hash := range h {
+		jsonArray = append(jsonArray, map[string]interface{}{
+			"algorithm": hash.Algorithm,
+			"value":     hash.Value,
+		})
+	}
+	return jsonArray
 }
