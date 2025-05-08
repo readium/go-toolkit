@@ -10,6 +10,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func loadMetadata(ctx context.Context, name string) (*manifest.Metadata, error) {
@@ -357,6 +358,25 @@ func TestMetadataEPUB3Accessibility(t *testing.T) {
 	e.Features = []manifest.A11yFeature{manifest.A11yFeatureStructuralNavigation, manifest.A11yFeatureAlternativeText}
 	e.Hazards = []manifest.A11yHazard{manifest.A11yHazardMotionSimulation, manifest.A11yHazardNoSoundHazard}
 	e.Exemptions = []manifest.A11yExemption{manifest.A11yExemptionEAAMicroenterprise, manifest.A11yExemptionEAAFundamentalAlteration, manifest.A11yExemptionEAADisproportionateBurden}
+	assert.Equal(t, &e, m.Accessibility)
+	assert.Nil(t, m.OtherMetadata["accessibility"])
+}
+
+func TestMetadataEPUB3AccessibilityRefines(t *testing.T) {
+	m, err := loadMetadata(t.Context(), "accessibility-refines")
+	require.NoError(t, err)
+	e := manifest.NewA11y()
+	e.Summary = "This publication conforms to WCAG 2.2 Level AA."
+	e.ConformsTo = []manifest.A11yProfile{manifest.EPUBA11y11WCAG22AA}
+	e.Certification = &manifest.A11yCertification{
+		CertifiedBy: "Standard Ebooks",
+	}
+	e.AccessModes = manifest.A11yAccessModesFromStrings([]string{"textual"})
+	e.AccessModesSufficient = [][]manifest.A11yPrimaryAccessMode{
+		a11yAccessModesSufficient("textual"),
+	}
+	e.Features = valuesToA11yFeatures([]string{"readingOrder", "structuralNavigation", "tableOfContents", "unlocked"})
+	e.Hazards = valuesToA11yHazards([]string{"none"})
 	assert.Equal(t, &e, m.Accessibility)
 	assert.Nil(t, m.OtherMetadata["accessibility"])
 }
