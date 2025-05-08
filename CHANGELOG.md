@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.9.1] - 2025-05-05
+
+### Added
+
+- New config option available when creating a `Streamer`: `InferIgnoredImages`, a list of hashes of images to ignore when when inferring nonvisual reading
+- `analyzer.MatchImage` function that compares an image link's hashes with given hashes to check for a match
+- `HashValue` has new `String` and `Equal` convenience functions. `HashList` has a new `Find` convenience function.
+
+### Changed
+
+- Renamed `analyzer.Image` to `analyzer.InspectImage`
+- Slight adjustments to behavior of manifest properties functions
+
 ## [0.9.0] - 2025-04-30
 
 ### Removed

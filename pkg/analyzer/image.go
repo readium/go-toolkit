@@ -81,7 +81,7 @@ func (p *imageProperties) EnhanceLink(link *manifest.Link) {
 	}
 	hashes.Deduplicate()
 
-	link.Properties["hash"] = hashes
+	link.Properties["hash"] = hashes.ToJSONArray()
 	link.Properties["animated"] = p.Animated
 }
 
@@ -101,14 +101,31 @@ func hasVisualAlgorithm(hashes []manifest.HashAlgorithm) bool {
 	return visualHash
 }
 
-// Image inspects an image located in the provided filesystem, using the provided link's [manifest.HREF]
+// InspectImage inspects an image located in the provided filesystem, using the provided link's [manifest.HREF]
 // as a path. Additional properties from the link, such as the [mediatype.MediaType], may be used, and should
 // be included. A copy of the provided link will be returned, with the `size`, `width`, `height` and
 // `properties.animated` attributes set. A slice of [manifest.HashAlgorithm] can be provided, in which case
 // the returned link will also have `properties.hash` set with the computed hashes. Currently, the supported
 // algorithms are: [manifest.HashAlgorithmSHA256], [manifest.HashAlgorithmMD5], [manifest.HashAlgorithmPhashDCT],
 // and `https://blurha.sh` (BlurHash). The latter two are visual hashes, which are more computationally expensive.
-func Image(system fs.FS, link manifest.Link, algorithms []manifest.HashAlgorithm) (*manifest.Link, error) {
+func InspectImage(system fs.FS, link manifest.Link, algorithms []manifest.HashAlgorithm) (*manifest.Link, error) {
+
+	// Skip any supplied algorithms for hashes that have already been computed in the link properties
+	neededAlgorithms := make([]manifest.HashAlgorithm, 0, len(algorithms))
+	existingHashes := link.Properties.Hash()
+	for _, algorithm := range algorithms {
+		exists := false
+		for _, hash := range existingHashes {
+			if hash.Algorithm == algorithm {
+				exists = true
+				break
+			}
+		}
+		if !exists && !slices.Contains(neededAlgorithms, algorithm) {
+			neededAlgorithms = append(neededAlgorithms, algorithm)
+		}
+	}
+
 	path := link.Href.String()
 	file, err := system.Open(path)
 	if err != nil {
@@ -236,7 +253,7 @@ func Image(system fs.FS, link manifest.Link, algorithms []manifest.HashAlgorithm
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reopening file")
 	}
-	visualHash := hasVisualAlgorithm(algorithms)
+	visualHash := hasVisualAlgorithm(neededAlgorithms)
 	hashVisually := func(img image.Image) {
 		if !visualHash {
 			return
@@ -248,12 +265,12 @@ func Image(system fs.FS, link manifest.Link, algorithms []manifest.HashAlgorithm
 			img = imaging.Resize(img, 128, 0, imaging.Lanczos)
 		}
 
-		if slices.Contains(algorithms, manifest.HashAlgorithmPhashDCT) {
+		if slices.Contains(neededAlgorithms, manifest.HashAlgorithmPhashDCT) {
 			// Create phash and put it in a byte array
 			p.Hashes.PhashDCT = make([]byte, 8)
 			binary.BigEndian.PutUint64(p.Hashes.PhashDCT, phash.DTC(img))
 		}
-		if slices.Contains(algorithms, blurHashAlgorithm) {
+		if slices.Contains(neededAlgorithms, blurHashAlgorithm) {
 			// Create the blurhash
 			blurhash, _ := blurhash.Encode(5, 5, img)
 			p.Hashes.BlurHash = blurhash
@@ -343,7 +360,7 @@ func Image(system fs.FS, link manifest.Link, algorithms []manifest.HashAlgorithm
 	// TODO: rewrite more cleanly
 	s2hash := sha256.New()
 	mdhash := md5.New()
-	if slices.Contains(algorithms, manifest.HashAlgorithmSHA256) && slices.Contains(algorithms, manifest.HashAlgorithmMD5) {
+	if slices.Contains(neededAlgorithms, manifest.HashAlgorithmSHA256) && slices.Contains(neededAlgorithms, manifest.HashAlgorithmMD5) {
 		mw := io.MultiWriter(s2hash, mdhash)
 		if _, err := io.Copy(mw, file); err != nil {
 			return nil, errors.Wrap(err, "failed computing SHA256 and MD5 hashes")
@@ -351,13 +368,13 @@ func Image(system fs.FS, link manifest.Link, algorithms []manifest.HashAlgorithm
 		p.Hashes.Sha256 = s2hash.Sum(nil)
 		p.Hashes.Md5 = mdhash.Sum(nil)
 	} else {
-		if slices.Contains(algorithms, manifest.HashAlgorithmSHA256) {
+		if slices.Contains(neededAlgorithms, manifest.HashAlgorithmSHA256) {
 			if _, err := io.Copy(s2hash, file); err != nil {
 				return nil, errors.Wrap(err, "failed computing SHA256 hash")
 			}
 			p.Hashes.Sha256 = s2hash.Sum(nil)
 		}
-		if slices.Contains(algorithms, manifest.HashAlgorithmMD5) {
+		if slices.Contains(neededAlgorithms, manifest.HashAlgorithmMD5) {
 			if _, err := io.Copy(mdhash, file); err != nil {
 				return nil, errors.Wrap(err, "failed computing MD5 hash")
 			}
@@ -386,4 +403,52 @@ func isWEBPAnimated(file io.Reader) (bool, error) {
 		return false, errors.Wrap(err, "failed reading RIFF chunks from WEBP file")
 	}
 	return frames > 1, nil
+}
+
+// MatchImage compares the link with the given hashes to determine if they match.
+func MatchImage(link manifest.Link, hashes manifest.HashList) (bool, error) {
+	if link.MediaType == nil || !link.MediaType.IsBitmap() {
+		return false, errors.New("link is not to an image that can be matched")
+	}
+
+	linkHashes := link.Properties.Hash()
+	if len(linkHashes) == 0 {
+		// No hashes in the link, we can't match it
+		return false, nil
+	}
+	for _, hash := range hashes {
+		if v, ok := linkHashes.Find(hash.Algorithm); ok {
+			if v.Equal(hash) {
+				// Simple equality
+				return true, nil
+			}
+
+			// Special distance-based matching for perceptual hashes
+			if v.Algorithm == manifest.HashAlgorithmPhashDCT {
+				phashVal, err := base64.StdEncoding.DecodeString(v.Value)
+				if err != nil {
+					return false, errors.Wrap(err, "failed decoding perceptual hash value of link")
+				}
+				if len(phashVal) != 8 {
+					return false, errors.New("perceptual hash value of link is not 8 bytes in length")
+				}
+				linkPerceptualHash := binary.BigEndian.Uint64(phashVal)
+
+				phashVal, err = base64.StdEncoding.DecodeString(hash.Value)
+				if err != nil {
+					return false, errors.Wrap(err, "failed decoding provided perceptual hash value")
+				}
+				if len(phashVal) != 8 {
+					return false, errors.New("provided perceptual hash value is not 8 bytes in length")
+				}
+				providedPerceptualHash := binary.BigEndian.Uint64(phashVal)
+
+				if phash.Distance(linkPerceptualHash, providedPerceptualHash) == 0 {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
 }

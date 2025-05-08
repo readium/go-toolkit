@@ -1,12 +1,19 @@
 package streamer
 
 import (
+	"context"
+	"slices"
+
+	"github.com/readium/go-toolkit/pkg/analyzer"
+	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/pub"
 )
 
-func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
+func inferA11yMetadataInPublicationManifest(ctx context.Context, pub *pub.Publication, ignorableImages manifest.HashList) (*manifest.A11y, error) {
+	mf := pub.Manifest
 	inferredA11y := manifest.NewA11y()
 
 	var manifestA11y manifest.A11y
@@ -48,13 +55,46 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 		mf.Metadata.Presentation != nil &&
 		*mf.Metadata.Presentation.Layout == manifest.EPUBLayoutReflowable {
 		isTextual = true
+
+		var hashAlgorithms []manifest.HashAlgorithm
+		for _, hash := range ignorableImages {
+			if !slices.Contains(hashAlgorithms, hash.Algorithm) {
+				hashAlgorithms = append(hashAlgorithms, hash.Algorithm)
+			}
+		}
+		ffs := fetcher.ToFS(ctx, pub.Fetcher)
+
 		for _, link := range allResources {
 			mt := link.MediaType
 			if mt.IsAudio() ||
 				mt.IsVideo() ||
-				(mt.IsBitmap() && !extensions.Contains(link.Rels, "cover")) ||
 				mt.Matches(&mediatype.PDF) {
+				isTextual = false
+				break
+			} else if mt.IsBitmap() && !extensions.Contains(link.Rels, "cover") {
+				if len(ignorableImages) > 0 {
+					// We may want to consider doing this in parallel in a future version,
+					// as it could be reading each resource in sequence from a remote source.
+					link, err := analyzer.InspectImage(ffs, link, hashAlgorithms)
+					if err != nil {
+						return nil, err
+					}
+					hashes := link.Properties.Hash()
+					canIgnore := false
+					for _, ignorable := range ignorableImages {
+						if v, ok := hashes.Find(ignorable.Algorithm); ok {
+							if v.Equal(ignorable) {
+								canIgnore = true
+								break
+							}
+						}
+					}
 
+					// If image is ignored, isTextual remains true
+					if canIgnore {
+						continue
+					}
+				}
 				isTextual = false
 				break
 			}
@@ -143,7 +183,7 @@ func inferA11yMetadataFromManifest(mf manifest.Manifest) *manifest.A11y {
 	}
 
 	if inferredA11y.IsEmpty() {
-		return nil
+		return nil, nil
 	}
-	return &inferredA11y
+	return &inferredA11y, nil
 }
