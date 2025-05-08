@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.10.1] - 2025-05-08
+
+### Fixed
+
+- Streamer was ignoring `InferIgnoredImages` parameter
+
 ## [0.10.0] - 2025-05-08
 
 ### Added

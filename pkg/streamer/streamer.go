@@ -76,11 +76,12 @@ func New(config Config) Streamer { // TODO contentProtections
 	}
 
 	return Streamer{
-		parsers:           config.Parsers,
-		inferA11yMetadata: config.InferA11yMetadata,
-		inferPageCount:    config.InferPageCount,
-		archiveFactory:    config.ArchiveFactory,
-		httpClient:        config.HttpClient,
+		parsers:            config.Parsers,
+		inferA11yMetadata:  config.InferA11yMetadata,
+		inferPageCount:     config.InferPageCount,
+		inferIgnoredImages: config.InferIgnoredImages,
+		archiveFactory:     config.ArchiveFactory,
+		httpClient:         config.HttpClient,
 	}
 }
 
