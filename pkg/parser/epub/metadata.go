@@ -205,7 +205,7 @@ func (m MetadataParser) parseMetaElement(element *xmlquery.Node) *MetadataItem {
 			id:       element.SelectAttr("id"),
 		}
 	} else {
-		propName := strings.TrimSpace(element.SelectAttr("property"))
+		propName := strings.TrimSpace(property)
 		if propName == "" {
 			return nil
 		}
@@ -238,7 +238,7 @@ func (m MetadataParser) parseDcElement(element *xmlquery.Node) *MetadataItem {
 	}
 
 	data := strings.ToLower(element.Data)
-	propName := VocabularyDCTerms + data
+	propName := VocabularyDCTerms + element.Data
 	switch data {
 	case "creator", "contributor", "publisher":
 		c := m.contributorWithLegacyAttr(element, propName, propValue)
@@ -399,13 +399,18 @@ func (m metadataAdapter) FirstValue(property string) string {
 	return item.value
 }
 
+func itemsValues(items []MetadataItem) []string {
+	values := make([]string, len(items))
+	for i, item := range items {
+		values[i] = item.value
+	}
+	return values
+}
+
 func (m metadataAdapter) Values(property string) []string {
 	var values []string
 	if items, ok := m.items[property]; ok {
-		values = make([]string, len(items))
-		for i, item := range items {
-			values[i] = item.value
-		}
+		values = itemsValues(items)
 	}
 	return values
 }
@@ -636,18 +641,38 @@ func (m PubMetadataAdapter) LocalizedSortAs() *manifest.LocalizedString {
 
 func (m PubMetadataAdapter) Accessibility() *manifest.A11y {
 	a11y := manifest.NewA11y()
-	a11y.ConformsTo = m.a11yConformsTo()
-	a11y.Certification = m.a11yCertification()
-	a11y.Summary = m.a11ySummary()
-	a11y.AccessModes = m.a11yAccessModes()
-	a11y.AccessModesSufficient = m.a11yAccessModesSufficient()
-	a11y.Features = m.a11yFeatures()
-	a11y.Hazards = m.a11yHazards()
-	a11y.Exemptions = m.a11yExemptions()
+	ct, refinedA11y := m.a11yConformsTo()
+	a11y.ConformsTo = ct
+
+	certifierItem, _ := m.First(VocabularyA11Y + "certifiedBy")
+	a11y.Certification = m.a11yCertification(certifierItem)
+
+	a11y.Summary = m.FirstValue(VocabularySchema + "accessibilitySummary")
+
+	modeValues := m.Values(VocabularySchema + "accessMode")
+	a11y.AccessModes = valuesToAccessModes(modeValues)
+
+	sufficientValues := m.Values(VocabularySchema + "accessModeSufficient")
+	a11y.AccessModesSufficient = valuesToAccessModesSufficient(sufficientValues)
+
+	featureValues := m.Values(VocabularySchema + "accessibilityFeature")
+	a11y.Features = valuesToA11yFeatures(featureValues)
+
+	hazardValues := m.Values(VocabularySchema + "accessibilityHazard")
+	a11y.Hazards = valuesToA11yHazards(hazardValues)
+
+	exemptionValues := m.Values(VocabularyA11Y + "exemption")
+	a11y.Exemptions = valuesToA11yExemptions(exemptionValues)
 
 	if a11y.IsEmpty() {
 		return nil
 	}
+
+	// ConformsTo refinements merge with the main a11y data
+	if !refinedA11y.IsEmpty() {
+		a11y.Merge(&refinedA11y)
+	}
+
 	return &a11y
 }
 
@@ -670,13 +695,32 @@ func (m PubMetadataAdapter) TDM() *manifest.TDM {
 	return tdm
 }
 
-func (m PubMetadataAdapter) a11yConformsTo() []manifest.A11yProfile {
+func (m PubMetadataAdapter) a11yConformsTo() ([]manifest.A11yProfile, manifest.A11y) {
 	profiles := manifest.A11yProfileList{}
+	a11y := manifest.NewA11y()
 
-	if items, ok := m.items[VocabularyDCTerms+"conformsto"]; ok {
+	if items, ok := m.items[VocabularyDCTerms+"conformsTo"]; ok {
 		for _, item := range items {
 			if profile := a11yProfile(item.value); profile != "" {
 				profiles = append(profiles, profile)
+				for k, v := range item.children {
+					switch k {
+					case VocabularyA11Y + "certifiedBy":
+						a11y.Certification = m.a11yCertification(v[0])
+					case VocabularySchema + "accessibilitySummary":
+						a11y.Summary = v[0].value
+					case VocabularySchema + "accessMode":
+						a11y.AccessModes = valuesToAccessModes(itemsValues(v))
+					case VocabularySchema + "accessModeSufficient":
+						a11y.AccessModesSufficient = valuesToAccessModesSufficient(itemsValues(v))
+					case VocabularySchema + "accessibilityFeature":
+						a11y.Features = valuesToA11yFeatures(itemsValues(v))
+					case VocabularySchema + "accessibilityHazard":
+						a11y.Hazards = valuesToA11yHazards(itemsValues(v))
+					case VocabularyA11Y + "exemption":
+						a11y.Exemptions = valuesToA11yExemptions(itemsValues(v))
+					}
+				}
 			}
 		}
 	}
@@ -688,7 +732,7 @@ func (m PubMetadataAdapter) a11yConformsTo() []manifest.A11yProfile {
 	}
 
 	profiles.Sort()
-	return profiles
+	return profiles, a11y
 }
 
 func a11yProfile(value string) manifest.A11yProfile {
@@ -722,13 +766,18 @@ func a11yProfile(value string) manifest.A11yProfile {
 		return manifest.EPUBA11y11WCAG21AA
 	case "EPUB Accessibility 1.1 - WCAG 2.1 Level AAA":
 		return manifest.EPUBA11y11WCAG21AAA
+	case "EPUB Accessibility 1.1 - WCAG 2.2 Level A":
+		return manifest.EPUBA11y11WCAG22A
+	case "EPUB Accessibility 1.1 - WCAG 2.2 Level AA":
+		return manifest.EPUBA11y11WCAG22AA
+	case "EPUB Accessibility 1.1 - WCAG 2.2 Level AAA":
+		return manifest.EPUBA11y11WCAG22AAA
 	default:
 		return ""
 	}
 }
 
-func (m PubMetadataAdapter) a11yCertification() *manifest.A11yCertification {
-	certifierItem, _ := m.First(VocabularyA11Y + "certifiedBy")
+func (m PubMetadataAdapter) a11yCertification(certifierItem MetadataItem) *manifest.A11yCertification {
 	c := manifest.A11yCertification{
 		CertifiedBy: certifierItem.value,
 	}
@@ -756,12 +805,7 @@ func (m PubMetadataAdapter) a11yCertification() *manifest.A11yCertification {
 	return &c
 }
 
-func (m PubMetadataAdapter) a11ySummary() string {
-	return m.FirstValue(VocabularySchema + "accessibilitySummary")
-}
-
-func (m PubMetadataAdapter) a11yAccessModes() []manifest.A11yAccessMode {
-	values := m.Values(VocabularySchema + "accessMode")
+func valuesToAccessModes(values []string) []manifest.A11yAccessMode {
 	am := make([]manifest.A11yAccessMode, len(values))
 	for i, v := range values {
 		am[i] = manifest.A11yAccessMode(v)
@@ -769,8 +813,7 @@ func (m PubMetadataAdapter) a11yAccessModes() []manifest.A11yAccessMode {
 	return am
 }
 
-func (m PubMetadataAdapter) a11yAccessModesSufficient() [][]manifest.A11yPrimaryAccessMode {
-	values := m.Values(VocabularySchema + "accessModeSufficient")
+func valuesToAccessModesSufficient(values []string) [][]manifest.A11yPrimaryAccessMode {
 	ams := make([][]manifest.A11yPrimaryAccessMode, 0, len(values))
 	for _, v := range values {
 		c := a11yAccessModesSufficient(v)
@@ -793,8 +836,7 @@ func a11yAccessModesSufficient(value string) []manifest.A11yPrimaryAccessMode {
 	return ams
 }
 
-func (m PubMetadataAdapter) a11yFeatures() []manifest.A11yFeature {
-	values := m.Values(VocabularySchema + "accessibilityFeature")
+func valuesToA11yFeatures(values []string) []manifest.A11yFeature {
 	features := make([]manifest.A11yFeature, len(values))
 	for i, v := range values {
 		features[i] = manifest.A11yFeature(v)
@@ -802,8 +844,7 @@ func (m PubMetadataAdapter) a11yFeatures() []manifest.A11yFeature {
 	return features
 }
 
-func (m PubMetadataAdapter) a11yHazards() []manifest.A11yHazard {
-	values := m.Values(VocabularySchema + "accessibilityHazard")
+func valuesToA11yHazards(values []string) []manifest.A11yHazard {
 	hazards := make([]manifest.A11yHazard, len(values))
 	for i, v := range values {
 		hazards[i] = manifest.A11yHazard(v)
@@ -811,8 +852,7 @@ func (m PubMetadataAdapter) a11yHazards() []manifest.A11yHazard {
 	return hazards
 }
 
-func (m PubMetadataAdapter) a11yExemptions() []manifest.A11yExemption {
-	values := m.Values(VocabularyA11Y + "exemption")
+func valuesToA11yExemptions(values []string) []manifest.A11yExemption {
 	exemptions := make([]manifest.A11yExemption, len(values))
 	for i, v := range values {
 		exemptions[i] = manifest.A11yExemption(v)
