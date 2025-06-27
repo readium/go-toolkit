@@ -13,7 +13,7 @@ require (
 	github.com/bbrks/go-blurhash v1.1.1
 	github.com/deckarep/golang-set v1.8.0
 	github.com/disintegration/imaging v1.6.2
-	github.com/go-viper/mapstructure/v2 v2.2.1
+	github.com/go-viper/mapstructure/v2 v2.3.0
 	github.com/kettek/apng v0.0.0-20220823221153-ff692776a607
 	github.com/pdfcpu/pdfcpu v0.10.2
 	github.com/pkg/errors v0.9.1
