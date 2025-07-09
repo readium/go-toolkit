@@ -29,18 +29,20 @@ type Streamer struct {
 	archiveFactory     archive.ArchiveFactory
 	// TODO pdfFactory
 	httpClient          *http.Client
-	onCreatePublication func(builder *pub.Builder) error
+	onCreatePublication OnCreatePublicationFunc
 }
 
+type OnCreatePublicationFunc func(builder *pub.Builder) error
+
 type Config struct {
-	Parsers              []parser.PublicationParser       // Parsers used to open a publication, in addition to the default parsers.
-	IgnoreDefaultParsers bool                             // When true, only parsers provided in parsers will be used.
-	InferA11yMetadata    InferA11yMetadata                // When not empty, additional accessibility metadata will be infered from the manifest.
-	InferPageCount       bool                             // When true, will infer `metadata.numberOfPages` from the generated position list.
-	InferIgnoredImages   manifest.HashList                // An optional list of hashes of images, to use in finding images that can be ignored when inferring accessibility metadata.
-	ArchiveFactory       archive.ArchiveFactory           // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
-	HttpClient           *http.Client                     // Service performing HTTP requests.
-	OnCreatePublication  func(builder *pub.Builder) error // Called on every parsed [pub.Builder]. It can be used to modify the manifest, the root container or the list of service factories of a [pub.Publication]
+	Parsers              []parser.PublicationParser // Parsers used to open a publication, in addition to the default parsers.
+	IgnoreDefaultParsers bool                       // When true, only parsers provided in parsers will be used.
+	InferA11yMetadata    InferA11yMetadata          // When not empty, additional accessibility metadata will be infered from the manifest.
+	InferPageCount       bool                       // When true, will infer `metadata.numberOfPages` from the generated position list.
+	InferIgnoredImages   manifest.HashList          // An optional list of hashes of images, to use in finding images that can be ignored when inferring accessibility metadata.
+	ArchiveFactory       archive.ArchiveFactory     // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
+	HttpClient           *http.Client               // Service performing HTTP requests.
+	OnCreatePublication  OnCreatePublicationFunc    // Called on every parsed [pub.Builder]. It can be used to modify the manifest, the root container or the list of service factories of a [pub.Publication]
 }
 
 type InferA11yMetadata uint8
@@ -115,8 +117,10 @@ func (s Streamer) Open(ctx context.Context, a asset.PublicationAsset, credential
 		return nil, errors.New("cannot find a parser for this asset")
 	}
 
-	if err := s.onCreatePublication(builder); err != nil {
-		return nil, errors.Wrap(err, "failed creating publication")
+	if s.onCreatePublication != nil {
+		if err := s.onCreatePublication(builder); err != nil {
+			return nil, errors.Wrap(err, "failed creating publication")
+		}
 	}
 
 	pub := builder.Build()
