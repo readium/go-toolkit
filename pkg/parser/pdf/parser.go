@@ -69,7 +69,7 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 	}
 
 	// Finalize
-	builder := pub.NewServicesBuilder(map[string]pub.ServiceFactory{
+	builder := pub.NewServicesBuilder(map[pub.ServiceName]pub.ServiceFactory{
 		pub.PositionsService_Name: PositionsServiceFactory(),
 	})
 	return pub.NewBuilder(m, f, builder), nil

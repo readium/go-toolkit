@@ -7,14 +7,16 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 )
 
+type ServiceName string
+
 const (
-	ContentProtectionService_Name = "ContentProtectionService"
-	CoverService_Name             = "CoverService"
-	LocatorService_Name           = "LocatorService"
-	PositionsService_Name         = "PositionsService"
-	SearchService_Name            = "SearchService"
-	ContentService_Name           = "ContentService"
-	GuidedNavigationService_Name  = "GuidedNavigationService"
+	ContentProtectionService_Name ServiceName = "ContentProtectionService"
+	CoverService_Name             ServiceName = "CoverService"
+	LocatorService_Name           ServiceName = "LocatorService"
+	PositionsService_Name         ServiceName = "PositionsService"
+	SearchService_Name            ServiceName = "SearchService"
+	ContentService_Name           ServiceName = "ContentService"
+	GuidedNavigationService_Name  ServiceName = "GuidedNavigationService"
 )
 
 // Base interface to be implemented by all publication services.
@@ -42,7 +44,7 @@ type ServiceFactory func(context Context) Service
 // Builds a list of [Service] from a collection of service factories.
 // Provides helpers to manipulate the list of services of a [pub.Publication].
 type ServicesBuilder struct {
-	serviceFactories map[string]ServiceFactory
+	serviceFactories map[ServiceName]ServiceFactory
 }
 
 /*
@@ -51,9 +53,9 @@ contentProtection ServiceFactory,
 	search ServiceFactory,
 */
 
-func NewServicesBuilder(fcs map[string]ServiceFactory) *ServicesBuilder {
+func NewServicesBuilder(fcs map[ServiceName]ServiceFactory) *ServicesBuilder {
 	if fcs == nil {
-		fcs = map[string]ServiceFactory{}
+		fcs = map[ServiceName]ServiceFactory{}
 	}
 
 	// TODO DefaultLocatorService(it.manifest.readingOrder, it.publication) if LocatorService_Name doesn't exist
@@ -64,8 +66,8 @@ func NewServicesBuilder(fcs map[string]ServiceFactory) *ServicesBuilder {
 }
 
 // Builds the actual list of publication services to use in a Publication.
-func (s *ServicesBuilder) Build(context Context) map[string]Service {
-	services := make(map[string]Service, len(s.serviceFactories))
+func (s *ServicesBuilder) Build(context Context) map[ServiceName]Service {
+	services := make(map[ServiceName]Service, len(s.serviceFactories))
 	for k, v := range s.serviceFactories {
 		// Allow service factories to be nil
 		if v != nil {
@@ -79,7 +81,7 @@ func (s *ServicesBuilder) Build(context Context) map[string]Service {
 }
 
 // Gets the publication service factory for the given service type.
-func (s *ServicesBuilder) Get(name string) *ServiceFactory {
+func (s *ServicesBuilder) Get(name ServiceName) *ServiceFactory {
 	if v, ok := s.serviceFactories[name]; ok {
 		return &v
 	}
@@ -87,7 +89,7 @@ func (s *ServicesBuilder) Get(name string) *ServiceFactory {
 }
 
 // Sets the publication service factory for the given service type.
-func (s *ServicesBuilder) Set(name string, factory *ServiceFactory) {
+func (s *ServicesBuilder) Set(name ServiceName, factory *ServiceFactory) {
 	if name == "" {
 		return
 	}
@@ -99,15 +101,33 @@ func (s *ServicesBuilder) Set(name string, factory *ServiceFactory) {
 }
 
 // Removes the service factory producing the given kind of service, if any.
-func (s *ServicesBuilder) Remove(name string, factory *ServiceFactory) {
+func (s *ServicesBuilder) Remove(name ServiceName) {
 	if name == "" {
 		return
 	}
 	delete(s.serviceFactories, name)
 }
 
+// Removes all service factories except the ones producing the given kinds of services, if any.
+// If no services are given, all service factories are removed.
+func (s *ServicesBuilder) RemoveExcept(name ...ServiceName) {
+	if len(name) == 0 {
+		clear(s.serviceFactories)
+	}
+
+	whitelist := make(map[ServiceName]struct{}, len(name))
+	for _, n := range name {
+		whitelist[n] = struct{}{}
+	}
+	for k := range s.serviceFactories {
+		if _, ok := whitelist[k]; !ok {
+			delete(s.serviceFactories, k)
+		}
+	}
+}
+
 // Replaces the service factory associated with the given service type with the result of [transform]
-func (s *ServicesBuilder) Decorate(name string, transform func(*ServiceFactory) ServiceFactory) {
+func (s *ServicesBuilder) Decorate(name ServiceName, transform func(*ServiceFactory) ServiceFactory) {
 	if name == "" {
 		return
 	}

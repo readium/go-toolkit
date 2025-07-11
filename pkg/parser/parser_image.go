@@ -67,7 +67,7 @@ func (p ImageParser) Parse(ctx context.Context, asset asset.PublicationAsset, fe
 		ReadingOrder: readingOrder,
 	}
 
-	builder := pub.NewServicesBuilder(map[string]pub.ServiceFactory{
+	builder := pub.NewServicesBuilder(map[pub.ServiceName]pub.ServiceFactory{
 		pub.PositionsService_Name: pub.PerResourcePositionsServiceFactory(mediatype.MustNewOfString("image/*")),
 	})
 	return pub.NewBuilder(manifest, fetcher, builder), nil
