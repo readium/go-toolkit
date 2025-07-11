@@ -8,7 +8,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.80.0
-	github.com/aws/smithy-go v1.22.3
+	github.com/aws/smithy-go v1.22.4
 	github.com/azr/phash v0.2.0
 	github.com/bbrks/go-blurhash v1.1.1
 	github.com/deckarep/golang-set v1.8.0
