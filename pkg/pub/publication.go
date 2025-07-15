@@ -14,7 +14,7 @@ type Publication struct {
 	Manifest manifest.Manifest // The manifest holding the publication metadata extracted from the publication file.
 	Fetcher  fetcher.Fetcher   // The underlying fetcher used to read publication resources.
 	// TODO servicesBuilder
-	services map[string]Service
+	services map[ServiceName]Service
 }
 
 // Returns whether this publication conforms to the given Readium Web Publication Profile.
@@ -104,7 +104,7 @@ func (p Publication) BaseURL() url.URL {
 	return nil
 }
 
-func (p Publication) FindService(serviceName string) Service {
+func (p Publication) FindService(serviceName ServiceName) Service {
 	for k, v := range p.services {
 		if k != serviceName {
 			continue
@@ -114,7 +114,7 @@ func (p Publication) FindService(serviceName string) Service {
 	return nil
 }
 
-func (p Publication) FindServices(serviceName string) []Service {
+func (p Publication) FindServices(serviceName ServiceName) []Service {
 	var services []Service
 	for k, v := range p.services {
 		if k != serviceName {

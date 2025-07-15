@@ -69,7 +69,7 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 		ffetcher = fetcher.NewTransformingFetcher(f, NewDeobfuscator(manifest.Metadata.Identifier).Transform)
 	}
 
-	builder := pub.NewServicesBuilder(map[string]pub.ServiceFactory{
+	builder := pub.NewServicesBuilder(map[pub.ServiceName]pub.ServiceFactory{
 		pub.PositionsService_Name: PositionsServiceFactory(p.reflowablePositionsStrategy),
 		pub.ContentService_Name: pub.DefaultContentServiceFactory([]iterator.ResourceContentIteratorFactory{
 			iterator.HTMLFactory(),
