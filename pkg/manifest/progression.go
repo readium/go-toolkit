@@ -1,7 +1,5 @@
 package manifest
 
-// ReadingProgression
-// This is not a proper enum replacement! Use the validator to enforce the values
 type ReadingProgression string
 
 const (
@@ -11,6 +9,15 @@ const (
 	TTB  ReadingProgression = "ttb"
 	BTT  ReadingProgression = "btt"
 )
+
+func (r ReadingProgression) Correct() ReadingProgression {
+	switch r {
+	case Auto, LTR, RTL, TTB, BTT:
+		return r
+	default:
+		return Auto // Default to Auto if the value is not recognized
+	}
+}
 
 func IsHorizontal(progression ReadingProgression) *bool {
 	switch progression {

@@ -27,14 +27,14 @@ type Metadata struct {
 	Identifier         string                 `json:"identifier,omitempty"`
 	Type               string                 `json:"@type,omitempty"`
 	ConformsTo         Profiles               `json:"conformsTo,omitempty"`
-	LocalizedTitle     LocalizedString        `json:"title" validate:"required"`
+	LocalizedTitle     LocalizedString        `json:"title"`
 	LocalizedSubtitle  *LocalizedString       `json:"subtitle,omitempty"`
 	LocalizedSortAs    *LocalizedString       `json:"sortAs,omitempty"`
 	Accessibility      *A11y                  `json:"accessibility,omitempty"`
 	TDM                *TDM                   `json:"tdm,omitempty"`
 	Modified           *time.Time             `json:"modified,omitempty"`
 	Published          *time.Time             `json:"published,omitempty"`
-	Languages          Strings                `json:"language,omitempty" validate:"BCP47"` // TODO validator
+	Languages          Strings                `json:"language,omitempty"`
 	Subjects           []Subject              `json:"subject,omitempty"`
 	Authors            Contributors           `json:"author,omitempty"`
 	Translators        Contributors           `json:"translator,omitempty"`
@@ -49,12 +49,12 @@ type Metadata struct {
 	Contributors       Contributors           `json:"contributor,omitempty"`
 	Publishers         Contributors           `json:"publisher,omitempty"`
 	Imprints           Contributors           `json:"imprint,omitempty"`
-	ReadingProgression ReadingProgression     `json:"readingProgression,omitempty" validate:"readingProgression"` // TODO validator.
+	ReadingProgression ReadingProgression     `json:"readingProgression,omitempty"`
+	Layout             Layout                 `json:"layout,omitempty"`
 	Description        string                 `json:"description,omitempty"`
-	Duration           *float64               `json:"duration,omitempty" validator:"positive"` // TODO validator
+	Duration           *float64               `json:"duration,omitempty"`
 	NumberOfPages      *uint                  `json:"numberOfPages,omitempty"`
 	BelongsTo          map[string]Collections `json:"belongsTo,omitempty"`
-	Presentation       *Presentation          `json:"presentation,omitempty"`
 	MediaOverlay       *MediaOverlay          `json:"mediaOverlay,omitempty"`
 
 	OtherMetadata map[string]interface{} `json:"-"` // Extension point for other metadata.
@@ -115,6 +115,10 @@ func (m Metadata) EffectiveReadingProgression() ReadingProgression {
 	}
 
 	return LTR
+}
+
+func (m Metadata) EffectiveLayout() Layout {
+	return m.Layout.EffectiveValue(m.ConformsTo)
 }
 
 const InferredAccessibilityMetadataKey = "https://readium.org/webpub-manifest#inferredAccessibility"
@@ -194,7 +198,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 		TDM:                tdm,
 		Modified:           parseOptTime(rawJson["modified"]),
 		Published:          parseOptTime(rawJson["published"]),
-		ReadingProgression: ReadingProgression(parseOptString(rawJson["readingProgression"])),
+		ReadingProgression: ReadingProgression(parseOptString(rawJson["readingProgression"])).Correct(),
 		Description:        parseOptString(rawJson["description"]),
 	}
 
@@ -205,6 +209,12 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 	}
 	if len(conformsTo) > 0 {
 		metadata.ConformsTo = Profiles(profilesFromStrings(conformsTo))
+	}
+
+	// Layout
+	layout := Layout(parseOptString(rawJson["layout"]))
+	if layout != LayoutNone {
+		metadata.Layout = layout.Correct(metadata.ConformsTo)
 	}
 
 	// LocalizedSubtitle
@@ -365,20 +375,6 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 		metadata.BelongsTo = belongsTo
 	}
 
-	// Presentation
-	if presentation, ok := rawJson["presentation"].(map[string]interface{}); ok {
-		metadata.Presentation = &Presentation{}
-
-		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			TagName: "json",
-			Result:  metadata.Presentation,
-		})
-		if err := decoder.Decode(presentation); err != nil {
-			return nil, errors.Wrap(err, "failed parsing 'presentation'")
-		}
-		metadata.Presentation.setDefaults()
-	}
-
 	// Media Overlay
 	if mediaOverlay, ok := rawJson["mediaOverlay"].(map[string]interface{}); ok {
 		metadata.MediaOverlay = &MediaOverlay{}
@@ -416,11 +412,11 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 		"narrator",
 		"numberOfPages",
 		"penciler",
-		"presentation",
 		"mediaOverlay",
 		"published",
 		"publisher",
 		"readingProgression",
+		"layout",
 		"sortAs",
 		"subject",
 		"subtitle",
@@ -467,14 +463,6 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	if ToolkitVersionKey != "" {
 		j[ToolkitVersionKey] = version.Version
 	}
-
-	if m.Presentation != nil {
-		j["presentation"] = m.Presentation
-	}
-	if m.MediaOverlay != nil {
-		j["mediaOverlay"] = m.MediaOverlay
-	}
-
 	if m.Identifier != "" {
 		j["identifier"] = m.Identifier
 	}
@@ -551,6 +539,9 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	if m.ReadingProgression != "" && m.ReadingProgression != Auto {
 		j["readingProgression"] = m.ReadingProgression
 	}
+	if m.Layout != "" {
+		j["layout"] = m.Layout.MinimalValue(m.ConformsTo)
+	}
 	if m.Description != "" {
 		j["description"] = m.Description
 	}
@@ -562,6 +553,9 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	}
 	if len(m.BelongsTo) > 0 {
 		j["belongsTo"] = m.BelongsTo
+	}
+	if m.MediaOverlay != nil {
+		j["mediaOverlay"] = m.MediaOverlay
 	}
 
 	return json.Marshal(j)
