@@ -19,7 +19,7 @@ func TestReturnsAdditionalInferredA11yMetadata(t *testing.T) {
 		Metadata: manifest.Metadata{
 			ConformsTo:    manifest.Profiles{manifest.ProfileEPUB},
 			Accessibility: &a11y,
-			Presentation:  newEPUBPresentation(manifest.EPUBLayoutReflowable),
+			Layout:        manifest.LayoutReflowable,
 		},
 		ReadingOrder: []manifest.Link{
 			newLink(mediatype.HTML, "html"),
@@ -125,7 +125,7 @@ func TestInferTextualAccessModeAndAccessModeSufficientFromLackOfMedia(t *testing
 			Metadata: manifest.Metadata{
 				ConformsTo:    manifest.Profiles{manifest.ProfileEPUB},
 				Accessibility: &a11y,
-				Presentation:  newEPUBPresentation(manifest.EPUBLayoutReflowable),
+				Layout:        manifest.LayoutReflowable,
 			},
 			ReadingOrder:    []manifest.Link{newLink(mt, extension)},
 			TableOfContents: []manifest.Link{newLink(mt, extension)},
@@ -143,7 +143,7 @@ func TestInferTextualAccessModeAndAccessModeSufficientFromLackOfMedia(t *testing
 			Metadata: manifest.Metadata{
 				ConformsTo:    manifest.Profiles{manifest.ProfileEPUB},
 				Accessibility: &a11y,
-				Presentation:  newEPUBPresentation(manifest.EPUBLayoutReflowable),
+				Layout:        manifest.LayoutReflowable,
 			},
 			ReadingOrder:    []manifest.Link{newLink(mt, extension)},
 			Resources:       []manifest.Link{newLink(mt, extension)},
@@ -167,7 +167,7 @@ func TestDontInferTextualAccessModeAndAccessModeSufficientFromLackOfMediaForFXL(
 		Metadata: manifest.Metadata{
 			ConformsTo:    manifest.Profiles{manifest.ProfileEPUB},
 			Accessibility: &a11y,
-			Presentation:  newEPUBPresentation(manifest.EPUBLayoutFixed),
+			Layout:        manifest.LayoutFixed,
 		},
 		ReadingOrder:    []manifest.Link{newLink(mediatype.HTML, "html")},
 		TableOfContents: []manifest.Link{newLink(mediatype.HTML, "html")},
@@ -198,8 +198,8 @@ func TestInferTextualAccessModeWithIgnoredImages(t *testing.T) {
 
 	m := manifest.Manifest{
 		Metadata: manifest.Metadata{
-			ConformsTo:   manifest.Profiles{manifest.ProfileEPUB},
-			Presentation: newEPUBPresentation(manifest.EPUBLayoutReflowable),
+			ConformsTo: manifest.Profiles{manifest.ProfileEPUB},
+			Layout:     manifest.LayoutReflowable,
 		},
 		ReadingOrder: []manifest.Link{
 			newLink(mediatype.HTML, "html"),
@@ -373,7 +373,7 @@ func TestInferFeatureMathML(t *testing.T) {
 // This property should only be inferred for reflowable EPUB files as it
 // doesn't apply to other formats (FXL, PDF, audiobooks, CBZ/CBR).
 func TestInferFeatureDisplayTransformability(t *testing.T) {
-	test := func(contains bool, profile manifest.A11yProfile, layout manifest.EPUBLayout) {
+	test := func(contains bool, profile manifest.A11yProfile, layout manifest.Layout) {
 		a11y := manifest.NewA11y()
 		a11y.ConformsTo = []manifest.A11yProfile{profile}
 
@@ -381,9 +381,7 @@ func TestInferFeatureDisplayTransformability(t *testing.T) {
 			Metadata: manifest.Metadata{
 				ConformsTo:    []manifest.Profile{manifest.ProfileEPUB},
 				Accessibility: &a11y,
-				Presentation: &manifest.Presentation{
-					Layout: &layout,
-				},
+				Layout:        layout,
 			},
 			ReadingOrder: []manifest.Link{newLink(mediatype.HTML, "html")},
 		}
@@ -398,10 +396,10 @@ func TestInferFeatureDisplayTransformability(t *testing.T) {
 		}
 	}
 
-	test(false, manifest.EPUBA11y10WCAG20A, manifest.EPUBLayoutReflowable)
-	test(true, manifest.EPUBA11y10WCAG20AA, manifest.EPUBLayoutReflowable)
-	test(true, manifest.EPUBA11y10WCAG20AAA, manifest.EPUBLayoutReflowable)
-	test(false, manifest.EPUBA11y10WCAG20AAA, manifest.EPUBLayoutFixed)
+	test(false, manifest.EPUBA11y10WCAG20A, manifest.LayoutReflowable)
+	test(true, manifest.EPUBA11y10WCAG20AA, manifest.LayoutReflowable)
+	test(true, manifest.EPUBA11y10WCAG20AAA, manifest.LayoutReflowable)
+	test(false, manifest.EPUBA11y10WCAG20AAA, manifest.LayoutFixed)
 }
 
 // If the publication contains any reference to Media Overlays.
@@ -423,10 +421,4 @@ func assertFeature(t *testing.T, m manifest.Manifest, feature manifest.A11yFeatu
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Contains(t, res.Features, feature)
-}
-
-func newEPUBPresentation(layout manifest.EPUBLayout) *manifest.Presentation {
-	pres := manifest.NewPresentation()
-	pres.Layout = &layout
-	return pres
 }

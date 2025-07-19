@@ -52,8 +52,7 @@ func inferA11yMetadataInPublicationManifest(ctx context.Context, pub *pub.Public
 	// if the only image available can be identified as a cover.
 	if !isTextual &&
 		mf.ConformsTo(manifest.ProfileEPUB) &&
-		mf.Metadata.Presentation != nil &&
-		*mf.Metadata.Presentation.Layout == manifest.EPUBLayoutReflowable {
+		mf.Metadata.EffectiveLayout() == manifest.LayoutReflowable {
 		isTextual = true
 
 		var hashAlgorithms []manifest.HashAlgorithm
@@ -177,7 +176,7 @@ func inferA11yMetadataInPublicationManifest(ctx context.Context, pub *pub.Public
 			}
 		}
 
-		if mf.Metadata.Presentation != nil && *mf.Metadata.Presentation.Layout == manifest.EPUBLayoutReflowable && conformsToWCAGAA {
+		if mf.Metadata.EffectiveLayout() == manifest.LayoutReflowable && conformsToWCAGAA {
 			addFeature(manifest.A11yFeatureDisplayTransformability)
 		}
 	}
