@@ -367,7 +367,6 @@ func (m MetadataParser) computeMetaItem(expr MetadataItem, metas map[string][]Me
 		refines:       expr.refines,
 		id:            expr.id,
 		children:      children,
-		presentation:  expr.presentation,
 		otherMetadata: expr.otherMetadata,
 	}
 }
@@ -466,12 +465,12 @@ type PubMetadataAdapter struct {
 
 	_subjects        []manifest.Subject
 	_allContributors map[string][]manifest.Contributor
-	_presentation    *manifest.Presentation
+	_layout          manifest.Layout
 	_otherMetadata   map[string]interface{}
 }
 
 func (m PubMetadataAdapter) Metadata() manifest.Metadata {
-	presentation := m.Presentation() // Presentation is always defined for EPUB
+	layout := m.Layout()
 	metadata := manifest.Metadata{
 		Identifier:         m.Identifier(),
 		ConformsTo:         manifest.Profiles{manifest.ProfileEPUB},
@@ -487,7 +486,7 @@ func (m PubMetadataAdapter) Metadata() manifest.Metadata {
 		Subjects:           m.Subjects(),
 		Description:        m.Description(),
 		ReadingProgression: m.ReadingProgression(),
-		Presentation:       &presentation,
+		Layout:             layout,
 		MediaOverlay:       m.MediaOverlay(),
 		BelongsTo:          make(map[string]manifest.Contributors),
 		OtherMetadata:      m.OtherMetadata(),
@@ -1011,13 +1010,8 @@ func (m *PubMetadataAdapter) ReadingProgression() manifest.ReadingProgression {
 	return m.readingProgression
 }
 
-func (m *PubMetadataAdapter) Presentation() manifest.Presentation {
-	if m._presentation == nil {
-		m._presentation = &manifest.Presentation{}
-
-		flowProp := m.FirstValue(VocabularyRendition + "flow")
-		spreadProp := m.FirstValue(VocabularyRendition + "spread")
-		orientationProp := m.FirstValue(VocabularyRendition + "orientation")
+func (m *PubMetadataAdapter) Layout() manifest.Layout {
+	if m._layout == manifest.LayoutNone {
 		var layoutProp string
 		if m.epubVersion < 3.0 {
 			if do, ok := m.displayOptions["fixed-layout"]; ok && do == "true" {
@@ -1029,48 +1023,14 @@ func (m *PubMetadataAdapter) Presentation() manifest.Presentation {
 			layoutProp = m.FirstValue(VocabularyRendition + "layout")
 		}
 
-		overflow := manifest.OverflowAuto
-		continuous := manifest.PresentationDefaultContinuous
-		switch flowProp {
-		case "paginated":
-			overflow = manifest.OverflowPaginated
-		case "scrolled-continuous":
-			overflow = manifest.OverflowScrolled
-			continuous = true
-		case "scrolled-doc":
-			overflow = manifest.OverflowScrolled
-		}
-		m._presentation.Overflow = &overflow
-		m._presentation.Continuous = &continuous
-
-		layout := manifest.EPUBLayoutReflowable
+		m._layout = manifest.LayoutReflowable
 		if layoutProp == "pre-paginated" {
-			layout = manifest.EPUBLayoutFixed
+			m._layout = manifest.LayoutFixed
+		} else if layoutProp == "scrolled" {
+			m._layout = manifest.LayoutScrolled
 		}
-		m._presentation.Layout = &layout
-
-		orientation := manifest.OrientationAuto
-		switch orientationProp {
-		case "landscape":
-			orientation = manifest.OrientationLandscape
-		case "portrait":
-			orientation = manifest.OrientationPortrait
-		}
-		m._presentation.Orientation = &orientation
-
-		spread := manifest.SpreadAuto
-		switch spreadProp {
-		case "none":
-			spread = manifest.SpreadNone
-		case "landscape":
-			spread = manifest.SpreadLandscape
-		case "portrait", "both":
-			spread = manifest.SpreadBoth
-		}
-		m._presentation.Spread = &spread
-
 	}
-	return *m._presentation
+	return m._layout
 }
 
 func (m *PubMetadataAdapter) MediaOverlay() *manifest.MediaOverlay {
@@ -1105,10 +1065,6 @@ func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 			VocabularyMedia + "duration":              {},
 			VocabularyMedia + "active-class":          {},
 			VocabularyMedia + "playback-active-class": {},
-			VocabularyRendition + "flow":              {},
-			VocabularyRendition + "spread":            {},
-			VocabularyRendition + "orientation":       {},
-			VocabularyRendition + "layout":            {},
 
 			VocabularyDCTerms + "conformsto":          {},
 			VocabularyDCTerms + "conformsTo":          {},
@@ -1150,7 +1106,6 @@ type MetadataItem struct {
 	refines       string
 	id            string
 	children      map[string][]MetadataItem
-	presentation  manifest.Presentation
 	otherMetadata map[string]interface{}
 }
 
