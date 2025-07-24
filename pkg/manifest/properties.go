@@ -84,15 +84,6 @@ func (p Properties) Page() *Page {
 	return &page
 }
 
-// Specifies that an item in the reading order should break the current continuous scroll and start a new one.
-func (p Properties) BreakScrollBefore() bool {
-	v := p.GetBool("break-scroll-before")
-	if v == nil {
-		return false
-	}
-	return *v
-}
-
 // Indicates that a resource is encrypted/obfuscated and provides relevant information for decryption.
 func (p Properties) Encryption() *Encryption {
 	v := p.Get("encrypted")
