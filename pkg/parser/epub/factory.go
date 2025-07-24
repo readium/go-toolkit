@@ -248,8 +248,8 @@ func parseItemProperties(properties []string) (rels []string, contains []string,
 	return
 }
 
-func parseItemrefProperties(properties []string) map[string]string {
-	linkProperties := make(map[string]string)
+func parseItemrefProperties(properties []string) map[string]interface{} {
+	linkProperties := make(map[string]interface{})
 	for _, property := range properties {
 		switch property {
 		// Page
@@ -263,38 +263,6 @@ func parseItemrefProperties(properties []string) map[string]string {
 			fallthrough
 		case VocabularyItemref + "page-spread-right":
 			linkProperties["page"] = "right"
-		// Spread
-		case VocabularyRendition + "spread-node":
-			linkProperties["spread"] = "none"
-		case VocabularyRendition + "spread-auto":
-			linkProperties["spread"] = "auto"
-		case VocabularyRendition + "spread-landscape":
-			linkProperties["spread"] = "landscape"
-		case VocabularyRendition + "spread-portrait":
-			fallthrough
-		case VocabularyRendition + "spread-both":
-			linkProperties["spread"] = "both"
-		// Layout
-		case VocabularyRendition + "layout-reflowable":
-			linkProperties["layout"] = "reflowable"
-		case VocabularyRendition + "layout-pre-paginated":
-			linkProperties["layout"] = "fixed"
-		// Orientation
-		case VocabularyRendition + "orientation-auto":
-			linkProperties["orientation"] = "auto"
-		case VocabularyRendition + "orientation-landscape":
-			linkProperties["orientation"] = "landscape"
-		case VocabularyRendition + "orientation-portrait":
-			linkProperties["orientation"] = "portrait"
-		// Overflow
-		case VocabularyRendition + "flow-auto":
-			linkProperties["overflow"] = "auto"
-		case VocabularyRendition + "flow-paginated":
-			linkProperties["overflow"] = "paginated"
-		case VocabularyRendition + "flow-scrolled-continuous":
-			fallthrough
-		case VocabularyRendition + "flow-scrolled-doc":
-			linkProperties["overflow"] = "scrolled"
 		}
 	}
 	return linkProperties
