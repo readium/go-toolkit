@@ -451,6 +451,7 @@ type PubMetadataAdapter struct {
 	readingProgression manifest.ReadingProgression
 	displayOptions     map[string]string
 	_identifier        string
+	_altIdentifiers    []manifest.AltIdentifier
 
 	// Title data
 	_titlesSeeded      bool
@@ -470,9 +471,10 @@ type PubMetadataAdapter struct {
 }
 
 func (m PubMetadataAdapter) Metadata() manifest.Metadata {
-	layout := m.Layout()
+	identifier, altIdentifiers := m.Identifiers()
 	metadata := manifest.Metadata{
-		Identifier:         m.Identifier(),
+		Identifier:         identifier,
+		AltIdentifiers:     altIdentifiers,
 		ConformsTo:         manifest.Profiles{manifest.ProfileEPUB},
 		Modified:           m.Modified(),
 		Published:          m.Published(),
@@ -486,7 +488,7 @@ func (m PubMetadataAdapter) Metadata() manifest.Metadata {
 		Subjects:           m.Subjects(),
 		Description:        m.Description(),
 		ReadingProgression: m.ReadingProgression(),
-		Layout:             layout,
+		Layout:             m.Layout(),
 		MediaOverlay:       m.MediaOverlay(),
 		BelongsTo:          make(map[string]manifest.Contributors),
 		OtherMetadata:      m.OtherMetadata(),
@@ -526,25 +528,30 @@ func (m PubMetadataAdapter) Languages() []string {
 	return languages
 }
 
-func (m *PubMetadataAdapter) Identifier() string {
-	if m._identifier != "" {
-		return m._identifier
-	}
-	if m.uniqueIdentifierID == "" {
-		return ""
+func (m *PubMetadataAdapter) Identifiers() (string, []manifest.AltIdentifier) {
+	if m._identifier != "" || len(m._altIdentifiers) > 0 {
+		return m._identifier, m._altIdentifiers
 	}
 	identifiers, ok := m.items[VocabularyDCTerms+"identifier"]
 	if !ok || len(identifiers) == 0 {
-		return ""
+		return "", nil
 	}
+
 	for _, v := range identifiers {
 		if v.id == m.uniqueIdentifierID {
 			m._identifier = v.value
-			return m._identifier
+		} else {
+			m._altIdentifiers = append(m._altIdentifiers, manifest.AltIdentifier{
+				Value:  v.value,
+				Scheme: v.scheme,
+			})
 		}
 	}
-	m._identifier = identifiers[0].value
-	return m._identifier
+	if m._identifier == "" {
+		// Fall back to first identifier if no unique identifier was found
+		m._identifier = identifiers[0].value
+	}
+	return m._identifier, m._altIdentifiers
 }
 
 func (m PubMetadataAdapter) Published() *time.Time {
@@ -1197,11 +1204,28 @@ func (m MetadataItem) ToContributor() (string, *manifest.Contributor, error) {
 		}
 	}
 
+	allIdentifiers := m.Identifiers()
+	var identifier string
+	var altIdentifiers []manifest.AltIdentifier
+	if len(allIdentifiers) > 0 {
+		identifier = allIdentifiers[0]
+		if len(allIdentifiers) > 1 {
+			altIdentifiers = make([]manifest.AltIdentifier, len(allIdentifiers)-1)
+			for i, id := range allIdentifiers[1:] {
+				altIdentifiers[i] = manifest.AltIdentifier{
+					Value:  id,
+					Scheme: m.scheme,
+				}
+			}
+		}
+	}
+
 	return typ, &manifest.Contributor{
 		LocalizedName:   names,
 		LocalizedSortAs: localizedSortAs,
 		Roles:           roles,
-		Identifier:      m.Identifier(),
+		Identifier:      identifier,
+		AltIdentifier:   altIdentifiers,
 		Position:        m.GroupPosition(),
 	}, nil
 }
@@ -1273,8 +1297,13 @@ func (m MetadataItem) GroupPosition() *float64 {
 	return floatOrNil(m.FirstValue(VocabularyMeta + "group-position"))
 }
 
-func (m MetadataItem) Identifier() string {
-	return m.FirstValue(VocabularyDCTerms + "identifier")
+func (m MetadataItem) Identifiers() []string {
+	identifiers, ok := m.children[VocabularyDCTerms+"identifier"]
+	if !ok || len(identifiers) == 0 {
+		return nil
+	}
+
+	return itemsValues(identifiers)
 }
 
 func (m MetadataItem) Role() string {
@@ -1294,10 +1323,7 @@ func (m MetadataItem) LocalizedString() manifest.LocalizedString {
 
 func (m MetadataItem) FirstValue(property string) string {
 	child, ok := m.children[property]
-	if !ok {
-		return ""
-	}
-	if len(child) == 0 {
+	if !ok || len(child) == 0 {
 		return ""
 	}
 	return child[0].value
