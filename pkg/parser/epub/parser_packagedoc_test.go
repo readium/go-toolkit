@@ -38,13 +38,13 @@ func loadPackageDoc(ctx context.Context, name string) (*manifest.Manifest, error
 func TestPackageDocReadingProgressionNoneIsAuto(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "progression-none")
 	assert.NoError(t, err)
-	assert.Equal(t, manifest.Auto, p.Metadata.ReadingProgression)
+	assert.Equal(t, manifest.None, p.Metadata.ReadingProgression)
 }
 
 func TestPackageDocPageProgression(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "progression-default")
 	assert.NoError(t, err)
-	assert.Equal(t, manifest.Auto, p.Metadata.ReadingProgression)
+	assert.Equal(t, manifest.None, p.Metadata.ReadingProgression)
 }
 
 func TestPackageDocPageProgressionLTR(t *testing.T) {
@@ -86,29 +86,9 @@ func TestPackageDocLinkPropertiesPresentation(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "links-properties")
 	assert.NoError(t, err)
 	ro := p.ReadingOrder
-	assert.Equal(t, ro[0].Properties.Layout(), manifest.EPUBLayoutFixed)
-	assert.Equal(t, ro[0].Properties.Overflow(), manifest.OverflowAuto)
-	assert.Equal(t, ro[0].Properties.Orientation(), manifest.OrientationAuto)
 	assert.Equal(t, ro[0].Properties.Page(), manifest.PageRight)
-	assert.Equal(t, ro[0].Properties.Spread(), manifest.Spread(""))
-
-	assert.Equal(t, ro[1].Properties.Layout(), manifest.EPUBLayoutReflowable)
-	assert.Equal(t, ro[1].Properties.Overflow(), manifest.OverflowPaginated)
-	assert.Equal(t, ro[1].Properties.Orientation(), manifest.OrientationLandscape)
-	assert.Equal(t, ro[1].Properties.Page(), manifest.PageLeft)
-	assert.Equal(t, ro[1].Properties.Spread(), manifest.Spread(""))
-
-	assert.Equal(t, ro[2].Properties.Layout(), manifest.EPUBLayout(""))
-	assert.Equal(t, ro[2].Properties.Overflow(), manifest.OverflowScrolled)
-	assert.Equal(t, ro[2].Properties.Orientation(), manifest.OrientationPortrait)
 	assert.Equal(t, ro[2].Properties.Page(), manifest.PageCenter)
-	assert.Equal(t, ro[2].Properties.Spread(), manifest.Spread(""))
-
-	assert.Equal(t, ro[3].Properties.Layout(), manifest.EPUBLayout(""))
-	assert.Equal(t, ro[3].Properties.Overflow(), manifest.OverflowScrolled)
-	assert.Equal(t, ro[3].Properties.Orientation(), manifest.Orientation(""))
-	assert.Equal(t, ro[3].Properties.Page(), manifest.Page(""))
-	assert.Equal(t, ro[3].Properties.Spread(), manifest.SpreadAuto)
+	assert.Equal(t, ro[3].Properties.Page(), manifest.PageNone)
 }
 
 func TestPackageDocLinkReadingOrder(t *testing.T) {

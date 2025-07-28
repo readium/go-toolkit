@@ -524,7 +524,11 @@ func TestMetadataUniqueIdentifierParsed(t *testing.T) {
 func TestMetadataLayout(t *testing.T) {
 	m3, err := loadMetadata(t.Context(), "presentation-metadata")
 	assert.NoError(t, err)
-	assert.Equal(t, manifest.LayoutReflowable, m3.Layout)
+	assert.Equal(t, manifest.LayoutFixed, m3.Layout)
+	assert.Equal(t, "scrolled-doc", m3.OtherMetadata["http://www.idpf.org/vocab/rendition/#flow"])
+	assert.Empty(t, m3.OtherMetadata["http://www.idpf.org/vocab/rendition/#layout"])
+	assert.Equal(t, "landscape", m3.OtherMetadata["http://www.idpf.org/vocab/rendition/#orientation"])
+	assert.Equal(t, "both", m3.OtherMetadata["http://www.idpf.org/vocab/rendition/#spread"])
 }
 
 func TestMetadataCoverLink(t *testing.T) {

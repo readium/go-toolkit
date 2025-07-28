@@ -1065,6 +1065,7 @@ func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 			VocabularyMedia + "duration":              {},
 			VocabularyMedia + "active-class":          {},
 			VocabularyMedia + "playback-active-class": {},
+			VocabularyRendition + "layout":            {},
 
 			VocabularyDCTerms + "conformsto":          {},
 			VocabularyDCTerms + "conformsTo":          {},
