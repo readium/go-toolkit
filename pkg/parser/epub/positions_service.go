@@ -20,7 +20,7 @@ import (
 // https://github.com/readium/architecture/issues/101
 type PositionsService struct {
 	readingOrder       manifest.LinkList
-	presentation       *manifest.Presentation
+	layout             *manifest.Layout
 	fetcher            fetcher.Fetcher
 	reflowableStrategy ReflowableStrategy
 	positions          [][]manifest.Locator
@@ -59,7 +59,7 @@ func (s *PositionsService) computePositions(ctx context.Context) [][]manifest.Lo
 	positions := make([][]manifest.Locator, len(s.readingOrder))
 	for i, link := range s.readingOrder {
 		var lpositions []manifest.Locator
-		if s.presentation.LayoutOf(link) == manifest.EPUBLayoutFixed {
+		if s.layout != nil && *s.layout == manifest.LayoutFixed {
 			lpositions = s.createFixed(link, lastPositionOfPreviousResource)
 		} else {
 			lpositions = s.createReflowable(ctx, link, lastPositionOfPreviousResource, s.fetcher)
@@ -135,7 +135,7 @@ func PositionsServiceFactory(reflowableStrategy ReflowableStrategy) pub.ServiceF
 	return func(context pub.Context) pub.Service {
 		return &PositionsService{
 			readingOrder:       context.Manifest.ReadingOrder,
-			presentation:       context.Manifest.Metadata.Presentation,
+			layout:             &context.Manifest.Metadata.Layout,
 			fetcher:            context.Fetcher,
 			reflowableStrategy: reflowableStrategy,
 		}

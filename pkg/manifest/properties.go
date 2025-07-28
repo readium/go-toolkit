@@ -69,19 +69,19 @@ func (p Properties) GetBool(key string) *bool {
 
 type Page string // Indicates how the linked resource should be displayed in a reading environment that displays synthetic spreads.
 const (
+	PageNone   Page = ""
 	PageLeft   Page = "left"
 	PageRight  Page = "right"
 	PageCenter Page = "center"
 )
 
 // Indicates how the linked resource should be displayed in a reading environment that displays synthetic spreads.
-func (p Properties) Page() *Page {
+func (p Properties) Page() Page {
 	v := p.GetString("page")
 	if v == "" {
-		return nil
+		return PageNone
 	}
-	page := Page(v)
-	return &page
+	return Page(v)
 }
 
 // Indicates that a resource is encrypted/obfuscated and provides relevant information for decryption.

@@ -25,6 +25,7 @@ func (s Strings) MarshalJSON() ([]byte, error) {
 // Metadata for the default context in WebPub
 type Metadata struct {
 	Identifier         string                 `json:"identifier,omitempty"`
+	AltIdentifiers     []AltIdentifier        `json:"altIdentifier,omitempty"`
 	Type               string                 `json:"@type,omitempty"`
 	ConformsTo         Profiles               `json:"conformsTo,omitempty"`
 	LocalizedTitle     LocalizedString        `json:"title"`
@@ -89,7 +90,7 @@ func (m Metadata) BelongsToSeries() []Collection {
 }
 
 func (m Metadata) EffectiveReadingProgression() ReadingProgression {
-	if m.ReadingProgression != "" && m.ReadingProgression != Auto {
+	if m.ReadingProgression != None {
 		return m.ReadingProgression
 	}
 
@@ -172,6 +173,15 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 		return nil, errors.Wrap(err, "failed parsing 'title'")
 	}
 
+	// Alt Identifiers
+	var altIdentifiers []AltIdentifier
+	if altIdentifiersRaw, ok := rawJson["altIdentifier"]; ok {
+		altIdentifiers, err = AltIdentifierFromJSONArray(altIdentifiersRaw)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed parsing 'altIdentifier'")
+		}
+	}
+
 	// Accessibility
 	var a11y *A11y
 	if a11yJSON, ok := rawJson["accessibility"].(map[string]interface{}); ok {
@@ -192,6 +202,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 
 	metadata := &Metadata{
 		Identifier:         parseOptString(rawJson["identifier"]),
+		AltIdentifiers:     altIdentifiers,
 		Type:               parseOptString(rawJson["@type"]),
 		LocalizedTitle:     *title,
 		Accessibility:      a11y,
@@ -392,6 +403,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 	for _, v := range []string{
 		"@type",
 		"accessibility",
+		"altIdentifier",
 		"artist",
 		"author",
 		"belongsTo",
@@ -466,6 +478,9 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	if m.Identifier != "" {
 		j["identifier"] = m.Identifier
 	}
+	if len(m.AltIdentifiers) > 0 {
+		j["altIdentifier"] = m.AltIdentifiers
+	}
 	if m.Type != "" {
 		j["@type"] = m.Type
 	}
@@ -536,11 +551,13 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	if len(m.Imprints) > 0 {
 		j["imprint"] = m.Imprints
 	}
-	if m.ReadingProgression != "" && m.ReadingProgression != Auto {
+	if m.ReadingProgression != None {
 		j["readingProgression"] = m.ReadingProgression
 	}
 	if m.Layout != "" {
-		j["layout"] = m.Layout.MinimalValue(m.ConformsTo)
+		if l := m.Layout.MinimalValue(m.ConformsTo); l != LayoutNone {
+			j["layout"] = l
+		}
 	}
 	if m.Description != "" {
 		j["description"] = m.Description
