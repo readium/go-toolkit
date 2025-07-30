@@ -12,7 +12,7 @@ const (
 )
 
 // Correct the layout value based on the provided profiles.
-func (l Layout) Correct(profiles Profiles) Layout {
+func (l Layout) correct(profiles Profiles) Layout {
 	if len(profiles) == 0 {
 		return l
 	}
@@ -41,7 +41,7 @@ func (l Layout) Correct(profiles Profiles) Layout {
 
 // Determines the actual layout value based on the provided profiles.
 func (l Layout) EffectiveValue(profiles Profiles) Layout {
-	l = l.Correct(profiles)
+	l = l.correct(profiles)
 
 	if l == LayoutNone {
 		// Divina profile defaults to fixed if layout is not present
@@ -59,8 +59,8 @@ func (l Layout) EffectiveValue(profiles Profiles) Layout {
 }
 
 // Determines the minimal layout value based on the provided profiles.
-func (l Layout) MinimalValue(profiles Profiles) Layout {
-	l = l.Correct(profiles)
+func (l Layout) minimalValue(profiles Profiles) Layout {
+	l = l.correct(profiles)
 
 	// Divina profile defaults to fixed if layout is not present
 	if slices.Contains(profiles, ProfileDivina) && l == LayoutFixed {

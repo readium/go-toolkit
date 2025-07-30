@@ -8,7 +8,7 @@ const (
 	RTL  ReadingProgression = "rtl"
 )
 
-func (r ReadingProgression) Correct() ReadingProgression {
+func (r ReadingProgression) correct() ReadingProgression {
 	switch r {
 	case LTR, RTL:
 		return r

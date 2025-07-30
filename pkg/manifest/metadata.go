@@ -209,7 +209,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 		TDM:                tdm,
 		Modified:           parseOptTime(rawJson["modified"]),
 		Published:          parseOptTime(rawJson["published"]),
-		ReadingProgression: ReadingProgression(parseOptString(rawJson["readingProgression"])).Correct(),
+		ReadingProgression: ReadingProgression(parseOptString(rawJson["readingProgression"])).correct(),
 		Description:        parseOptString(rawJson["description"]),
 	}
 
@@ -225,7 +225,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 	// Layout
 	layout := Layout(parseOptString(rawJson["layout"]))
 	if layout != LayoutNone {
-		metadata.Layout = layout.Correct(metadata.ConformsTo)
+		metadata.Layout = layout.correct(metadata.ConformsTo)
 	}
 
 	// LocalizedSubtitle
@@ -555,7 +555,7 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 		j["readingProgression"] = m.ReadingProgression
 	}
 	if m.Layout != "" {
-		if l := m.Layout.MinimalValue(m.ConformsTo); l != LayoutNone {
+		if l := m.Layout.minimalValue(m.ConformsTo); l != LayoutNone {
 			j["layout"] = l
 		}
 	}
