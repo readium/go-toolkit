@@ -367,7 +367,6 @@ func (m MetadataParser) computeMetaItem(expr MetadataItem, metas map[string][]Me
 		refines:       expr.refines,
 		id:            expr.id,
 		children:      children,
-		presentation:  expr.presentation,
 		otherMetadata: expr.otherMetadata,
 	}
 }
@@ -452,6 +451,7 @@ type PubMetadataAdapter struct {
 	readingProgression manifest.ReadingProgression
 	displayOptions     map[string]string
 	_identifier        string
+	_altIdentifiers    []manifest.AltIdentifier
 
 	// Title data
 	_titlesSeeded      bool
@@ -466,14 +466,15 @@ type PubMetadataAdapter struct {
 
 	_subjects        []manifest.Subject
 	_allContributors map[string][]manifest.Contributor
-	_presentation    *manifest.Presentation
+	_layout          manifest.Layout
 	_otherMetadata   map[string]interface{}
 }
 
 func (m PubMetadataAdapter) Metadata() manifest.Metadata {
-	presentation := m.Presentation() // Presentation is always defined for EPUB
+	identifier, altIdentifiers := m.Identifiers()
 	metadata := manifest.Metadata{
-		Identifier:         m.Identifier(),
+		Identifier:         identifier,
+		AltIdentifiers:     altIdentifiers,
 		ConformsTo:         manifest.Profiles{manifest.ProfileEPUB},
 		Modified:           m.Modified(),
 		Published:          m.Published(),
@@ -487,7 +488,7 @@ func (m PubMetadataAdapter) Metadata() manifest.Metadata {
 		Subjects:           m.Subjects(),
 		Description:        m.Description(),
 		ReadingProgression: m.ReadingProgression(),
-		Presentation:       &presentation,
+		Layout:             m.Layout(),
 		MediaOverlay:       m.MediaOverlay(),
 		BelongsTo:          make(map[string]manifest.Contributors),
 		OtherMetadata:      m.OtherMetadata(),
@@ -527,25 +528,30 @@ func (m PubMetadataAdapter) Languages() []string {
 	return languages
 }
 
-func (m *PubMetadataAdapter) Identifier() string {
-	if m._identifier != "" {
-		return m._identifier
-	}
-	if m.uniqueIdentifierID == "" {
-		return ""
+func (m *PubMetadataAdapter) Identifiers() (string, []manifest.AltIdentifier) {
+	if m._identifier != "" || len(m._altIdentifiers) > 0 {
+		return m._identifier, m._altIdentifiers
 	}
 	identifiers, ok := m.items[VocabularyDCTerms+"identifier"]
 	if !ok || len(identifiers) == 0 {
-		return ""
+		return "", nil
 	}
+
 	for _, v := range identifiers {
 		if v.id == m.uniqueIdentifierID {
 			m._identifier = v.value
-			return m._identifier
+		} else {
+			m._altIdentifiers = append(m._altIdentifiers, manifest.AltIdentifier{
+				Value:  v.value,
+				Scheme: v.scheme,
+			})
 		}
 	}
-	m._identifier = identifiers[0].value
-	return m._identifier
+	if m._identifier == "" {
+		// Fall back to first identifier if no unique identifier was found
+		m._identifier = identifiers[0].value
+	}
+	return m._identifier, m._altIdentifiers
 }
 
 func (m PubMetadataAdapter) Published() *time.Time {
@@ -1011,13 +1017,8 @@ func (m *PubMetadataAdapter) ReadingProgression() manifest.ReadingProgression {
 	return m.readingProgression
 }
 
-func (m *PubMetadataAdapter) Presentation() manifest.Presentation {
-	if m._presentation == nil {
-		m._presentation = &manifest.Presentation{}
-
-		flowProp := m.FirstValue(VocabularyRendition + "flow")
-		spreadProp := m.FirstValue(VocabularyRendition + "spread")
-		orientationProp := m.FirstValue(VocabularyRendition + "orientation")
+func (m *PubMetadataAdapter) Layout() manifest.Layout {
+	if m._layout == manifest.LayoutNone {
 		var layoutProp string
 		if m.epubVersion < 3.0 {
 			if do, ok := m.displayOptions["fixed-layout"]; ok && do == "true" {
@@ -1029,48 +1030,14 @@ func (m *PubMetadataAdapter) Presentation() manifest.Presentation {
 			layoutProp = m.FirstValue(VocabularyRendition + "layout")
 		}
 
-		overflow := manifest.OverflowAuto
-		continuous := manifest.PresentationDefaultContinuous
-		switch flowProp {
-		case "paginated":
-			overflow = manifest.OverflowPaginated
-		case "scrolled-continuous":
-			overflow = manifest.OverflowScrolled
-			continuous = true
-		case "scrolled-doc":
-			overflow = manifest.OverflowScrolled
-		}
-		m._presentation.Overflow = &overflow
-		m._presentation.Continuous = &continuous
-
-		layout := manifest.EPUBLayoutReflowable
+		m._layout = manifest.LayoutReflowable
 		if layoutProp == "pre-paginated" {
-			layout = manifest.EPUBLayoutFixed
+			m._layout = manifest.LayoutFixed
+		} else if layoutProp == "scrolled" {
+			m._layout = manifest.LayoutScrolled
 		}
-		m._presentation.Layout = &layout
-
-		orientation := manifest.OrientationAuto
-		switch orientationProp {
-		case "landscape":
-			orientation = manifest.OrientationLandscape
-		case "portrait":
-			orientation = manifest.OrientationPortrait
-		}
-		m._presentation.Orientation = &orientation
-
-		spread := manifest.SpreadAuto
-		switch spreadProp {
-		case "none":
-			spread = manifest.SpreadNone
-		case "landscape":
-			spread = manifest.SpreadLandscape
-		case "portrait", "both":
-			spread = manifest.SpreadBoth
-		}
-		m._presentation.Spread = &spread
-
 	}
-	return *m._presentation
+	return m._layout
 }
 
 func (m *PubMetadataAdapter) MediaOverlay() *manifest.MediaOverlay {
@@ -1105,9 +1072,6 @@ func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 			VocabularyMedia + "duration":              {},
 			VocabularyMedia + "active-class":          {},
 			VocabularyMedia + "playback-active-class": {},
-			VocabularyRendition + "flow":              {},
-			VocabularyRendition + "spread":            {},
-			VocabularyRendition + "orientation":       {},
 			VocabularyRendition + "layout":            {},
 
 			VocabularyDCTerms + "conformsto":          {},
@@ -1150,7 +1114,6 @@ type MetadataItem struct {
 	refines       string
 	id            string
 	children      map[string][]MetadataItem
-	presentation  manifest.Presentation
 	otherMetadata map[string]interface{}
 }
 
@@ -1241,11 +1204,28 @@ func (m MetadataItem) ToContributor() (string, *manifest.Contributor, error) {
 		}
 	}
 
+	allIdentifiers := m.Identifiers()
+	var identifier string
+	var altIdentifiers []manifest.AltIdentifier
+	if len(allIdentifiers) > 0 {
+		identifier = allIdentifiers[0]
+		if len(allIdentifiers) > 1 {
+			altIdentifiers = make([]manifest.AltIdentifier, len(allIdentifiers)-1)
+			for i, id := range allIdentifiers[1:] {
+				altIdentifiers[i] = manifest.AltIdentifier{
+					Value:  id,
+					Scheme: m.scheme,
+				}
+			}
+		}
+	}
+
 	return typ, &manifest.Contributor{
 		LocalizedName:   names,
 		LocalizedSortAs: localizedSortAs,
 		Roles:           roles,
-		Identifier:      m.Identifier(),
+		Identifier:      identifier,
+		AltIdentifier:   altIdentifiers,
 		Position:        m.GroupPosition(),
 	}, nil
 }
@@ -1317,8 +1297,13 @@ func (m MetadataItem) GroupPosition() *float64 {
 	return floatOrNil(m.FirstValue(VocabularyMeta + "group-position"))
 }
 
-func (m MetadataItem) Identifier() string {
-	return m.FirstValue(VocabularyDCTerms + "identifier")
+func (m MetadataItem) Identifiers() []string {
+	identifiers, ok := m.children[VocabularyDCTerms+"identifier"]
+	if !ok || len(identifiers) == 0 {
+		return nil
+	}
+
+	return itemsValues(identifiers)
 }
 
 func (m MetadataItem) Role() string {
@@ -1338,10 +1323,7 @@ func (m MetadataItem) LocalizedString() manifest.LocalizedString {
 
 func (m MetadataItem) FirstValue(property string) string {
 	child, ok := m.children[property]
-	if !ok {
-		return ""
-	}
-	if len(child) == 0 {
+	if !ok || len(child) == 0 {
 		return ""
 	}
 	return child[0].value

@@ -36,6 +36,10 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 
 	assert.NoError(t, json.Unmarshal([]byte(`{
 		"identifier": "1234",
+		"altIdentifier": ["https://example.com/identifier/12345", {
+			"value": "123456789",
+			"scheme": "https://example.com/identifierScheme"
+		}],
 		"@type": "epub",
 		"conformsTo": [
 			"https://readium.org/webpub-manifest/profiles/epub",
@@ -64,6 +68,7 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 		"publisher": "Publisher",
 		"imprint": "Imprint",
 		"readingProgression": "rtl",
+		"layout": "fixed",
 		"description": "Description",
 		"duration": 4.24,
 		"numberOfPages": 240,
@@ -79,6 +84,15 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 
 	assert.Equal(t, Metadata{
 		Identifier: "1234",
+		AltIdentifiers: []AltIdentifier{
+			{
+				Value: "https://example.com/identifier/12345",
+			},
+			{
+				Value:  "123456789",
+				Scheme: "https://example.com/identifierScheme",
+			},
+		},
 		Type:       "epub",
 		ConformsTo: Profiles{ProfileEPUB, ProfilePDF},
 		LocalizedTitle: NewLocalizedStringFromStrings(map[string]string{
@@ -110,6 +124,7 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 		Publishers:         Contributors{{LocalizedName: NewLocalizedStringFromString("Publisher")}},
 		Imprints:           Contributors{{LocalizedName: NewLocalizedStringFromString("Imprint")}},
 		ReadingProgression: RTL,
+		Layout:             LayoutNone, // Not fixed, because layout got corrected
 		Description:        "Description",
 		Duration:           &duration,
 		NumberOfPages:      &numberOfPages,
@@ -208,6 +223,15 @@ func TestMetadataFullJSON(t *testing.T) {
 
 	b, err := json.Marshal(Metadata{
 		Identifier: "1234",
+		AltIdentifiers: []AltIdentifier{
+			{
+				Value: "https://example.com/identifier/12345",
+			},
+			{
+				Value:  "123456789",
+				Scheme: "https://example.com/identifierScheme",
+			},
+		},
 		Type:       "epub",
 		ConformsTo: Profiles{ProfileEPUB, ProfilePDF},
 		LocalizedTitle: NewLocalizedStringFromStrings(map[string]string{
@@ -239,6 +263,7 @@ func TestMetadataFullJSON(t *testing.T) {
 		Publishers:         Contributors{{LocalizedName: NewLocalizedStringFromString("Publisher")}},
 		Imprints:           Contributors{{LocalizedName: NewLocalizedStringFromString("Imprint")}},
 		ReadingProgression: RTL,
+		Layout:             LayoutFixed,
 		Description:        "Description",
 		Duration:           &duration,
 		NumberOfPages:      &numberOfPages,
@@ -260,6 +285,10 @@ func TestMetadataFullJSON(t *testing.T) {
 
 	assert.JSONEq(t, `{
 		"identifier": "1234",
+		"altIdentifier": ["https://example.com/identifier/12345", {
+			"value": "123456789",
+			"scheme": "https://example.com/identifierScheme"
+		}],
 		"@type": "epub",
 		"conformsTo": [
 			"https://readium.org/webpub-manifest/profiles/epub",
@@ -308,7 +337,7 @@ func TestMetadataFullJSON(t *testing.T) {
 func TestMetadataERPFallsBackToLTR(t *testing.T) {
 	assert.Equal(t, LTR, Metadata{
 		Languages:          []string{},
-		ReadingProgression: Auto,
+		ReadingProgression: None,
 	}.EffectiveReadingProgression())
 }
 
@@ -320,37 +349,37 @@ func TestMetadataERPFallsBackToProvided(t *testing.T) {
 }
 
 func TestMetadataERPWithRTLLanguages(t *testing.T) {
-	assert.Equal(t, RTL, Metadata{Languages: []string{"zh-Hant"}, ReadingProgression: Auto}.EffectiveReadingProgression())
-	assert.Equal(t, RTL, Metadata{Languages: []string{"zh-TW"}, ReadingProgression: Auto}.EffectiveReadingProgression())
-	assert.Equal(t, RTL, Metadata{Languages: []string{"ar"}, ReadingProgression: Auto}.EffectiveReadingProgression())
-	assert.Equal(t, RTL, Metadata{Languages: []string{"fa"}, ReadingProgression: Auto}.EffectiveReadingProgression())
-	assert.Equal(t, RTL, Metadata{Languages: []string{"he"}, ReadingProgression: Auto}.EffectiveReadingProgression())
+	assert.Equal(t, RTL, Metadata{Languages: []string{"zh-Hant"}, ReadingProgression: None}.EffectiveReadingProgression())
+	assert.Equal(t, RTL, Metadata{Languages: []string{"zh-TW"}, ReadingProgression: None}.EffectiveReadingProgression())
+	assert.Equal(t, RTL, Metadata{Languages: []string{"ar"}, ReadingProgression: None}.EffectiveReadingProgression())
+	assert.Equal(t, RTL, Metadata{Languages: []string{"fa"}, ReadingProgression: None}.EffectiveReadingProgression())
+	assert.Equal(t, RTL, Metadata{Languages: []string{"he"}, ReadingProgression: None}.EffectiveReadingProgression())
 	assert.Equal(t, LTR, Metadata{Languages: []string{"he"}, ReadingProgression: LTR}.EffectiveReadingProgression())
 }
 
 func TestMetadataERPIgnoresMultipleLanguages(t *testing.T) {
 	assert.Equal(t, LTR, Metadata{
 		Languages:          []string{"ar", "fa"},
-		ReadingProgression: Auto,
+		ReadingProgression: None,
 	}.EffectiveReadingProgression())
 }
 
 func TestMetdataERPIgnoresLanguageCase(t *testing.T) {
 	assert.Equal(t, RTL, Metadata{
 		Languages:          []string{"AR"},
-		ReadingProgression: Auto,
+		ReadingProgression: None,
 	}.EffectiveReadingProgression())
 }
 
 func TestMetadataERPIgnoresLanguageRegionExceptChinese(t *testing.T) {
 	assert.Equal(t, RTL, Metadata{
 		Languages:          []string{"ar-foo"},
-		ReadingProgression: Auto,
+		ReadingProgression: None,
 	}.EffectiveReadingProgression())
 
 	// But not for ZH
 	assert.Equal(t, LTR, Metadata{
 		Languages:          []string{"zh-foo"},
-		ReadingProgression: Auto,
+		ReadingProgression: None,
 	}.EffectiveReadingProgression())
 }

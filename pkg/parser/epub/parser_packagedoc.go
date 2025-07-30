@@ -138,7 +138,7 @@ func ParseSpine(element *xmlquery.Node, prefixMap map[string]string, epubVersion
 		itemrefs = append(itemrefs, *itemref)
 	}
 
-	pageProgressionDiretion := manifest.Auto
+	pageProgressionDiretion := manifest.None
 	switch element.SelectAttr("page-progression-direction") {
 	case "ltr":
 		pageProgressionDiretion = manifest.LTR

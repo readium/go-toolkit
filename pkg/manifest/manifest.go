@@ -36,18 +36,14 @@ func (m Manifest) ConformsTo(profile Profile) bool {
 		return m.Links.AllAreBitmap()
 	case ProfileEPUB:
 		// EPUB needs to be explicitly indicated in `conformsTo`, otherwise it could be a regular Web Publication.
-		for _, v := range m.Metadata.ConformsTo {
-			if v == ProfileEPUB && m.ReadingOrder.AllAreHTML() {
-				return true
-			}
+		if slices.Contains(m.Metadata.ConformsTo, ProfileEPUB) && m.ReadingOrder.AllAreHTML() {
+			return true
 		}
 	case ProfilePDF:
 		return m.Links.AllMatchMediaType(&mediatype.PDF)
 	default:
-		for _, v := range m.Metadata.ConformsTo {
-			if v == profile {
-				return true
-			}
+		if slices.Contains(m.Metadata.ConformsTo, profile) {
+			return true
 		}
 	}
 	return false

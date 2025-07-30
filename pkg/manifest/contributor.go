@@ -11,12 +11,13 @@ import (
 // https://github.com/readium/webpub-manifest/tree/master/contexts/default#contributors
 // https://github.com/readium/webpub-manifest/blob/master/schema/contributor-object.schema.json
 type Contributor struct {
-	LocalizedName   LocalizedString  `json:"name" validate:"required"` // The name of the contributor.
-	LocalizedSortAs *LocalizedString `json:"sortAs,omitempty"`         // The string used to sort the name of the contributor.
-	Identifier      string           `json:"identifier,omitempty"`     // An unambiguous reference to this contributor.
-	Roles           Strings          `json:"role,omitempty"`           // The roles of the contributor in the making of the publication.
-	Position        *float64         `json:"position,omitempty"`       // The position of the publication in this collection/series, when the contributor represents a collection. TODO validator
-	Links           LinkList         `json:"links,omitempty"`          // Used to retrieve similar publications for the given contributor.
+	LocalizedName   LocalizedString  `json:"name"`                    // The name of the contributor.
+	LocalizedSortAs *LocalizedString `json:"sortAs,omitempty"`        // The string used to sort the name of the contributor.
+	Identifier      string           `json:"identifier,omitempty"`    // An unambiguous reference to this contributor.
+	AltIdentifier   []AltIdentifier  `json:"altIdentifier,omitempty"` // Alternate identifiers
+	Roles           Strings          `json:"role,omitempty"`          // The roles of the contributor in the making of the publication.
+	Position        *float64         `json:"position,omitempty"`      // The position of the publication in this collection/series, when the contributor represents a collection. TODO validator
+	Links           LinkList         `json:"links,omitempty"`         // Used to retrieve similar publications for the given contributor.
 }
 
 func (c Contributor) Name() string {
@@ -85,6 +86,16 @@ func ContributorFromJSON(rawJson interface{}) (*Contributor, error) {
 		// Identifier
 		c.Identifier = parseOptString(dd["identifier"])
 
+		// Alt Identifiers
+		rawAltIdentifiers, ok := dd["altIdentifier"]
+		if ok {
+			altIdentifiers, err := AltIdentifierFromJSONArray(rawAltIdentifiers)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed parsing Contributor 'altIdentifier'")
+			}
+			c.AltIdentifier = altIdentifiers
+		}
+
 		// Position
 		position, ok := dd["position"].(float64)
 		if ok { // Need to do this because default is not 0, but nil
@@ -125,7 +136,7 @@ func ContributorFromJSONArray(rawJsonArray interface{}) ([]Contributor, error) {
 }
 
 func (c Contributor) MarshalJSON() ([]byte, error) {
-	if c.LocalizedSortAs == nil && c.Identifier == "" && len(c.Roles) == 0 && c.Position == nil && c.Links == nil && len(c.LocalizedName.Translations) == 1 {
+	if c.LocalizedSortAs == nil && c.Identifier == "" && len(c.AltIdentifier) == 0 && len(c.Roles) == 0 && c.Position == nil && c.Links == nil && len(c.LocalizedName.Translations) == 1 {
 		// If everything but name is empty, and there's just one name, Contributor can be just a name
 		return json.Marshal(c.LocalizedName)
 	}

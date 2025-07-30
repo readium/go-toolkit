@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Properties associated with a linked resource
 type Properties map[string]interface{}
 
 // Properties should be immutable, therefore these functions have been removed.
@@ -66,41 +67,24 @@ func (p Properties) GetBool(key string) *bool {
 	return &cv
 }
 
-// Specifies whether or not the parts of a linked resource that flow out of the viewport are clippped.
-func (p Properties) Clipped() *bool {
-	return p.GetBool("clipped")
-}
-
-// Suggested method for constraining a resource inside the viewport.
-func (p Properties) Fit() Fit {
-	return Fit(p.GetString("fit"))
-}
-
-// Suggested orientation for the device when displaying the linked resource.
-func (p Properties) Orientation() Orientation {
-	return Orientation(p.GetString("orientation"))
-}
-
-// Suggested method for handling overflow while displaying the linked resource.
-func (p Properties) Overflow() Overflow {
-	return Overflow(p.GetString("overflow"))
-}
+type Page string // Indicates how the linked resource should be displayed in a reading environment that displays synthetic spreads.
+const (
+	PageNone   Page = ""
+	PageLeft   Page = "left"
+	PageRight  Page = "right"
+	PageCenter Page = "center"
+)
 
 // Indicates how the linked resource should be displayed in a reading environment that displays synthetic spreads.
 func (p Properties) Page() Page {
-	return Page(p.GetString("page"))
+	v := p.GetString("page")
+	if v == "" {
+		return PageNone
+	}
+	return Page(v)
 }
 
-// Indicates the condition to be met for the linked resource to be rendered within a synthetic spread.
-func (p Properties) Spread() Spread {
-	return Spread(p.GetString("spread"))
-}
-
-// Hints how the layout of the resource should be presented.
-func (p Properties) Layout() EPUBLayout {
-	return EPUBLayout(p.GetString("layout"))
-}
-
+// Indicates that a resource is encrypted/obfuscated and provides relevant information for decryption.
 func (p Properties) Encryption() *Encryption {
 	v := p.Get("encrypted")
 	if v == nil {
@@ -117,6 +101,7 @@ func (p Properties) Encryption() *Encryption {
 	return enc
 }
 
+// Identifies content contained in the linked resource, that cannot be strictly identified using a media type.
 func (p Properties) Contains() []string {
 	v := p.Get("contains")
 	if v == nil {

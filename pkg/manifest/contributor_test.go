@@ -32,8 +32,11 @@ func TestContributorUnmarshalFullJSON(t *testing.T) {
 		LocalizedName:   NewLocalizedStringFromString("Colin Greenwood"),
 		LocalizedSortAs: &sortAs,
 		Identifier:      "colin",
-		Roles:           []string{"bassist"},
-		Position:        &position,
+		AltIdentifier: []AltIdentifier{
+			{Value: "id123", Scheme: "scheme456"},
+		},
+		Roles:    []string{"bassist"},
+		Position: &position,
 		Links: []Link{
 			{
 				Href: MustNewHREFFromString("http://link1", false),
@@ -47,6 +50,7 @@ func TestContributorUnmarshalFullJSON(t *testing.T) {
 	assert.NoError(t, json.Unmarshal([]byte(`{
 		"name": "Colin Greenwood",
 		"identifier": "colin",
+		"altIdentifier": [{"value": "id123", "scheme": "scheme456"}],
 		"sortAs": "greenwood",
 		"role": "bassist",
 		"position": 4,
@@ -116,8 +120,11 @@ func TestContributorFullJSON(t *testing.T) {
 		LocalizedName:   NewLocalizedStringFromString("Colin Greenwood"),
 		LocalizedSortAs: &sortAs,
 		Identifier:      "colin",
-		Roles:           []string{"bassist"},
-		Position:        &pos,
+		AltIdentifier: []AltIdentifier{
+			{Value: "id123", Scheme: "scheme456"},
+		},
+		Roles:    []string{"bassist"},
+		Position: &pos,
 		Links: []Link{
 			{
 				Href: MustNewHREFFromString("http://link1", true),
@@ -132,6 +139,7 @@ func TestContributorFullJSON(t *testing.T) {
 	assert.JSONEq(t, `{
 		"name": "Colin Greenwood",
 		"identifier": "colin",
+		"altIdentifier": [{"value": "id123", "scheme": "scheme456"}],
 		"sortAs": "greenwood",
 		"role": "bassist",
 		"position": 4.0,

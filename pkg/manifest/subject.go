@@ -10,7 +10,7 @@ import (
 // https://github.com/readium/webpub-manifest/tree/master/contexts/default#subjects
 // https://github.com/readium/webpub-manifest/blob/master/schema/subject-object.schema.json
 type Subject struct {
-	LocalizedName   LocalizedString  `json:"name" validate:"required"`
+	LocalizedName   LocalizedString  `json:"name"`
 	LocalizedSortAs *LocalizedString `json:"sortAs,omitempty"`
 	Scheme          string           `json:"scheme,omitempty"`
 	Code            string           `json:"code,omitempty"`
