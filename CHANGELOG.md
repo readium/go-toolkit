@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.11.0] - 2025-07-30
+
+The WebPub data the toolkit parses and provides has been updated to more closely match the latest WebPub spec. Pay close attention to these changes if you depend on the WebPub output in reading systems/libraries that use an older version of the spec!
+
+### Added
+
+- ServicesBuilder now has a convenience function `RemoveExcept` to remove unecessary services easily
+- `metadata.altIdentifiers`, an array of alternative publication identifiers. Populated for EPUBs, current logic is rudamentary
+- `contributor.altIdentifiers`, an array of alternative contributor identifiers. Populated for EPUBs, current logic is rudamentary
+- `metadata.layout`, along with logic to figure out its effective value depending on the publication type. This replaces `metadata.presentation.layout`. It includes the new `scrolled` value for TTB content like webtoons
+
+### Changed
+
+- `metadata.readingProgression` can only be `ltr`, `rtl`, or empty. `auto`, `ttb`, `btt` are not recognized anymore
+
+### Removed
+
+- `metadata.presentation` no longer exists. Any properties that were parsed from EPUB will be available as keys in the metadata, using the full namespace + key URL, for example `http://www.idpf.org/vocab/rendition/#orientation`
+- Link properties no longer contains helpers for `fit`, `clipped`, `orientation`, `overflow`, `spread`, `layout` values, as they are no longer recognized
+
+### Fixed
+
+- Potential bug in FileFetcher regarding OS file handle cleanup made safer
+
 ## [0.10.2] - 2025-07-11
 
 ### Added
