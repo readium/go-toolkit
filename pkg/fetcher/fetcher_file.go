@@ -150,7 +150,9 @@ func (r *FileResource) File() string {
 
 func (r *FileResource) open() (*os.File, *ResourceError) {
 	if r.file != nil {
-		r.file.Seek(0, io.SeekStart)
+		if _, err := r.file.Seek(0, io.SeekStart); err != nil {
+			return nil, Other(err)
+		}
 		return r.file, nil
 	}
 	f, err := os.Open(r.path)
@@ -167,6 +169,7 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 	r.file = f
 	runtime.AddCleanup(r, func(f *os.File) {
 		f.Close()
+		r.file = nil
 	}, f)
 	return f, nil
 }
