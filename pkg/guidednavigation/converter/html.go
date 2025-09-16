@@ -1,26 +1,17 @@
-package iterator
+package converter
 
 import (
-	nurl "net/url"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/readium/go-toolkit/pkg/content/element"
-	iutil "github.com/readium/go-toolkit/pkg/internal/util"
+	"github.com/readium/go-toolkit/pkg/guidednavigation"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
-
-// Holds the result of parsing the HTML resource into a list of [element.Element].
-// The [startIndex] will be calculated from the element matched by the base [locator], if possible. Defaults to 0.
-type ParsedElements struct {
-	Elements   []element.Element
-	StartIndex int
-}
 
 func trimText(text string, before *string) manifest.Text {
 	var b string
@@ -72,6 +63,15 @@ func getAttr(n *html.Node, key string) string {
 	}
 	return ""
 }
+
+/*func getFirstAttr(n *html.Node, keys []string) string {
+	for _, attr := range n.Attr {
+		if slices.Contains(keys, attr.Key) {
+			return attr.Val
+		}
+	}
+	return ""
+}*/
 
 func srcRelativeToHref(n *html.Node, base url.URL) url.URL {
 	if n == nil {
@@ -201,10 +201,22 @@ func isInlineTag(n *html.Node) bool {
 	return ok
 }
 
+// This isn't cheap to run
 func nodeLanguage(n *html.Node) *string {
-	if l := getAttr(n, "lang"); l != "" { // Includes lang and xml:lang
-		return &l
+	// xml:lang takes priority over lang
+
+	var lang string
+	for _, attr := range n.Attr {
+		if attr.Key == "xml:lang" && attr.Val != "" {
+			return &attr.Val
+		} else if attr.Key == "lang" {
+			lang = attr.Val
+		}
 	}
+	if lang != "" {
+		return &lang
+	}
+
 	if n.Parent != nil {
 		return nodeLanguage(n.Parent)
 	}
@@ -270,151 +282,132 @@ func TraverseNode(visitor NodeVisitor, root *html.Node) {
 }
 
 type breadcrumbData struct {
-	node        *html.Node
-	cssSelector string
+	node   *html.Node
+	object *guidednavigation.GuidedNavigationObject
+	skip   bool // If true, this block and its children should be skipped
 }
 
 // Note that this whole thing is based off of JSoup's NodeVisitor and NodeTraverser classes
 // https://jsoup.org/apidocs/org/jsoup/select/NodeVisitor.html
 // https://jsoup.org/apidocs/org/jsoup/select/NodeTraversor.html
 type HTMLConverter struct {
-	baseLocator     manifest.Locator
-	startElement    *html.Node
-	beforeMaxLength int
+	baseLocator manifest.Locator
 
-	elements   []element.Element
-	startIndex int
+	root    *guidednavigation.GuidedNavigationObject
+	current *guidednavigation.GuidedNavigationObject
 
-	segmentsAcc       []element.TextSegment // Segments accumulated for the current element.
-	textAcc           strings.Builder       // Text since the beginning of the current segment, after coalescing whitespaces.
-	wholeRawTextAcc   *string               // Text content since the beginning of the resource, including whitespaces.
-	elementRawTextAcc string                // Text content since the beginning of the current element, including whitespaces.
-	rawTextAcc        string                // Text content since the beginning of the current element, including whitespaces.
-	currentLanguage   *string               // Language of the current segment.
+	skipCurrent     bool
+	segmentsAcc     []guidednavigation.GuidedNavigationObject // Segments accumulated for the current element.
+	textAcc         strings.Builder                           // Text since the beginning of the current segment, after coalescing whitespaces.
+	currentLanguage *string                                   // Language of the current segment.
 
 	breadcrumbs []breadcrumbData // LIFO stack of the current element's block ancestors.
 }
 
-func (c *HTMLConverter) Result() ParsedElements {
-	p := ParsedElements{
-		Elements: c.elements,
+func NewHTMLConverter(baseLocator manifest.Locator) *HTMLConverter {
+	doc := &guidednavigation.GuidedNavigationObject{}
+	return &HTMLConverter{
+		baseLocator: baseLocator,
+		root:        doc,
+		current:     doc,
 	}
-	one := 1.0
-	if c.baseLocator.Locations.Progression == &one {
-		p.StartIndex = len(c.elements)
-	} else {
-		p.StartIndex = c.startIndex
-	}
-	return p
+}
+
+func (c *HTMLConverter) Result() []guidednavigation.GuidedNavigationObject {
+	return c.root.Children
 }
 
 // Implements NodeTraversor
 func (c *HTMLConverter) Head(n *html.Node, depth int) {
 	if n.Type == html.ElementNode {
-		isBlock := !isInlineTag(n)
-		var cssSelector *string
-		if isBlock {
-			// Calculate CSS selector now because we'll definitely need it
-			cs := iutil.CSSSelector(n)
-			cssSelector = &cs
+		aria, visible := ExtractNodeAria(n)
 
+		isBlock := !isInlineTag(n)
+		if isBlock {
 			// Flush text
 			c.flushText()
 
+			// Go down in the GN tree
+			c.current.Children = append(c.current.Children, guidednavigation.GuidedNavigationObject{
+				// Role: []guidednavigation.GuidedNavigationRole{guidednavigation.GuidedNavigationRole(n.Data)},
+			})
+			c.current = &c.current.Children[len(c.current.Children)-1]
+
 			// Add blocks to breadcrumbs
 			c.breadcrumbs = append(c.breadcrumbs, breadcrumbData{
-				node:        n,
-				cssSelector: cs,
+				node:   n,
+				object: c.current,
+				skip:   !visible,
 			})
 		}
 
+		roles, level := ExtractNodeRoles(n)
+
 		if n.DataAtom == atom.Br {
 			c.flushText()
-		} else if n.DataAtom == atom.Img || n.DataAtom == atom.Audio || n.DataAtom == atom.Video {
+		} else if n.DataAtom == atom.Audio || n.DataAtom == atom.Video || slices.Contains(roles, guidednavigation.RoleImage) {
 			c.flushText()
 
-			if cssSelector == nil {
-				cs := iutil.CSSSelector(n)
-				cssSelector = &cs
-			}
-			elementLocator := manifest.Locator{
-				Href:      c.baseLocator.Href,
-				MediaType: c.baseLocator.MediaType,
-				Title:     c.baseLocator.Title,
-				Text:      c.baseLocator.Text,
-				Locations: manifest.Locations{
-					OtherLocations: map[string]interface{}{
-						"cssSelector": cssSelector,
-					},
-				},
-			}
-
-			if n.DataAtom == atom.Img {
-				if href := srcRelativeToHref(n, c.baseLocator.Href); href != nil {
-					atlist := []element.Attribute[any]{}
-					alt := getAttr(n, "alt")
-					if alt == "" {
-						// Try fallback to title if no alt
-						alt = getAttr(n, "title")
-					}
-					if alt != "" {
-						atlist = append(atlist, element.NewAttribute(element.AcessibilityLabelAttributeKey, alt))
-					}
-					c.elements = append(c.elements, element.NewImageElement(
-						elementLocator,
-						manifest.Link{
-							Href: manifest.NewHREF(href),
-						},
-						"", // FIXME: Get the caption from figcaption
-						atlist,
-					))
+			if slices.Contains(roles, guidednavigation.RoleImage) {
+				obj := guidednavigation.GuidedNavigationObject{
+					Role: roles,
 				}
+				if href := srcRelativeToHref(n, c.baseLocator.Href); href != nil {
+					obj.ImgRef = href
+				}
+				if aria != nil {
+					obj.Description = aria.Plain
+					c.skipCurrent = true
+				}
+				c.current.Children = append(c.current.Children, obj)
 			} else { // Audio or Video
 				href := srcRelativeToHref(n, c.baseLocator.Href)
-				var link *manifest.Link
-				if href != nil {
-					link = &manifest.Link{
-						Href: manifest.NewHREF(href),
-					}
-				} else {
+				if href == nil {
 					sourceNodes := childrenOfType(n, atom.Source, 1)
-					sources := make([]manifest.Link, len(sourceNodes))
 					for _, source := range sourceNodes {
 						if src := srcRelativeToHref(source, c.baseLocator.Href); src != nil {
-							l := manifest.Link{
-								Href: manifest.NewHREF(href),
-							}
-							if typ := getAttr(source, "type"); typ != "" {
-								if mt, err := mediatype.NewOfString(typ); err == nil {
-									l.MediaType = &mt
-								}
-							}
-							sources = append(sources, l)
-						}
-					}
-					if len(sources) > 0 {
-						link = &sources[0]
-						if len(sources) > 1 {
-							link.Alternates = sources[1:]
+							href = src
+							// TODO: we're losing the alts
+							break
 						}
 					}
 				}
 
-				if link != nil {
+				if href != nil {
 					if n.DataAtom == atom.Audio {
-						c.elements = append(c.elements, element.NewAudioElement(
-							elementLocator,
-							*link,
-							[]element.Attribute[any]{},
-						))
+						obj := guidednavigation.GuidedNavigationObject{
+							AudioRef: href,
+							// elementLocator
+						}
+						if aria != nil {
+							obj.Description = aria.Plain
+							c.skipCurrent = true
+						}
+						c.current.Children = append(c.current.Children, obj)
 					} else if n.DataAtom == atom.Video {
-						c.elements = append(c.elements, element.NewVideoElement(
-							elementLocator,
-							*link,
-							[]element.Attribute[any]{},
-						))
+						// TODO: videoref?
+						panic("videoref not implemented!")
 					}
 				}
+			}
+		} else {
+			if isBlock {
+				if level > 0 {
+					c.current.Level = level
+				}
+				if len(roles) > 0 {
+					for _, role := range roles {
+						if !slices.Contains(c.current.Role, role) {
+							c.current.Role = append(c.current.Role, role)
+						}
+					}
+				}
+			}
+
+			if aria != nil {
+				c.current.Description = aria.Plain
+				c.breadcrumbs[len(c.breadcrumbs)-1].skip = true
+				c.skipCurrent = true
 			}
 		}
 
@@ -426,14 +419,12 @@ func (c *HTMLConverter) Head(n *html.Node, depth int) {
 
 // Implements NodeTraversor
 func (c *HTMLConverter) Tail(n *html.Node, depth int) {
-	if n.Type == html.TextNode && !onlySpace(n.Data) {
+	if n.Type == html.TextNode && !onlySpace(n.Data) && !c.skippable() {
 		language := nodeLanguage(n)
 		if c.currentLanguage != language {
 			c.flushSegment()
 			c.currentLanguage = language
 		}
-
-		c.rawTextAcc += n.Data
 
 		var stripLeading bool
 		if acc := c.textAcc.String(); len(acc) > 0 && acc[len(acc)-1] == ' ' {
@@ -442,25 +433,53 @@ func (c *HTMLConverter) Tail(n *html.Node, depth int) {
 		appendNormalizedWhitespace(&c.textAcc, n.Data, stripLeading)
 	} else if n.Type == html.ElementNode {
 		if !isInlineTag(n) { // Is block
-			if len(c.breadcrumbs) > 0 && c.breadcrumbs[len(c.breadcrumbs)-1].node != n {
-				// TODO, should we panic? Kotlin does assert(breadcrumbs.last() == node) which throws
-				panic("HTMLConverter: breadcrumbs mismatch")
-			}
+			c.skipCurrent = false
 			c.flushText()
-			c.breadcrumbs = c.breadcrumbs[:len(c.breadcrumbs)-1]
+
+			cleanChildren := make([]guidednavigation.GuidedNavigationObject, 0, len(c.current.Children))
+			for _, child := range c.current.Children {
+				if !child.Empty() {
+					cleanChildren = append(cleanChildren, child)
+				}
+			}
+			c.current.Children = cleanChildren
+
+			if len(c.breadcrumbs) > 0 {
+				if c.breadcrumbs[len(c.breadcrumbs)-1].node != n {
+					panic("HTMLConverter: breadcrumbs mismatch")
+				}
+
+				c.breadcrumbs = c.breadcrumbs[:len(c.breadcrumbs)-1]
+				if len(c.breadcrumbs) > 0 {
+					// Go up in the GN tree
+					c.current = c.breadcrumbs[len(c.breadcrumbs)-1].object
+				} else {
+					c.current = c.root
+				}
+			} else {
+				c.current = c.root
+			}
 		}
 	}
 }
 
+func (c *HTMLConverter) skippable() bool {
+	if c.skipCurrent {
+		return true
+	}
+	if len(c.breadcrumbs) == 0 {
+		return false
+	}
+	for i := len(c.breadcrumbs) - 1; i >= 0; i-- {
+		if c.breadcrumbs[i].skip {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *HTMLConverter) flushText() {
 	c.flushSegment()
-
-	if c.startIndex == 0 && c.startElement != nil &&
-		((len(c.breadcrumbs) == 0 && c.startElement == nil) || // TODO is this right??
-			(c.startElement != nil && len(c.breadcrumbs) > 0 &&
-				c.breadcrumbs[len(c.breadcrumbs)-1].node == c.startElement)) {
-		c.startIndex = len(c.elements)
-	}
 
 	if len(c.segmentsAcc) == 0 {
 		return
@@ -468,73 +487,27 @@ func (c *HTMLConverter) flushText() {
 
 	// Trim the end of the last segment's text to get a cleaner output for the TextElement.
 	// Only whitespaces between the segments are meaningful.
-	c.segmentsAcc[len(c.segmentsAcc)-1].Text = strings.TrimRightFunc(c.segmentsAcc[len(c.segmentsAcc)-1].Text, unicode.IsSpace)
+	lastSegment := c.segmentsAcc[len(c.segmentsAcc)-1]
+	lastSegment.Text.Plain = strings.TrimRightFunc(lastSegment.Text.Plain, unicode.IsSpace)
 
-	var bestRole element.TextRole = element.Body{}
+	c.current.Children = append(c.current.Children, c.segmentsAcc...)
+
 	if len(c.breadcrumbs) > 0 {
 		el := c.breadcrumbs[len(c.breadcrumbs)-1].node
-		for _, at := range el.Attr {
-			// THIS IS WRONG! need epub:type so split the str
-			if at.Namespace == "http://www.idpf.org/2007/ops" && at.Key == "type" && at.Val == "footnote" {
-				bestRole = element.Footnote{}
-				break
-			}
+		roles, level := ExtractNodeRoles(el)
+		if level > 0 {
+			c.current.Level = level
 		}
-		if bestRole.Role() == "body" { // Still a body
-			switch el.DataAtom {
-			case atom.H1:
-				bestRole = element.Heading{Level: 1}
-			case atom.H2:
-				bestRole = element.Heading{Level: 2}
-			case atom.H3:
-				bestRole = element.Heading{Level: 3}
-			case atom.H4:
-				bestRole = element.Heading{Level: 4}
-			case atom.H5:
-				bestRole = element.Heading{Level: 5}
-			case atom.H6:
-				bestRole = element.Heading{Level: 6}
-			case atom.Blockquote, atom.Q:
-				quote := element.Quote{}
-				for _, at := range el.Attr {
-					if at.Key == "cite" {
-						quote.ReferenceURL, _ = nurl.Parse(at.Val)
-					}
-					if at.Key == "title" {
-						quote.ReferenceTitle = at.Val
-					}
+		if len(roles) > 0 {
+			for _, role := range roles {
+				if !slices.Contains(c.current.Role, role) {
+					c.current.Role = append(c.current.Role, role)
 				}
-				bestRole = quote
 			}
 		}
 	}
 
-	var before *string
-	if len(c.segmentsAcc) > 0 {
-		before = &c.segmentsAcc[0].Locator.Text.Before
-	}
-	el := element.NewTextElement(
-		manifest.Locator{
-			Href:      c.baseLocator.Href,
-			MediaType: c.baseLocator.MediaType,
-			Title:     c.baseLocator.Title,
-			Locations: manifest.Locations{
-				OtherLocations: map[string]interface{}{},
-			},
-			Text: trimText(c.elementRawTextAcc, before),
-		},
-		bestRole,
-		c.segmentsAcc,
-		nil,
-	)
-	if len(c.breadcrumbs) > 0 {
-		if lastCrumb := c.breadcrumbs[len(c.breadcrumbs)-1]; lastCrumb.cssSelector != "" {
-			el.Locator().Locations.OtherLocations["cssSelector"] = lastCrumb.cssSelector
-		}
-	}
-	c.elements = append(c.elements, el)
-	c.elementRawTextAcc = ""
-	c.segmentsAcc = []element.TextSegment{}
+	c.segmentsAcc = []guidednavigation.GuidedNavigationObject{}
 }
 
 func (c *HTMLConverter) flushSegment() {
@@ -554,50 +527,13 @@ func (c *HTMLConverter) flushSegment() {
 			text = trimmedText + whitespaceSuffix
 		}
 
-		var before *string
-		if c.wholeRawTextAcc != nil {
-			var last string
-			if c.beforeMaxLength > len(*c.wholeRawTextAcc) {
-				last = (*c.wholeRawTextAcc)[:]
-			} else {
-				last = (*c.wholeRawTextAcc)[len(*c.wholeRawTextAcc)-c.beforeMaxLength:]
-			}
-			before = &last
-		}
-		seg := element.TextSegment{
-			Locator: manifest.Locator{
-				Href:      c.baseLocator.Href,
-				MediaType: c.baseLocator.MediaType,
-				Title:     c.baseLocator.Title,
-				Locations: manifest.Locations{
-					// TODO fix: needs to use baseLocator locations too!
-					OtherLocations: map[string]interface{}{},
-				},
-				Text: trimText(c.rawTextAcc, before),
-			},
-			Text: text,
-		}
-		if len(c.breadcrumbs) > 0 {
-			if lastCrumb := c.breadcrumbs[len(c.breadcrumbs)-1]; lastCrumb.cssSelector != "" {
-				seg.Locator.Locations.OtherLocations["cssSelector"] = lastCrumb.cssSelector
-			}
-		}
+		obj := guidednavigation.GuidedNavigationObject{}
+		obj.Text.Plain = text
 		if c.currentLanguage != nil {
-			seg.AttributesHolder = element.NewAttributesHolder([]element.Attribute[any]{
-				element.NewAttribute(element.LanguageAttributeKey, c.currentLanguage),
-			})
+			obj.Text.Language = *c.currentLanguage
 		}
-		c.segmentsAcc = append(c.segmentsAcc, seg)
+		c.segmentsAcc = append(c.segmentsAcc, obj)
 	}
 
-	if c.rawTextAcc != "" {
-		if c.wholeRawTextAcc != nil {
-			(*c.wholeRawTextAcc) += c.rawTextAcc
-		} else {
-			ns := strings.Clone(c.rawTextAcc)
-			c.wholeRawTextAcc = &ns
-		}
-	}
-	c.rawTextAcc = ""
 	c.textAcc.Reset()
 }

@@ -3,6 +3,9 @@ package element
 type AttributeKey string
 
 const AcessibilityLabelAttributeKey AttributeKey = "accessibilityLabel"
+const AccessibilityDetailsAttributeKey AttributeKey = "accessibilityDetails"
+const AccessibilityLabeledByAttributeKey AttributeKey = "accessibilityLabeledBy"
+const AccessibilityDescribedByAttributeKey AttributeKey = "accessibilityDescribedBy"
 const LanguageAttributeKey AttributeKey = "language"
 
 // An attribute is an arbitrary key-value metadata pair.

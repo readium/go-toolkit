@@ -4,12 +4,12 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/guidednavigation"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/readium/xmlquery"
 )
 
-func ParseSMILDocument(document *xmlquery.Node, filePath url.URL) (*manifest.GuidedNavigationDocument, error) {
+func ParseSMILDocument(document *xmlquery.Node, filePath url.URL) (*guidednavigation.GuidedNavigationDocument, error) {
 	smil := document.SelectElement("/" + DualNSSelect(NamespaceSMIL, NamespaceSMIL2, "smil"))
 	if smil == nil {
 		return nil, errors.New("SMIL root element not found")
@@ -26,17 +26,17 @@ func ParseSMILDocument(document *xmlquery.Node, filePath url.URL) (*manifest.Gui
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing SMIL body")
 	}
-	return &manifest.GuidedNavigationDocument{
+	return &guidednavigation.GuidedNavigationDocument{
 		Guided: seqs,
 	}, nil
 }
 
-func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]manifest.GuidedNavigationObject, error) {
+func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]guidednavigation.GuidedNavigationObject, error) {
 	childElements := seq.SelectElements(ManyNSSelectMany([]string{NamespaceSMIL, NamespaceSMIL2}, []string{"par", "seq"}))
 	if len(childElements) == 0 && seq.Data == "body" {
 		return nil, errors.New("SMIL body is empty")
 	}
-	objects := make([]manifest.GuidedNavigationObject, 0, len(childElements))
+	objects := make([]guidednavigation.GuidedNavigationObject, 0, len(childElements))
 	for _, el := range childElements {
 		if el.Data == "par" {
 			// <par>
@@ -47,7 +47,7 @@ func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]manifest.GuidedNaviga
 			objects = append(objects, *o)
 		} else {
 			// <seq>
-			o := &manifest.GuidedNavigationObject{
+			o := &guidednavigation.GuidedNavigationObject{
 				TextRef: SelectNodeAttrNs(el, NamespaceOPS, "textref"),
 			}
 			if o.TextRef == "" {
@@ -83,12 +83,12 @@ func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]manifest.GuidedNaviga
 	return objects, nil
 }
 
-func ParseSMILPar(par *xmlquery.Node, filePath url.URL) (*manifest.GuidedNavigationObject, error) {
+func ParseSMILPar(par *xmlquery.Node, filePath url.URL) (*guidednavigation.GuidedNavigationObject, error) {
 	text := par.SelectElement(DualNSSelect(NamespaceSMIL, NamespaceSMIL2, "text"))
 	if text == nil {
 		return nil, errors.New("SMIL par has no text element")
 	}
-	o := &manifest.GuidedNavigationObject{
+	o := &guidednavigation.GuidedNavigationObject{
 		TextRef: text.SelectAttr("src"),
 	}
 	if o.TextRef == "" {
