@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.12.0] - 2025-10-10
+
+All services are now hidden by default. This mainly affects implementors creating webservers, but you also shouldn't need to manually remove services just to produce clean manifest output. To restore previous functionality, set the `streamer.Config`'s `AddServiceLinks` to `true`
+
+### Added
+
+- ServicesBuilder now has a convenience function `Services` to get the names of all services currently in the builder
+- ServicesBuilder now has a `Publicize` and `Privatize` function to toggle the exposure of a service via the links that get added to the WebPub manifest, as well as access to the service via its well-known link path. By default, services are **private**
+- `streamer.Config` has a new property, `AddServiceLinks`. Setting this property is equivalent to calling the aforementioned `Publicize` function for every service
+
+### Changed
+
+- `ServiceFactory` now has a required `public` property. This lets a service expose itself via the `Get` and `Links` function if set to true. This also means that by default, all services are now "private". That means they will not be added to manifests as links, or callable by said link's path. They are still directly accessible in Go code using e.g. `Publication.FindService`, and then directly calling their functions by casting them to the correct service type (see e.g. `Publication.Positions`)
+
 ## [0.11.0] - 2025-07-30
 
 The WebPub data the toolkit parses and provides has been updated to more closely match the latest WebPub spec. Pay close attention to these changes if you depend on the WebPub output in reading systems/libraries that use an older version of the spec!
