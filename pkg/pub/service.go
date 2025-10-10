@@ -39,12 +39,13 @@ func NewContext(manifest manifest.Manifest, fetcher fetcher.Fetcher) Context {
 	}
 }
 
-type ServiceFactory func(context Context) Service
+type ServiceFactory func(context Context, public bool) Service
 
 // Builds a list of [Service] from a collection of service factories.
 // Provides helpers to manipulate the list of services of a [pub.Publication].
 type ServicesBuilder struct {
 	serviceFactories map[ServiceName]ServiceFactory
+	publicFlags      map[ServiceName]bool
 }
 
 /*
@@ -62,6 +63,7 @@ func NewServicesBuilder(fcs map[ServiceName]ServiceFactory) *ServicesBuilder {
 
 	return &ServicesBuilder{
 		serviceFactories: fcs,
+		publicFlags:      map[ServiceName]bool{},
 	}
 }
 
@@ -71,13 +73,24 @@ func (s *ServicesBuilder) Build(context Context) map[ServiceName]Service {
 	for k, v := range s.serviceFactories {
 		// Allow service factories to be nil
 		if v != nil {
+			public := s.publicFlags[k]
+
 			// Allow service factories to return nil
-			if service := v(context); service != nil {
+			if service := v(context, public); service != nil {
 				services[k] = service
 			}
 		}
 	}
 	return services
+}
+
+// Gets the names of all services currently in the builder
+func (s *ServicesBuilder) Services() []ServiceName {
+	keys := make([]ServiceName, 0, len(s.serviceFactories))
+	for k := range s.serviceFactories {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // Gets the publication service factory for the given service type.
@@ -137,4 +150,12 @@ func (s *ServicesBuilder) Decorate(name ServiceName, transform func(*ServiceFact
 	} else {
 		s.serviceFactories[name] = transform(nil)
 	}
+}
+
+func (s *ServicesBuilder) Publicize(name ServiceName) {
+	s.publicFlags[name] = true
+}
+
+func (s *ServicesBuilder) Privatize(name ServiceName) {
+	delete(s.publicFlags, name)
 }

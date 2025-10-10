@@ -30,6 +30,7 @@ type Streamer struct {
 	// TODO pdfFactory
 	httpClient          *http.Client
 	onCreatePublication OnCreatePublicationFunc
+	addServicelinks     bool
 }
 
 type OnCreatePublicationFunc func(builder *pub.Builder) error
@@ -43,6 +44,7 @@ type Config struct {
 	ArchiveFactory       archive.ArchiveFactory     // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
 	HttpClient           *http.Client               // Service performing HTTP requests.
 	OnCreatePublication  OnCreatePublicationFunc    // Called on every parsed [pub.Builder]. It can be used to modify the manifest, the root container or the list of service factories of a [pub.Publication]
+	AddServiceLinks      bool                       // When true, services will add their links to the publication manifest. This can also be adjusted for individual services in `OnCreatePublication`
 }
 
 type InferA11yMetadata uint8
@@ -86,6 +88,7 @@ func New(config Config) Streamer { // TODO contentProtections
 		archiveFactory:      config.ArchiveFactory,
 		httpClient:          config.HttpClient,
 		onCreatePublication: config.OnCreatePublication,
+		addServicelinks:     config.AddServiceLinks,
 	}
 }
 
@@ -115,6 +118,12 @@ func (s Streamer) Open(ctx context.Context, a asset.PublicationAsset, credential
 	if builder == nil {
 		fetcher.Close()
 		return nil, errors.New("cannot find a parser for this asset")
+	}
+
+	if s.addServicelinks {
+		for _, name := range builder.ServicesBuilder.Services() {
+			builder.ServicesBuilder.Publicize(name)
+		}
 	}
 
 	if s.onCreatePublication != nil {
