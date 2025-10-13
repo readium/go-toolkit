@@ -6,13 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## [0.12.0] - 2025-10-10
 
-All services are now hidden by default. This mainly affects implementors creating webservers, but you also shouldn't need to manually remove services just to produce clean manifest output. To restore previous functionality, set the `streamer.Config`'s `AddServiceLinks` to `true`
+All services are now hidden by default. This mainly affects implementers creating webservers, but you also shouldn't need to manually remove services just to produce clean manifest output. To restore previous functionality, set the `streamer.Config`'s `AddServiceLinks` to `true`
 
 ### Added
 
 - ServicesBuilder now has a convenience function `Services` to get the names of all services currently in the builder
-- ServicesBuilder now has a `Publicize` and `Privatize` function to toggle the exposure of a service via the links that get added to the WebPub manifest, as well as access to the service via its well-known link path. By default, services are **private**
-- `streamer.Config` has a new property, `AddServiceLinks`. Setting this property is equivalent to calling the aforementioned `Publicize` function for every service
+- ServicesBuilder now has a `ExposeLinks` and `HideLinks` function to toggle the exposure of a service via the links that get added to the WebPub manifest, as well as access to the service via its well-known link path. By default, services are **private**
+- `streamer.Config` has a new property, `AddServiceLinks`. Setting this property is equivalent to calling the aforementioned `ExposeLinks` function for every service
 
 ### Changed
 
@@ -91,7 +91,7 @@ The WebPub data the toolkit parses and provides has been updated to more closely
 
 ### Changed
 
-- In order to support remote streaming, a lot of APIs have been altered to accept a `context.Context` as the first parameter, to provide implementors with the ability to e.g. cancel a request to fetch a resource.
+- In order to support remote streaming, a lot of APIs have been altered to accept a `context.Context` as the first parameter, to provide implementers with the ability to e.g. cancel a request to fetch a resource.
 - `ReadAsString`, `ReadAsJSON`, and `ReadAsXML` functions have been removed from `Resource` and are instead available as helper functions.
 
 ## [0.8.1] - 2025-02-24
