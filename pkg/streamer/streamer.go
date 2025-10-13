@@ -122,7 +122,7 @@ func (s Streamer) Open(ctx context.Context, a asset.PublicationAsset, credential
 
 	if s.addServicelinks {
 		for _, name := range builder.ServicesBuilder.Services() {
-			builder.ServicesBuilder.Publicize(name)
+			builder.ServicesBuilder.ExposeLinks(name)
 		}
 	}
 

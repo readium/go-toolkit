@@ -152,10 +152,10 @@ func (s *ServicesBuilder) Decorate(name ServiceName, transform func(*ServiceFact
 	}
 }
 
-func (s *ServicesBuilder) Publicize(name ServiceName) {
+func (s *ServicesBuilder) ExposeLinks(name ServiceName) {
 	s.publicFlags[name] = true
 }
 
-func (s *ServicesBuilder) Privatize(name ServiceName) {
+func (s *ServicesBuilder) HideLinks(name ServiceName) {
 	delete(s.publicFlags, name)
 }
