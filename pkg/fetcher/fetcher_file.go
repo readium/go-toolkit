@@ -199,8 +199,8 @@ func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte
 		}
 		return data[:n], nil
 	} else {
-		n, err := f.Read(data)
-		if err != nil && err != io.EOF {
+		n, err := io.ReadFull(f, data)
+		if err != nil && err != io.ErrUnexpectedEOF {
 			return nil, Other(err)
 		}
 		return data[:n], nil

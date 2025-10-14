@@ -11,6 +11,7 @@ require (
 	github.com/aws/smithy-go v1.23.0
 	github.com/azr/phash v0.2.0
 	github.com/bbrks/go-blurhash v1.1.1
+	github.com/chocolatkey/gzran v0.0.0-20251014025324-d3baa4d16d07
 	github.com/deckarep/golang-set v1.8.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/go-viper/mapstructure/v2 v2.4.0

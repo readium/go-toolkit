@@ -54,7 +54,11 @@ func (e explodedArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 		}
 	}
 	data := make([]byte, end-start+1)
-	n, err := f.Read(data)
+	n, err := io.ReadFull(f, data)
+	if n > 0 && err == io.ErrUnexpectedEOF {
+		// Not EOF error if some data was read
+		err = nil
+	}
 	return data[:n], err
 }
 

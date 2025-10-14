@@ -94,8 +94,8 @@ func (d DeobfuscatingResource) Stream(ctx context.Context, w io.Writer, start in
 
 		// First, we just read the obfuscated portion (1040 or 1024 first bytes)
 		obfuscatedPortion := make([]byte, v)
-		on, err := pr.Read(obfuscatedPortion)
-		if err != nil && err != io.EOF {
+		on, err := io.ReadFull(pr, obfuscatedPortion)
+		if err != nil && err != io.ErrUnexpectedEOF {
 			if fre, ok := err.(*fetcher.ResourceError); ok {
 				return 0, fre
 			} else {

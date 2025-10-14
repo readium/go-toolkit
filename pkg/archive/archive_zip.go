@@ -11,30 +11,34 @@ import (
 	"path"
 	"sync"
 
+	"github.com/chocolatkey/gzran"
 	"github.com/pkg/errors"
 )
 
 type gozipArchiveEntry struct {
 	file          *zip.File
 	minimizeReads bool
+
+	gi gzran.Index
+	gm sync.Mutex
 }
 
-func (e gozipArchiveEntry) Path() string {
+func (e *gozipArchiveEntry) Path() string {
 	return path.Clean(e.file.Name)
 }
 
-func (e gozipArchiveEntry) Length() uint64 {
+func (e *gozipArchiveEntry) Length() uint64 {
 	return e.file.UncompressedSize64
 }
 
-func (e gozipArchiveEntry) CompressedLength() uint64 {
+func (e *gozipArchiveEntry) CompressedLength() uint64 {
 	if e.file.Method == zip.Store {
 		return 0
 	}
 	return e.file.CompressedSize64
 }
 
-func (e gozipArchiveEntry) CompressedAs(compressionMethod CompressionMethod) bool {
+func (e *gozipArchiveEntry) CompressedAs(compressionMethod CompressionMethod) bool {
 	if compressionMethod != CompressionMethodDeflate {
 		return false
 	}
@@ -45,11 +49,11 @@ func (e gozipArchiveEntry) CompressedAs(compressionMethod CompressionMethod) boo
 // It's especially useful when trying to stream the ZIP from a remote file, e.g.
 // cloud storage. It's only enabled when trying to read the entire file and compression
 // is enabled. Care needs to be taken to cover every edge case.
-func (e gozipArchiveEntry) couldMinimizeReads() bool {
+func (e *gozipArchiveEntry) couldMinimizeReads() bool {
 	return e.minimizeReads && e.CompressedLength() > 0
 }
 
-func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
+func (e *gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	if end < start {
 		return nil, errors.New("range not satisfiable")
 	}
@@ -73,14 +77,50 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	}
 
 	if minimizeReads {
-		compressedData := make([]byte, e.file.CompressedSize64)
-		_, err := io.ReadFull(f, compressedData)
-		if err != nil {
-			return nil, err
+		// If uncompressed size is smaller than 1MB, it's not worth
+		// using deflate random access, because the state itself takes memory
+		if e.file.UncompressedSize64 < ZRandCutoff {
+			compressedData := make([]byte, e.file.CompressedSize64)
+			_, err := io.ReadFull(f, compressedData)
+			if err != nil {
+				return nil, err
+			}
+			frdr := flate.NewReader(bytes.NewReader(compressedData))
+			defer frdr.Close()
+			f = frdr
+		} else {
+			e.gm.Lock()
+			var lastCompressedOffset int64
+			for _, v := range e.gi {
+				if v.CompressedOffset > lastCompressedOffset && v.UncompressedOffset <= start {
+					lastCompressedOffset = v.CompressedOffset
+				}
+			}
+			e.gm.Unlock()
+
+			compressedData := make([]byte, e.file.CompressedSize64)
+			f.(io.Seeker).Seek(lastCompressedOffset, io.SeekStart)
+			_, err := io.ReadFull(f, compressedData[lastCompressedOffset:])
+			if err != nil {
+				return nil, err
+			}
+
+			fzr, err := gzran.NewDReader(bytes.NewReader(compressedData)) // Default interval = 1MB, same as current ZRandCutoff
+			if err != nil {
+				return nil, err
+			}
+			e.gm.Lock()
+			defer e.gm.Unlock()
+			defer func() {
+				e.gi = fzr.Index
+			}()
+			defer fzr.Close()
+			if len(e.gi) > 0 {
+				fzr.Index = e.gi
+			}
+
+			f = fzr
 		}
-		frdr := flate.NewReader(bytes.NewReader(compressedData))
-		defer frdr.Close()
-		f = frdr
 	}
 
 	if start == 0 && end == 0 {
@@ -92,21 +132,25 @@ func (e gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 		return data, nil
 	}
 	if start > 0 {
-		_, err := io.CopyN(io.Discard, f, start)
+		if skr, ok := f.(io.Seeker); ok {
+			_, err = skr.Seek(start, io.SeekStart)
+		} else {
+			_, err = io.CopyN(io.Discard, f, start)
+		}
 		if err != nil {
 			return nil, err
 		}
 	}
 	data := make([]byte, end-start+1)
-	n, err := f.Read(data)
-	if n > 0 && err == io.EOF {
+	n, err := io.ReadFull(f, data)
+	if n > 0 && err == io.ErrUnexpectedEOF {
 		// Not EOF error if some data was read
 		err = nil
 	}
 	return data[:n], err
 }
 
-func (e gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, error) {
+func (e *gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, error) {
 	if end < start {
 		return -1, errors.New("range not satisfiable")
 	}
@@ -157,7 +201,7 @@ func (e gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, e
 	return n, err
 }
 
-func (e gozipArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
+func (e *gozipArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
 	if e.file.Method != zip.Deflate {
 		return -1, errors.New("not a compressed resource")
 	}
@@ -169,7 +213,7 @@ func (e gozipArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
 	return io.Copy(w, f)
 }
 
-func (e gozipArchiveEntry) StreamCompressedGzip(w io.Writer) (int64, error) {
+func (e *gozipArchiveEntry) StreamCompressedGzip(w io.Writer) (int64, error) {
 	if e.file.Method != zip.Deflate {
 		return -1, errors.New("not a compressed resource")
 	}
@@ -205,7 +249,7 @@ func (e gozipArchiveEntry) StreamCompressedGzip(w io.Writer) (int64, error) {
 	return int64(n) + nn + int64(nnn), nil
 }
 
-func (e gozipArchiveEntry) ReadCompressed() ([]byte, error) {
+func (e *gozipArchiveEntry) ReadCompressed() ([]byte, error) {
 	if e.file.Method != zip.Deflate {
 		return nil, errors.New("not a compressed resource")
 	}
@@ -223,7 +267,7 @@ func (e gozipArchiveEntry) ReadCompressed() ([]byte, error) {
 	return compressedData, nil
 }
 
-func (e gozipArchiveEntry) ReadCompressedGzip() ([]byte, error) {
+func (e *gozipArchiveEntry) ReadCompressedGzip() ([]byte, error) {
 	if e.file.Method != zip.Deflate {
 		return nil, errors.New("not a compressed resource")
 	}
@@ -280,7 +324,7 @@ func (a *gozipArchive) Entries() []Entry {
 
 		aentry, ok := a.cachedEntries.Load(f.Name)
 		if !ok {
-			aentry = gozipArchiveEntry{
+			aentry = &gozipArchiveEntry{
 				file:          f,
 				minimizeReads: a.minimizeReads,
 			}
@@ -307,7 +351,7 @@ func (a *gozipArchive) Entry(p string) (Entry, error) {
 	for _, f := range a.zip.File {
 		fp := path.Clean(f.Name)
 		if fp == cpath {
-			aentry := gozipArchiveEntry{
+			aentry := &gozipArchiveEntry{
 				file:          f,
 				minimizeReads: a.minimizeReads,
 			}
