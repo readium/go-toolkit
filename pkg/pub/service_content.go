@@ -33,10 +33,11 @@ type ContentService interface {
 type DefaultContentService struct {
 	context                          Context
 	resourceContentIteratorFactories []iterator.ResourceContentIteratorFactory
+	public                           bool
 }
 
 func GetForContentService(ctx context.Context, service ContentService, link manifest.Link) (fetcher.Resource, bool) {
-	if link.Href != ContentLink.Href {
+	if !link.URL(nil, nil).Equivalent(ContentLink.URL(nil, nil)) {
 		return nil, false
 	}
 
@@ -55,10 +56,16 @@ func GetForContentService(ctx context.Context, service ContentService, link mani
 func (s DefaultContentService) Close() {}
 
 func (s DefaultContentService) Links() manifest.LinkList {
+	if !s.public {
+		return nil
+	}
 	return manifest.LinkList{ContentLink}
 }
 
 func (s DefaultContentService) Get(ctx context.Context, link manifest.Link) (fetcher.Resource, bool) {
+	if !s.public {
+		return nil, false
+	}
 	return GetForContentService(ctx, s, link)
 }
 
@@ -94,10 +101,11 @@ func (c contentImplementation) Text(ctx context.Context, separator *string) (str
 }
 
 func DefaultContentServiceFactory(resourceContentIteratorFactories []iterator.ResourceContentIteratorFactory) ServiceFactory {
-	return func(context Context) Service {
+	return func(context Context, public bool) Service {
 		return DefaultContentService{
 			context:                          context,
 			resourceContentIteratorFactories: resourceContentIteratorFactories,
+			public:                           public,
 		}
 	}
 }

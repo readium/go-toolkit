@@ -104,25 +104,13 @@ func (p Publication) BaseURL() url.URL {
 	return nil
 }
 
+// Find a service in the publication by its name.
 func (p Publication) FindService(serviceName ServiceName) Service {
-	for k, v := range p.services {
-		if k != serviceName {
-			continue
-		}
-		return v
+	svc, ok := p.services[serviceName]
+	if ok {
+		return svc
 	}
 	return nil
-}
-
-func (p Publication) FindServices(serviceName ServiceName) []Service {
-	var services []Service
-	for k, v := range p.services {
-		if k != serviceName {
-			continue
-		}
-		services = append(services, v)
-	}
-	return services
 }
 
 // Returns the resource targeted by the given non-templated [link].

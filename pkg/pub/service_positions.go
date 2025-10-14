@@ -28,6 +28,7 @@ type PositionsService interface {
 type PerResourcePositionsService struct {
 	readingOrder      manifest.LinkList
 	fallbackMediaType mediatype.MediaType
+	public            bool
 }
 
 func GetForPositionsService(ctx context.Context, service PositionsService, link manifest.Link) (fetcher.Resource, bool) {
@@ -48,10 +49,16 @@ func GetForPositionsService(ctx context.Context, service PositionsService, link 
 func (s PerResourcePositionsService) Close() {}
 
 func (s PerResourcePositionsService) Links() manifest.LinkList {
+	if !s.public {
+		return nil
+	}
 	return manifest.LinkList{PositionsLink}
 }
 
 func (s PerResourcePositionsService) Get(ctx context.Context, link manifest.Link) (fetcher.Resource, bool) {
+	if !s.public {
+		return nil, false
+	}
 	return GetForPositionsService(ctx, s, link)
 }
 
@@ -86,10 +93,11 @@ func (s PerResourcePositionsService) PositionsByReadingOrder(ctx context.Context
 }
 
 func PerResourcePositionsServiceFactory(fallbackMediaType mediatype.MediaType) ServiceFactory {
-	return func(context Context) Service {
+	return func(context Context, public bool) Service {
 		return PerResourcePositionsService{
 			readingOrder:      context.Manifest.ReadingOrder,
 			fallbackMediaType: fallbackMediaType,
+			public:            public,
 		}
 	}
 }
