@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
-## [0.12.0] - 2025-10-10
+## [0.12.0] - 2025-10-14
 
 All services are now hidden by default. This mainly affects implementers creating webservers, but you also shouldn't need to manually remove services just to produce clean manifest output. To restore previous functionality, set the `streamer.Config`'s `AddServiceLinks` to `true`
 
@@ -17,6 +17,7 @@ All services are now hidden by default. This mainly affects implementers creatin
 ### Changed
 
 - `ServiceFactory` now has a required `public` property. This lets a service expose itself via the `Get` and `Links` function if set to true. This also means that by default, all services are now "private". That means they will not be added to manifests as links, or callable by said link's path. They are still directly accessible in Go code using e.g. `Publication.FindService`, and then directly calling their functions by casting them to the correct service type (see e.g. `Publication.Positions`)
+- Upgraded dependencies
 
 ## [0.11.0] - 2025-07-30
 
