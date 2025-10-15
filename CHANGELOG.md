@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.12.1] - 2025-10-14
+
+### Fixed
+
+- If the `links` array in a manifest is empty, it was set to `null` when the manifest was serialized to JSON. Now, it is not included, which is the proper behavior
+
 ## [0.12.0] - 2025-10-14
 
 All services are now hidden by default. This mainly affects implementers creating webservers, but you also shouldn't need to manually remove services just to produce clean manifest output. To restore previous functionality, set the `streamer.Config`'s `AddServiceLinks` to `true`
