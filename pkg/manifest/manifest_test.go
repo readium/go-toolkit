@@ -214,7 +214,6 @@ func TestManifestMinimalJSON(t *testing.T) {
 	assert.JSONEq(t, `{
 		"@context": "https://readium.org/webpub-manifest/context.jsonld",
 		"metadata": {"title": "Title"},
-		"links": [],
 		"readingOrder": []
 	}`, string(bin))
 }
