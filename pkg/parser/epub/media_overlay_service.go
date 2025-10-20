@@ -12,7 +12,7 @@ import (
 )
 
 func MediaOverlayFactory() pub.ServiceFactory {
-	return func(context pub.Context) pub.Service {
+	return func(context pub.Context, public bool) pub.Service {
 		// Process reading order to find and replace SMIL alternates
 		smilMap := make(map[string]manifest.Link)
 		var smilIndexes []string
@@ -50,11 +50,13 @@ func MediaOverlayFactory() pub.ServiceFactory {
 			fetcher:                context.Fetcher,
 			originalSmilAlternates: smilMap,
 			originalSmilIndexes:    smilIndexes,
+			public:                 public,
 		}
 	}
 }
 
 type MediaOverlayService struct {
+	public                 bool
 	fetcher                fetcher.Fetcher
 	originalSmilAlternates map[string]manifest.Link
 	originalSmilIndexes    []string
@@ -67,6 +69,9 @@ func (s *MediaOverlayService) Close() {
 }
 
 func (s *MediaOverlayService) Links() manifest.LinkList {
+	if !s.public {
+		return nil
+	}
 	return manifest.LinkList{pub.GuidedNavigationLink}
 }
 
@@ -121,5 +126,8 @@ func (s *MediaOverlayService) GuideForResource(ctx context.Context, href string)
 }
 
 func (s *MediaOverlayService) Get(ctx context.Context, link manifest.Link) (fetcher.Resource, bool) {
+	if !s.public {
+		return nil, false
+	}
 	return pub.GetForGuidedNavigationService(ctx, s, link)
 }

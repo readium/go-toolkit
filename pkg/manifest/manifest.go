@@ -384,12 +384,10 @@ func (m Manifest) ToMap(selfLink *Link) map[string]interface{} {
 	res["metadata"] = m.Metadata
 	if selfLink != nil {
 		newList := make(LinkList, len(m.Links)+1)
-		for i, link := range m.Links {
-			newList[i] = link
-		}
+		copy(newList, m.Links)
 		newList[len(newList)-1] = *selfLink
 		res["links"] = newList
-	} else {
+	} else if len(m.Links) > 0 {
 		res["links"] = m.Links
 	}
 	res["readingOrder"] = m.ReadingOrder
