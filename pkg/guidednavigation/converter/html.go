@@ -579,12 +579,12 @@ func (c *HTMLConverter) flushSegment(asTag string, extraAttrs []xml.Attr) {
 		if asTag != "" {
 			obj.tag = &asTag
 		}
+		obj.attributes = append(obj.attributes, extraAttrs...)
 		if c.currentLanguage != nil {
 			if obj.tag == nil {
 				langStr := "lang"
 				obj.tag = &langStr
 			}
-			obj.attributes = append(obj.attributes, extraAttrs...)
 			obj.attributes = append(obj.attributes, xml.Attr{
 				Name:  xml.Name{Local: "xml:lang"},
 				Value: *c.currentLanguage,
