@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/guidednavigation"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/pub"
@@ -74,7 +75,7 @@ func (s *MediaOverlayService) HasGuideForResource(href string) bool {
 	return ok
 }
 
-func (s *MediaOverlayService) GuideForResource(ctx context.Context, href string) (*manifest.GuidedNavigationDocument, error) {
+func (s *MediaOverlayService) GuideForResource(ctx context.Context, href string) (*guidednavigation.GuidedNavigationDocument, error) {
 	// Check if the provided resource has a guided navigation document
 	if link, ok := s.originalSmilAlternates[href]; ok {
 		res := s.fetcher.Get(ctx, link)

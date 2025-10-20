@@ -34,7 +34,7 @@ func Do(ctx context.Context, resource fetcher.Resource, locator manifest.Locator
 	contentConverter := NewHTMLConverter(locator)
 
 	// Traverse the document's HTML
-	TraverseNode(contentConverter, body)
+	contentConverter.Convert(body)
 
 	return &guidednavigation.GuidedNavigationDocument{
 		Guided: contentConverter.Result(),

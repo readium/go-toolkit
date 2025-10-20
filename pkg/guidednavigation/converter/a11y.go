@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"encoding/xml"
 	"slices"
 	"strings"
 
@@ -126,4 +127,27 @@ func ExtractNodeAria(el *html.Node) (*guidednavigation.GuidedNavigationText, boo
 	}
 
 	return nil, true
+}
+
+func ConvertElementToSSMLTag(a atom.Atom) (string, []xml.Attr) {
+	switch a {
+	case atom.Em:
+		return "emphasis", nil
+	case atom.B:
+		return "emphasis", nil
+	case atom.I:
+		return "emphasis", []xml.Attr{{
+			Name:  xml.Name{Local: "level"},
+			Value: "reduced",
+		}}
+	case atom.Strong:
+		return "emphasis", []xml.Attr{{
+			Name:  xml.Name{Local: "level"},
+			Value: "strong",
+		}}
+	case atom.Br:
+		return "break", nil
+	default:
+		return "", nil
+	}
 }

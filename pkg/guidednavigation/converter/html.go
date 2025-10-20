@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"encoding/xml"
 	"slices"
 	"strings"
 	"unicode"
@@ -242,25 +243,90 @@ func appendNormalizedWhitespace(accum *strings.Builder, text string, stripLeadin
 	}
 }
 
-type NodeVisitor interface {
-	Head(n *html.Node, depth int) // Callback for when a node is first visited.
-	Tail(n *html.Node, depth int) // Callback for when a node is last visited, after all of its descendants have been visited.
+type textSegment struct {
+	text string
+
+	tag        *string
+	attributes []xml.Attr
 }
 
-// Start a depth-first traverse of the root and all of its descendants.
-// This implementation does not use recursion, so a deep DOM does not risk blowing the stack.
-// From JSoup: https://github.com/jhy/jsoup/blob/1762412a28fa7b08ccf71d93fc4c98dc73086e03/src/main/java/org/jsoup/select/NodeTraversor.java#L20
-// NOTE: Unlike the JSoup implementation, we expect any implementor of NodeVisitor to be read-only, because it simplifies implementation
-func TraverseNode(visitor NodeVisitor, root *html.Node) {
-	node := root
+type navigationObject struct {
+	node     *html.Node
+	object   guidednavigation.GuidedNavigationObject
+	children []*navigationObject
+	parent   *navigationObject
+	noText   bool
+}
+
+func (n *navigationObject) convert(prettify bool) guidednavigation.GuidedNavigationObject {
+	result := n.object
+
+	for _, child := range n.children {
+		res := child.convert(prettify)
+		if !res.Empty() {
+			result.Children = append(result.Children, res)
+		}
+	}
+	// Prettify
+	if len(result.Children) == 1 && result.Children[0].TextOnly() && prettify {
+		result.Text = result.Children[0].Text
+		result.Children = nil
+	}
+
+	return result
+}
+
+type HTMLConverter struct {
+	baseLocator manifest.Locator
+
+	segmentsAcc     []textSegment   // Segments accumulated for the current element.
+	textAcc         strings.Builder // Text since the beginning of the current segment, after coalescing whitespaces.
+	currentLanguage *string         // Language of the current segment.
+	lastTextNode    *html.Node
+
+	root     *navigationObject
+	current  *navigationObject
+	skipNode bool
+}
+
+func NewHTMLConverter(baseLocator manifest.Locator) *HTMLConverter {
+	return &HTMLConverter{
+		baseLocator: baseLocator,
+	}
+}
+
+func (c *HTMLConverter) descend(n *html.Node) {
+	newNode := &navigationObject{
+		node:   n,
+		parent: c.current,
+		noText: c.current.noText,
+	}
+	if c.current == nil {
+		c.root = newNode
+	} else {
+		c.current.children = append(c.current.children, newNode)
+	}
+	c.current = newNode
+}
+
+func (c *HTMLConverter) ascend() {
+	if c.current != nil {
+		c.current = c.current.parent
+	}
+}
+
+func (c *HTMLConverter) Convert(doc *html.Node) {
+	node := doc
+	c.root = &navigationObject{
+		node: doc,
+	}
+	c.current = c.root
+
 	depth := 0
 
 	for node != nil {
-		visitor.Head(node, depth) // visit current node
-
-		// DON'T check if removed or replaced
-
-		if node.FirstChild != nil { // descend
+		c.head(node)
+		if node.FirstChild != nil && !c.skipNode { // descend
 			node = node.FirstChild
 			depth++
 		} else {
@@ -268,12 +334,12 @@ func TraverseNode(visitor NodeVisitor, root *html.Node) {
 				if !(node.NextSibling == nil && depth > 0) {
 					break
 				}
-				visitor.Tail(node, depth) // when no more siblings, ascend
+				c.tail(node)
 				node = node.Parent
 				depth--
 			}
-			visitor.Tail(node, depth)
-			if node == root {
+			c.tail(node)
+			if node == doc {
 				break
 			}
 			node = node.NextSibling
@@ -281,148 +347,103 @@ func TraverseNode(visitor NodeVisitor, root *html.Node) {
 	}
 }
 
-type breadcrumbData struct {
-	node   *html.Node
-	object *guidednavigation.GuidedNavigationObject
-	skip   bool // If true, this block and its children should be skipped
-}
-
-// Note that this whole thing is based off of JSoup's NodeVisitor and NodeTraverser classes
-// https://jsoup.org/apidocs/org/jsoup/select/NodeVisitor.html
-// https://jsoup.org/apidocs/org/jsoup/select/NodeTraversor.html
-type HTMLConverter struct {
-	baseLocator manifest.Locator
-
-	root    *guidednavigation.GuidedNavigationObject
-	current *guidednavigation.GuidedNavigationObject
-
-	skipCurrent     bool
-	segmentsAcc     []guidednavigation.GuidedNavigationObject // Segments accumulated for the current element.
-	textAcc         strings.Builder                           // Text since the beginning of the current segment, after coalescing whitespaces.
-	currentLanguage *string                                   // Language of the current segment.
-
-	breadcrumbs []breadcrumbData // LIFO stack of the current element's block ancestors.
-}
-
-func NewHTMLConverter(baseLocator manifest.Locator) *HTMLConverter {
-	doc := &guidednavigation.GuidedNavigationObject{}
-	return &HTMLConverter{
-		baseLocator: baseLocator,
-		root:        doc,
-		current:     doc,
-	}
-}
-
 func (c *HTMLConverter) Result() []guidednavigation.GuidedNavigationObject {
-	return c.root.Children
+	if c.root == nil {
+		return nil
+	}
+	return c.root.convert(true).Children
 }
 
-// Implements NodeTraversor
-func (c *HTMLConverter) Head(n *html.Node, depth int) {
-	if n.Type == html.ElementNode {
-		aria, visible := ExtractNodeAria(n)
+func (c *HTMLConverter) head(n *html.Node) {
+	if n.Type != html.ElementNode {
+		return
+	}
 
-		isBlock := !isInlineTag(n)
-		if isBlock {
-			// Flush text
-			c.flushText()
+	aria, visible := ExtractNodeAria(n)
+	if !visible {
+		c.skipNode = true
+		return
+	}
 
-			// Go down in the GN tree
-			c.current.Children = append(c.current.Children, guidednavigation.GuidedNavigationObject{
-				// Role: []guidednavigation.GuidedNavigationRole{guidednavigation.GuidedNavigationRole(n.Data)},
-			})
-			c.current = &c.current.Children[len(c.current.Children)-1]
+	isBlock := !isInlineTag(n)
+	if isBlock {
+		// Flush text
+		c.flushText()
+	}
+	c.descend(n)
 
-			// Add blocks to breadcrumbs
-			c.breadcrumbs = append(c.breadcrumbs, breadcrumbData{
-				node:   n,
-				object: c.current,
-				skip:   !visible,
-			})
-		}
+	cur := &c.current.object
 
-		roles, level := ExtractNodeRoles(n)
+	roles, level := ExtractNodeRoles(n)
 
-		if n.DataAtom == atom.Br {
-			c.flushText()
-		} else if n.DataAtom == atom.Audio || n.DataAtom == atom.Video || slices.Contains(roles, guidednavigation.RoleImage) {
-			c.flushText()
-
-			if slices.Contains(roles, guidednavigation.RoleImage) {
-				obj := guidednavigation.GuidedNavigationObject{
-					Role: roles,
-				}
-				if href := srcRelativeToHref(n, c.baseLocator.Href); href != nil {
-					obj.ImgRef = href
-				}
-				if aria != nil {
-					obj.Description = aria.Plain
-					c.skipCurrent = true
-				}
-				c.current.Children = append(c.current.Children, obj)
-			} else { // Audio or Video
-				href := srcRelativeToHref(n, c.baseLocator.Href)
-				if href == nil {
-					sourceNodes := childrenOfType(n, atom.Source, 1)
-					for _, source := range sourceNodes {
-						if src := srcRelativeToHref(source, c.baseLocator.Href); src != nil {
-							href = src
-							// TODO: we're losing the alts
-							break
-						}
-					}
-				}
-
-				if href != nil {
-					if n.DataAtom == atom.Audio {
-						obj := guidednavigation.GuidedNavigationObject{
-							AudioRef: href,
-							// elementLocator
-						}
-						if aria != nil {
-							obj.Description = aria.Plain
-							c.skipCurrent = true
-						}
-						c.current.Children = append(c.current.Children, obj)
-					} else if n.DataAtom == atom.Video {
-						// TODO: videoref?
-						panic("videoref not implemented!")
-					}
-				}
+	if n.DataAtom == atom.Br {
+		c.flushSegment("", nil)
+		breakStr := "break"
+		c.segmentsAcc = append(c.segmentsAcc, textSegment{
+			text: "",
+			tag:  &breakStr,
+		})
+	} else if n.DataAtom == atom.Audio || n.DataAtom == atom.Video || slices.Contains(roles, guidednavigation.RoleImage) || slices.Contains(roles, guidednavigation.RoleFigure) {
+		// These three ops are essential to ensuring the correct order of the inline elements in the guided nav tree
+		c.flushText()
+		c.ascend()
+		c.descend(n)
+		c.current.object.Role = roles
+		if slices.Contains(roles, guidednavigation.RoleImage) {
+			if href := srcRelativeToHref(n, c.baseLocator.Href); href != nil {
+				c.current.object.ImgRef = href
 			}
-		} else {
-			if isBlock {
-				if level > 0 {
-					c.current.Level = level
-				}
-				if len(roles) > 0 {
-					for _, role := range roles {
-						if !slices.Contains(c.current.Role, role) {
-							c.current.Role = append(c.current.Role, role)
-						}
-					}
-				}
-			}
-
 			if aria != nil {
-				c.current.Description = aria.Plain
-				c.breadcrumbs[len(c.breadcrumbs)-1].skip = true
-				c.skipCurrent = true
+				c.current.object.Description = aria.Plain
+				c.current.noText = true
+			}
+		} else if slices.Contains(roles, guidednavigation.RoleFigure) {
+			if aria != nil {
+				c.current.object.Description = aria.Plain
+				c.current.noText = true
+			}
+		} else { // Audio or Video
+			href := srcRelativeToHref(n, c.baseLocator.Href)
+			if href == nil {
+				sourceNodes := childrenOfType(n, atom.Source, 1)
+				for _, source := range sourceNodes {
+					if src := srcRelativeToHref(source, c.baseLocator.Href); src != nil {
+						href = src
+						// TODO: we're losing the alts
+						break
+					}
+				}
+			}
+
+			if href != nil {
+				switch n.DataAtom {
+				case atom.Audio:
+					c.current.object.AudioRef = href
+					if aria != nil {
+						c.current.object.Description = aria.Plain
+						c.current.noText = true
+					}
+				case atom.Video:
+					// TODO: videoref?
+					c.current.noText = true
+				}
 			}
 		}
-
-		if isBlock {
-			c.flushText()
+	} else {
+		cur.Level = level
+		cur.Role = roles
+		if aria != nil {
+			cur.Description = aria.Plain
 		}
 	}
 }
 
-// Implements NodeTraversor
-func (c *HTMLConverter) Tail(n *html.Node, depth int) {
-	if n.Type == html.TextNode && !onlySpace(n.Data) && !c.skippable() {
+func (c *HTMLConverter) tail(n *html.Node) {
+	if n.Type == html.TextNode && !onlySpace(n.Data) && !c.current.noText {
 		language := nodeLanguage(n)
-		if c.currentLanguage != language {
-			c.flushSegment()
+		ssmlTag, attrs := ConvertElementToSSMLTag(n.Parent.DataAtom)
+		if c.currentLanguage != language || ssmlTag != "" {
+			c.flushSegment(ssmlTag, attrs)
 			c.currentLanguage = language
 		}
 
@@ -431,55 +452,26 @@ func (c *HTMLConverter) Tail(n *html.Node, depth int) {
 			stripLeading = true
 		}
 		appendNormalizedWhitespace(&c.textAcc, n.Data, stripLeading)
+		c.lastTextNode = n
 	} else if n.Type == html.ElementNode {
 		if !isInlineTag(n) { // Is block
-			c.skipCurrent = false
 			c.flushText()
-
-			cleanChildren := make([]guidednavigation.GuidedNavigationObject, 0, len(c.current.Children))
-			for _, child := range c.current.Children {
-				if !child.Empty() {
-					cleanChildren = append(cleanChildren, child)
-				}
-			}
-			c.current.Children = cleanChildren
-
-			if len(c.breadcrumbs) > 0 {
-				if c.breadcrumbs[len(c.breadcrumbs)-1].node != n {
-					panic("HTMLConverter: breadcrumbs mismatch")
-				}
-
-				c.breadcrumbs = c.breadcrumbs[:len(c.breadcrumbs)-1]
-				if len(c.breadcrumbs) > 0 {
-					// Go up in the GN tree
-					c.current = c.breadcrumbs[len(c.breadcrumbs)-1].object
-				} else {
-					c.current = c.root
-				}
-			} else {
-				c.current = c.root
-			}
+		}
+		if !c.skipNode {
+			c.ascend()
+		} else {
+			c.skipNode = false
 		}
 	}
-}
-
-func (c *HTMLConverter) skippable() bool {
-	if c.skipCurrent {
-		return true
-	}
-	if len(c.breadcrumbs) == 0 {
-		return false
-	}
-	for i := len(c.breadcrumbs) - 1; i >= 0; i-- {
-		if c.breadcrumbs[i].skip {
-			return true
-		}
-	}
-	return false
 }
 
 func (c *HTMLConverter) flushText() {
-	c.flushSegment()
+	if c.lastTextNode != nil {
+		ssmlTag, attrs := ConvertElementToSSMLTag(c.lastTextNode.Parent.DataAtom)
+		c.flushSegment(ssmlTag, attrs)
+	} else {
+		c.flushSegment("", nil)
+	}
 
 	if len(c.segmentsAcc) == 0 {
 		return
@@ -487,30 +479,83 @@ func (c *HTMLConverter) flushText() {
 
 	// Trim the end of the last segment's text to get a cleaner output for the TextElement.
 	// Only whitespaces between the segments are meaningful.
-	lastSegment := c.segmentsAcc[len(c.segmentsAcc)-1]
-	lastSegment.Text.Plain = strings.TrimRightFunc(lastSegment.Text.Plain, unicode.IsSpace)
+	c.segmentsAcc[len(c.segmentsAcc)-1].text = strings.TrimRightFunc(c.segmentsAcc[len(c.segmentsAcc)-1].text, unicode.IsSpace)
 
-	c.current.Children = append(c.current.Children, c.segmentsAcc...)
+	cobj := guidednavigation.GuidedNavigationObject{}
 
-	if len(c.breadcrumbs) > 0 {
-		el := c.breadcrumbs[len(c.breadcrumbs)-1].node
-		roles, level := ExtractNodeRoles(el)
-		if level > 0 {
-			c.current.Level = level
-		}
-		if len(roles) > 0 {
-			for _, role := range roles {
-				if !slices.Contains(c.current.Role, role) {
-					c.current.Role = append(c.current.Role, role)
+	var ssml bool
+	allLang := true
+	var lastLang string
+	var sb strings.Builder
+	for _, v := range c.segmentsAcc {
+		if v.tag != nil {
+			ssml = true
+			if *v.tag == "lang" {
+				// Cheating here because we're in control of the attributes
+				if lastLang != "" && lastLang != v.attributes[0].Value {
+					allLang = false
+					break
 				}
+				lastLang = v.attributes[0].Value
+			} else {
+				allLang = false
+				break
 			}
+		} else {
+			allLang = false
 		}
 	}
+	if allLang {
+		ssml = false
+		cobj.Text.Language = lastLang
+	}
 
-	c.segmentsAcc = []guidednavigation.GuidedNavigationObject{}
+	for i, v := range c.segmentsAcc {
+		if i > 0 && len(c.segmentsAcc[i-1].text) > 0 && len(v.text) > 0 && v.tag == nil {
+			sb.WriteRune(' ')
+		}
+		if ssml {
+			if v.tag != nil {
+				sb.WriteRune('<')
+				sb.WriteString(*v.tag)
+				for _, attr := range v.attributes {
+					sb.WriteRune(' ')
+					sb.WriteString(attr.Name.Local)
+					sb.WriteString(`="`)
+					xml.EscapeText(&sb, []byte(attr.Value))
+					sb.WriteRune('"')
+				}
+				if len(v.text) > 0 {
+					sb.WriteRune('>')
+				} else {
+					sb.WriteString("/>")
+				}
+			}
+			if len(v.text) > 0 {
+				xml.EscapeText(&sb, []byte(v.text))
+				if v.tag != nil {
+					sb.WriteString("</")
+					sb.WriteString(*v.tag)
+					sb.WriteRune('>')
+				}
+			}
+		} else {
+			sb.WriteString(v.text)
+		}
+	}
+	if ssml {
+		cobj.Text.SSML = sb.String()
+	} else {
+		cobj.Text.Plain = sb.String()
+	}
+	c.current.children = append(c.current.children, &navigationObject{
+		object: cobj,
+	})
+
+	c.segmentsAcc = []textSegment{}
 }
 
-func (c *HTMLConverter) flushSegment() {
+func (c *HTMLConverter) flushSegment(asTag string, extraAttrs []xml.Attr) {
 	text := c.textAcc.String()
 	trimmedText := strings.TrimSpace(text)
 
@@ -527,10 +572,23 @@ func (c *HTMLConverter) flushSegment() {
 			text = trimmedText + whitespaceSuffix
 		}
 
-		obj := guidednavigation.GuidedNavigationObject{}
-		obj.Text.Plain = text
+		obj := textSegment{
+			text: text,
+		}
+
+		if asTag != "" {
+			obj.tag = &asTag
+		}
 		if c.currentLanguage != nil {
-			obj.Text.Language = *c.currentLanguage
+			if obj.tag == nil {
+				langStr := "lang"
+				obj.tag = &langStr
+			}
+			obj.attributes = append(obj.attributes, extraAttrs...)
+			obj.attributes = append(obj.attributes, xml.Attr{
+				Name:  xml.Name{Local: "xml:lang"},
+				Value: *c.currentLanguage,
+			})
 		}
 		c.segmentsAcc = append(c.segmentsAcc, obj)
 	}

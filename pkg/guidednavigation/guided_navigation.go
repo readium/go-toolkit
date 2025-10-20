@@ -32,7 +32,11 @@ func (o GuidedNavigationObject) Empty() bool {
 }
 
 func (o GuidedNavigationObject) ChildrenOnly() bool {
-	return o.TextRef == nil && o.ImgRef == nil && o.AudioRef == nil && o.Text.Empty() && len(o.Children) > 0 && o.Description == ""
+	return o.TextRef == nil && o.ImgRef == nil && o.AudioRef == nil && o.Text.Empty() && len(o.Children) > 0 && o.Description == "" && len(o.Role) == 0 && o.Level == 0
+}
+
+func (o GuidedNavigationObject) TextOnly() bool {
+	return o.TextRef == nil && o.ImgRef == nil && o.AudioRef == nil && !o.Text.Empty() && len(o.Children) == 0 && o.Description == "" && len(o.Role) == 0 && o.Level == 0
 }
 
 func (o GuidedNavigationObject) MarshalJSON() ([]byte, error) {

@@ -264,6 +264,24 @@ func ExtractNodeRoles(el *html.Node) (roles []guidednavigation.GuidedNavigationR
 	default:
 		if role, ok := simpleElementTypeRoles[el.DataAtom]; ok {
 			add(role)
+
+			switch role {
+			case guidednavigation.RoleHeading:
+				switch el.DataAtom {
+				case atom.H1:
+					level = 1
+				case atom.H2:
+					level = 2
+				case atom.H3:
+					level = 3
+				case atom.H4:
+					level = 4
+				case atom.H5:
+					level = 5
+				case atom.H6:
+					level = 6
+				}
+			}
 		}
 	}
 
@@ -280,4 +298,11 @@ func ExtractNodeRoles(el *html.Node) (roles []guidednavigation.GuidedNavigationR
 	bestRole = quote*/ // TODO
 
 	return
+}
+
+func ConvertEPUBRole(role string) guidednavigation.GuidedNavigationRole {
+	if gRole, ok := epubTypeRoles[role]; ok {
+		return gRole
+	}
+	return ""
 }

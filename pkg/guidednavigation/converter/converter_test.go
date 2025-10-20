@@ -19,8 +19,13 @@ func TestDo(t *testing.T) {
 		<html xmlns:epub="http://www.idpf.org/2007/ops"><!-- lang="en" xml:lang="en" -->
 		<body>
 			<p xml:lang="fr">Paragraphe avec image: <img src="src/image.jpg" alt="A cool image" /></p>
+			<p xml:lang="fr">Paragraphe avec image #1 <img src="src/image.jpg" alt="A cool image" /> et #2 <img src="src/image.jpg" alt="A second cool image" />!</p>
+			<p xml:lang="fr"><img src="src/image.jpg" alt="The coolest image" /> et <img src="src/image.jpg" alt="The boring image" /></p>
+			<p>A paragraph with: <img src="src/image.jpg" alt="A cool image" /><em xml:lang="fr">est cool!</em></p>
+			<p><i>Simple paragraph</i></p>
 			<p>This job requires a certain <em xml:lang="fr">savoir faire</em> that can only be acquired over time.</p>
 			<p>This is a paragraph <b>with some very-<em>strong</em> bold</b> text!</p>
+			<p>Just<br />testing<br>some<br /> breaks! And useless <span>elements</span>...</p>
 
 			<div>
 			<span id="pg04" role="doc-pagebreak" epub:type="pagebreak" title="4"/>
@@ -37,6 +42,8 @@ func TestDo(t *testing.T) {
 				<li>Third item</li>
 			</ul>
 			<p aria-hidden="true">Hidden <b>text!</b> <img src="with_image.jpg" />...</p>
+			<p aria-hidden="true">More Hidden text</p>
+			<p aria-hidden="true">More Hidden text</p>
 
 			<img src="image1.avif" alt="Alternative text using the alt attribute">
 			<span role="img" aria-label="Rating: 4 out of 5 stars">
@@ -64,6 +71,6 @@ func TestDo(t *testing.T) {
 		Href: f.Link().Href.Resolve(nil, nil),
 	})
 	require.NoError(t, err)
-	bin, _ := json.Marshal(nav)
+	bin, _ := json.MarshalIndent(nav, "", "  ")
 	t.Log(string(bin))
 }

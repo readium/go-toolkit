@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/guidednavigation"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 )
 
-func loadSmil(ctx context.Context, name string) (*manifest.GuidedNavigationDocument, error) {
+func loadSmil(ctx context.Context, name string) (*guidednavigation.GuidedNavigationDocument, error) {
 	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/smil/"+name+".smil"), map[string]string{
 		NamespaceOPS:   "epub",
 		NamespaceSMIL:  "smil",
@@ -30,8 +31,8 @@ func TestSMILDocTypicalAudio(t *testing.T) {
 	}
 	assert.Empty(t, doc.Links)
 	if assert.Len(t, doc.Guided, 6) {
-		assert.Equal(t, "OEBPS/page1.xhtml#word0", doc.Guided[0].TextRef)
-		assert.Equal(t, "OEBPS/audio/page1.m4a#t=0,0.84", doc.Guided[0].AudioRef)
+		assert.Equal(t, "OEBPS/page1.xhtml#word0", doc.Guided[0].TextRef.String())
+		assert.Equal(t, "OEBPS/audio/page1.m4a#t=0,0.84", doc.Guided[0].AudioRef.String())
 	}
 }
 
@@ -51,7 +52,7 @@ func TestSMILClipBoundaries(t *testing.T) {
 	if !assert.Len(t, doc.Guided, 3) {
 		return
 	}
-	assert.Equal(t, "OEBPS/audio/page1.m4a#t=,0.84", doc.Guided[0].AudioRef)
-	assert.Equal(t, "OEBPS/audio/page1.m4a#t=0.84", doc.Guided[1].AudioRef)
-	assert.Equal(t, "OEBPS/audio/page1.m4a", doc.Guided[2].AudioRef)
+	assert.Equal(t, "OEBPS/audio/page1.m4a#t=,0.84", doc.Guided[0].AudioRef.String())
+	assert.Equal(t, "OEBPS/audio/page1.m4a#t=0.84", doc.Guided[1].AudioRef.String())
+	assert.Equal(t, "OEBPS/audio/page1.m4a", doc.Guided[2].AudioRef.String())
 }
