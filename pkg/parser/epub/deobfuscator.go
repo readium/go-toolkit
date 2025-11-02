@@ -171,6 +171,15 @@ func (d DeobfuscatingResource) CompressedLength(ctx context.Context) int64 {
 	return d.ProxyResource.CompressedLength(ctx)
 }
 
+func (d DeobfuscatingResource) CRC32Checksum(ctx context.Context) *uint32 {
+	_, v := d.obfuscation()
+	if v > 0 {
+		return nil
+	}
+
+	return d.ProxyResource.CRC32Checksum(ctx)
+}
+
 // StreamCompressed implements CompressedResource
 func (d DeobfuscatingResource) StreamCompressed(ctx context.Context, w io.Writer) (int64, *fetcher.ResourceError) {
 	_, v := d.obfuscation()

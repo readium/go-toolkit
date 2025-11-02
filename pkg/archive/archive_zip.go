@@ -38,6 +38,11 @@ func (e *gozipArchiveEntry) CompressedLength() uint64 {
 	return e.file.CompressedSize64
 }
 
+func (e *gozipArchiveEntry) CRC32Checksum() *uint32 {
+	c := e.file.CRC32
+	return &c
+}
+
 func (e *gozipArchiveEntry) CompressedAs(compressionMethod CompressionMethod) bool {
 	if compressionMethod != CompressionMethodDeflate {
 		return false

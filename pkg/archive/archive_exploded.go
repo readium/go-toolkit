@@ -26,6 +26,10 @@ func (e explodedArchiveEntry) CompressedLength() uint64 {
 	return 0
 }
 
+func (e explodedArchiveEntry) CRC32Checksum() *uint32 {
+	return nil
+}
+
 func (e explodedArchiveEntry) CompressedAs(compressionMethod CompressionMethod) bool {
 	return false
 }
