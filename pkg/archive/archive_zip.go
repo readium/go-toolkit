@@ -83,8 +83,10 @@ func (e *gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 
 	if minimizeReads {
 		// If uncompressed size is smaller than 1MB, it's not worth
-		// using deflate random access, because the state itself takes memory
-		if e.file.UncompressedSize64 < ZRandCutoff {
+		// using deflate random access, because the state itself takes memory.
+		// We also skip using zrand logic if the entire file is being requested,
+		// becaus that means the client probably won't need a partial range
+		if e.file.UncompressedSize64 < ZRandCutoff || (start == 0 && (end == 0 || end == int64(e.file.UncompressedSize64-1))) {
 			compressedData := make([]byte, e.file.CompressedSize64)
 			_, err := io.ReadFull(f, compressedData)
 			if err != nil {
@@ -110,10 +112,18 @@ func (e *gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 				return nil, err
 			}
 
+			// This special reader lets us restore the decompressor state at known offsets
+			// which is useful when a client has already requested previous parts of the file,
+			// such as when a web browser requests subsequent byte ranges for media playback.
 			fzr, err := gzran.NewDReader(bytes.NewReader(compressedData)) // Default interval = 1MB, same as current ZRandCutoff
 			if err != nil {
 				return nil, err
 			}
+			// Note: if an implementor uses the same publication instance for all clients,
+			// this code will lock all clients. This could be problematic and should be
+			// mitigated in a future version. For us to get this far is pretty rare though,
+			// and mainly applies to multimedia that is natively streamed by web browsers and
+			// was also inconveniently compressed by the original author of the ZIP.
 			e.gm.Lock()
 			defer e.gm.Unlock()
 			defer func() {
