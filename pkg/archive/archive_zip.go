@@ -94,18 +94,10 @@ func (e *gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 			defer frdr.Close()
 			f = frdr
 		} else {
-			e.gm.Lock()
-			var lastCompressedOffset int64
-			for _, v := range e.gi {
-				if v.CompressedOffset > lastCompressedOffset && v.UncompressedOffset <= start {
-					lastCompressedOffset = v.CompressedOffset
-				}
-			}
-			e.gm.Unlock()
-
+			// Read the entire compressed data - we cannot skip compressed bytes
+			// because deflate streams cannot be decoded from arbitrary offsets
 			compressedData := make([]byte, e.file.CompressedSize64)
-			f.(io.Seeker).Seek(lastCompressedOffset, io.SeekStart)
-			_, err := io.ReadFull(f, compressedData[lastCompressedOffset:])
+			_, err := io.ReadFull(f, compressedData)
 			if err != nil {
 				return nil, err
 			}
