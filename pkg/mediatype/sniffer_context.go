@@ -253,7 +253,7 @@ func (s SnifferContext) Read(start int64, end int64) []byte {
 		}
 	}
 	data := make([]byte, end-start+1)
-	_, err := stream.Read(data)
+	_, err := io.ReadFull(stream, data)
 	if err != nil {
 		return nil
 	}
