@@ -351,6 +351,15 @@ func (r ProxyResource) CompressedLength(ctx context.Context) int64 {
 	return cres.CompressedLength(ctx)
 }
 
+// CRC32Checksum implements CompressedResource
+func (r ProxyResource) CRC32Checksum(ctx context.Context) *uint32 {
+	cres, ok := r.Res.(CompressedResource)
+	if !ok {
+		return nil
+	}
+	return cres.CRC32Checksum(ctx)
+}
+
 // StreamCompressed implements CompressedResource
 func (r ProxyResource) StreamCompressed(ctx context.Context, w io.Writer) (int64, *ResourceError) {
 	cres, ok := r.Res.(CompressedResource)
@@ -576,6 +585,15 @@ func (r *LazyResource) CompressedLength(ctx context.Context) int64 {
 		return -1
 	}
 	return cres.CompressedLength(ctx)
+}
+
+// CRC32Checksum implements CompressedResource
+func (r *LazyResource) CRC32Checksum(ctx context.Context) *uint32 {
+	cres, ok := r.resource().(CompressedResource)
+	if !ok {
+		return nil
+	}
+	return cres.CRC32Checksum(ctx)
 }
 
 // StreamCompressed implements CompressedResource
