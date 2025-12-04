@@ -13,6 +13,7 @@ import (
 
 // Positions Service for an PDF.
 type PositionsService struct {
+	public          bool                 // Whether the service exposes itself via Links() and Get()
 	link            manifest.Link        // The [Link] to the PDF document in the [Publication].
 	pageCount       uint                 // Total page count in the PDF document.
 	tableOfContents manifest.LinkList    // Table of contents used to compute the position titles.
@@ -22,10 +23,16 @@ type PositionsService struct {
 func (s *PositionsService) Close() {}
 
 func (s *PositionsService) Links() manifest.LinkList {
+	if !s.public {
+		return nil
+	}
 	return manifest.LinkList{pub.PositionsLink}
 }
 
 func (s *PositionsService) Get(ctx context.Context, link manifest.Link) (fetcher.Resource, bool) {
+	if !s.public {
+		return nil, false
+	}
 	return pub.GetForPositionsService(ctx, s, link)
 }
 
@@ -86,7 +93,7 @@ func (s *PositionsService) computePositions() [][]manifest.Locator {
 }
 
 func PositionsServiceFactory() pub.ServiceFactory {
-	return func(context pub.Context) pub.Service {
+	return func(context pub.Context, public bool) pub.Service {
 		if len(context.Manifest.ReadingOrder) == 0 {
 			return nil
 		}
@@ -97,6 +104,7 @@ func PositionsServiceFactory() pub.ServiceFactory {
 		}
 
 		return &PositionsService{
+			public:          public,
 			link:            context.Manifest.ReadingOrder[0],
 			pageCount:       count,
 			tableOfContents: context.Manifest.TableOfContents,

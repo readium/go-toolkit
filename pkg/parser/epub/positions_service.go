@@ -19,20 +19,27 @@ import (
 // https://github.com/readium/architecture/blob/master/models/locators/best-practices/format.md#epub
 // https://github.com/readium/architecture/issues/101
 type PositionsService struct {
-	readingOrder       manifest.LinkList
-	layout             manifest.Layout
-	fetcher            fetcher.Fetcher
-	reflowableStrategy ReflowableStrategy
-	positions          [][]manifest.Locator
+	public             bool                 // Whether the service exposes itself via Links() and Get()
+	readingOrder       manifest.LinkList    // The reading order of the publication
+	layout             manifest.Layout      // The publication's layout
+	fetcher            fetcher.Fetcher      // The publication's fetcher
+	reflowableStrategy ReflowableStrategy   // How to compute positions in reflowable resources
+	positions          [][]manifest.Locator // Cached calculated positions
 }
 
 func (s *PositionsService) Close() {}
 
 func (s *PositionsService) Links() manifest.LinkList {
+	if !s.public {
+		return nil
+	}
 	return manifest.LinkList{pub.PositionsLink}
 }
 
 func (s *PositionsService) Get(ctx context.Context, link manifest.Link) (fetcher.Resource, bool) {
+	if !s.public {
+		return nil, false
+	}
 	return pub.GetForPositionsService(ctx, s, link)
 }
 
@@ -132,8 +139,9 @@ func PositionsServiceFactory(reflowableStrategy ReflowableStrategy) pub.ServiceF
 		reflowableStrategy = RecommendedReflowableStrategy
 	}
 
-	return func(context pub.Context) pub.Service {
+	return func(context pub.Context, public bool) pub.Service {
 		return &PositionsService{
+			public:             public,
 			readingOrder:       context.Manifest.ReadingOrder,
 			layout:             context.Manifest.Metadata.Layout,
 			fetcher:            context.Fetcher,
