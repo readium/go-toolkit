@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.13.0] - 2025-12-04
+
+### Added
+
+- Implemented [zran](https://github.com/madler/zlib/blob/master/examples/zran.h)-like reading of ZIP entries. This only applies to the start offset, not the total length of the resources. Particularly useful for e.g. streaming compressed videos where a browser will send `Range: bytes=0-` then abort when satisfied, which is already hopeless for us to handle. At least when users scrub through video/audio, we can take a `Range: bytes=XXXXXX-` header and start the remote range request for the resource closer to the start of the byte range. This happens in increments of 1MB
+- Add CRC32 checksum function for `CompressedResource` to make direct copying of compressed resources to new archives easier
+
+### Fixed
+
+- Fixed bugged `Read` calls that aren't obligated to return the entirety of a resource. This was resulting in errors when reading partial ranges of resources, most notably ones that are range-read by browsers such as audio and video
+
+### Changed
+
+- Updated dependencies
+
 ## [0.12.1] - 2025-10-14
 
 ### Fixed
