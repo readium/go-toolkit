@@ -39,18 +39,14 @@ func (s SnifferFileContent) Read() []byte {
 	if of, ok := s.file.(io.ReadSeeker); ok {
 		of.Seek(0, io.SeekStart)
 		data := make([]byte, info.Size())
-		_, err = s.file.Read(data)
-		if err != nil && err != io.EOF {
+		if _, err := io.ReadFull(s.file, data); err != nil {
 			return nil
 		}
 		return data
 	} else {
 		if s.buffer == nil {
 			s.buffer = make([]byte, info.Size())
-			_, err = s.file.Read(s.buffer)
-			if err != nil && err != io.EOF {
-				return nil
-			}
+			io.ReadFull(s.file, s.buffer)
 		}
 		return s.buffer
 	}

@@ -194,6 +194,11 @@ func (r *entryResource) CompressedLength(ctx context.Context) int64 {
 	return int64(r.entry.CompressedLength())
 }
 
+// CRC32Checksum implements CompressedResource
+func (r *entryResource) CRC32Checksum(ctx context.Context) *uint32 {
+	return r.entry.CRC32Checksum()
+}
+
 // StreamCompressed implements CompressedResource
 func (r *entryResource) StreamCompressed(ctx context.Context, w io.Writer) (int64, *ResourceError) {
 	i, err := r.entry.StreamCompressed(w)

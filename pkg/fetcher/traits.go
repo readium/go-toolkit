@@ -14,4 +14,5 @@ type CompressedResource interface {
 	StreamCompressedGzip(ctx context.Context, w io.Writer) (int64, *ResourceError)
 	ReadCompressed(ctx context.Context) ([]byte, *ResourceError)
 	ReadCompressedGzip(ctx context.Context) ([]byte, *ResourceError)
+	CRC32Checksum(ctx context.Context) *uint32
 }
