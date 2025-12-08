@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.13.1] - 2025-12-08
+
+### Changed
+
+- Now that we not longer make full releases on GitHub for the go-toolkit, it's confusing to have `https://github.com/readium/go-toolkit/releases` as the JSON key for the toolkit version in manifests. The new value is `https://github.com/readium/go-toolkit#version`
+
 ## [0.13.0] - 2025-12-04
 
 ### Added
