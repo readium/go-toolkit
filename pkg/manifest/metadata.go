@@ -462,7 +462,7 @@ func (m *Metadata) UnmarshalJSON(b []byte) error {
 }
 
 // If you really don't want the version info in your manifest, you can blank this value.
-var ToolkitVersionKey = "https://github.com/readium/go-toolkit/releases"
+var ToolkitVersionKey = "https://github.com/readium/go-toolkit#version"
 
 func (m Metadata) MarshalJSON() ([]byte, error) {
 	j := make(map[string]interface{})
