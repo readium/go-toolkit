@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## Unreleased
+
+### Fixed
+
+- Fixed a typo in the accessibility metadata (`describeMath` should be `describedMath`).
+
 ## [0.13.1] - 2025-12-08
 
 ### Changed

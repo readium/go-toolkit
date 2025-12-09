@@ -379,7 +379,7 @@ const (
 
 	// Textual descriptions of math equations are included, whether in the alt attribute
 	// for image-based equations,
-	A11yFeatureDescribedMath A11yFeature = "describeMath"
+	A11yFeatureDescribedMath A11yFeature = "describedMath"
 
 	// Descriptions are provided for image-based visual content and/or complex structures
 	// such as tables, mathematics, diagrams, and charts.
