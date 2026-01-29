@@ -7,6 +7,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 /*func TestLinkTemplateParameters(t *testing.T) {
@@ -37,14 +38,14 @@ func TestLinkTemplateExpand(t *testing.T) {
 
 func TestLinkUnmarshalMinimalJSON(t *testing.T) {
 	var l Link
-	assert.NoError(t, json.Unmarshal([]byte(`{"href": "http://href"}`), &l))
+	require.NoError(t, json.Unmarshal([]byte(`{"href": "http://href"}`), &l))
 	u, _ := url.URLFromString("http://href")
 	assert.Equal(t, Link{Href: NewHREF(u)}, l, "parsed JSON object should be equal to Link object")
 }
 
 func TestLinkUnmarshalFullJSON(t *testing.T) {
 	var l Link
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"href": "http://href",
 		"type": "application/pdf",
 		"templated": true,
@@ -94,31 +95,31 @@ func TestLinkUnmarshalFullJSON(t *testing.T) {
 
 func TestLinkUnmarshalNilJSON(t *testing.T) {
 	s, err := LinkFromJSON(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, s)
 }
 
 func TestLinkUnmarshalJSONRelString(t *testing.T) {
 	var l Link
-	assert.NoError(t, json.Unmarshal([]byte(`{"href": "a", "rel": "publication"}`), &l))
+	require.NoError(t, json.Unmarshal([]byte(`{"href": "a", "rel": "publication"}`), &l))
 	assert.Equal(t, Link{Href: MustNewHREFFromString("a", false), Rels: []string{"publication"}}, l)
 }
 
 func TestLinkUnmarshalJSONTemplatedDefaultFalse(t *testing.T) {
 	var l Link
-	assert.NoError(t, json.Unmarshal([]byte(`{"href": "a"}`), &l))
+	require.NoError(t, json.Unmarshal([]byte(`{"href": "a"}`), &l))
 	assert.False(t, l.Href.IsTemplated())
 }
 
 func TestLinkUnmarshalJSONTemplatedNilFalse(t *testing.T) {
 	var l Link
-	assert.NoError(t, json.Unmarshal([]byte(`{"href": "a", "templated": null}`), &l))
+	require.NoError(t, json.Unmarshal([]byte(`{"href": "a", "templated": null}`), &l))
 	assert.False(t, l.Href.IsTemplated())
 }
 
 func TestLinkUnmarshalJSONMultipleLanguages(t *testing.T) {
 	var l Link
-	assert.NoError(t, json.Unmarshal([]byte(`{"href": "a", "language": ["fr", "en"]}`), &l))
+	require.NoError(t, json.Unmarshal([]byte(`{"href": "a", "language": ["fr", "en"]}`), &l))
 	assert.Equal(t, Link{Href: MustNewHREFFromString("a", false), Languages: []string{"fr", "en"}}, l)
 }
 
@@ -129,31 +130,31 @@ func TestLinkUnmarshalJSONRequiresHref(t *testing.T) {
 
 func TestLinkUnmarshalJSONRequiresPositiveWidth(t *testing.T) {
 	var l Link
-	assert.NoError(t, json.Unmarshal([]byte(`{"href": "a", "width": -20}`), &l))
+	require.NoError(t, json.Unmarshal([]byte(`{"href": "a", "width": -20}`), &l))
 	assert.Equal(t, l.Width, uint(0))
 }
 
 func TestLinkUnmarshalJSONRequiresPositiveHeight(t *testing.T) {
 	var l Link
-	assert.NoError(t, json.Unmarshal([]byte(`{"href": "a", "height": -20}`), &l))
+	require.NoError(t, json.Unmarshal([]byte(`{"href": "a", "height": -20}`), &l))
 	assert.Equal(t, l.Height, uint(0))
 }
 
 func TestLinkUnmarshalJSONRequiresPositiveBitrate(t *testing.T) {
 	var l Link
-	assert.NoError(t, json.Unmarshal([]byte(`{"href": "a", "bitrate": -20}`), &l))
+	require.NoError(t, json.Unmarshal([]byte(`{"href": "a", "bitrate": -20}`), &l))
 	assert.Equal(t, l.Bitrate, float64(0))
 }
 
 func TestLinkUnmarshalJSONRequiresPositiveDuration(t *testing.T) {
 	var l Link
-	assert.NoError(t, json.Unmarshal([]byte(`{"href": "a", "duration": -20}`), &l))
+	require.NoError(t, json.Unmarshal([]byte(`{"href": "a", "duration": -20}`), &l))
 	assert.Equal(t, l.Duration, float64(0))
 }
 
 func TestLinkUnmarshalJSONArray(t *testing.T) {
 	var ll []Link
-	assert.NoError(t, json.Unmarshal([]byte(`[
+	require.NoError(t, json.Unmarshal([]byte(`[
 		{"href": "http://child1"},
 		{"href": "http://child2"}
 	]`), &ll))
@@ -165,7 +166,7 @@ func TestLinkUnmarshalJSONArray(t *testing.T) {
 
 func TestLinkUnmarshalJSONNilArray(t *testing.T) {
 	ll, err := LinksFromJSONArray(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, LinkList{}, ll)
 }
 
@@ -179,7 +180,7 @@ func TestLinkUnmarshalJSONArrayRefusesInvalidLinks(t *testing.T) {
 
 func TestLinkMinimalJSON(t *testing.T) {
 	b, err := json.Marshal(Link{Href: MustNewHREFFromString("http://href", false)})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{"href": "http://href"}`, string(b))
 }
 
@@ -206,7 +207,7 @@ func TestLinkFullJSON(t *testing.T) {
 			{Href: MustNewHREFFromString("http://child2", false)},
 		},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"href": "http://href",
 		"type": "application/pdf",
@@ -237,7 +238,7 @@ func TestLinkJSONArray(t *testing.T) {
 		{Href: MustNewHREFFromString("http://child1", false)},
 		{Href: MustNewHREFFromString("http://child2", false)},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `[
 		{"href": "http://child1"},
 		{"href": "http://child2"}

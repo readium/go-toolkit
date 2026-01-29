@@ -7,6 +7,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const identifier = "urn:uuid:36d5078e-ff7d-468e-a5f3-f47c14b91f2f"
@@ -18,7 +19,7 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 	// Cleartext font
 	clean, err := ft.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString("deobfuscation/cut-cut.woff", false)}).Read(t.Context(), start, end)
 	if !assert.Nil(t, err) {
-		assert.NoError(t, err.Cause)
+		require.NoError(t, err.Cause)
 		f(nil, nil)
 		return
 	}
@@ -36,7 +37,7 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 	}
 	obfu, err := NewDeobfuscator(identifier).Transform(ft.Get(t.Context(), link)).Read(t.Context(), start, end)
 	if !assert.Nil(t, err) {
-		assert.NoError(t, err.Cause)
+		require.NoError(t, err.Cause)
 		f(nil, nil)
 		return
 	}
@@ -45,7 +46,7 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 	bbuff := new(bytes.Buffer)
 	_, err = NewDeobfuscator(identifier).Transform(ft.Get(t.Context(), link)).Stream(t.Context(), bbuff, start, end)
 	if !assert.Nil(t, err) {
-		assert.NoError(t, err.Cause)
+		require.NoError(t, err.Cause)
 		f(nil, nil)
 		return
 	}

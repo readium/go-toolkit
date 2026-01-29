@@ -7,11 +7,12 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func withArchiveFetcher(t *testing.T, callback func(a *ArchiveFetcher)) {
 	a, err := NewArchiveFetcherFromPath(t.Context(), "./testdata/epub.epub")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	callback(a)
 }
 
@@ -55,7 +56,7 @@ func TestArchiveFetcherLinks(t *testing.T) {
 
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		links, err := a.Links(t.Context())
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		mustLinks := make([]manifest.Link, len(mustContain))
 		for i, l := range mustContain {
@@ -88,15 +89,13 @@ func TestArchiveFetcherRead(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		resource := a.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString("mimetype", false)})
 		bin, err := resource.Read(t.Context(), 0, 0)
-		if assert.Nil(t, err) {
-			assert.Equal(t, "application/epub+zip", string(bin))
-		}
+		require.Nil(t, err)
+		assert.Equal(t, "application/epub+zip", string(bin))
 		var b bytes.Buffer
 		n, err := resource.Stream(t.Context(), &b, 0, 0)
-		if assert.Nil(t, err) {
-			assert.EqualValues(t, 20, n)
-			assert.Equal(t, "application/epub+zip", b.String())
-		}
+		require.Nil(t, err)
+		assert.EqualValues(t, 20, n)
+		assert.Equal(t, "application/epub+zip", b.String())
 	})
 }
 
@@ -104,15 +103,13 @@ func TestArchiveFetcherReadRange(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		resource := a.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString("mimetype", false)})
 		bin, err := resource.Read(t.Context(), 0, 10)
-		if assert.Nil(t, err) {
-			assert.Equal(t, "application", string(bin))
-		}
+		require.Nil(t, err)
+		assert.Equal(t, "application", string(bin))
 		var b bytes.Buffer
 		n, err := resource.Stream(t.Context(), &b, 0, 10)
-		if assert.Nil(t, err) {
-			assert.EqualValues(t, 11, n)
-			assert.Equal(t, "application", b.String())
-		}
+		require.Nil(t, err)
+		assert.EqualValues(t, 11, n)
+		assert.Equal(t, "application", b.String())
 	})
 }
 
@@ -120,7 +117,7 @@ func TestArchiveFetcherComputingLength(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		resource := a.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString("mimetype", false)})
 		length, err := resource.Length(t.Context())
-		assert.Nil(t, err)
+		require.Nil(t, err)
 		assert.EqualValues(t, 20, length)
 	})
 }
