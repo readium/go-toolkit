@@ -5,18 +5,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLocalizedStringUnmarshalJSONString(t *testing.T) {
 	var l LocalizedString
-	assert.NoError(t, json.Unmarshal([]byte("\"a string\""), &l))
+	require.NoError(t, json.Unmarshal([]byte("\"a string\""), &l))
 	assert.Equal(t, NewLocalizedStringFromString("a string"), l, "parsed JSON string should be equal to string")
 }
 
 func TestLocalizedStringUnmarshalJSONLocalizedStrings(t *testing.T) {
 	var l1 LocalizedString
 	var l2 LocalizedString
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"en": "a string",
 		"fr": "une chaîne"
 	}`), &l1))
@@ -38,7 +39,7 @@ func TestLocalizedStringUnmarshalNullJSON(t *testing.T) {
 func TestLocalizedStringOneTranslationNoLanguage(t *testing.T) {
 	l := NewLocalizedStringFromString("a string")
 	s, err := json.Marshal(&l)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `"a string"`, string(s), "JSON of LocalizedString with default language should equal a JSON string of the value")
 }
 
@@ -48,7 +49,7 @@ func TestLocalizedStringJSON(t *testing.T) {
 	l.SetTranslation("fr", "une chaîne")
 	l.SetTranslation(UndefinedLanguage, "Surgh")
 	s, err := json.Marshal(&l)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"en": "a string",
 		"fr": "une chaîne",

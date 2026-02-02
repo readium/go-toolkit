@@ -9,6 +9,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func loadPackageDoc(ctx context.Context, name string) (*manifest.Manifest, error) {
@@ -37,31 +38,31 @@ func loadPackageDoc(ctx context.Context, name string) (*manifest.Manifest, error
 
 func TestPackageDocReadingProgressionNoneIsAuto(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "progression-none")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, manifest.None, p.Metadata.ReadingProgression)
 }
 
 func TestPackageDocPageProgression(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "progression-default")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, manifest.None, p.Metadata.ReadingProgression)
 }
 
 func TestPackageDocPageProgressionLTR(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "progression-ltr")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, manifest.LTR, p.Metadata.ReadingProgression)
 }
 
 func TestPackageDocPageProgressionRTL(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "progression-rtl")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, manifest.RTL, p.Metadata.ReadingProgression)
 }
 
 func TestPackageDocLinkPropertiesContains(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "links-properties")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ro := p.ReadingOrder
 	assert.Equal(t, []string{"mathml"}, ro[0].Properties.Contains())
 	assert.Equal(t, []string{"remote-resources"}, ro[1].Properties.Contains())
@@ -72,7 +73,7 @@ func TestPackageDocLinkPropertiesContains(t *testing.T) {
 
 func TestPackageDocLinkPropertiesRels(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "links-properties")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ro := p.ReadingOrder
 	assert.Equal(t, manifest.Strings{"cover"}, p.Resources[0].Rels)
 	assert.Empty(t, ro[0].Rels)
@@ -84,7 +85,7 @@ func TestPackageDocLinkPropertiesRels(t *testing.T) {
 
 func TestPackageDocLinkPropertiesPresentation(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "links-properties")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ro := p.ReadingOrder
 	assert.Equal(t, ro[0].Properties.Page(), manifest.PageRight)
 	assert.Equal(t, ro[2].Properties.Page(), manifest.PageCenter)
@@ -93,7 +94,7 @@ func TestPackageDocLinkPropertiesPresentation(t *testing.T) {
 
 func TestPackageDocLinkReadingOrder(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "links")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, manifest.LinkList{
 		{
@@ -109,7 +110,7 @@ func TestPackageDocLinkReadingOrder(t *testing.T) {
 
 func TestPackageDocLinkResources(t *testing.T) {
 	p, err := loadPackageDoc(t.Context(), "links")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ft := mediatype.OfString("application/vnd.ms-opentype")
 
