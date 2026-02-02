@@ -48,9 +48,9 @@ func loadMetadata(ctx context.Context, name string) (*manifest.Metadata, error) 
 
 func TestMetadataContributorDCCreatorDefaultsToAuthor(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Author 1"),
@@ -61,9 +61,9 @@ func TestMetadataContributorDCCreatorDefaultsToAuthor(t *testing.T) {
 
 func TestMetadataContributorDCPublisherIsPublisher(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Publisher 1"),
@@ -74,9 +74,9 @@ func TestMetadataContributorDCPublisherIsPublisher(t *testing.T) {
 
 func TestMetadataContributorDCContributorDefaultsToContributor(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Contributor 1"),
@@ -87,9 +87,9 @@ func TestMetadataContributorDCContributorDefaultsToContributor(t *testing.T) {
 
 func TestMetadataContributorUnknownRolesIgnored(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Contributor 2"),
@@ -101,9 +101,9 @@ func TestMetadataContributorUnknownRolesIgnored(t *testing.T) {
 
 func TestMetadataContributorFileAsParsed(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	lsa := manifest.NewLocalizedStringFromString("Sorting Key")
 	contributor := manifest.Contributor{
@@ -117,7 +117,7 @@ func TestMetadataContributorFileAsParsed(t *testing.T) {
 func TestMetadataContributorLocalizedParsed(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Contains(t, m3.Contributors, manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromStrings(map[string]string{
@@ -130,7 +130,7 @@ func TestMetadataContributorLocalizedParsed(t *testing.T) {
 func TestMetadataContributorOnlyFirstRoleConsidered(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Cameleon"),
@@ -143,7 +143,7 @@ func TestMetadataContributorOnlyFirstRoleConsidered(t *testing.T) {
 func TestMetadataContributorMediaOverlaysNarrator(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Contains(t, m3.Narrators, manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Media Overlays Narrator"),
@@ -152,9 +152,9 @@ func TestMetadataContributorMediaOverlaysNarrator(t *testing.T) {
 
 func TestMetadataContributorAuthor(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Author 2"),
@@ -166,9 +166,9 @@ func TestMetadataContributorAuthor(t *testing.T) {
 
 func TestMetadataContributorPublisher(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Publisher 2"),
@@ -180,9 +180,9 @@ func TestMetadataContributorPublisher(t *testing.T) {
 
 func TestMetadataContributorTranslator(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Translator"),
@@ -194,9 +194,9 @@ func TestMetadataContributorTranslator(t *testing.T) {
 
 func TestMetadataContributorArtist(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Artist"),
@@ -208,9 +208,9 @@ func TestMetadataContributorArtist(t *testing.T) {
 
 func TestMetadataContributorIllustrator(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Illustrator"),
@@ -222,9 +222,9 @@ func TestMetadataContributorIllustrator(t *testing.T) {
 
 func TestMetadataContributorColorist(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Colorist"),
@@ -236,9 +236,9 @@ func TestMetadataContributorColorist(t *testing.T) {
 
 func TestMetadataContributorNarrator(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	contributor := manifest.Contributor{
 		LocalizedName: manifest.NewLocalizedStringFromString("Narrator"),
@@ -250,9 +250,9 @@ func TestMetadataContributorNarrator(t *testing.T) {
 
 func TestMetadataContributorsNoMoreThanNeeded(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Len(t, m2.Authors, 2)
 	assert.Len(t, m2.Publishers, 2)
@@ -277,9 +277,9 @@ func TestMetadataContributorsNoMoreThanNeeded(t *testing.T) {
 
 func TestMetadataTitleParsed(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "titles-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "titles-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, manifest.NewLocalizedStringFromStrings(map[string]string{
 		"en": "Alice's Adventures in Wonderland",
@@ -293,7 +293,7 @@ func TestMetadataTitleParsed(t *testing.T) {
 func TestMetadataTitleSubtitleParsed(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "titles-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, manifest.NewLocalizedStringFromStrings(map[string]string{
 		"en-GB": "Alice returns to the magical world from her childhood adventure",
@@ -303,13 +303,13 @@ func TestMetadataTitleSubtitleParsed(t *testing.T) {
 
 func TestMetadataNoAccessibility(t *testing.T) {
 	m, err := loadMetadata(t.Context(), "version-default")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, m.Accessibility)
 }
 
 func TestMetadataEPUB2Accessibility(t *testing.T) {
 	m, err := loadMetadata(t.Context(), "accessibility-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	e := manifest.NewA11y()
 	e.ConformsTo = []manifest.A11yProfile{manifest.EPUBA11y11WCAG21AA, manifest.EPUBA11y11WCAG20AAA, manifest.EPUBA11y10WCAG20A}
 	e.Certification = &manifest.A11yCertification{
@@ -332,7 +332,7 @@ func TestMetadataEPUB2Accessibility(t *testing.T) {
 
 func TestMetadataEPUB2TDM(t *testing.T) {
 	m, err := loadMetadata(t.Context(), "tdm-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, &manifest.TDM{
 		Policy:      "https://provider.com/policies/policy.json",
 		Reservation: manifest.TDMReservationAll,
@@ -341,7 +341,7 @@ func TestMetadataEPUB2TDM(t *testing.T) {
 
 func TestMetadataEPUB3Accessibility(t *testing.T) {
 	m, err := loadMetadata(t.Context(), "accessibility-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	e := manifest.NewA11y()
 	e.ConformsTo = []manifest.A11yProfile{manifest.EPUBA11y11WCAG21AA, manifest.EPUBA11y11WCAG20AAA, manifest.EPUBA11y10WCAG20A}
 	e.Certification = &manifest.A11yCertification{
@@ -383,7 +383,7 @@ func TestMetadataEPUB3AccessibilityRefines(t *testing.T) {
 
 func TestMetadataEPUB3TDM(t *testing.T) {
 	m, err := loadMetadata(t.Context(), "tdm-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, &manifest.TDM{
 		Policy:      "https://provider.com/policies/policy.json",
 		Reservation: manifest.TDMReservationAll,
@@ -392,9 +392,9 @@ func TestMetadataEPUB3TDM(t *testing.T) {
 
 func TestMetadataTitleFileAs(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "titles-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "titles-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "Adventures", m2.SortAs())
 	assert.Equal(t, "Adventures", m3.SortAs())
@@ -403,7 +403,7 @@ func TestMetadataTitleFileAs(t *testing.T) {
 func TestMetadataTitleMainTakesPrecedence(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "title-main-precedence")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "Main title takes precedence", m3.Title())
 }
@@ -411,7 +411,7 @@ func TestMetadataTitleMainTakesPrecedence(t *testing.T) {
 func TestMetadataTitleSelectedSubtitleHasLowestDisplaySeqProperty(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "title-multiple-subtitles")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, manifest.NewLocalizedStringFromStrings(map[string]string{
 		"en": "Subtitle 2",
@@ -421,7 +421,7 @@ func TestMetadataTitleSelectedSubtitleHasLowestDisplaySeqProperty(t *testing.T) 
 func TestMetadataSubjectLocalized(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "subjects-complex")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Len(t, m3.Subjects, 1)
 	assert.Equal(t, manifest.NewLocalizedStringFromStrings(map[string]string{
@@ -433,7 +433,7 @@ func TestMetadataSubjectLocalized(t *testing.T) {
 func TestMetadataSubjectFileAs(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "subjects-complex")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Len(t, m3.Subjects, 1)
 	assert.Equal(t, "occult", m3.Subjects[0].SortAs())
@@ -442,7 +442,7 @@ func TestMetadataSubjectFileAs(t *testing.T) {
 func TestMetadataSubjectCodeAndScheme(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "subjects-complex")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Len(t, m3.Subjects, 1)
 	assert.Equal(t, "BISAC", m3.Subjects[0].Scheme)
@@ -452,7 +452,7 @@ func TestMetadataSubjectCodeAndScheme(t *testing.T) {
 func TestMetadataSubjectCommaSeparatedSplit(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "subjects-single")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Contains(t, m3.Subjects, manifest.Subject{LocalizedName: manifest.NewLocalizedStringFromString("apple")})
 	assert.Contains(t, m3.Subjects, manifest.Subject{LocalizedName: manifest.NewLocalizedStringFromString("banana")})
@@ -462,7 +462,7 @@ func TestMetadataSubjectCommaSeparatedSplit(t *testing.T) {
 func TestMetadataSubjectCommaSeparatedMultipleNotSplit(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "subjects-multiple")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Contains(t, m3.Subjects, manifest.Subject{LocalizedName: manifest.NewLocalizedStringFromString("fiction")})
 	assert.Contains(t, m3.Subjects, manifest.Subject{LocalizedName: manifest.NewLocalizedStringFromString("apple; banana,  pear")})
@@ -470,45 +470,45 @@ func TestMetadataSubjectCommaSeparatedMultipleNotSplit(t *testing.T) {
 
 func TestMetadataDatePublished(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "dates-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "dates-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tx, err := time.Parse(time.RFC3339, "1865-07-04T00:00:00Z")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, &tx, m2.Published)
 	assert.Equal(t, &tx, m3.Published)
 
 	// Non-ISO date
 	m3notiso, err := loadMetadata(t.Context(), "dates-epub3-notiso")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, time.Date(1865, time.January, 1, 0, 0, 0, 0, time.UTC), *m3notiso.Published)
 }
 
 func TestMetadataDateModified(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "dates-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "dates-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tx, err := time.Parse(time.RFC3339, "2012-04-02T12:47:00Z")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, &tx, m2.Modified)
 	assert.Equal(t, &tx, m3.Modified)
 
 	// Non-ISO date
 	m3notiso, err := loadMetadata(t.Context(), "dates-epub3-notiso")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, time.Date(2012, time.April, 1, 0, 0, 0, 0, time.UTC), *m3notiso.Modified)
 }
 
 func TestMetadataConformsToProfileEPUB(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "contributors-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "contributors-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Contains(t, m2.ConformsTo, manifest.ProfileEPUB)
 	assert.Contains(t, m3.ConformsTo, manifest.ProfileEPUB)
@@ -516,14 +516,14 @@ func TestMetadataConformsToProfileEPUB(t *testing.T) {
 
 func TestMetadataUniqueIdentifierParsed(t *testing.T) {
 	m3, err := loadMetadata(t.Context(), "identifier-unique")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "urn:uuid:2", m3.Identifier)
 }
 
 func TestMetadataLayout(t *testing.T) {
 	m3, err := loadMetadata(t.Context(), "presentation-metadata")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, manifest.LayoutFixed, m3.Layout)
 	assert.Equal(t, "scrolled-doc", m3.OtherMetadata["http://www.idpf.org/vocab/rendition/#flow"])
 	assert.Empty(t, m3.OtherMetadata["http://www.idpf.org/vocab/rendition/#layout"])
@@ -534,11 +534,11 @@ func TestMetadataLayout(t *testing.T) {
 func TestMetadataCoverLink(t *testing.T) {
 	// Note: not using loadMetadata
 	m2, err := loadPackageDoc(t.Context(), "cover-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadPackageDoc(t.Context(), "cover-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	mm, err := loadPackageDoc(t.Context(), "cover-mix")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := &manifest.Link{
 		Href:      manifest.MustNewHREFFromString("OEBPS/cover.jpg", false),
@@ -557,7 +557,7 @@ func TestMetadataCrossRefinings(t *testing.T) {
 
 func TestMetadataOtherMetadata(t *testing.T) {
 	m3, err := loadMetadata(t.Context(), "meta-others")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, m3.OtherMetadata, map[string]interface{}{
 		VocabularyDCTerms + "source": []interface{}{
@@ -581,7 +581,7 @@ func TestMetadataOtherMetadata(t *testing.T) {
 func TestMetadataCollectionBasic(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "collections-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Contains(t, m3.BelongsToCollections(), manifest.Collection{
 		LocalizedName: manifest.NewLocalizedStringFromStrings(map[string]string{
@@ -593,7 +593,7 @@ func TestMetadataCollectionBasic(t *testing.T) {
 func TestMetadataCollectionsWithUnknownTypeInBelongsTo(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "collections-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Contains(t, m3.BelongsToCollections(), manifest.Collection{
 		LocalizedName: manifest.NewLocalizedStringFromStrings(map[string]string{
@@ -605,7 +605,7 @@ func TestMetadataCollectionsWithUnknownTypeInBelongsTo(t *testing.T) {
 func TestMetadataCollectionLocalizedSeries(t *testing.T) {
 	// EPUB 3 only
 	m3, err := loadMetadata(t.Context(), "collections-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Contains(t, m3.BelongsToSeries(), manifest.Collection{
 		LocalizedName: manifest.NewLocalizedStringFromStrings(map[string]string{
@@ -619,9 +619,9 @@ func TestMetadataCollectionLocalizedSeries(t *testing.T) {
 
 func TestMetadataCollectionSeriesWithPosition(t *testing.T) {
 	m2, err := loadMetadata(t.Context(), "collections-epub2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m3, err := loadMetadata(t.Context(), "collections-epub3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := manifest.Collection{
 		LocalizedName: manifest.NewLocalizedStringFromStrings(map[string]string{

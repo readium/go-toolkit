@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSubjectUnmarshalJSONString(t *testing.T) {
 	s, err := SubjectFromJSON("Fantasy")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, &Subject{
 		LocalizedName: NewLocalizedStringFromString("Fantasy"),
@@ -18,7 +19,7 @@ func TestSubjectUnmarshalJSONString(t *testing.T) {
 
 func TestSubjectUnmarshalMinimalJSON(t *testing.T) {
 	var s Subject
-	assert.NoError(t, json.Unmarshal([]byte(`{"name":"Science Fiction"}`), &s))
+	require.NoError(t, json.Unmarshal([]byte(`{"name":"Science Fiction"}`), &s))
 
 	assert.Equal(t, &Subject{
 		LocalizedName: NewLocalizedStringFromString("Science Fiction"),
@@ -27,7 +28,7 @@ func TestSubjectUnmarshalMinimalJSON(t *testing.T) {
 
 func TestSubjectUnmarshalFullJSON(t *testing.T) {
 	var s Subject
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"name": "Science Fiction",
 		"sortAs": "science-fiction",
 		"scheme": "http://scheme",
@@ -53,7 +54,7 @@ func TestSubjectUnmarshalFullJSON(t *testing.T) {
 
 func TestSubjectUnmarshalNilJSON(t *testing.T) {
 	s, err := SubjectFromJSON(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, s)
 }
 
@@ -64,7 +65,7 @@ func TestSubjectUnmarshalRequiresName(t *testing.T) {
 
 func TestSubjectUnmarshalJSONArray(t *testing.T) {
 	var ss []Subject
-	assert.NoError(t, json.Unmarshal([]byte(`[
+	require.NoError(t, json.Unmarshal([]byte(`[
 		"Fantasy",
 		{
 			"name": "Science Fiction",
@@ -83,13 +84,13 @@ func TestSubjectUnmarshalJSONArray(t *testing.T) {
 
 func TestSubjectUnmarshalNilJSONArray(t *testing.T) {
 	ss, err := SubjectFromJSONArray(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 0, len(ss))
 }
 
 func TestSubjectUnmarshalJSONArrayString(t *testing.T) {
 	ss, err := SubjectFromJSONArray("Fantasy")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []Subject{
 		{LocalizedName: NewLocalizedStringFromString("Fantasy")},
 	}, ss, "parsed JSON object should be equal to Subject object")
@@ -110,7 +111,7 @@ func TestSubjectMinimalJSON(t *testing.T) {
 	bin, err := json.Marshal(Subject{
 		LocalizedName: NewLocalizedStringFromString("Science Fiction"),
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, string(bin), `"Science Fiction"`)
 }
 
@@ -126,7 +127,7 @@ func TestSubjectFullJSON(t *testing.T) {
 			{Href: MustNewHREFFromString("pub2", false)},
 		},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, string(bin), `{
 		"name": "Science Fiction",
 		"sortAs": "science-fiction",
@@ -146,7 +147,7 @@ func TestSubjectJSONArray(t *testing.T) {
 		LocalizedName: NewLocalizedStringFromString("Science Fiction"),
 		Scheme:        "http://scheme",
 	}})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, string(bin), `[
 		"Fantasy",
 		{
