@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTDMFromJSON(t *testing.T) {
@@ -13,7 +14,7 @@ func TestTDMFromJSON(t *testing.T) {
 		"reservation": "all",
 	}
 	tdm, err := TDMFromJSON(rawJSON)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "https://provider.com/policies/policy.json", tdm.Policy)
 	assert.Equal(t, TDMReservationAll, tdm.Reservation)
@@ -22,7 +23,7 @@ func TestTDMFromJSON(t *testing.T) {
 		"reservation": "none",
 	}
 	tdm, err = TDMFromJSON(rawJSON)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "", tdm.Policy)
 	assert.Equal(t, TDMReservationNone, tdm.Reservation)
@@ -34,7 +35,7 @@ func TestTDMMarshalJSON(t *testing.T) {
 		Reservation: TDMReservationAll,
 	}
 	rawJSON, err := json.Marshal(tdm)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expectedJSON := `{"policy":"https://provider.com/policies/policy.json","reservation":"all"}`
 	assert.JSONEq(t, expectedJSON, string(rawJSON))
@@ -43,7 +44,7 @@ func TestTDMMarshalJSON(t *testing.T) {
 		Reservation: TDMReservationNone,
 	}
 	rawJSON, err = json.Marshal(tdm)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expectedJSON = `{"reservation":"none"}`
 	assert.JSONEq(t, expectedJSON, string(rawJSON))

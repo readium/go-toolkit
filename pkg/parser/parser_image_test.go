@@ -9,6 +9,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/pub"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func withImageParser(t *testing.T, filepath string, f func(*pub.Builder)) {
@@ -17,9 +18,9 @@ func withImageParser(t *testing.T, filepath string, f func(*pub.Builder)) {
 	fet, err := a.CreateFetcher(t.Context(), asset.Dependencies{
 		ArchiveFactory: archive.NewArchiveFactory(),
 	}, "")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	p, err := ImageParser{}.Parse(t.Context(), a, fet)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	f(p)
 }
 
@@ -37,9 +38,9 @@ func TestImageJPGAccepted(t *testing.T) {
 
 func TestImageConformsTo(t *testing.T) {
 	withImageParser(t, "./testdata/image/futuristic_tales.cbz", func(p *pub.Builder) {
-		assert.NotNil(t, p)
+		require.NotNil(t, p)
 		pub := p.Build()
-		assert.NotNil(t, pub)
+		require.NotNil(t, pub)
 
 		assert.Equal(t, pub.Manifest.Metadata.ConformsTo, manifest.Profiles{manifest.ProfileDivina})
 	})
@@ -47,9 +48,9 @@ func TestImageConformsTo(t *testing.T) {
 
 func TestImageReadingOrderAlphabetical(t *testing.T) {
 	withImageParser(t, "./testdata/image/futuristic_tales.cbz", func(p *pub.Builder) {
-		assert.NotNil(t, p)
+		require.NotNil(t, p)
 		pub := p.Build()
-		assert.NotNil(t, pub)
+		require.NotNil(t, pub)
 		base, _ := url.URLFromDecodedPath("Cory Doctorow's Futuristic Tales of the Here and Now/")
 
 		hrefs := make([]string, 0, len(pub.Manifest.ReadingOrder))
@@ -64,12 +65,12 @@ func TestImageReadingOrderAlphabetical(t *testing.T) {
 
 func TestImageCoverFirstItem(t *testing.T) {
 	withImageParser(t, "./testdata/image/futuristic_tales.cbz", func(p *pub.Builder) {
-		assert.NotNil(t, p)
+		require.NotNil(t, p)
 		pub := p.Build()
-		assert.NotNil(t, pub)
+		require.NotNil(t, pub)
 
 		coverItem := pub.Manifest.ReadingOrder.FirstWithRel("cover")
-		assert.NotNil(t, coverItem, "readingOrder should have an item with rel=cover")
+		require.NotNil(t, coverItem, "readingOrder should have an item with rel=cover")
 
 		u, _ := url.URLFromDecodedPath("Cory Doctorow's Futuristic Tales of the Here and Now/a-fc.jpg")
 		assert.Equal(t, manifest.NewHREF(u).String(), coverItem.Href.String())
@@ -78,9 +79,9 @@ func TestImageCoverFirstItem(t *testing.T) {
 
 func TestImageTitleBasedOnRoot(t *testing.T) {
 	withImageParser(t, "./testdata/image/futuristic_tales.cbz", func(p *pub.Builder) {
-		assert.NotNil(t, p)
+		require.NotNil(t, p)
 		pub := p.Build()
-		assert.NotNil(t, pub)
+		require.NotNil(t, pub)
 
 		assert.Equal(
 			t,

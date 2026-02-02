@@ -7,11 +7,12 @@ import (
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestManifestUnmarshalMinimalJSON(t *testing.T) {
 	var m Manifest
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {"title": "Title"},
 		"links": [],
 		"readingOrder": []
@@ -28,7 +29,7 @@ func TestManifestUnmarshalMinimalJSON(t *testing.T) {
 
 func TestManifestUnmarshalFullJSON(t *testing.T) {
 	var m Manifest
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"@context": "https://readium.org/webpub-manifest/context.jsonld",
 		"metadata": {"title": "Title"},
 		"links": [
@@ -80,7 +81,7 @@ func TestManifestUnmarshalFullJSON(t *testing.T) {
 
 func TestManifestUnmarshalJSONContextAsArray(t *testing.T) {
 	var m Manifest
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"@context": ["context1", "context2"],
 		"metadata": {"title": "Title"},
 		"links": [
@@ -120,7 +121,7 @@ func TestManifestUnmarshalJSONRequiresMetadata(t *testing.T) {
 // {readingOrder} used to be {spine}, so we parse {spine} as a fallback.
 func TestManifestUnmarshalJSONSpinFallback(t *testing.T) {
 	var m Manifest
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {"title": "Title"},
 		"links": [
 			{"href": "manifest.json", "rel": "self"}
@@ -209,7 +210,7 @@ func TestManifestMinimalJSON(t *testing.T) {
 		Links:        LinkList{},
 		ReadingOrder: LinkList{},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.JSONEq(t, `{
 		"@context": "https://readium.org/webpub-manifest/context.jsonld",
@@ -243,7 +244,7 @@ func TestManifestFullJSON(t *testing.T) {
 			}},
 		},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.JSONEq(t, `{
 		"@context": "https://readium.org/webpub-manifest/context.jsonld",
@@ -272,7 +273,7 @@ func TestManifestFullJSON(t *testing.T) {
 
 func TestManifestSelfLinkReplacedWhenPackaged(t *testing.T) {
 	var rm map[string]interface{}
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {"title": "Title"},
 		"links": [
 			{"href": "manifest.json", "rel": ["self"], "templated": false}
@@ -280,7 +281,7 @@ func TestManifestSelfLinkReplacedWhenPackaged(t *testing.T) {
 		"readingOrder": []
 	}`), &rm))
 	m, err := ManifestFromJSON(rm, true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, Manifest{
 		Metadata: Metadata{
@@ -295,7 +296,7 @@ func TestManifestSelfLinkReplacedWhenPackaged(t *testing.T) {
 
 func TestManifestSelfLinkKeptWhenRemote(t *testing.T) {
 	var rm map[string]interface{}
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {"title": "Title"},
 		"links": [
 			{"href": "manifest.json", "rel": ["self"], "templated": false}
@@ -303,7 +304,7 @@ func TestManifestSelfLinkKeptWhenRemote(t *testing.T) {
 		"readingOrder": []
 	}`), &rm))
 	m, err := ManifestFromJSON(rm, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, Manifest{
 		Metadata: Metadata{
@@ -318,7 +319,7 @@ func TestManifestSelfLinkKeptWhenRemote(t *testing.T) {
 
 func TestManifestHrefResolvedToRoot(t *testing.T) {
 	var rm map[string]interface{}
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {"title": "Title"},
 		"links": [
 			{"href": "http://example.com/manifest.json", "rel": ["self"], "templated": false}
@@ -329,7 +330,7 @@ func TestManifestHrefResolvedToRoot(t *testing.T) {
 	}`), &rm))
 
 	m, err := ManifestFromJSON(rm, true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m2 := m.NormalizeHREFsToSelf()
 
 	assert.Equal(t, "chap1.html", m2.ReadingOrder[0].Href.String())
@@ -337,7 +338,7 @@ func TestManifestHrefResolvedToRoot(t *testing.T) {
 
 func TestManifestHrefResolvedToRootRemotePackage(t *testing.T) {
 	var rm map[string]interface{}
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {"title": "Title"},
 		"links": [
 			{"href": "http://example.com/directory/manifest.json", "rel": ["self"], "templated": false}
@@ -348,7 +349,7 @@ func TestManifestHrefResolvedToRootRemotePackage(t *testing.T) {
 	}`), &rm))
 
 	m, err := ManifestFromJSON(rm, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	m2 := m.NormalizeHREFsToSelf()
 
 	assert.Equal(t, "http://example.com/directory/chap1.html", m2.ReadingOrder[0].Href.String())

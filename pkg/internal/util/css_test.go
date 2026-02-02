@@ -6,6 +6,7 @@ import (
 
 	"github.com/andybalholm/cascadia"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/html"
 )
 
@@ -30,15 +31,11 @@ const testDoc = `<?xml version="1.0" encoding="UTF-8"?>
 
 func TestCSSSelector(t *testing.T) {
 	doc, err := html.Parse(strings.NewReader(testDoc))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	qf := func(query string) string {
 		n := cascadia.Query(doc, cascadia.MustCompile(query))
-		if !assert.NotNil(t, n) {
-			t.FailNow()
-		}
+		require.NotNil(t, n)
 		return CSSSelector(n)
 	}
 

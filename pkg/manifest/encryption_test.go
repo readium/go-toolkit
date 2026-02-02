@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEncryptionUnmarshalMinimalJSON(t *testing.T) {
 	var m Encryption
-	assert.NoError(t, json.Unmarshal([]byte(`{"algorithm": "http://algo"}`), &m))
+	require.NoError(t, json.Unmarshal([]byte(`{"algorithm": "http://algo"}`), &m))
 	assert.Equal(
 		t,
 		Encryption{
@@ -22,7 +23,7 @@ func TestEncryptionUnmarshalMinimalJSON(t *testing.T) {
 
 func TestEncryptionUnmarshalFullJSON(t *testing.T) {
 	var m Encryption
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"algorithm": "http://algo",
 		"compression": "gzip",
 		"originalLength": 42099,
@@ -40,7 +41,7 @@ func TestEncryptionUnmarshalFullJSON(t *testing.T) {
 
 func TestEncryptionUnmarshalNullJSON(t *testing.T) {
 	enc, err := EncryptionFromJSON(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, enc)
 }
 
@@ -54,7 +55,7 @@ func TestEncryptionMarshalMinimalJSON(t *testing.T) {
 		Algorithm: "http://algo",
 	}
 	data, err := json.Marshal(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, data, []byte(`{"algorithm":"http://algo"}`), "unmarshalled JSON object should be equal to Encryption object")
 }
 
@@ -67,7 +68,7 @@ func TestEncryptionMarshalFullJSON(t *testing.T) {
 		Scheme:         "http://scheme",
 	}
 	data, err := json.Marshal(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(
 		t,
 		data,
