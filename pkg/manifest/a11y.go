@@ -229,6 +229,15 @@ func (p A11yProfile) Compare(other A11yProfile) int {
 
 type A11yProfileList []A11yProfile
 
+func (l A11yProfileList) MarshalJSON() ([]byte, error) {
+	if len(l) == 1 {
+		return json.Marshal(l[0])
+	}
+
+	type alias A11yProfileList
+	return json.Marshal(alias(l))
+}
+
 func (l A11yProfileList) Sort() {
 	if len(l) <= 1 {
 		return
