@@ -319,7 +319,7 @@ func TestMetadataEPUB2Accessibility(t *testing.T) {
 	}
 	e.Summary = "The publication contains structural and page navigation."
 	e.AccessModes = []manifest.A11yAccessMode{manifest.A11yAccessModeTextual, manifest.A11yAccessModeVisual}
-	e.AccessModesSufficient = [][]manifest.A11yPrimaryAccessMode{
+	e.AccessModesSufficient = manifest.A11yPrimaryAccessModeList{
 		{manifest.A11yPrimaryAccessModeTextual},
 		{manifest.A11yPrimaryAccessModeTextual, manifest.A11yPrimaryAccessModeVisual},
 	}
@@ -351,7 +351,7 @@ func TestMetadataEPUB3Accessibility(t *testing.T) {
 	}
 	e.Summary = "The publication contains structural and page navigation."
 	e.AccessModes = []manifest.A11yAccessMode{manifest.A11yAccessModeTextual, manifest.A11yAccessModeVisual}
-	e.AccessModesSufficient = [][]manifest.A11yPrimaryAccessMode{
+	e.AccessModesSufficient = manifest.A11yPrimaryAccessModeList{
 		{manifest.A11yPrimaryAccessModeTextual},
 		{manifest.A11yPrimaryAccessModeTextual, manifest.A11yPrimaryAccessModeVisual},
 	}
@@ -372,7 +372,7 @@ func TestMetadataEPUB3AccessibilityRefines(t *testing.T) {
 		CertifiedBy: "Standard Ebooks",
 	}
 	e.AccessModes = manifest.A11yAccessModesFromStrings([]string{"textual"})
-	e.AccessModesSufficient = [][]manifest.A11yPrimaryAccessMode{
+	e.AccessModesSufficient = manifest.A11yPrimaryAccessModeList{
 		a11yAccessModesSufficient("textual"),
 	}
 	e.Features = valuesToA11yFeatures([]string{"readingOrder", "structuralNavigation", "tableOfContents", "unlocked"})

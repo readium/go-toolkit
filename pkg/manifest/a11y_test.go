@@ -45,7 +45,7 @@ func TestA11yUnmarshalFullJSON(t *testing.T) {
 			A11yAccessModeAuditory,
 			A11yAccessModeChartOnVisual,
 		},
-		AccessModesSufficient: [][]A11yPrimaryAccessMode{
+		AccessModesSufficient: A11yPrimaryAccessModeList{
 			{
 				A11yPrimaryAccessModeVisual,
 				A11yPrimaryAccessModeTactile,
@@ -110,7 +110,7 @@ func TestA11yUnmarshalAccessModeSufficientContainingBothStringsAndArrays(t *test
 	var m A11y
 	require.NoError(t, json.Unmarshal([]byte(`{"accessModeSufficient": ["auditory", ["visual", "tactile"], [], "visual"]}`), &m))
 	var e A11y = NewA11y()
-	e.AccessModesSufficient = [][]A11yPrimaryAccessMode{
+	e.AccessModesSufficient = A11yPrimaryAccessModeList{
 		{A11yPrimaryAccessModeAuditory},
 		{A11yPrimaryAccessModeVisual, A11yPrimaryAccessModeTactile},
 		{A11yPrimaryAccessModeVisual},
@@ -122,7 +122,7 @@ func TestA11yMarshalMinimalJSON(t *testing.T) {
 	m := A11y{
 		ConformsTo:            []A11yProfile{},
 		AccessModes:           []A11yAccessMode{},
-		AccessModesSufficient: [][]A11yPrimaryAccessMode{},
+		AccessModesSufficient: A11yPrimaryAccessModeList{},
 		Features:              []A11yFeature{},
 		Hazards:               []A11yHazard{},
 		Exemptions:            []A11yExemption{},
@@ -148,7 +148,7 @@ func TestA11yMarshalFullJSON(t *testing.T) {
 			A11yAccessModeAuditory,
 			A11yAccessModeChartOnVisual,
 		},
-		AccessModesSufficient: [][]A11yPrimaryAccessMode{
+		AccessModesSufficient: A11yPrimaryAccessModeList{
 			{A11yPrimaryAccessModeAuditory},
 			{
 				A11yPrimaryAccessModeVisual,

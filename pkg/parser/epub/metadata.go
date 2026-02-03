@@ -819,8 +819,8 @@ func valuesToAccessModes(values []string) []manifest.A11yAccessMode {
 	return am
 }
 
-func valuesToAccessModesSufficient(values []string) [][]manifest.A11yPrimaryAccessMode {
-	ams := make([][]manifest.A11yPrimaryAccessMode, 0, len(values))
+func valuesToAccessModesSufficient(values []string) manifest.A11yPrimaryAccessModeList {
+	ams := make(manifest.A11yPrimaryAccessModeList, 0, len(values))
 	for _, v := range values {
 		c := a11yAccessModesSufficient(v)
 		if len(c) > 0 {
