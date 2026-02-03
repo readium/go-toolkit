@@ -177,3 +177,33 @@ func TestA11yMarshalFullJSON(t *testing.T) {
 		[]byte(`{"conformsTo":["http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a","https://profile2"],"certification":{"certifiedBy":"company1","credential":"credential1","report":"https://report1"},"summary":"Summary","accessMode":["auditory","chartOnVisual"],"accessModeSufficient":[["auditory"],["visual","tactile"],["visual"]],"feature":["readingOrder","alternativeText"],"hazard":["flashing","motionSimulation"],"exemption":["eaa-fundamental-alteration","eaa-microenterprise"]}`),
 	)
 }
+
+func TestA11yMarshalConformsToSingleValue(t *testing.T) {
+	m := A11y{
+		ConformsTo: []A11yProfile{
+			EPUBA11y11WCAG22AA,
+		},
+	}
+	data, err := json.Marshal(m)
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		[]byte(`{"conformsTo":"https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aa"}`),
+		data,
+	)
+}
+
+func TestA11yMarshalAccessModeSufficientSingleValue(t *testing.T) {
+	m := A11y{
+		AccessModesSufficient: A11yPrimaryAccessModeList{
+			{A11yPrimaryAccessModeTextual},
+		},
+	}
+	data, err := json.Marshal(m)
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		[]byte(`{"accessModeSufficient":"textual"}`),
+		data,
+	)
+}
