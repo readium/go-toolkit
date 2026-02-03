@@ -17,7 +17,7 @@ type A11y struct {
 	Certification         *A11yCertification        `json:"certification,omitempty"`        // Certification of accessible publications.
 	Summary               string                    `json:"summary,omitempty"`              // A human-readable summary of specific accessibility features or deficiencies, consistent with the other accessibility metadata but expressing subtleties such as "short descriptions are present but long descriptions will be needed for non-visual users" or "short descriptions are present and no long descriptions are needed."
 	AccessModes           []A11yAccessMode          `json:"accessMode,omitempty"`           // The human sensory perceptual system or cognitive faculty through which a person may process or perceive information.
-	AccessModesSufficient A11yPrimaryAccessModeList `json:"accessModeSufficient,omitempty"` //  A list of single or combined accessModes that are sufficient to understand all the intellectual content of a resource.
+	AccessModesSufficient A11yPrimaryAccessModeList `json:"accessModeSufficient,omitempty"` // A list of single or combined accessModes that are sufficient to understand all the intellectual content of a resource.
 	Features              []A11yFeature             `json:"feature,omitempty"`              // Content features of the resource, such as accessible media, alternatives and supported enhancements for accessibility.
 	Hazards               []A11yHazard              `json:"hazard,omitempty"`               // A characteristic of the described resource that is physiologically dangerous to some users.
 	Exemptions            []A11yExemption           `json:"exemption,omitempty"`            // Justifications for non-conformance based on exemptions in a given jurisdiction.
