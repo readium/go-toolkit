@@ -13,14 +13,14 @@ import (
 // https://www.w3.org/2021/a11y-discov-vocab/latest/
 // https://readium.org/webpub-manifest/schema/a11y.schema.json
 type A11y struct {
-	ConformsTo            A11yProfileList           `json:"conformsTo,omitempty"`           // An established standard to which the described resource conforms.
-	Certification         *A11yCertification        `json:"certification,omitempty"`        // Certification of accessible publications.
-	Summary               string                    `json:"summary,omitempty"`              // A human-readable summary of specific accessibility features or deficiencies, consistent with the other accessibility metadata but expressing subtleties such as "short descriptions are present but long descriptions will be needed for non-visual users" or "short descriptions are present and no long descriptions are needed."
-	AccessModes           []A11yAccessMode          `json:"accessMode,omitempty"`           // The human sensory perceptual system or cognitive faculty through which a person may process or perceive information.
-	AccessModesSufficient [][]A11yPrimaryAccessMode `json:"accessModeSufficient,omitempty"` // A list of single or combined accessModes that are sufficient to understand all the intellectual content of a resource.
-	Features              []A11yFeature             `json:"feature,omitempty"`              // Content features of the resource, such as accessible media, alternatives and supported enhancements for accessibility.
-	Hazards               []A11yHazard              `json:"hazard,omitempty"`               // A characteristic of the described resource that is physiologically dangerous to some users.
-	Exemptions            []A11yExemption           `json:"exemption,omitempty"`            // Justifications for non-conformance based on exemptions in a given jurisdiction.
+	ConformsTo            A11yProfileList            `json:"conformsTo,omitempty"`           // An established standard to which the described resource conforms.
+	Certification         *A11yCertification         `json:"certification,omitempty"`        // Certification of accessible publications.
+	Summary               string                     `json:"summary,omitempty"`              // A human-readable summary of specific accessibility features or deficiencies, consistent with the other accessibility metadata but expressing subtleties such as "short descriptions are present but long descriptions will be needed for non-visual users" or "short descriptions are present and no long descriptions are needed."
+	AccessModes           []A11yAccessMode           `json:"accessMode,omitempty"`           // The human sensory perceptual system or cognitive faculty through which a person may process or perceive information.
+	AccessModesSufficient A11yPrimaryAccessModeLists `json:"accessModeSufficient,omitempty"` // A list of single or combined accessModes that are sufficient to understand all the intellectual content of a resource.
+	Features              []A11yFeature              `json:"feature,omitempty"`              // Content features of the resource, such as accessible media, alternatives and supported enhancements for accessibility.
+	Hazards               []A11yHazard               `json:"hazard,omitempty"`               // A characteristic of the described resource that is physiologically dangerous to some users.
+	Exemptions            []A11yExemption            `json:"exemption,omitempty"`            // Justifications for non-conformance based on exemptions in a given jurisdiction.
 }
 
 // NewA11y creates a new empty A11y.
@@ -28,7 +28,7 @@ func NewA11y() A11y {
 	return A11y{
 		ConformsTo:            A11yProfileList{},
 		AccessModes:           []A11yAccessMode{},
-		AccessModesSufficient: [][]A11yPrimaryAccessMode{},
+		AccessModesSufficient: A11yPrimaryAccessModeLists{},
 		Features:              []A11yFeature{},
 		Hazards:               []A11yHazard{},
 		Exemptions:            []A11yExemption{},
@@ -109,7 +109,7 @@ func A11yFromJSON(rawJSON map[string]any) (*A11y, error) {
 	}
 	a.AccessModes = A11yAccessModesFromStrings(accessModes)
 
-	ams := [][]A11yPrimaryAccessMode{}
+	ams := A11yPrimaryAccessModeLists{}
 	if amsJSON, ok := rawJSON["accessModeSufficient"].([]any); ok {
 		for _, l := range amsJSON {
 			strings, err := parseSliceOrString(l, true)
@@ -299,6 +299,17 @@ func A11yAccessModesFromStrings(strings []string) []A11yAccessMode {
 
 // A11yPrimaryAccessMode is a human primary sensory perceptual system or cognitive faculty through which a person may process or perceive information.
 type A11yPrimaryAccessMode string
+
+type A11yPrimaryAccessModeLists [][]A11yPrimaryAccessMode
+
+func (l A11yPrimaryAccessModeLists) MarshalJSON() ([]byte, error) {
+	if len(l) == 1 && len(l[0]) == 1 {
+		return json.Marshal(l[0][0])
+	}
+
+	type alias A11yPrimaryAccessModeLists
+	return json.Marshal(alias(l))
+}
 
 const (
 	// Indicates that auditory perception is necessary to consume the information.
