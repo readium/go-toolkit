@@ -8,6 +8,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func loadEncryption(ctx context.Context, name string) (map[string]manifest.Encryption, error) {
@@ -46,19 +47,19 @@ var testEncMap = map[string]manifest.Encryption{
 
 func TestEncryptionParserNamespacePrefixes(t *testing.T) {
 	e, err := loadEncryption(t.Context(), "lcp-prefixes")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, testEncMap, e)
 }
 
 func TestEncryptionParserDefaultNamespaces(t *testing.T) {
 	e, err := loadEncryption(t.Context(), "lcp-xmlns")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, testEncMap, e)
 }
 
 func TestEncryptionParserUnknownRetrievalMethod(t *testing.T) {
 	e, err := loadEncryption(t.Context(), "unknown-method")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, map[string]manifest.Encryption{
 		url.MustURLFromString("OEBPS/images/image.jpeg").String(): {
 			Algorithm: "http://www.w3.org/2001/04/xmlenc#kw-aes128",

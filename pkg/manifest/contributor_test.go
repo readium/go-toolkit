@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestContributorUnmarshalJSONString(t *testing.T) {
@@ -12,7 +13,7 @@ func TestContributorUnmarshalJSONString(t *testing.T) {
 		LocalizedName: NewLocalizedStringFromString("John Smith"),
 	}
 	var c2 Contributor
-	assert.NoError(t, json.Unmarshal([]byte(`"John Smith"`), &c2))
+	require.NoError(t, json.Unmarshal([]byte(`"John Smith"`), &c2))
 	assert.Equal(t, c1, c2, "unmarshalled JSON string should be equal to string")
 }
 
@@ -21,7 +22,7 @@ func TestContributorUnmarshalMinimalJSON(t *testing.T) {
 		LocalizedName: NewLocalizedStringFromString("John Smith"),
 	}
 	var c2 Contributor
-	assert.NoError(t, json.Unmarshal([]byte(`{"name": "John Smith"}`), &c2))
+	require.NoError(t, json.Unmarshal([]byte(`{"name": "John Smith"}`), &c2))
 	assert.Equal(t, c1, c2, "unmarshalled JSON object should be equal to Contributor object")
 }
 
@@ -47,7 +48,7 @@ func TestContributorUnmarshalFullJSON(t *testing.T) {
 		},
 	}
 	var c2 Contributor
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"name": "Colin Greenwood",
 		"identifier": "colin",
 		"altIdentifier": [{"value": "id123", "scheme": "scheme456"}],
@@ -68,7 +69,7 @@ func TestContributorUnmarshalJSONWithDuplicateRoles(t *testing.T) {
 		Roles:         []string{"singer", "guitarist"},
 	}
 	var c2 Contributor
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"name": "Thom Yorke",
 		"role": ["singer", "guitarist", "guitarist"]
 	}`), &c2))
@@ -99,7 +100,7 @@ func TestContributorNameFromDefaultTranslation(t *testing.T) {
 func TestContributorMinimalJSON(t *testing.T) {
 	l := Contributor{LocalizedName: NewLocalizedStringFromString("Colin Greenwood")}
 	s, err := json.Marshal(l)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `"Colin Greenwood"`, string(s), "JSON of Contributor with one name should be equal to JSON representation")
 }
 
@@ -109,7 +110,7 @@ func TestContributorMinimalJSONWithLocalizedName(t *testing.T) {
 	n.SetTranslation("fr", "Colain Grinwoud")
 	l := Contributor{LocalizedName: n}
 	s, err := json.Marshal(l)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{"name": {"fr": "Colain Grinwoud", "en": "Colin Greenwood"}}`, string(s), "JSON of Contributor with one name should be equal to JSON representation")
 }
 
@@ -135,7 +136,7 @@ func TestContributorFullJSON(t *testing.T) {
 		},
 	}
 	s, err := json.Marshal(l)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"name": "Colin Greenwood",
 		"identifier": "colin",

@@ -6,11 +6,12 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPubCollectionUnmarshalMinimalJSON(t *testing.T) {
 	var pc PublicationCollection
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": null,
 		"links": [{"href": "/link"}]
 	}`), &pc))
@@ -23,7 +24,7 @@ func TestPubCollectionUnmarshalMinimalJSON(t *testing.T) {
 
 func TestPubCollectionUnmarshalFullJSON(t *testing.T) {
 	var pc PublicationCollection
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {
 			"metadata1": "value"
 		},
@@ -77,13 +78,13 @@ func TestPubCollectionUnmarshalFullJSON(t *testing.T) {
 
 func TestPubCollectionUnmarshalNilJSON(t *testing.T) {
 	pc, err := PublicationCollectionFromJSON(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, pc)
 }
 
 func TestPubCollectionUnmarshalJSONMultipleCollections(t *testing.T) {
 	var pcsr map[string]interface{}
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"sub1": {
 			"links": [
 				{"href": "/sublink"}
@@ -107,7 +108,7 @@ func TestPubCollectionUnmarshalJSONMultipleCollections(t *testing.T) {
 		]
 	}`), &pcsr))
 	pcs, err := PublicationCollectionsFromJSON(pcsr)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, PublicationCollectionMap{
 		"sub1": {{
@@ -130,7 +131,7 @@ func TestPubCollectionMinimalJSON(t *testing.T) {
 		Metadata: map[string]interface{}{},
 		Links:    []Link{{Href: NewHREF(url.MustURLFromString("/link"))}},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"metadata": {},
 		"links": [{"href": "/link"}]
@@ -158,7 +159,7 @@ func TestPubCollectionFullJSON(t *testing.T) {
 			},
 		},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"metadata": {
 			"metadata1": "value"
@@ -211,7 +212,7 @@ func TestPubCollectionMultipleCollectionsJSON(t *testing.T) {
 			{Metadata: map[string]interface{}{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink4"))}}},
 		},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"sub1": {
 			"metadata": {},
