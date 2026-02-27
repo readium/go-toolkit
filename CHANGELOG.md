@@ -4,11 +4,13 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
-## Unreleased
+## [0.13.2] - 2026-02-26
 
 ### Fixed
 
 - Fixed a typo in the accessibility metadata (`describeMath` should be `describedMath`).
+- File fetcher (for exploded local publications) would panic due to runtime cleanup bug
+- Fetcher for archives and exploded publications were [not able to retrieve resources at paths containing special characters](https://github.com/readium/cli/issues/94), such as spaces
 
 ## [0.13.1] - 2025-12-08
 
