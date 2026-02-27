@@ -79,7 +79,13 @@ func (f *FileFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 
 // Get implements Fetcher
 func (f *FileFetcher) Get(ctx context.Context, link manifest.Link) Resource {
-	linkHref := link.Href.String()
+	// use decoded path for local file lookup to support files with spaces and special characters
+	var linkHref string
+	if hrefURL := link.Href.Resolve(nil, nil); hrefURL != nil {
+		linkHref = hrefURL.Path()
+	} else {
+		linkHref = link.Href.String()
+	}
 	for itemHref, itemFile := range f.paths {
 		if strings.HasPrefix(linkHref, itemHref) {
 			resourceFile := filepath.Join(itemFile, strings.TrimPrefix(linkHref, itemHref))
@@ -169,7 +175,6 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 	r.file = f
 	runtime.AddCleanup(r, func(f *os.File) {
 		f.Close()
-		r.file = nil
 	}, f)
 	return f, nil
 }
