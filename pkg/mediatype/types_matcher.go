@@ -39,6 +39,7 @@ var knownMatches = map[string]*MediaType{
 	"application/opds-authentication+json":                 &OPDSAuthentication,
 	"application/oebps-package+xml":                        &OPF,
 	"audio/opus":                                           &OPUS,
+	"audio/ogg;codecs=opus":                                &OPUS,
 	"font/otf":                                             &OTF,
 	"application/pdf":                                      &PDF,
 	"image/png":                                            &PNG,

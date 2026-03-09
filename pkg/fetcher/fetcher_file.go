@@ -181,6 +181,7 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 
 // Read implements Resource
 func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
+	defer runtime.KeepAlive(r)
 	if end < start {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
@@ -214,6 +215,7 @@ func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte
 
 // Stream implements Resource
 func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	defer runtime.KeepAlive(r)
 	if end < start {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
 		return -1, err
@@ -245,6 +247,7 @@ func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end
 
 // Length implements Resource
 func (r *FileResource) Length(ctx context.Context) (int64, *ResourceError) {
+	defer runtime.KeepAlive(r)
 	f, ex := r.open()
 	if ex != nil {
 		return 0, ex

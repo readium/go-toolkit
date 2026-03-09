@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.13.4] - 2026-03-09
+
+### Changed
+
+- The mimetype for OPUS is now the modern `audio/opus`, to align with the other toolkits
+- The mimetype string matcher now removes spaces, so that `audio/ogg; codecs=opus` and `audio/ogg;codecs=opus` are the same when searching for a match
+
+### Fixed
+
+- Fixed race condition causing local file reads to fail due to early closure
+
 ## [0.13.3] - 2026-02-27
 
 ### Fixed
