@@ -5,23 +5,24 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPropertiesUnmarshalNilJSON(t *testing.T) {
 	props, err := PropertiesFromJSON(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Properties{}, props)
 }
 
 func TestProperiesUnmarshalMinimalJSON(t *testing.T) {
 	var p Properties
-	assert.NoError(t, json.Unmarshal([]byte(`{}`), &p))
+	require.NoError(t, json.Unmarshal([]byte(`{}`), &p))
 	assert.Equal(t, Properties{}, p)
 }
 
 func TestPropertiesUnmarshalFullJSON(t *testing.T) {
 	var p Properties
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"other-property1": "value",
 		"other-property2": [42]
 	}`), &p))

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -14,7 +15,7 @@ func init() {
 
 func TestMetadataUnmarshalMinimalJSON(t *testing.T) {
 	var m Metadata
-	assert.NoError(t, json.Unmarshal([]byte(`{"title": "Title"}`), &m))
+	require.NoError(t, json.Unmarshal([]byte(`{"title": "Title"}`), &m))
 	assert.Equal(t, Metadata{LocalizedTitle: NewLocalizedStringFromString("Title")}, m, "parsed JSON object should be equal to Metadata object")
 }
 
@@ -26,15 +27,15 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 	})
 	lsa := NewLocalizedStringFromString("sort key")
 	modified, err := time.Parse(time.RFC3339Nano, "2001-01-01T12:36:27.000Z")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	published, err := time.Parse(time.RFC3339Nano, "2001-01-02T12:36:27.000Z")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	duration := float64(4.24)
 	numberOfPages := uint(240)
 	a11y := NewA11y()
 	a11y.ConformsTo = []A11yProfile{EPUBA11y10WCAG20A}
 
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"identifier": "1234",
 		"altIdentifier": ["https://example.com/identifier/12345", {
 			"value": "123456789",
@@ -152,7 +153,7 @@ func TestMetadataUnmarshalNilJSON(t *testing.T) {
 
 func TestMetadataUnmarshalJSONSingleProfile(t *testing.T) {
 	var m Metadata
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"title": "Title",
 		"conformsTo": "https://readium.org/webpub-manifest/profiles/epub"
 	}`), &m))
@@ -164,7 +165,7 @@ func TestMetadataUnmarshalJSONSingleProfile(t *testing.T) {
 
 func TestMetadataUnmarshalJSONSingleLanguage(t *testing.T) {
 	var m Metadata
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"title": "Title",
 		"language": "fr"
 	}`), &m))
@@ -181,7 +182,7 @@ func TestMetadataUnmarshalJSONRequiresTitle(t *testing.T) {
 
 func TestMetadataUnmarshalJSONDurationPositive(t *testing.T) {
 	var m Metadata
-	assert.NoError(t, json.Unmarshal([]byte(`{"title": "Title", "duration": -20}`), &m))
+	require.NoError(t, json.Unmarshal([]byte(`{"title": "Title", "duration": -20}`), &m))
 	assert.Equal(t, Metadata{
 		LocalizedTitle: NewLocalizedStringFromString("Title"),
 	}, m)
@@ -189,7 +190,7 @@ func TestMetadataUnmarshalJSONDurationPositive(t *testing.T) {
 
 func TestMetadataUnmarshalJSONNumberOfPagesPositive(t *testing.T) {
 	var m Metadata
-	assert.NoError(t, json.Unmarshal([]byte(`{"title": "Title", "numberOfPages": -20}`), &m))
+	require.NoError(t, json.Unmarshal([]byte(`{"title": "Title", "numberOfPages": -20}`), &m))
 	assert.Equal(t, Metadata{
 		LocalizedTitle: NewLocalizedStringFromString("Title"),
 	}, m)
@@ -199,7 +200,7 @@ func TestMetadataMinimalJSON(t *testing.T) {
 	b, err := json.Marshal(Metadata{
 		LocalizedTitle: NewLocalizedStringFromString("Title"),
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{"title": "Title"}`, string(b))
 }
 
@@ -209,9 +210,9 @@ func TestMetadataFullJSON(t *testing.T) {
 		"fr": "Sous-titre",
 	})
 	modified, err := time.Parse(time.RFC3339Nano, "2001-01-01T12:36:27.123Z")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	published, err := time.Parse(time.RFC3339Nano, "2001-01-02T12:36:27.000Z")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	lsa := NewLocalizedStringFromStrings(map[string]string{
 		"en": "sort key",
 		"fr": "clé de tri",
@@ -281,7 +282,7 @@ func TestMetadataFullJSON(t *testing.T) {
 			"other-metadata2": []interface{}{float64(42)},
 		},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.JSONEq(t, `{
 		"identifier": "1234",

@@ -79,7 +79,13 @@ func (f *FileFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 
 // Get implements Fetcher
 func (f *FileFetcher) Get(ctx context.Context, link manifest.Link) Resource {
-	linkHref := link.Href.String()
+	// use decoded path for local file lookup to support files with spaces and special characters
+	var linkHref string
+	if hrefURL := link.Href.Resolve(nil, nil); hrefURL != nil {
+		linkHref = hrefURL.Path()
+	} else {
+		linkHref = link.Href.String()
+	}
 	for itemHref, itemFile := range f.paths {
 		if strings.HasPrefix(linkHref, itemHref) {
 			resourceFile := filepath.Join(itemFile, strings.TrimPrefix(linkHref, itemHref))
@@ -169,13 +175,13 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 	r.file = f
 	runtime.AddCleanup(r, func(f *os.File) {
 		f.Close()
-		r.file = nil
 	}, f)
 	return f, nil
 }
 
 // Read implements Resource
 func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
+	defer runtime.KeepAlive(r)
 	if end < start {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
@@ -199,8 +205,8 @@ func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte
 		}
 		return data[:n], nil
 	} else {
-		n, err := f.Read(data)
-		if err != nil && err != io.EOF {
+		n, err := io.ReadFull(f, data)
+		if err != nil && err != io.ErrUnexpectedEOF {
 			return nil, Other(err)
 		}
 		return data[:n], nil
@@ -209,6 +215,7 @@ func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte
 
 // Stream implements Resource
 func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
+	defer runtime.KeepAlive(r)
 	if end < start {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
 		return -1, err
@@ -240,6 +247,7 @@ func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end
 
 // Length implements Resource
 func (r *FileResource) Length(ctx context.Context) (int64, *ResourceError) {
+	defer runtime.KeepAlive(r)
 	f, ex := r.open()
 	if ex != nil {
 		return 0, ex

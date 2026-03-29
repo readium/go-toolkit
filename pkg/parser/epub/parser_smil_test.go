@@ -9,6 +9,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func loadSmil(ctx context.Context, name string) (*guidednavigation.GuidedNavigationDocument, error) {
@@ -26,9 +27,7 @@ func loadSmil(ctx context.Context, name string) (*guidednavigation.GuidedNavigat
 
 func TestSMILDocTypicalAudio(t *testing.T) {
 	doc, err := loadSmil(t.Context(), "audio1")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	assert.Empty(t, doc.Links)
 	if assert.Len(t, doc.Guided, 6) {
 		assert.Equal(t, "OEBPS/page1.xhtml#word0", doc.Guided[0].TextRef.String())
@@ -46,12 +45,8 @@ func TestSMILW3Examples(t *testing.T) {
 
 func TestSMILClipBoundaries(t *testing.T) {
 	doc, err := loadSmil(t.Context(), "audio-clip")
-	if !assert.NoError(t, err) {
-		return
-	}
-	if !assert.Len(t, doc.Guided, 3) {
-		return
-	}
+	require.NoError(t, err)
+	require.Len(t, doc.Guided, 3)
 	assert.Equal(t, "OEBPS/audio/page1.m4a#t=,0.84", doc.Guided[0].AudioRef.String())
 	assert.Equal(t, "OEBPS/audio/page1.m4a#t=0.84", doc.Guided[1].AudioRef.String())
 	assert.Equal(t, "OEBPS/audio/page1.m4a", doc.Guided[2].AudioRef.String())

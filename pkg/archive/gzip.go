@@ -8,5 +8,9 @@ const (
 	gzipDeflate = 8
 )
 
-const GzipWrapperLength = 18
+const GzipHeaderLength = 10
+const GzipTrailerLength = 8
+const GzipWrapperLength = GzipHeaderLength + GzipTrailerLength
 const GzipMaxLength = math.MaxUint32
+
+const ZRandCutoff = 1024 * 1024 // 1MB

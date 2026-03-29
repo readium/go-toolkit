@@ -4,6 +4,52 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.13.4] - 2026-03-09
+
+### Changed
+
+- The mimetype for OPUS is now the modern `audio/opus`, to align with the other toolkits
+- The mimetype string matcher now removes spaces, so that `audio/ogg; codecs=opus` and `audio/ogg;codecs=opus` are the same when searching for a match
+
+### Fixed
+
+- Fixed race condition causing local file reads to fail due to early closure
+
+## [0.13.3] - 2026-02-27
+
+### Fixed
+
+- The `ConformsTo` function on manifests (and by extension, publications) mistakenly checked the manifest's `links`, not its `readingOrder`, for mediatypes that determine whether the manifest is conforming to a certain profile. This may have caused mistaken cases of a11y inferrence or Divina/Audiobook/EPUB/PDF profile detection.
+
+## [0.13.2] - 2026-02-26
+
+### Fixed
+
+- Fixed a typo in the accessibility metadata (`describeMath` should be `describedMath`).
+- File fetcher (for exploded local publications) would panic due to runtime cleanup bug
+- Fetcher for archives and exploded publications were [not able to retrieve resources at paths containing special characters](https://github.com/readium/cli/issues/94), such as spaces
+
+## [0.13.1] - 2025-12-08
+
+### Changed
+
+- Now that we not longer make full releases on GitHub for the go-toolkit, it's confusing to have `https://github.com/readium/go-toolkit/releases` as the JSON key for the toolkit version in manifests. The new value is `https://github.com/readium/go-toolkit#version`
+
+## [0.13.0] - 2025-12-04
+
+### Added
+
+- Implemented [zran](https://github.com/madler/zlib/blob/master/examples/zran.h)-like reading of ZIP entries. This only applies to the start offset, not the total length of the resources. Particularly useful for e.g. streaming compressed videos where a browser will send `Range: bytes=0-` then abort when satisfied, which is already hopeless for us to handle. At least when users scrub through video/audio, we can take a `Range: bytes=XXXXXX-` header and start the remote range request for the resource closer to the start of the byte range. This happens in increments of 1MB
+- Add CRC32 checksum function for `CompressedResource` to make direct copying of compressed resources to new archives easier
+
+### Fixed
+
+- Fixed bugged `Read` calls that aren't obligated to return the entirety of a resource. This was resulting in errors when reading partial ranges of resources, most notably ones that are range-read by browsers such as audio and video
+
+### Changed
+
+- Updated dependencies
+
 ## [0.12.1] - 2025-10-14
 
 ### Fixed

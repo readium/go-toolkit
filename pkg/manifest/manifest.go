@@ -31,16 +31,16 @@ func (m Manifest) ConformsTo(profile Profile) bool {
 
 	switch profile {
 	case ProfileAudiobook:
-		return m.Links.AllAreAudio()
+		return m.ReadingOrder.AllAreAudio()
 	case ProfileDivina:
-		return m.Links.AllAreBitmap()
+		return m.ReadingOrder.AllAreBitmap()
 	case ProfileEPUB:
 		// EPUB needs to be explicitly indicated in `conformsTo`, otherwise it could be a regular Web Publication.
 		if slices.Contains(m.Metadata.ConformsTo, ProfileEPUB) && m.ReadingOrder.AllAreHTML() {
 			return true
 		}
 	case ProfilePDF:
-		return m.Links.AllMatchMediaType(&mediatype.PDF)
+		return m.ReadingOrder.AllMatchMediaType(&mediatype.PDF)
 	default:
 		if slices.Contains(m.Metadata.ConformsTo, profile) {
 			return true

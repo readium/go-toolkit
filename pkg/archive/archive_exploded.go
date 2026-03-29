@@ -26,6 +26,10 @@ func (e explodedArchiveEntry) CompressedLength() uint64 {
 	return 0
 }
 
+func (e explodedArchiveEntry) CRC32Checksum() *uint32 {
+	return nil
+}
+
 func (e explodedArchiveEntry) CompressedAs(compressionMethod CompressionMethod) bool {
 	return false
 }
@@ -54,7 +58,11 @@ func (e explodedArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 		}
 	}
 	data := make([]byte, end-start+1)
-	n, err := f.Read(data)
+	n, err := io.ReadFull(f, data)
+	if n > 0 && err == io.ErrUnexpectedEOF {
+		// Not EOF error if some data was read
+		err = nil
+	}
 	return data[:n], err
 }
 

@@ -5,17 +5,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestA11yUnmarshalMinimalJSON(t *testing.T) {
 	var m A11y
-	assert.NoError(t, json.Unmarshal([]byte("{}"), &m))
+	require.NoError(t, json.Unmarshal([]byte("{}"), &m))
 	assert.Equal(t, NewA11y(), m, "unmarshalled JSON object should be equal to A11y object")
 }
 
 func TestA11yUnmarshalFullJSON(t *testing.T) {
 	var m A11y
-	assert.NoError(t, json.Unmarshal([]byte(`{
+	require.NoError(t, json.Unmarshal([]byte(`{
 		"conformsTo": ["https://profile1", "https://profile2"],
 		"certification": {
 			"certifiedBy": "company1",
@@ -67,13 +68,13 @@ func TestA11yUnmarshalFullJSON(t *testing.T) {
 
 func TestA11yUnmarshalInvalidSummaryIsIgnored(t *testing.T) {
 	var m A11y
-	assert.NoError(t, json.Unmarshal([]byte(`{"summary": ["sum1", "sum2"]}`), &m))
+	require.NoError(t, json.Unmarshal([]byte(`{"summary": ["sum1", "sum2"]}`), &m))
 	assert.Equal(t, NewA11y(), m, "unmarshalled JSON object should be equal to A11y object")
 }
 
 func TestA11yUnmarshalConformsToString(t *testing.T) {
 	var m A11y
-	assert.NoError(t, json.Unmarshal([]byte(`{"conformsTo": "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a"}`), &m))
+	require.NoError(t, json.Unmarshal([]byte(`{"conformsTo": "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a"}`), &m))
 	var e A11y = NewA11y()
 	e.ConformsTo = []A11yProfile{EPUBA11y10WCAG20A}
 	assert.Equal(t, e, m, "unmarshalled JSON object should be equal to A11y object")
@@ -81,7 +82,7 @@ func TestA11yUnmarshalConformsToString(t *testing.T) {
 
 func TestA11yUnmarshalConformsToArray(t *testing.T) {
 	var m A11y
-	assert.NoError(t, json.Unmarshal([]byte(`{"conformsTo": ["http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a", "https://profile2"]}`), &m))
+	require.NoError(t, json.Unmarshal([]byte(`{"conformsTo": ["http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a", "https://profile2"]}`), &m))
 	var e A11y = NewA11y()
 	e.ConformsTo = []A11yProfile{EPUBA11y10WCAG20A, "https://profile2"}
 	assert.Equal(t, e, m, "unmarshalled JSON object should be equal to A11y object")
@@ -107,7 +108,7 @@ func TestA11ySortConformsTo(t *testing.T) {
 
 func TestA11yUnmarshalAccessModeSufficientContainingBothStringsAndArrays(t *testing.T) {
 	var m A11y
-	assert.NoError(t, json.Unmarshal([]byte(`{"accessModeSufficient": ["auditory", ["visual", "tactile"], [], "visual"]}`), &m))
+	require.NoError(t, json.Unmarshal([]byte(`{"accessModeSufficient": ["auditory", ["visual", "tactile"], [], "visual"]}`), &m))
 	var e A11y = NewA11y()
 	e.AccessModesSufficient = [][]A11yPrimaryAccessMode{
 		{A11yPrimaryAccessModeAuditory},
@@ -127,7 +128,7 @@ func TestA11yMarshalMinimalJSON(t *testing.T) {
 		Exemptions:            []A11yExemption{},
 	}
 	data, err := json.Marshal(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, data, []byte(`{}`), "unmarshalled JSON object should be equal to A11y object")
 }
 
@@ -169,7 +170,7 @@ func TestA11yMarshalFullJSON(t *testing.T) {
 		},
 	}
 	data, err := json.Marshal(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(
 		t,
 		data,

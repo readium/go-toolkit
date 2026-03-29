@@ -8,6 +8,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func loadNcx(ctx context.Context, name string) (map[string]manifest.LinkList, error) {
@@ -23,7 +24,7 @@ func loadNcx(ctx context.Context, name string) (map[string]manifest.LinkList, er
 
 func TestNCXParserNewlinesTrimmedFromTitle(t *testing.T) {
 	n, err := loadNcx(t.Context(), "ncx-titles")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, n["toc"], manifest.Link{
 		Title: "A link with new lines splitting the text",
 		Href:  manifest.MustNewHREFFromString("OEBPS/xhtml/chapter1.xhtml", false),
@@ -32,7 +33,7 @@ func TestNCXParserNewlinesTrimmedFromTitle(t *testing.T) {
 
 func TestNCXParserSpacesTrimmedFromTitle(t *testing.T) {
 	n, err := loadNcx(t.Context(), "ncx-titles")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, n["toc"], manifest.Link{
 		Title: "A link with ignorable spaces",
 		Href:  manifest.MustNewHREFFromString("OEBPS/xhtml/chapter2.xhtml", false),
@@ -41,7 +42,7 @@ func TestNCXParserSpacesTrimmedFromTitle(t *testing.T) {
 
 func TestNCXParserEntryWithNoTitleOrChildrenIgnored(t *testing.T) {
 	n, err := loadNcx(t.Context(), "ncx-titles")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotContains(t, n["toc"], manifest.Link{
 		Title: "",
 		Href:  manifest.MustNewHREFFromString("OEBPS/xhtml/chapter3.xhtml", false),
@@ -50,7 +51,7 @@ func TestNCXParserEntryWithNoTitleOrChildrenIgnored(t *testing.T) {
 
 func TestNCXParserUnlinkedEntriesWithoutChildrenIgnored(t *testing.T) {
 	n, err := loadNcx(t.Context(), "ncx-titles")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotContains(t, n["toc"], manifest.Link{
 		Title: "An unlinked element without children must be ignored",
 		Href:  manifest.MustNewHREFFromString("#", false),
@@ -59,7 +60,7 @@ func TestNCXParserUnlinkedEntriesWithoutChildrenIgnored(t *testing.T) {
 
 func TestNCXParserHierarchicalItemsAllowed(t *testing.T) {
 	n, err := loadNcx(t.Context(), "ncx-children")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, manifest.LinkList{
 		{Title: "Introduction", Href: manifest.MustNewHREFFromString("OEBPS/xhtml/introduction.xhtml", false)},
 		{
@@ -83,13 +84,13 @@ func TestNCXParserHierarchicalItemsAllowed(t *testing.T) {
 
 func TestNCXParserEmptyNCX(t *testing.T) {
 	n, err := loadNcx(t.Context(), "ncx-empty")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, n["toc"])
 }
 
 func TestNCXParserTOC(t *testing.T) {
 	n, err := loadNcx(t.Context(), "ncx-complex")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, manifest.LinkList{
 		{Title: "Chapter 1", Href: manifest.MustNewHREFFromString("OEBPS/xhtml/chapter1.xhtml", false)},
 		{Title: "Chapter 2", Href: manifest.MustNewHREFFromString("OEBPS/xhtml/chapter2.xhtml", false)},
@@ -98,7 +99,7 @@ func TestNCXParserTOC(t *testing.T) {
 
 func TestNCXParserPageList(t *testing.T) {
 	n, err := loadNcx(t.Context(), "ncx-complex")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, manifest.LinkList{
 		{Title: "1", Href: manifest.MustNewHREFFromString("OEBPS/xhtml/chapter1.xhtml#page1", false)},
 		{Title: "2", Href: manifest.MustNewHREFFromString("OEBPS/xhtml/chapter1.xhtml#page2", false)},

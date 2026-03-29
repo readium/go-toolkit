@@ -107,7 +107,8 @@ func New(str string, name string, extension string) (mt MediaType, err error) {
 // Create a new MediaType solely from a mime string.
 // When an error is returned, do not use the resulting MediaType, as it will be incomplete/invalid
 func NewOfString(str string) (MediaType, error) {
-	if knownMatch, ok := knownMatches[str]; ok {
+	noSpaceStr := strings.ReplaceAll(str, " ", "")
+	if knownMatch, ok := knownMatches[noSpaceStr]; ok {
 		// The string was recognized as a known mimetype.
 		// This not only shortcuts building of the MediaType,
 		// but also ensures that the resulting MediaType is identical

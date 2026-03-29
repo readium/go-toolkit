@@ -80,6 +80,8 @@ type Entry interface {
 	StreamCompressedGzip(w io.Writer) (int64, error) // Streams the compressed content of this entry to a writer in a GZIP container.
 	ReadCompressed() ([]byte, error)                 // Reads the compressed content of this entry.
 	ReadCompressedGzip() ([]byte, error)             // Reads the compressed content of this entry inside a GZIP container.
+
+	CRC32Checksum() *uint32 // Returns the CRC32 checksum of the uncompressed data.
 }
 
 // Represents an immutable archive.

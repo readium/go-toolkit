@@ -44,7 +44,14 @@ func (f *ArchiveFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 
 // Get implements Fetcher
 func (f *ArchiveFetcher) Get(ctx context.Context, link manifest.Link) Resource {
-	entry, err := f.archive.Entry(link.Href.String())
+	// use decoded path for archive entry lookup to support files with spaces and special characters
+	var entryPath string
+	if hrefURL := link.Href.Resolve(nil, nil); hrefURL != nil {
+		entryPath = hrefURL.Path()
+	} else {
+		entryPath = link.Href.String()
+	}
+	entry, err := f.archive.Entry(entryPath)
 	if err != nil {
 		return NewFailureResource(link, NotFound(err))
 	}
@@ -192,6 +199,11 @@ func (r *entryResource) CompressedAs(compressionMethod archive.CompressionMethod
 // CompressedLength implements CompressedResource
 func (r *entryResource) CompressedLength(ctx context.Context) int64 {
 	return int64(r.entry.CompressedLength())
+}
+
+// CRC32Checksum implements CompressedResource
+func (r *entryResource) CRC32Checksum(ctx context.Context) *uint32 {
+	return r.entry.CRC32Checksum()
 }
 
 // StreamCompressed implements CompressedResource
