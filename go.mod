@@ -1,6 +1,6 @@
 module github.com/readium/go-toolkit
 
-go 1.24.0
+go 1.25.0
 
 require (
 	cloud.google.com/go/storage v1.59.2
@@ -24,9 +24,9 @@ require (
 	github.com/trimmer-io/go-xmp v1.0.0
 	go4.org v0.0.0-20230225012048-214862532bf5
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
-	golang.org/x/image v0.35.0
+	golang.org/x/image v0.38.0
 	golang.org/x/net v0.49.0
-	golang.org/x/text v0.33.0
+	golang.org/x/text v0.35.0
 	google.golang.org/api v0.264.0
 )
 
@@ -82,7 +82,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.39.0 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto v0.0.0-20251202230838-ff82c1b0f217 // indirect
