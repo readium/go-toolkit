@@ -6,11 +6,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
-	"github.com/readium/xmlquery"
+)
+
+var (
+	xpMetaLanguage = mustCompileNS("//opf:metadata/dc:language")
+	xpMetadata     = mustCompileNS("//opf:metadata")
 )
 
 type Title struct {
@@ -52,22 +57,18 @@ func NewMetadataParser(epubVersion float64, prefixMap map[string]string) Metadat
 
 func (m MetadataParser) Parse(document *xmlquery.Node, filePath url.URL) *EPUBMetadata {
 	// Init lang
-	if l := document.SelectElement("/" + NSSelect(NamespaceOPF, "package")); l != nil {
+	if l := xmlquery.QuerySelector(document, xpPackage); l != nil {
 		for _, attr := range l.Attr {
 			if attr.Name.Local == "lang" {
 				m.packageLanguage = attr.Value
 			}
 		}
 	}
-	if l := document.SelectElement(
-		"//" + NSSelect(NamespaceOPF, "metadata") + "/" + NSSelect(NamespaceDC, "language"),
-	); l != nil {
+	if l := xmlquery.QuerySelector(document, xpMetaLanguage); l != nil {
 		m.metaLanguage = strings.TrimSpace(l.InnerText())
 	}
 
-	metadata := document.SelectElement(
-		"//" + NSSelect(NamespaceOPF, "metadata"),
-	)
+	metadata := xmlquery.QuerySelector(document, xpMetadata)
 	if metadata == nil {
 		return nil
 	}
@@ -1091,7 +1092,7 @@ func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 			if _, ok := usedProperties[k]; ok {
 				continue
 			}
-			values := make([]interface{}, len(v))
+			values := make([]any, len(v))
 			for i, val := range v {
 				values[i] = val.ToMap()
 			}

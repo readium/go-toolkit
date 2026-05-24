@@ -11,9 +11,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/xmlquery"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"
 )
@@ -92,13 +92,12 @@ func ReadResourceAsJSON(ctx context.Context, r Resource) (map[string]interface{}
 	return object, nil
 }
 
-func ReadResourceAsXML(ctx context.Context, r Resource, prefixes map[string]string) (*xmlquery.Node, *ResourceError) {
+func ReadResourceAsXML(ctx context.Context, r Resource) (*xmlquery.Node, *ResourceError) {
 	bytes, ex := r.Read(ctx, 0, 0)
 	if ex != nil {
 		return nil, ex
 	}
 	node, err := xmlquery.ParseWithOptions(strings.NewReader(string(bytes)), xmlquery.ParserOptions{
-		Prefixes: prefixes,
 		Decoder: &xmlquery.DecoderOptions{
 			Strict: true,
 			Entity: xml.HTMLEntity,

@@ -85,11 +85,7 @@ func (s *MediaOverlayService) GuideForResource(ctx context.Context, href string)
 		res := s.fetcher.Get(ctx, link)
 		defer res.Close()
 
-		n, rerr := fetcher.ReadResourceAsXML(ctx, res, map[string]string{
-			NamespaceOPS:   "epub",
-			NamespaceSMIL:  "smil",
-			NamespaceSMIL2: "smil2",
-		})
+		n, rerr := fetcher.ReadResourceAsXML(ctx, res)
 		if rerr != nil {
 			return nil, rerr.Cause
 		}
