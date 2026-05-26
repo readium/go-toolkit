@@ -28,7 +28,10 @@ var xmlNS = map[string]string{
 	"epub":      NamespaceOPS,
 	"smil":      NamespaceSMIL,
 	"smil2":     NamespaceSMIL2,
+	"ocf":       NamespaceOPC,
 }
+
+var xpRootfile = mustCompileNS("/ocf:container/ocf:rootfiles/ocf:rootfile")
 
 func mustCompileNS(expr string) *xpath.Expr {
 	e, err := xpath.CompileWithNS(expr, xmlNS)
@@ -45,7 +48,7 @@ func GetRootFilePath(ctx context.Context, fetcher fetcher.Fetcher) (url.URL, err
 	if err != nil {
 		return nil, errors.Wrap(err, "failed loading container.xml")
 	}
-	n := xml.SelectElement("/container/rootfiles/rootfile")
+	n := xmlquery.QuerySelector(xml, xpRootfile)
 	if n == nil {
 		return nil, errors.New("rootfile not found in container")
 	}
