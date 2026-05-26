@@ -14,12 +14,7 @@ import (
 )
 
 func loadMetadata(ctx context.Context, name string) (*manifest.Metadata, error) {
-	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/package/"+name+".opf"), map[string]string{
-		NamespaceOPF:                         "opf",
-		NamespaceDC:                          "dc",
-		VocabularyDCTerms:                    "dcterms",
-		"http://www.idpf.org/2013/rendition": "rendition",
-	})
+	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/package/"+name+".opf"))
 	if rerr != nil {
 		return nil, rerr.Cause
 	}

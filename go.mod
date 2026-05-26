@@ -6,6 +6,8 @@ require (
 	cloud.google.com/go/storage v1.59.2
 	github.com/agext/regexp v1.3.0
 	github.com/andybalholm/cascadia v1.3.3
+	github.com/antchfx/xmlquery v1.5.1
+	github.com/antchfx/xpath v1.3.6
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
 	github.com/aws/smithy-go v1.24.0
@@ -18,7 +20,6 @@ require (
 	github.com/kettek/apng v0.0.0-20220823221153-ff692776a607
 	github.com/pdfcpu/pdfcpu v0.11.1
 	github.com/pkg/errors v0.9.1
-	github.com/readium/xmlquery v0.0.0-20230106230237-8f493145aef4
 	github.com/relvacode/iso8601 v1.7.0
 	github.com/stretchr/testify v1.11.1
 	github.com/trimmer-io/go-xmp v1.0.0
@@ -41,7 +42,6 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.30.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.54.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.54.0 // indirect
-	github.com/antchfx/xpath v1.3.6 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.4 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.17 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.17 // indirect

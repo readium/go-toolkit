@@ -12,10 +12,7 @@ import (
 )
 
 func loadNavDoc(ctx context.Context, name string) (map[string]manifest.LinkList, error) {
-	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/navdoc/"+name+".xhtml"), map[string]string{
-		NamespaceXHTML: "html",
-		NamespaceOPS:   "epub",
-	})
+	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/navdoc/"+name+".xhtml"))
 	if rerr != nil {
 		return nil, rerr.Cause
 	}

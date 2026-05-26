@@ -3,11 +3,19 @@ package epub
 import (
 	"strconv"
 
+	"github.com/antchfx/xmlquery"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
-	"github.com/readium/xmlquery"
+)
+
+var (
+	xpPackage  = mustCompileNS("/opf:package")
+	xpManifest = mustCompileNS("/opf:manifest")
+	xpSpine    = mustCompileNS("/opf:spine")
+	xpItems    = mustCompileNS("/opf:item")
+	xpItemRefs = mustCompileNS("/opf:itemref")
 )
 
 type PackageDocument struct {
@@ -21,7 +29,7 @@ type PackageDocument struct {
 }
 
 func ParsePackageDocument(document *xmlquery.Node, filePath url.URL) (*PackageDocument, error) {
-	pkg := document.SelectElement("/" + NSSelect(NamespaceOPF, "package"))
+	pkg := xmlquery.QuerySelector(document, xpPackage)
 	if pkg == nil {
 		return nil, errors.New("package root element not found")
 	}
@@ -48,16 +56,16 @@ func ParsePackageDocument(document *xmlquery.Node, filePath url.URL) (*PackageDo
 	if metadata == nil {
 		return nil, errors.New("failed parsing package metadata")
 	}
-	manifestElement := pkg.SelectElement("/" + NSSelect(NamespaceOPF, "manifest"))
+	manifestElement := xmlquery.QuerySelector(pkg, xpManifest)
 	if manifestElement == nil {
 		return nil, errors.New("package manifest not found")
 	}
-	spineElement := pkg.SelectElement("/" + NSSelect(NamespaceOPF, "spine"))
+	spineElement := xmlquery.QuerySelector(pkg, xpSpine)
 	if spineElement == nil {
 		return nil, errors.New("package spine not found")
 	}
 
-	mels := manifestElement.SelectElements("/" + NSSelect(NamespaceOPF, "item"))
+	mels := xmlquery.QuerySelectorAll(manifestElement, xpItems)
 	manifest := make([]Item, 0, len(mels))
 	for _, mel := range mels {
 		item := ParseItem(mel, filePath, prefixMap)
@@ -126,9 +134,7 @@ type Spine struct {
 }
 
 func ParseSpine(element *xmlquery.Node, prefixMap map[string]string, epubVersion float64) Spine {
-	selectedElements := element.SelectElements(
-		"/" + NSSelect(NamespaceOPF, "itemref"),
-	)
+	selectedElements := xmlquery.QuerySelectorAll(element, xpItemRefs)
 	itemrefs := make([]ItemRef, 0, len(selectedElements))
 	for _, itemref := range selectedElements {
 		itemref := ParseItemRef(itemref, prefixMap)
