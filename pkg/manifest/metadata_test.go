@@ -297,7 +297,7 @@ func TestMetadataFullJSON(t *testing.T) {
 		],
 		"title": {"en": "Title", "fr": "Titre"},
 		"subtitle": {"en": "Subtitle", "fr": "Sous-titre"},
-		"accessibility": {"conformsTo": ["http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa"]},
+		"accessibility": {"conformsTo": "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa"},
 		"tdm": {"policy": "https://provider.com/policies/policy.json", "reservation": "all"},
 		"modified": "2001-01-01T12:36:27.123Z",
 		"published": "2001-01-02T12:36:27Z",

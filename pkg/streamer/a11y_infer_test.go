@@ -29,7 +29,7 @@ func TestReturnsAdditionalInferredA11yMetadata(t *testing.T) {
 
 	inferreddA11y := manifest.NewA11y()
 	inferreddA11y.AccessModes = []manifest.A11yAccessMode{manifest.A11yAccessModeTextual}
-	inferreddA11y.AccessModesSufficient = [][]manifest.A11yPrimaryAccessMode{{manifest.A11yPrimaryAccessModeTextual}}
+	inferreddA11y.AccessModesSufficient = manifest.A11yPrimaryAccessModeList{{manifest.A11yPrimaryAccessModeTextual}}
 
 	res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
 	require.NoError(t, err)
