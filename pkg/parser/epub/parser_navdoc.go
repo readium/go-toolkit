@@ -3,9 +3,16 @@ package epub
 import (
 	"strings"
 
+	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util/url"
-	"github.com/readium/xmlquery"
+)
+
+var (
+	xpNavBody = mustCompileNS("//html:body")
+	xpNavNav  = mustCompileNS("//html:nav")
+	xpNavOL   = mustCompileNS("html:ol")
+	xpNavLI   = mustCompileNS("html:li")
 )
 
 func ParseNavDoc(document *xmlquery.Node, filePath url.URL) map[string]manifest.LinkList {
@@ -17,12 +24,12 @@ func ParseNavDoc(document *xmlquery.Node, filePath url.URL) map[string]manifest.
 		}
 	}
 
-	body := document.SelectElement("//" + NSSelect(NamespaceXHTML, "body"))
+	body := xmlquery.QuerySelector(document, xpNavBody)
 	if body == nil {
 		return ret
 	}
 
-	for _, nav := range body.SelectElements("//" + NSSelect(NamespaceXHTML, "nav")) {
+	for _, nav := range xmlquery.QuerySelectorAll(body, xpNavNav) {
 		types, links := parseNavElement(nav, filePath, docPrefixes)
 		if types == nil && links == nil {
 			continue
@@ -53,7 +60,7 @@ func parseNavElement(nav *xmlquery.Node, filePath url.URL, prefixMap map[string]
 		types = append(types, resolveProperty(prop, prefixMap, DefaultVocabType))
 	}
 
-	links := parseOlElement(nav.SelectElement(NSSelect(NamespaceXHTML, "ol")), filePath)
+	links := parseOlElement(xmlquery.QuerySelector(nav, xpNavOL), filePath)
 	if len(links) > 0 && len(types) > 0 {
 		return types, links
 	}
@@ -64,9 +71,9 @@ func parseOlElement(ol *xmlquery.Node, filePath url.URL) manifest.LinkList {
 	if ol == nil {
 		return nil
 	}
-	ols := ol.SelectElements(NSSelect(NamespaceXHTML, "li"))
-	links := make(manifest.LinkList, 0, len(ols))
-	for _, li := range ol.SelectElements(NSSelect(NamespaceXHTML, "li")) {
+	lis := xmlquery.QuerySelectorAll(ol, xpNavLI)
+	links := make(manifest.LinkList, 0, len(lis))
+	for _, li := range lis {
 		l := parseLiElement(li, filePath)
 		if l != nil {
 			links = append(links, *l)
@@ -96,7 +103,7 @@ func parseLiElement(li *xmlquery.Node, filePath url.URL) (link *manifest.Link) {
 		}
 	}
 
-	children := parseOlElement(li.SelectElement(NSSelect(NamespaceXHTML, "ol")), filePath)
+	children := parseOlElement(xmlquery.QuerySelector(li, xpNavOL), filePath)
 	if len(children) == 0 && (href.String() == "" || title == "") {
 		return nil
 	}

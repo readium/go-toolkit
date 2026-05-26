@@ -3,21 +3,29 @@ package epub
 import (
 	"strconv"
 
+	"github.com/antchfx/xmlquery"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util/url"
-	"github.com/readium/xmlquery"
+)
+
+var (
+	xpSMILRoot      = mustCompileNS("/smil:smil | /smil2:smil")
+	xpSMILBody      = mustCompileNS("smil:body | smil2:body")
+	xpSMILParOrSeq  = mustCompileNS("smil:par | smil:seq | smil2:par | smil2:seq")
+	xpSMILTextChild = mustCompileNS("smil:text | smil2:text")
+	xpSMILAudio     = mustCompileNS("smil:audio | smil2:audio")
 )
 
 func ParseSMILDocument(document *xmlquery.Node, filePath url.URL) (*manifest.GuidedNavigationDocument, error) {
-	smil := document.SelectElement("/" + DualNSSelect(NamespaceSMIL, NamespaceSMIL2, "smil"))
+	smil := xmlquery.QuerySelector(document, xpSMILRoot)
 	if smil == nil {
 		return nil, errors.New("SMIL root element not found")
 	}
 
 	// Ignore the <head>, we don't need it with the current implementation
 
-	body := smil.SelectElement(DualNSSelect(NamespaceSMIL, NamespaceSMIL2, "body"))
+	body := xmlquery.QuerySelector(smil, xpSMILBody)
 	if body == nil {
 		return nil, errors.New("SMIL body not found")
 	}
@@ -32,7 +40,7 @@ func ParseSMILDocument(document *xmlquery.Node, filePath url.URL) (*manifest.Gui
 }
 
 func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]manifest.GuidedNavigationObject, error) {
-	childElements := seq.SelectElements(ManyNSSelectMany([]string{NamespaceSMIL, NamespaceSMIL2}, []string{"par", "seq"}))
+	childElements := xmlquery.QuerySelectorAll(seq, xpSMILParOrSeq)
 	if len(childElements) == 0 && seq.Data == "body" {
 		return nil, errors.New("SMIL body is empty")
 	}
@@ -84,7 +92,7 @@ func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]manifest.GuidedNaviga
 }
 
 func ParseSMILPar(par *xmlquery.Node, filePath url.URL) (*manifest.GuidedNavigationObject, error) {
-	text := par.SelectElement(DualNSSelect(NamespaceSMIL, NamespaceSMIL2, "text"))
+	text := xmlquery.QuerySelector(par, xpSMILTextChild)
 	if text == nil {
 		return nil, errors.New("SMIL par has no text element")
 	}
@@ -101,7 +109,7 @@ func ParseSMILPar(par *xmlquery.Node, filePath url.URL) (*manifest.GuidedNavigat
 	o.TextRef = filePath.Resolve(u).String()
 
 	// Audio is optional
-	if audio := par.SelectElement(DualNSSelect(NamespaceSMIL, NamespaceSMIL2, "audio")); audio != nil {
+	if audio := xmlquery.QuerySelector(par, xpSMILAudio); audio != nil {
 		o.AudioRef = audio.SelectAttr("src")
 		if o.AudioRef == "" {
 			return nil, errors.New("SMIL par audio element has empty src attribute")

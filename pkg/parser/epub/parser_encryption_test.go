@@ -12,11 +12,7 @@ import (
 )
 
 func loadEncryption(ctx context.Context, name string) (map[string]manifest.Encryption, error) {
-	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/encryption/encryption-"+name+".xml"), map[string]string{
-		NamespaceENC:  "enc",
-		NamespaceSIG:  "ds",
-		NamespaceCOMP: "comp",
-	})
+	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/encryption/encryption-"+name+".xml"))
 	if rerr != nil {
 		return nil, rerr.Cause
 	}

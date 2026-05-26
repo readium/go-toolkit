@@ -3,14 +3,26 @@ package epub
 import (
 	"strconv"
 
+	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/protection"
 	"github.com/readium/go-toolkit/pkg/util/url"
-	"github.com/readium/xmlquery"
+)
+
+var (
+	xpEncEncData    = mustCompileNS("//enc:EncryptedData")
+	xpEncCipherData = mustCompileNS("enc:CipherData")
+	xpEncCipherRef  = mustCompileNS("enc:CipherReference")
+	xpEncKeyInfo    = mustCompileNS("ds:KeyInfo")
+	xpEncRetrieval  = mustCompileNS("ds:RetrievalMethod")
+	xpEncMethod     = mustCompileNS("enc:EncryptionMethod")
+	xpEncProps      = mustCompileNS("enc:EncryptionProperties")
+	xpEncProp       = mustCompileNS("enc:EncryptionProperty")
+	xpEncCompress   = mustCompileNS("comp:Compression")
 )
 
 func ParseEncryption(document *xmlquery.Node) (ret map[url.URL]manifest.Encryption) {
-	for _, node := range document.SelectElements("//" + NSSelect(NamespaceENC, "EncryptedData")) {
+	for _, node := range xmlquery.QuerySelectorAll(document, xpEncEncData) {
 		u, e := parseEncryptedData(node)
 		if e != nil {
 			if ret == nil {
@@ -23,19 +35,19 @@ func ParseEncryption(document *xmlquery.Node) (ret map[url.URL]manifest.Encrypti
 }
 
 func parseEncryptedData(node *xmlquery.Node) (url.URL, *manifest.Encryption) {
-	cdat := node.SelectElement(NSSelect(NamespaceENC, "CipherData"))
+	cdat := xmlquery.QuerySelector(node, xpEncCipherData)
 	if cdat == nil {
 		return nil, nil
 	}
-	cipherref := cdat.SelectElement(NSSelect(NamespaceENC, "CipherReference"))
+	cipherref := xmlquery.QuerySelector(cdat, xpEncCipherRef)
 	if cipherref == nil {
 		return nil, nil
 	}
 	resourceURI := cipherref.SelectAttr("URI")
 
 	retrievalMethod := ""
-	if keyinfo := node.SelectElement(NSSelect(NamespaceSIG, "KeyInfo")); keyinfo != nil {
-		if r := keyinfo.SelectElement(NSSelect(NamespaceSIG, "RetrievalMethod")); r != nil {
+	if keyinfo := xmlquery.QuerySelector(node, xpEncKeyInfo); keyinfo != nil {
+		if r := xmlquery.QuerySelector(keyinfo, xpEncRetrieval); r != nil {
 			retrievalMethod = r.SelectAttr("URI")
 		}
 	}
@@ -48,11 +60,11 @@ func parseEncryptedData(node *xmlquery.Node) (url.URL, *manifest.Encryption) {
 		ret.Scheme = protection.SchemeLCP
 	}
 
-	if encryptionmethod := node.SelectElement(NSSelect(NamespaceENC, "EncryptionMethod")); encryptionmethod != nil {
+	if encryptionmethod := xmlquery.QuerySelector(node, xpEncMethod); encryptionmethod != nil {
 		ret.Algorithm = encryptionmethod.SelectAttr("Algorithm")
 	}
 
-	if encryptionproperties := node.SelectElement(NSSelect(NamespaceENC, "EncryptionProperties")); encryptionproperties != nil {
+	if encryptionproperties := xmlquery.QuerySelector(node, xpEncProps); encryptionproperties != nil {
 		originalLength, method := parseEncryptionProperties(encryptionproperties)
 		if method != "" {
 			ret.Compression = method
@@ -69,8 +81,8 @@ func parseEncryptedData(node *xmlquery.Node) (url.URL, *manifest.Encryption) {
 }
 
 func parseEncryptionProperties(encryptionProperties *xmlquery.Node) (int64, string) {
-	for _, encryptionProperty := range encryptionProperties.SelectElements(NSSelect(NamespaceENC, "EncryptionProperty")) {
-		if compressionElement := encryptionProperty.SelectElement(NSSelect(NamespaceCOMP, "Compression")); compressionElement != nil {
+	for _, encryptionProperty := range xmlquery.QuerySelectorAll(encryptionProperties, xpEncProp) {
+		if compressionElement := xmlquery.QuerySelector(encryptionProperty, xpEncCompress); compressionElement != nil {
 			if originalLength, method := parseCompressionElement(compressionElement); method != "" {
 				return originalLength, method
 			}
