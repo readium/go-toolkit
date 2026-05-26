@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"encoding/xml"
@@ -9,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/archive"
@@ -93,11 +93,11 @@ func ReadResourceAsJSON(ctx context.Context, r Resource) (map[string]interface{}
 }
 
 func ReadResourceAsXML(ctx context.Context, r Resource) (*xmlquery.Node, *ResourceError) {
-	bytes, ex := r.Read(ctx, 0, 0)
+	bin, ex := r.Read(ctx, 0, 0)
 	if ex != nil {
 		return nil, ex
 	}
-	node, err := xmlquery.ParseWithOptions(strings.NewReader(string(bytes)), xmlquery.ParserOptions{
+	node, err := xmlquery.ParseWithOptions(bytes.NewReader(bin), xmlquery.ParserOptions{
 		Decoder: &xmlquery.DecoderOptions{
 			Strict: true,
 			Entity: xml.HTMLEntity,
