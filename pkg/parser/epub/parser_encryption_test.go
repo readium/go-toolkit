@@ -6,24 +6,19 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/protection"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func loadEncryption(ctx context.Context, name string) (map[string]manifest.Encryption, error) {
+func loadEncryption(ctx context.Context, name string, scheme protection.Scheme) (map[string]manifest.Encryption, error) {
 	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/encryption/encryption-"+name+".xml"))
 	if rerr != nil {
 		return nil, rerr.Cause
 	}
 
-	enc := ParseEncryption(n)
-	ret := make(map[string]manifest.Encryption)
-	for k, v := range enc {
-		ret[k.String()] = v
-	}
-
-	return ret, nil
+	return ParseEncryption(n, scheme.URI()), nil
 }
 
 var testEncMap = map[string]manifest.Encryption{
@@ -42,19 +37,19 @@ var testEncMap = map[string]manifest.Encryption{
 }
 
 func TestEncryptionParserNamespacePrefixes(t *testing.T) {
-	e, err := loadEncryption(t.Context(), "lcp-prefixes")
+	e, err := loadEncryption(t.Context(), "lcp-prefixes", protection.LCP)
 	require.NoError(t, err)
 	assert.Equal(t, testEncMap, e)
 }
 
 func TestEncryptionParserDefaultNamespaces(t *testing.T) {
-	e, err := loadEncryption(t.Context(), "lcp-xmlns")
+	e, err := loadEncryption(t.Context(), "lcp-xmlns", protection.LCP)
 	require.NoError(t, err)
 	assert.Equal(t, testEncMap, e)
 }
 
 func TestEncryptionParserUnknownRetrievalMethod(t *testing.T) {
-	e, err := loadEncryption(t.Context(), "unknown-method")
+	e, err := loadEncryption(t.Context(), "unknown-method", protection.NoDRM)
 	require.NoError(t, err)
 	assert.Equal(t, map[string]manifest.Encryption{
 		url.MustURLFromString("OEBPS/images/image.jpeg").String(): {

@@ -3,14 +3,13 @@ package epub
 import (
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 type PublicationFactory struct {
 	FallbackTitle   string
 	PackageDocument PackageDocument
 	NavigationData  map[string]manifest.LinkList
-	EncryptionData  map[url.URL]manifest.Encryption
+	EncryptionData  map[string]manifest.Encryption
 	DisplayOptions  map[string]string
 
 	itemById       map[string]Item
@@ -193,7 +192,7 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 		rels = extensions.AddToSet(rels, "cover")
 	}
 
-	if edat, ok := f.EncryptionData[item.Href]; ok {
+	if edat, ok := f.EncryptionData[item.Href.Normalize().String()]; ok {
 		properties["encrypted"] = edat.ToMap() // ToMap makes it JSON-like
 	}
 
