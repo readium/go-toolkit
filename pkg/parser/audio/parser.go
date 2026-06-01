@@ -1,4 +1,4 @@
-package parser
+package audio
 
 import (
 	"context"
@@ -12,12 +12,17 @@ import (
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/parser"
 	"github.com/readium/go-toolkit/pkg/pub"
 )
 
 // Handles parsing of audiobooks from an unstructured archive format containing audio files, such as ZAB (Zipped Audio Book) or a simple ZIP.
 // It can also work for a standalone audio file.
 type AudioParser struct{}
+
+func NewParser() AudioParser {
+	return AudioParser{}
+}
 
 // Parse implements PublicationParser
 func (p AudioParser) Parse(ctx context.Context, asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
@@ -55,7 +60,7 @@ func (p AudioParser) Parse(ctx context.Context, asset asset.PublicationAsset, fe
 	})
 
 	// Try to figure out the publication's title
-	title := guessPublicationTitleFromFileStructure(ctx, fetcher)
+	title := parser.GuessPublicationTitleFromFileStructure(ctx, fetcher)
 	if title == "" {
 		title = asset.Name()
 	}
