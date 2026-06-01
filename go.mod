@@ -13,13 +13,13 @@ require (
 	github.com/aws/smithy-go v1.25.1
 	github.com/azr/phash v0.2.0
 	github.com/bbrks/go-blurhash v1.2.0
-	github.com/chocolatkey/gzran v0.0.0-20251204101541-d8891e235711
 	github.com/deckarep/golang-set v1.8.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/kettek/apng v0.0.0-20220823221153-ff692776a607
 	github.com/pdfcpu/pdfcpu v0.12.1
 	github.com/pkg/errors v0.9.1
+	github.com/readium/zran v0.0.0-20260525212206-dcf56adb2c0e
 	github.com/relvacode/iso8601 v1.7.0
 	github.com/stretchr/testify v1.11.1
 	github.com/trimmer-io/go-xmp v1.0.0
