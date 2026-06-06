@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	cloud.google.com/go/storage v1.62.2
+	github.com/abema/go-mp4 v1.6.0
 	github.com/agext/regexp v1.3.0
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/antchfx/xmlquery v1.5.1
@@ -14,6 +15,7 @@ require (
 	github.com/azr/phash v0.2.0
 	github.com/bbrks/go-blurhash v1.2.0
 	github.com/deckarep/golang-set v1.8.0
+	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
 	github.com/disintegration/imaging v1.6.2
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/kettek/apng v0.0.0-20220823221153-ff692776a607
@@ -25,9 +27,10 @@ require (
 	github.com/trimmer-io/go-xmp v1.0.0
 	go4.org v0.0.0-20230225012048-214862532bf5
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
-	golang.org/x/image v0.39.0
-	golang.org/x/net v0.52.0
-	golang.org/x/text v0.36.0
+	golang.org/x/image v0.41.0
+	golang.org/x/net v0.55.0
+	golang.org/x/sync v0.20.0
+	golang.org/x/text v0.37.0
 	google.golang.org/api v0.274.0
 )
 
@@ -80,10 +83,9 @@ require (
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
-	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect

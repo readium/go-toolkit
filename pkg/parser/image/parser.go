@@ -1,4 +1,4 @@
-package parser
+package image
 
 import (
 	"context"
@@ -12,12 +12,17 @@ import (
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/parser"
 	"github.com/readium/go-toolkit/pkg/pub"
 )
 
 // Parses an image–based Publication from an unstructured archive format containing bitmap files, such as CBZ or a simple ZIP.
 // It can also work for a standalone bitmap file.
 type ImageParser struct{}
+
+func NewParser() ImageParser {
+	return ImageParser{}
+}
 
 // Parse implements PublicationParser
 func (p ImageParser) Parse(ctx context.Context, asset asset.PublicationAsset, fetcher fetcher.Fetcher) (*pub.Builder, error) {
@@ -50,7 +55,7 @@ func (p ImageParser) Parse(ctx context.Context, asset asset.PublicationAsset, fe
 	})
 
 	// Try to figure out the publication's title
-	title := guessPublicationTitleFromFileStructure(ctx, fetcher)
+	title := parser.GuessPublicationTitleFromFileStructure(ctx, fetcher)
 	if title == "" {
 		title = asset.Name()
 	}

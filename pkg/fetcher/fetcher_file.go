@@ -43,7 +43,8 @@ func (f *FileFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 				return err
 			}
 
-			href, err := manifest.NewHREFFromString(filepath.ToSlash(filepath.Join(href, strings.TrimPrefix(apath, xpath))), false)
+			rel := strings.TrimPrefix(strings.TrimPrefix(apath, xpath), string(filepath.Separator))
+			href, err := manifest.NewHREFFromString(filepath.ToSlash(filepath.Join(href, rel)), false)
 			if err != nil {
 				return err
 			}
