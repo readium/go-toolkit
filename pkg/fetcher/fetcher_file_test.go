@@ -164,7 +164,7 @@ func TestFileFetcherLinks(t *testing.T) {
 
 	mustContain := manifest.LinkList{{
 		Href:      manifest.MustNewHREFFromString("dir_href/subdirectory/hello.mp3", false),
-		MediaType: &mediatype.MP3,
+		MediaType: &mediatype.MPEGAudio,
 	}, {
 		Href:      manifest.MustNewHREFFromString("dir_href/subdirectory/text2.txt", false),
 		MediaType: &mediatype.Text,
