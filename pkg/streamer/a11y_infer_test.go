@@ -49,15 +49,15 @@ func newLink(mt mediatype.MediaType, extension string) manifest.Link {
 // If the publication contains a reference to an audio or video resource
 // (inspect "resources" and "readingOrder" in RWPM).
 func TestInferAuditoryAccessMode(t *testing.T) {
-	assertAccessMode(t, manifest.A11yAccessModeAuditory, "mp3", mediatype.MP3)
-	assertAccessMode(t, manifest.A11yAccessModeAuditory, "mpeg", mediatype.MPEG)
+	assertAccessMode(t, manifest.A11yAccessModeAuditory, "mp3", mediatype.MPEGAudio)
+	assertAccessMode(t, manifest.A11yAccessModeAuditory, "mpeg", mediatype.MPEGVideo)
 }
 
 // If the publications contains a reference to an image or a video resource
 // (inspect "resources" and "readingOrder" in RWPM)
 func TestInferVisualAccessMode(t *testing.T) {
 	assertAccessMode(t, manifest.A11yAccessModeVisual, "jpg", mediatype.JPEG)
-	assertAccessMode(t, manifest.A11yAccessModeVisual, "mpeg", mediatype.MPEG)
+	assertAccessMode(t, manifest.A11yAccessModeVisual, "mpeg", mediatype.MPEGVideo)
 }
 
 func assertAccessMode(t *testing.T, accessMode manifest.A11yAccessMode, extension string, mt mediatype.MediaType) {
@@ -135,8 +135,8 @@ func TestInferTextualAccessModeAndAccessModeSufficientFromLackOfMedia(t *testing
 
 	testReadingOrder(true, mediatype.HTML, "html")
 	testReadingOrder(false, mediatype.JPEG, "jpg")
-	testReadingOrder(false, mediatype.MP3, "mp3")
-	testReadingOrder(false, mediatype.MPEG, "mpeg")
+	testReadingOrder(false, mediatype.MPEGAudio, "mp3")
+	testReadingOrder(false, mediatype.MPEGVideo, "mpeg")
 	testReadingOrder(false, mediatype.PDF, "pdf")
 
 	testResources := func(contains bool, mt mediatype.MediaType, extension string) {
@@ -154,8 +154,8 @@ func TestInferTextualAccessModeAndAccessModeSufficientFromLackOfMedia(t *testing
 
 	testResources(true, mediatype.HTML, "html")
 	testResources(false, mediatype.JPEG, "jpg")
-	testResources(false, mediatype.MP3, "mp3")
-	testResources(false, mediatype.MPEG, "mpeg")
+	testResources(false, mediatype.MPEGAudio, "mp3")
+	testResources(false, mediatype.MPEGVideo, "mpeg")
 	testResources(false, mediatype.PDF, "pdf")
 }
 
@@ -254,7 +254,7 @@ func TestInferAuditoryAccessModeSufficient(t *testing.T) {
 	}
 
 	html := newLink(mediatype.HTML, "html")
-	mp3 := newLink(mediatype.MP3, "mp3")
+	mp3 := newLink(mediatype.MPEGAudio, "mp3")
 
 	testReadingOrder(false, html, html)
 	testReadingOrder(false, html, mp3)
@@ -302,7 +302,7 @@ func TestInferVisualAccessModeSufficient(t *testing.T) {
 
 	html := newLink(mediatype.HTML, "html")
 	jpg := newLink(mediatype.JPEG, "jpg")
-	mpeg := newLink(mediatype.MPEG, "mpeg")
+	mpeg := newLink(mediatype.MPEGVideo, "mpeg")
 
 	testReadingOrder(false, html)
 	testReadingOrder(false, html, jpg)
