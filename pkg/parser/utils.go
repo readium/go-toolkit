@@ -6,7 +6,6 @@ import (
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/mediatype"
 )
 
 func hrefCommonFirstComponent(links manifest.LinkList) string {
@@ -24,7 +23,7 @@ func hrefCommonFirstComponent(links manifest.LinkList) string {
 	return latest
 }
 
-func guessPublicationTitleFromFileStructure(ctx context.Context, fetcher fetcher.Fetcher) string { // TODO test for this
+func GuessPublicationTitleFromFileStructure(ctx context.Context, fetcher fetcher.Fetcher) string { // TODO test for this
 	links, err := fetcher.Links(ctx)
 	if err != nil || len(links) == 0 {
 		return ""
@@ -38,12 +37,4 @@ func guessPublicationTitleFromFileStructure(ctx context.Context, fetcher fetcher
 	}
 
 	return commonFirstComponent
-}
-
-func isMediatypeReadiumWebPubProfile(mt mediatype.MediaType) bool {
-	return mt.Matches(
-		&mediatype.ReadiumWebpub, &mediatype.ReadiumWebpubManifest,
-		&mediatype.ReadiumAudiobook, &mediatype.ReadiumAudiobookManifest, &mediatype.LCPProtectedAudiobook,
-		&mediatype.ReadiumDivina, &mediatype.ReadiumDivinaManifest, &mediatype.LCPProtectedPDF,
-	)
 }

@@ -11,15 +11,15 @@ import (
 	"path"
 	"sync"
 
-	"github.com/chocolatkey/gzran"
 	"github.com/pkg/errors"
+	"github.com/readium/zran"
 )
 
 type gozipArchiveEntry struct {
 	file          *zip.File
 	minimizeReads bool
 
-	gi gzran.Index
+	gi zran.Index
 	gm sync.Mutex
 }
 
@@ -115,7 +115,7 @@ func (e *gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 			// This special reader lets us restore the decompressor state at known offsets
 			// which is useful when a client has already requested previous parts of the file,
 			// such as when a web browser requests subsequent byte ranges for media playback.
-			fzr, err := gzran.NewDReader(bytes.NewReader(compressedData)) // Default interval = 1MB, same as current ZRandCutoff
+			fzr, err := zran.NewDReader(bytes.NewReader(compressedData)) // Default interval = 1MB, same as current ZRandCutoff
 			if err != nil {
 				return nil, err
 			}

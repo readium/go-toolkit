@@ -5,7 +5,6 @@ import (
 
 	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/protection"
 	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
@@ -13,51 +12,38 @@ var (
 	xpEncEncData    = mustCompileNS("//enc:EncryptedData")
 	xpEncCipherData = mustCompileNS("enc:CipherData")
 	xpEncCipherRef  = mustCompileNS("enc:CipherReference")
-	xpEncKeyInfo    = mustCompileNS("ds:KeyInfo")
-	xpEncRetrieval  = mustCompileNS("ds:RetrievalMethod")
 	xpEncMethod     = mustCompileNS("enc:EncryptionMethod")
 	xpEncProps      = mustCompileNS("enc:EncryptionProperties")
 	xpEncProp       = mustCompileNS("enc:EncryptionProperty")
 	xpEncCompress   = mustCompileNS("comp:Compression")
 )
 
-func ParseEncryption(document *xmlquery.Node) (ret map[url.URL]manifest.Encryption) {
+func ParseEncryption(document *xmlquery.Node, scheme string) (ret map[string]manifest.Encryption) {
 	for _, node := range xmlquery.QuerySelectorAll(document, xpEncEncData) {
-		u, e := parseEncryptedData(node)
+		key, e := parseEncryptedData(node, scheme)
 		if e != nil {
 			if ret == nil {
-				ret = make(map[url.URL]manifest.Encryption)
+				ret = make(map[string]manifest.Encryption)
 			}
-			ret[u] = *e
+			ret[key] = *e
 		}
 	}
 	return
 }
 
-func parseEncryptedData(node *xmlquery.Node) (url.URL, *manifest.Encryption) {
+func parseEncryptedData(node *xmlquery.Node, scheme string) (string, *manifest.Encryption) {
 	cdat := xmlquery.QuerySelector(node, xpEncCipherData)
 	if cdat == nil {
-		return nil, nil
+		return "", nil
 	}
 	cipherref := xmlquery.QuerySelector(cdat, xpEncCipherRef)
 	if cipherref == nil {
-		return nil, nil
+		return "", nil
 	}
 	resourceURI := cipherref.SelectAttr("URI")
 
-	retrievalMethod := ""
-	if keyinfo := xmlquery.QuerySelector(node, xpEncKeyInfo); keyinfo != nil {
-		if r := xmlquery.QuerySelector(keyinfo, xpEncRetrieval); r != nil {
-			retrievalMethod = r.SelectAttr("URI")
-		}
-	}
-
 	ret := &manifest.Encryption{
-		// TODO: No profile? https://github.com/readium/kotlin-toolkit/blob/develop/readium/streamer/src/main/java/org/readium/r2/streamer/parser/epub/EncryptionParser.kt#L40
-	}
-
-	if retrievalMethod == "license.lcpl#/encryption/content_key" {
-		ret.Scheme = protection.SchemeLCP
+		Scheme: scheme,
 	}
 
 	if encryptionmethod := xmlquery.QuerySelector(node, xpEncMethod); encryptionmethod != nil {
@@ -74,10 +60,10 @@ func parseEncryptedData(node *xmlquery.Node) (url.URL, *manifest.Encryption) {
 
 	ru, err := url.FromEPUBHref(resourceURI)
 	if err != nil {
-		return nil, nil
+		return "", nil
 	}
 
-	return ru, ret
+	return ru.Normalize().String(), ret
 }
 
 func parseEncryptionProperties(encryptionProperties *xmlquery.Node) (int64, string) {

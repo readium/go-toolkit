@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.14.0] - 2026-06-06
+
+### Added
+
+- The audiobook parser has been dramatically improved (coded largely by Claude Opus 4.8, xhigh setting). Audiobook refers to any non-WebPub audiobook, such as a folder of audio files, a ZIP with audio files, or a single audio file (.m4b, .mp3, .opus etc.). The previous implementation was techincally non-compliant, as `bitrate` and `duration` were not included in the generated manifest. The new implementation does the folowing:
+    - Parses ISO-BMFF (MP4) containers (.m4a, .m4b, .mp4 etc.), OGG containers (.ogg, .opus) etc.
+    - Extracts basic metadata, such as title, author, subject, and adds it to the metadata of the WebPub manifest, along with duration and bitrate
+    - Exposes the audiobook's cover as a link in the WebPub manifest
+    - Builds a WebPub TOC based on individual file names or TOCs inside audio files. .m3u, .m3u8, .pls, .xspf, .cue are also supported as indpendent metadata files
+    - Tries to reduce the amount of range requests that have to be made through caching, and tries to reduce latency the initial metadata parsing causes when opening files remotely by making requests in parallel
+- Detection of other popular DRM schemes besides LCP. This includes: Adobe ADEPT, Apple Fairplay, Kobo, B&N, and any other generic encryption scheme using `encryption.xml`. There's still not any particular action taken for these DRM schemes, but it lays the groundwork for future decryption or error throwing when a particular DRM scheme is detected
+
+### Changed
+
+- The zran code now uses the [Readium-hosted fork](https://github.com/readium/zran) instead of the personal fork created by @chocolatkey
+- When calling `ConformsTo` on a manifest (and publication), the contents of the manifest's `metadata.conformsTo` is now checked for conformance *before* scanning of the reading order and other checks are performed. Whether this is the best approach is TBD
+- Various parsers (audio, image, pdf) were moved to their own folders
+- The `mediatype` package has gotten some changes based on the other toolkits:
+    - `MP3` is now `MPEGAudio`
+    - FLAC, MP4, MPEGVideo were added as new mimetypes
+    - Some more audio extensions were added to the sniffer
+
+### Fixed
+
+- The HTTP fetcher would, when making byte range requests, only accept an HTTP 206 response. But if the full range is requested (start = 0 and end = 0), HTTP 200 is also an acceptable response
+- A slash was being added as a prefix to WebPub manifest links for exploded ebook folders
+
 ## [0.13.4] - 2026-03-09
 
 ### Changed

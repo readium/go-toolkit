@@ -9,8 +9,8 @@ import (
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/protection"
 	"github.com/readium/go-toolkit/pkg/pub"
-	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 type Parser struct {
@@ -51,11 +51,27 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 		return nil, errors.Wrap(err, "invalid OPF file")
 	}
 
+	// Detect the container-level DRM scheme. This is done unconditionally,
+	// not gated on the presence of META-INF/encryption.xml, because schemes
+	// like Adobe ADEPT, Barnes & Noble, Apple FairPlay and Kobo announce
+	// themselves through other well-known files (rights.xml / sinf.xml).
+	// TODO: surface the publication-level scheme on the manifest itself so
+	// consumers can detect protection even when encryption.xml is absent.
+	scheme, err := protection.IdentifyEPUBProtection(ctx, f)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed identifying EPUB protection scheme")
+	}
+
+	encryptionData, err := parseEncryptionData(ctx, f, scheme.URI())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing encryption data")
+	}
+
 	manifest := PublicationFactory{
 		FallbackTitle:   fallbackTitle,
 		PackageDocument: *packageDocument,
 		NavigationData:  parseNavigationData(ctx, *packageDocument, f),
-		EncryptionData:  parseEncryptionData(ctx, f),
+		EncryptionData:  encryptionData,
 		DisplayOptions:  parseDisplayOptions(ctx, f),
 	}.Create()
 
@@ -74,12 +90,16 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 	return pub.NewBuilder(manifest, ffetcher, builder), nil
 }
 
-func parseEncryptionData(ctx context.Context, f fetcher.Fetcher) (ret map[url.URL]manifest.Encryption) {
-	n, err := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/encryption.xml", false)}))
-	if err != nil {
-		return
+// parseEncryptionData parses META-INF/encryption.xml when present and stamps
+// each entry with the supplied DRM scheme URI (typically obtained by calling
+// [protection.IdentifyEPUBProtection] at a higher level). A missing
+// encryption.xml is normal and returns (nil, nil).
+func parseEncryptionData(ctx context.Context, f fetcher.Fetcher, scheme string) (map[string]manifest.Encryption, error) {
+	n, rerr := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/encryption.xml", false)}))
+	if rerr != nil {
+		return nil, nil
 	}
-	return ParseEncryption(n)
+	return ParseEncryption(n, scheme), nil
 }
 
 func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f fetcher.Fetcher) (ret map[string]manifest.LinkList) {

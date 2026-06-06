@@ -171,7 +171,8 @@ func (r *httpResource) Read(ctx context.Context, start int64, end int64) ([]byte
 	if err != nil {
 		return nil, Other(err)
 	}
-	if resp.StatusCode != http.StatusPartialContent {
+
+	if (start == 0 && end == 0 && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent) || ((start != 0 || end != 0) && resp.StatusCode != http.StatusPartialContent) {
 		ex := httpStatusToException(resp.StatusCode)
 		if ex == nil {
 			return nil, Other(errors.New("unexpected HTTP status code: " + strconv.Itoa(resp.StatusCode)))

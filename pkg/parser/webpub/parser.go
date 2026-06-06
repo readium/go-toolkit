@@ -1,4 +1,4 @@
-package parser
+package webpub
 
 import (
 	"context"
@@ -17,7 +17,7 @@ type WebPubParser struct {
 	// pdfFactory may never be needed
 }
 
-func NewWebPubParser(client *http.Client) WebPubParser {
+func NewParser(client *http.Client) WebPubParser {
 	return WebPubParser{
 		client: client,
 	}
@@ -84,4 +84,12 @@ func (p WebPubParser) Parse(ctx context.Context, asset asset.PublicationAsset, f
 	}
 
 	return pub.NewBuilder(*manifest, lFetcher, nil), nil // TODO services!
+}
+
+func isMediatypeReadiumWebPubProfile(mt mediatype.MediaType) bool {
+	return mt.Matches(
+		&mediatype.ReadiumWebpub, &mediatype.ReadiumWebpubManifest,
+		&mediatype.ReadiumAudiobook, &mediatype.ReadiumAudiobookManifest, &mediatype.LCPProtectedAudiobook,
+		&mediatype.ReadiumDivina, &mediatype.ReadiumDivinaManifest, &mediatype.LCPProtectedPDF,
+	)
 }
