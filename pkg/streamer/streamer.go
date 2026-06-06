@@ -76,7 +76,7 @@ func New(config Config) Streamer { // TODO contentProtections
 		pdf.NewParser(),
 		webpub.NewParser(config.HttpClient),
 		image.NewParser(),
-		audio.NewParser(),
+		audio.NewRichParser(),
 	}
 
 	if !config.IgnoreDefaultParsers {
