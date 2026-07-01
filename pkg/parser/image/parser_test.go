@@ -1,4 +1,4 @@
-package parser
+package image
 
 import (
 	"testing"

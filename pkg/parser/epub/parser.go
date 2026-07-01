@@ -9,8 +9,8 @@ import (
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
+	"github.com/readium/go-toolkit/pkg/protection"
 	"github.com/readium/go-toolkit/pkg/pub"
-	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 type Parser struct {
@@ -41,12 +41,7 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 
 	// Detect DRM
 
-	opfXmlDocument, errx := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(opfPath)}), map[string]string{
-		NamespaceOPF:                         "opf",
-		NamespaceDC:                          "dc",
-		VocabularyDCTerms:                    "dcterms",
-		"http://www.idpf.org/2013/rendition": "rendition",
-	})
+	opfXmlDocument, errx := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(opfPath)}))
 	if errx != nil {
 		return nil, errx
 	}
@@ -56,11 +51,27 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 		return nil, errors.Wrap(err, "invalid OPF file")
 	}
 
+	// Detect the container-level DRM scheme. This is done unconditionally,
+	// not gated on the presence of META-INF/encryption.xml, because schemes
+	// like Adobe ADEPT, Barnes & Noble, Apple FairPlay and Kobo announce
+	// themselves through other well-known files (rights.xml / sinf.xml).
+	// TODO: surface the publication-level scheme on the manifest itself so
+	// consumers can detect protection even when encryption.xml is absent.
+	scheme, err := protection.IdentifyEPUBProtection(ctx, f)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed identifying EPUB protection scheme")
+	}
+
+	encryptionData, err := parseEncryptionData(ctx, f, scheme.URI())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing encryption data")
+	}
+
 	manifest := PublicationFactory{
 		FallbackTitle:   fallbackTitle,
 		PackageDocument: *packageDocument,
 		NavigationData:  parseNavigationData(ctx, *packageDocument, f),
-		EncryptionData:  parseEncryptionData(ctx, f),
+		EncryptionData:  encryptionData,
 		DisplayOptions:  parseDisplayOptions(ctx, f),
 	}.Create()
 
@@ -79,16 +90,16 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 	return pub.NewBuilder(manifest, ffetcher, builder), nil
 }
 
-func parseEncryptionData(ctx context.Context, f fetcher.Fetcher) (ret map[url.URL]manifest.Encryption) {
-	n, err := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/encryption.xml", false)}), map[string]string{
-		NamespaceENC:  "enc",
-		NamespaceSIG:  "ds",
-		NamespaceCOMP: "comp",
-	})
-	if err != nil {
-		return
+// parseEncryptionData parses META-INF/encryption.xml when present and stamps
+// each entry with the supplied DRM scheme URI (typically obtained by calling
+// [protection.IdentifyEPUBProtection] at a higher level). A missing
+// encryption.xml is normal and returns (nil, nil).
+func parseEncryptionData(ctx context.Context, f fetcher.Fetcher, scheme string) (map[string]manifest.Encryption, error) {
+	n, rerr := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/encryption.xml", false)}))
+	if rerr != nil {
+		return nil, nil
 	}
-	return ParseEncryption(n)
+	return ParseEncryption(n, scheme), nil
 }
 
 func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f fetcher.Fetcher) (ret map[string]manifest.LinkList) {
@@ -113,9 +124,7 @@ func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f
 		if ncxItem == nil {
 			return
 		}
-		n, nerr := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(ncxItem.Href)}), map[string]string{
-			NamespaceNCX: "ncx",
-		})
+		n, nerr := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(ncxItem.Href)}))
 		if nerr != nil {
 			return
 		}
@@ -136,10 +145,7 @@ func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f
 		if navItem == nil {
 			return
 		}
-		n, errx := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(navItem.Href)}), map[string]string{
-			NamespaceXHTML: "html",
-			NamespaceOPS:   "epub",
-		})
+		n, errx := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(navItem.Href)}))
 		if errx != nil {
 			return
 		}
@@ -150,9 +156,9 @@ func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f
 
 func parseDisplayOptions(ctx context.Context, f fetcher.Fetcher) (ret map[string]string) {
 	ret = make(map[string]string)
-	displayOptionsXml, err := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/com.apple.ibooks.display-options.xml", false)}), nil)
+	displayOptionsXml, err := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/com.apple.ibooks.display-options.xml", false)}))
 	if err != nil {
-		displayOptionsXml, err = fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/com.kobobooks.display-options.xml", false)}), nil)
+		displayOptionsXml, err = fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/com.kobobooks.display-options.xml", false)}))
 		if err != nil {
 			return
 		}

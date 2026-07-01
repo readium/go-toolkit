@@ -13,11 +13,7 @@ import (
 )
 
 func loadSmil(ctx context.Context, name string) (*guidednavigation.GuidedNavigationDocument, error) {
-	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/smil/"+name+".smil"), map[string]string{
-		NamespaceOPS:   "epub",
-		NamespaceSMIL:  "smil",
-		NamespaceSMIL2: "smil2",
-	})
+	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/smil/"+name+".smil"))
 	if rerr != nil {
 		return nil, rerr.Cause
 	}

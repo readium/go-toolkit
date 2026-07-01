@@ -91,7 +91,7 @@ func TestMatchImage(t *testing.T) {
 
 	ok, err := MatchImage(manifest.Link{
 		Href:      manifest.MustNewHREFFromString("audio.mp3", false),
-		MediaType: &mediatype.MP3,
+		MediaType: &mediatype.MPEGAudio,
 	}, manifest.HashList{})
 	require.ErrorContains(t, err, "link is not to an image that can be matched")
 	require.False(t, ok)

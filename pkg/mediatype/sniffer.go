@@ -81,9 +81,10 @@ func SniffOPDS(ctx context.Context, context SnifferContext) *MediaType {
 	// OPDS 1 (Heavy)
 	if cxml := context.ContentAsXML(); cxml != nil {
 		if cxml.XMLName.Space == "http://www.w3.org/2005/Atom" {
-			if cxml.XMLName.Local == "feed" {
+			switch cxml.XMLName.Local {
+			case "feed":
 				return &OPDS1
-			} else if cxml.XMLName.Local == "entry" {
+			case "entry":
 				return &OPDS1Entry
 			}
 		}
@@ -114,7 +115,7 @@ func SniffLCPLicense(ctx context.Context, context SnifferContext) *MediaType {
 
 // Sniffs a bitmap image.
 func SniffBitmap(ctx context.Context, context SnifferContext) *MediaType {
-	if context.HasFileExtension("avif") || context.HasMediaType("image/avif") {
+	if context.HasFileExtension("avif", "avifs") || context.HasMediaType("image/avif") {
 		return &AVIF
 	}
 	if context.HasFileExtension("bmp", "dib") || context.HasMediaType("image/bmp", "image/x-bmp") {
@@ -149,24 +150,28 @@ func SniffAudio(ctx context.Context, context SnifferContext) *MediaType {
 	if context.HasFileExtension("aac") || context.HasMediaType("audio/aac") {
 		return &AAC
 	}
-	if context.HasFileExtension("aiff") || context.HasMediaType("audio/aiff") {
+	if context.HasFileExtension("aiff", "aif", "aifc") || context.HasMediaType("audio/aiff") {
 		return &AIFF
 	}
-	// TODO flac, m4a
-	if context.HasFileExtension("mp3") || context.HasMediaType("audio/mpeg") {
-		return &MP3
+	if context.HasFileExtension("flac") || context.HasMediaType("audio/flac") {
+		return &FLAC
 	}
-	if context.HasFileExtension("ogg", "oga") || context.HasMediaType("audio/ogg") {
+	if context.HasFileExtension("mp3") || context.HasMediaType("audio/mpeg") {
+		return &MPEGAudio
+	}
+	if context.HasFileExtension("mp4", "m4a", "m4b", "m4p", "m4r", "alac") || context.HasMediaType("audio/mp4") {
+		return &MP4
+	}
+	if context.HasFileExtension("ogg", "oga", "mogg") || context.HasMediaType("audio/ogg") {
 		return &OGG
 	}
 	if context.HasFileExtension("opus") || context.HasMediaType("audio/opus") {
 		return &OPUS
 	}
-	if context.HasFileExtension("wav") || context.HasMediaType("audio/wav") {
+	if context.HasFileExtension("wav", "wave") || context.HasMediaType("audio/wav", "audio/x-wav", "audio/wave") {
 		return &WAV
 	}
 	if context.HasFileExtension("webm") || context.HasMediaType("audio/webm") {
-		// Note: .webm extension could also be a video
 		return &WEBMAudio
 	}
 
@@ -292,8 +297,12 @@ var cbz_extensions = map[string]struct{}{
 
 // Authorized extensions for resources in a ZAB archive (Zipped Audio Book).
 var zab_extensions = map[string]struct{}{
-	"aac": {}, "aiff": {}, "alac": {}, "flac": {}, "m4a": {}, "m4b": {}, "mp3": {}, "ogg": {}, "oga": {}, "mogg": {}, "opus": {}, "wav": {}, "webm": {}, // Audio
-	"asx": {}, "bio": {}, "m3u": {}, "m3u8": {}, "pla": {}, "pls": {}, "smil": {}, "vlc": {}, "wpl": {}, "xspf": {}, "zpl": {}, // Playlist
+	"aac": {}, "aiff": {}, "aif": {}, "aifc": {}, "alac": {}, "flac": {},
+	"m4a": {}, "m4b": {}, "mp3": {}, "mp4": {}, "m4r": {}, "m4p": {},
+	"ogg": {}, "oga": {}, "mogg": {}, "opus": {}, "wav": {}, "wave": {},
+	"webm": {}, // Audio
+	"asx":  {}, "bio": {}, "m3u": {}, "m3u8": {}, "pla": {}, "pls": {},
+	"smil": {}, "vlc": {}, "wpl": {}, "xspf": {}, "zpl": {}, "cue": {}, "log": {}, // Playlist
 }
 
 // Sniffs a simple Archive-based format, like Comic Book Archive or Zipped Audio Book.

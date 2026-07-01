@@ -29,8 +29,14 @@ func (m Manifest) ConformsTo(profile Profile) bool {
 		return false
 	}
 
+	// Maybe we shouldn't trust the author of a WebPub? Who knows
+	if slices.Contains(m.Metadata.ConformsTo, profile) {
+		return true
+	}
+
 	switch profile {
 	case ProfileAudiobook:
+		// Note that we aren't checking for duration or bitrate as the profile requires
 		return m.ReadingOrder.AllAreAudio()
 	case ProfileDivina:
 		return m.ReadingOrder.AllAreBitmap()
@@ -41,10 +47,6 @@ func (m Manifest) ConformsTo(profile Profile) bool {
 		}
 	case ProfilePDF:
 		return m.ReadingOrder.AllMatchMediaType(&mediatype.PDF)
-	default:
-		if slices.Contains(m.Metadata.ConformsTo, profile) {
-			return true
-		}
 	}
 	return false
 }

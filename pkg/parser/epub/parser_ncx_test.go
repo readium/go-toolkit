@@ -12,9 +12,7 @@ import (
 )
 
 func loadNcx(ctx context.Context, name string) (map[string]manifest.LinkList, error) {
-	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/ncx/"+name+".ncx"), map[string]string{
-		NamespaceNCX: "ncx",
-	})
+	n, rerr := fetcher.ReadResourceAsXML(ctx, fetcher.NewFileResource(manifest.Link{}, "./testdata/ncx/"+name+".ncx"))
 	if rerr != nil {
 		return nil, rerr.Cause
 	}
