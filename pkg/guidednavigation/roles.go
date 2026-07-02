@@ -17,6 +17,7 @@ const (
 	RoleBibliography    GuidedNavigationRole = "bibliography"    // A list of external references cited in the work, which may be to print or digital sources.
 	RoleBiblioref       GuidedNavigationRole = "biblioref"       // A reference to a bibliography entry.
 	RoleBlockquote      GuidedNavigationRole = "blockquote"      // Represents a section that is quoted from another source.
+	RoleBody            GuidedNavigationRole = "body"            // Represents the content of an HTML document.
 	RoleCaption         GuidedNavigationRole = "caption"         // A caption for an image or a table.
 	RoleChapter         GuidedNavigationRole = "chapter"         // A major thematic section of content in a work.
 	RoleCell            GuidedNavigationRole = "cell"            // A single cell of tabular data or content.
@@ -37,10 +38,16 @@ const (
 	RoleExample         GuidedNavigationRole = "example"         // An illustration of the usage of a defined term or phrase.
 	RoleFigure          GuidedNavigationRole = "figure"          // An illustration, diagram, photo, code listing or similar, referenced from the text of a work, and typically annotated with a title, caption and/or credits.
 	RoleFootnote        GuidedNavigationRole = "footnote"        // Ancillary information, such as a citation or commentary, that provides additional context to a referenced passage of text.
+	RoleForeword        GuidedNavigationRole = "foreword"        // An introductory section that precedes the work, typically written by a person other than the author.
 	RoleGlossary        GuidedNavigationRole = "glossary"        // A brief dictionary of new, uncommon, or specialized terms used in the content.
 	RoleGlossref        GuidedNavigationRole = "glossref"        // A reference to a glossary definition.
 	RoleHeader          GuidedNavigationRole = "header"          // Represents introductory content, typically a group of introductory or navigational aids.
-	RoleHeading         GuidedNavigationRole = "heading"         // A heading for a section of the page.
+	RoleHeading1        GuidedNavigationRole = "heading1"        // A level 1 heading for a section of the page.
+	RoleHeading2        GuidedNavigationRole = "heading2"        // A level 2 heading for a section of the page.
+	RoleHeading3        GuidedNavigationRole = "heading3"        // A level 3 heading for a section of the page.
+	RoleHeading4        GuidedNavigationRole = "heading4"        // A level 4 heading for a section of the page.
+	RoleHeading5        GuidedNavigationRole = "heading5"        // A level 5 heading for a section of the page.
+	RoleHeading6        GuidedNavigationRole = "heading6"        // A level 6 heading for a section of the page.
 	RoleImage           GuidedNavigationRole = "image"           // Represents an image.
 	RoleIndex           GuidedNavigationRole = "index"           // A navigational aid that provides a detailed list of links to key subjects, names and other important topics covered in the work.
 	RoleIntroduction    GuidedNavigationRole = "introduction"    // A preliminary section that typically introduces the scope or nature of the work.
@@ -71,6 +78,7 @@ const (
 	RoleRowHeader       GuidedNavigationRole = "rowheader"       // The header cell for a row, establishing a relationship between it and the other cells in the same row.
 	RoleSection         GuidedNavigationRole = "section"         // Represents a generic standalone section of a document, which doesn't have a more specific semantic element to represent it.
 	RoleSeparator       GuidedNavigationRole = "separator"       // Indicates the element is a divider that separates and distinguishes sections of content or groups of menuitems.
+	RoleSequence        GuidedNavigationRole = "sequence"        // A sequence of related Guided Navigation Objects.
 	RoleSubtitle        GuidedNavigationRole = "subtitle"        // An explanatory or alternate title for the work, or a section or component within it.
 	RoleSummary         GuidedNavigationRole = "summary"         // A summary of an element contained in details.
 	RoleTable           GuidedNavigationRole = "table"           // A structure containing data or content laid out in tabular form.

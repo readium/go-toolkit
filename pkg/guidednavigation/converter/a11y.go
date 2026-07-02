@@ -44,13 +44,20 @@ func nodeText(sb *strings.Builder, n *html.Node) {
 		if n.Type == html.TextNode {
 			sb.WriteString(n.Data)
 		}
-		if n.FirstChild != nil {
-			for c := n.FirstChild; c != nil; c = c.NextSibling {
-				f(c)
-			}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
 		}
 	}
 	f(n)
+}
+
+// Normalized (whitespace-coalesced and trimmed) text content of a node's subtree.
+func normalizedNodeText(n *html.Node) string {
+	var raw strings.Builder
+	nodeText(&raw, n)
+	var sb strings.Builder
+	appendNormalizedWhitespace(&sb, raw.String(), true)
+	return strings.TrimSpace(sb.String())
 }
 
 // https://www.w3.org/TR/accname/#terminology
@@ -63,7 +70,7 @@ func ExtractNodeAria(el *html.Node) (*guidednavigation.GuidedNavigationText, boo
 
 	// 2.B
 	if labelledBy := strings.TrimSpace(getAttr(el, "aria-labelledby")); labelledBy != "" {
-		rawIds := strings.Split(strings.TrimSpace(labelledBy), " ")
+		rawIds := strings.Fields(labelledBy)
 		ids := make([]string, 0, len(rawIds))
 		for _, v := range rawIds {
 			if v != "" && !slices.Contains(ids, v) {
@@ -100,7 +107,9 @@ func ExtractNodeAria(el *html.Node) (*guidednavigation.GuidedNavigationText, boo
 					sb.WriteRune(' ') // Add a space at the end
 				}
 			}
-			text := strings.TrimSpace(sb.String())
+			var normalized strings.Builder
+			appendNormalizedWhitespace(&normalized, sb.String(), true)
+			text := strings.TrimSpace(normalized.String())
 			if text != "" {
 				return &guidednavigation.GuidedNavigationText{
 					Plain: text,
@@ -118,17 +127,35 @@ func ExtractNodeAria(el *html.Node) (*guidednavigation.GuidedNavigationText, boo
 
 	// 2.D
 	// TODO: more support for els
-	if el.DataAtom == atom.Img {
+	switch el.DataAtom {
+	case atom.Img:
 		if alt := strings.TrimSpace(getAttr(el, "alt")); alt != "" {
 			return &guidednavigation.GuidedNavigationText{
 				Plain: alt,
 			}, true
+		}
+		// 2.I fallback for images: the title attribute
+		if title := strings.TrimSpace(getAttr(el, "title")); title != "" {
+			return &guidednavigation.GuidedNavigationText{
+				Plain: title,
+			}, true
+		}
+	case atom.Svg:
+		// The accessible name of an SVG comes from its <title> child
+		if title := childOfType(el, atom.Title, true); title != nil {
+			if text := normalizedNodeText(title); text != "" {
+				return &guidednavigation.GuidedNavigationText{
+					Plain: text,
+				}, true
+			}
 		}
 	}
 
 	return nil, true
 }
 
+// ConvertElementToSSMLTag maps an HTML element to the SSML tag its text should be wrapped in.
+// https://www.w3.org/TR/speech-synthesis11/#S3.2.2
 func ConvertElementToSSMLTag(a atom.Atom) (string, []xml.Attr) {
 	switch a {
 	case atom.Em:
@@ -150,4 +177,20 @@ func ConvertElementToSSMLTag(a atom.Atom) (string, []xml.Attr) {
 	default:
 		return "", nil
 	}
+}
+
+// Elements whose entire subtree carries no user-facing content.
+var skippedElements = map[atom.Atom]struct{}{
+	atom.Script:   {},
+	atom.Style:    {},
+	atom.Template: {},
+	atom.Noscript: {},
+	atom.Textarea: {},
+	atom.Select:   {},
+	atom.Datalist: {},
+	atom.Iframe:   {},
+	// Ruby annotations would duplicate the base text when read aloud
+	atom.Rt:  {},
+	atom.Rp:  {},
+	atom.Rtc: {},
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/guidednavigation"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/mediatype"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -18,12 +19,25 @@ func Do(ctx context.Context, resource fetcher.Resource, locator manifest.Locator
 		return nil, errors.Wrap(rerr, "failed reading HTML string of "+resource.Link().Href.String())
 	}
 
-	document, err := html.ParseWithOptions(
-		strings.NewReader(raw),
-		html.ParseOptionEnableScripting(false),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed parsing HTML of "+resource.Link().Href.String())
+	var document *html.Node
+	xmlParsed := false
+	if mt := resource.Link().MediaType; mt != nil && mt.Matches(&mediatype.XHTML) {
+		// XHTML is XML: parse it as such, so that e.g. self-closing elements are
+		// handled correctly. Ill-formed documents fall back to the HTML parser.
+		if doc, err := ParseXHTML(strings.NewReader(raw)); err == nil && childOfType(doc, atom.Body, true) != nil {
+			document = doc
+			xmlParsed = true
+		}
+	}
+	if document == nil {
+		var err error
+		document, err = html.ParseWithOptions(
+			strings.NewReader(raw),
+			html.ParseOptionEnableScripting(false),
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed parsing HTML of "+resource.Link().Href.String())
+		}
 	}
 
 	body := childOfType(document, atom.Body, true)
@@ -32,6 +46,7 @@ func Do(ctx context.Context, resource fetcher.Resource, locator manifest.Locator
 	}
 
 	contentConverter := NewHTMLConverter(locator)
+	contentConverter.xmlParsed = xmlParsed
 
 	// Traverse the document's HTML
 	contentConverter.Convert(body)

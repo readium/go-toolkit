@@ -2,6 +2,7 @@ package converter
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/guidednavigation"
@@ -18,7 +19,7 @@ func ExtractNamespaces(el *html.Node) (namespaces map[string]string) {
 	}
 
 	f := func(n *html.Node) {
-		for _, at := range el.Attr {
+		for _, at := range n.Attr {
 			if at.Key == "xmlns" {
 				if _, ok := namespaces[""]; !ok {
 					// Only the first xmlns gets set
@@ -48,14 +49,26 @@ func ExtractNamespaces(el *html.Node) (namespaces map[string]string) {
 	return
 }
 
+var headingRoles = [6]guidednavigation.GuidedNavigationRole{
+	guidednavigation.RoleHeading1,
+	guidednavigation.RoleHeading2,
+	guidednavigation.RoleHeading3,
+	guidednavigation.RoleHeading4,
+	guidednavigation.RoleHeading5,
+	guidednavigation.RoleHeading6,
+}
+
 var ariaRoles = map[string]guidednavigation.GuidedNavigationRole{
 	"doc-abstract":        guidednavigation.RoleAbstract,
 	"doc-acknowledgments": guidednavigation.RoleAcknowledgments,
 	"doc-afterword":       guidednavigation.RoleAfterword,
 	"doc-appendix":        guidednavigation.RoleAppendix,
+	"article":             guidednavigation.RoleArticle,
 	"doc-backlink":        guidednavigation.RoleBacklink,
 	"doc-bibliography":    guidednavigation.RoleBibliography,
 	"doc-biblioref":       guidednavigation.RoleBiblioref,
+	"blockquote":          guidednavigation.RoleBlockquote,
+	"caption":             guidednavigation.RoleCaption,
 	"cell":                guidednavigation.RoleCell,
 	"doc-chapter":         guidednavigation.RoleChapter,
 	"doc-colophon":        guidednavigation.RoleColophon,
@@ -67,6 +80,7 @@ var ariaRoles = map[string]guidednavigation.GuidedNavigationRole{
 	"doc-credits":         guidednavigation.RoleCredits,
 	"doc-dedication":      guidednavigation.RoleDedication,
 	"definition":          guidednavigation.RoleDefinition,
+	"doc-endnote":         guidednavigation.RoleFootnote, // Deprecated in DPUB-ARIA 1.1
 	"doc-endnotes":        guidednavigation.RoleEndnotes,
 	"doc-epigraph":        guidednavigation.RoleEpigraph,
 	"doc-epilogue":        guidednavigation.RoleEpilogue,
@@ -74,10 +88,11 @@ var ariaRoles = map[string]guidednavigation.GuidedNavigationRole{
 	"doc-example":         guidednavigation.RoleExample,
 	"figure":              guidednavigation.RoleFigure,
 	"doc-footnote":        guidednavigation.RoleFootnote,
+	"doc-foreword":        guidednavigation.RoleForeword,
 	"doc-glossary":        guidednavigation.RoleGlossary,
 	"doc-glossref":        guidednavigation.RoleGlossref,
-	"heading":             guidednavigation.RoleHeading,
 	"img":                 guidednavigation.RoleImage,
+	"image":               guidednavigation.RoleImage, // ARIA 1.3 synonym of img
 	"doc-index":           guidednavigation.RoleIndex,
 	"doc-introduction":    guidednavigation.RoleIntroduction,
 	"list":                guidednavigation.RoleList,
@@ -89,12 +104,14 @@ var ariaRoles = map[string]guidednavigation.GuidedNavigationRole{
 	"doc-notice":          guidednavigation.RoleNotice,
 	"doc-pagebreak":       guidednavigation.RolePagebreak,
 	"doc-pagelist":        guidednavigation.RolePagelist,
+	"paragraph":           guidednavigation.RoleParagraph,
 	"doc-part":            guidednavigation.RolePart,
 	"doc-preface":         guidednavigation.RolePreface,
 	"doc-prologue":        guidednavigation.RolePrologue,
 	"doc-pullquote":       guidednavigation.RolePullquote,
 	"presentation":        guidednavigation.RolePresentation,
 	"none":                guidednavigation.RolePresentation,
+	"doc-qna":             guidednavigation.RoleQna,
 	"qna":                 guidednavigation.RoleQna,
 	"region":              guidednavigation.RoleRegion,
 	"row":                 guidednavigation.RoleRow,
@@ -125,13 +142,17 @@ var epubTypeRoles = map[string]guidednavigation.GuidedNavigationRole{
 	"credits":         guidednavigation.RoleCredits,
 	"dedication":      guidednavigation.RoleDedication,
 	"glossdef":        guidednavigation.RoleDefinition,
+	"endnote":         guidednavigation.RoleFootnote,
 	"endnotes":        guidednavigation.RoleEndnotes,
+	"rearnote":        guidednavigation.RoleFootnote, // Deprecated alias of endnote
+	"rearnotes":       guidednavigation.RoleEndnotes, // Deprecated alias of endnotes
 	"epigraph":        guidednavigation.RoleEpigraph,
 	"epilogue":        guidednavigation.RoleEpilogue,
 	"errata":          guidednavigation.RoleErrata,
 	"example":         guidednavigation.RoleExample,
 	"figure":          guidednavigation.RoleFigure,
 	"footnote":        guidednavigation.RoleFootnote,
+	"foreword":        guidednavigation.RoleForeword,
 	"glossary":        guidednavigation.RoleGlossary,
 	"glossref":        guidednavigation.RoleGlossref,
 	"index":           guidednavigation.RoleIndex,
@@ -146,6 +167,7 @@ var epubTypeRoles = map[string]guidednavigation.GuidedNavigationRole{
 	"noteref":         guidednavigation.RoleNoteref,
 	"notice":          guidednavigation.RoleNotice,
 	"pagebreak":       guidednavigation.RolePagebreak,
+	"page-list":       guidednavigation.RolePagelist,
 	"pagelist":        guidednavigation.RolePagelist,
 	"part":            guidednavigation.RolePart,
 	"preface":         guidednavigation.RolePreface,
@@ -172,12 +194,12 @@ var simpleElementTypeRoles = map[atom.Atom]guidednavigation.GuidedNavigationRole
 	atom.Details:    guidednavigation.RoleDetails,
 	atom.Figure:     guidednavigation.RoleFigure,
 	atom.Header:     guidednavigation.RoleHeader,
-	atom.H1:         guidednavigation.RoleHeading,
-	atom.H2:         guidednavigation.RoleHeading,
-	atom.H3:         guidednavigation.RoleHeading,
-	atom.H4:         guidednavigation.RoleHeading,
-	atom.H5:         guidednavigation.RoleHeading,
-	atom.H6:         guidednavigation.RoleHeading,
+	atom.H1:         guidednavigation.RoleHeading1,
+	atom.H2:         guidednavigation.RoleHeading2,
+	atom.H3:         guidednavigation.RoleHeading3,
+	atom.H4:         guidednavigation.RoleHeading4,
+	atom.H5:         guidednavigation.RoleHeading5,
+	atom.H6:         guidednavigation.RoleHeading6,
 	atom.Img:        guidednavigation.RoleImage,
 	atom.Ul:         guidednavigation.RoleList,
 	atom.Ol:         guidednavigation.RoleList,
@@ -195,20 +217,25 @@ var simpleElementTypeRoles = map[atom.Atom]guidednavigation.GuidedNavigationRole
 	atom.Dfn:        guidednavigation.RoleTerm,
 	atom.Dt:         guidednavigation.RoleTerm,
 	atom.Video:      guidednavigation.RoleVideo,
+	atom.Svg:        guidednavigation.RoleImage,
 }
 
-func ExtractNodeRoles(el *html.Node) (roles []guidednavigation.GuidedNavigationRole, level uint8) {
+// ExtractNodeRoles determines the Guided Navigation roles of an element, combining
+// the roles derived from the element type itself with the ones from its ARIA `role`
+// and `epub:type` attributes, e.g. <section epub:type="chapter"> -> [section, chapter].
+// An ARIA role of "presentation"/"none" strips the element of its native semantics.
+func ExtractNodeRoles(el *html.Node) (roles []guidednavigation.GuidedNavigationRole) {
 	add := func(role guidednavigation.GuidedNavigationRole) {
 		if !slices.Contains(roles, role) {
 			roles = append(roles, role)
 		}
 	}
 
-	// Based on attributes
+	// Based on attributes. Both `role` and `epub:type` can hold a list of values.
 	var namespaces map[string]string
-	var alreadyHasRole bool
+	var attrRoles []guidednavigation.GuidedNavigationRole
+	presentational := false
 	for _, at := range el.Attr {
-
 		// Remove namespace prefix if it exists
 		frags := strings.SplitN(at.Key, ":", 2)
 		key := frags[len(frags)-1]
@@ -216,9 +243,21 @@ func ExtractNodeRoles(el *html.Node) (roles []guidednavigation.GuidedNavigationR
 		if len(frags) == 1 {
 			// ARIA role
 			if key == "role" {
-				if role, ok := ariaRoles[at.Val]; ok {
-					alreadyHasRole = true
-					add(role)
+				for _, val := range strings.Fields(at.Val) {
+					if val == "presentation" || val == "none" {
+						presentational = true
+					}
+					if val == "heading" {
+						// The heading level comes from aria-level. It defaults to 2:
+						// https://www.w3.org/TR/wai-aria/#heading
+						level := 2
+						if l, err := strconv.Atoi(getAttr(el, "aria-level")); err == nil && l >= 1 {
+							level = min(l, 6)
+						}
+						attrRoles = append(attrRoles, headingRoles[level-1])
+					} else if role, ok := ariaRoles[val]; ok {
+						attrRoles = append(attrRoles, role)
+					}
 				}
 			}
 		} else {
@@ -240,62 +279,45 @@ func ExtractNodeRoles(el *html.Node) (roles []guidednavigation.GuidedNavigationR
 			}
 
 			if at.Namespace == "http://www.idpf.org/2007/ops" && key == "type" {
-				if role, ok := epubTypeRoles[at.Val]; ok {
-					add(role)
+				for _, val := range strings.Fields(at.Val) {
+					if role, ok := epubTypeRoles[val]; ok {
+						attrRoles = append(attrRoles, role)
+					}
 				}
 			}
 		}
 	}
-	if alreadyHasRole {
-		// Aria role overrides logic based on the element type
-		return
+
+	if presentational {
+		// The element only retains the presentation role
+		return []guidednavigation.GuidedNavigationRole{guidednavigation.RolePresentation}
 	}
 
-	// Based on element type
+	// Based on element type. The element's own role comes first, followed by the
+	// more specific attribute-based roles, matching the ordering of the examples
+	// in the Guided Navigation specification.
 	switch el.DataAtom {
+	case atom.Body:
+		add(guidednavigation.RoleBody)
 	case atom.Th:
-		scope := getAttr(el, "scope")
-		switch scope {
+		switch getAttr(el, "scope") {
 		case "col":
 			add(guidednavigation.RoleColumnHeader)
 		case "row":
 			add(guidednavigation.RoleRowHeader)
+		default:
+			// Without an explicit scope the direction is unknown, but it's still a cell
+			add(guidednavigation.RoleCell)
 		}
 	default:
 		if role, ok := simpleElementTypeRoles[el.DataAtom]; ok {
 			add(role)
-
-			switch role {
-			case guidednavigation.RoleHeading:
-				switch el.DataAtom {
-				case atom.H1:
-					level = 1
-				case atom.H2:
-					level = 2
-				case atom.H3:
-					level = 3
-				case atom.H4:
-					level = 4
-				case atom.H5:
-					level = 5
-				case atom.H6:
-					level = 6
-				}
-			}
 		}
 	}
 
-	/*case atom.Blockquote, atom.Q:
-	quote := element.Quote{}
-	for _, at := range el.Attr {
-		if at.Key == "cite" {
-			quote.ReferenceURL, _ = nurl.Parse(at.Val)
-		}
-		if at.Key == "title" {
-			quote.ReferenceTitle = at.Val
-		}
+	for _, role := range attrRoles {
+		add(role)
 	}
-	bestRole = quote*/ // TODO
 
 	return
 }

@@ -1,7 +1,7 @@
 package epub
 
 import (
-	"strconv"
+	"time"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/pkg/errors"
@@ -93,6 +93,14 @@ func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]guidednavigation.Guid
 	return objects, nil
 }
 
+func secondsToDuration(seconds *float64) *time.Duration {
+	if seconds == nil {
+		return nil
+	}
+	d := time.Duration(*seconds * float64(time.Second))
+	return &d
+}
+
 func ParseSMILPar(par *xmlquery.Node, filePath url.URL) (*guidednavigation.GuidedNavigationObject, error) {
 	text := xmlquery.QuerySelector(par, xpSMILTextChild)
 	if text == nil {
@@ -116,16 +124,12 @@ func ParseSMILPar(par *xmlquery.Node, filePath url.URL) (*guidednavigation.Guide
 		if audioAttr == "" {
 			return nil, errors.New("SMIL par audio element has empty src attribute")
 		}
-		begin := ParseClockValue(audio.SelectAttr("clipBegin"))
-		end := ParseClockValue(audio.SelectAttr("clipEnd"))
-		if begin != nil || end != nil {
-			audioAttr += "#t="
+		clip := guidednavigation.Clip{
+			Begin: secondsToDuration(ParseClockValue(audio.SelectAttr("clipBegin"))),
+			End:   secondsToDuration(ParseClockValue(audio.SelectAttr("clipEnd"))),
 		}
-		if begin != nil {
-			audioAttr += strconv.FormatFloat(*begin, 'f', -1, 64)
-		}
-		if end != nil {
-			audioAttr += "," + strconv.FormatFloat(*end, 'f', -1, 64)
+		if fragment := clip.MediaFragment(); fragment != "" {
+			audioAttr += "#" + fragment
 		}
 
 		u, err := url.URLFromString(audioAttr)

@@ -1,12 +1,13 @@
 package audio
 
 import (
-	"math"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/readium/go-toolkit/pkg/guidednavigation"
 	"github.com/readium/go-toolkit/pkg/manifest"
 )
 
@@ -33,20 +34,14 @@ func chaptersToLinks(entries []chapterEntry, base manifest.Link) manifest.LinkLi
 func chapterLink(base manifest.Link, title string, start float64) manifest.Link {
 	href := base.URL(nil, nil).String()
 	if start > 0 {
-		href += "#t=" + formatFragmentTime(start)
+		begin := time.Duration(start * float64(time.Second))
+		href += "#" + guidednavigation.Clip{Begin: &begin}.MediaFragment()
 	}
 	return manifest.Link{
 		Href:      manifest.MustNewHREFFromString(href, false),
 		MediaType: base.MediaType,
 		Title:     title,
 	}
-}
-
-// formatFragmentTime formats a number of seconds for a media fragment, rounded
-// to the millisecond and without trailing zeros.
-func formatFragmentTime(seconds float64) string {
-	rounded := math.Round(seconds*1000) / 1000
-	return strconv.FormatFloat(rounded, 'f', -1, 64)
 }
 
 var vorbisChapterKey = regexp.MustCompile(`^chapter(\d+)$`)

@@ -17,26 +17,33 @@ type GuidedNavigationDocument struct {
 // Readium Guided Navigation Object
 // https://readium.org/guided-navigation/schema/object.schema.json
 type GuidedNavigationObject struct {
-	AudioRef    url.URL                  `json:"audioref,omitempty"`    // References an audio resource or a fragment of it.
-	ImgRef      url.URL                  `json:"imgref,omitempty"`      // References an image or a fragment of it.
-	TextRef     url.URL                  `json:"textref,omitempty"`     // References a textual resource or a fragment of it.
-	Text        GuidedNavigationText     `json:"text,omitempty"`        // Textual equivalent of the resources or fragment of the resources referenced by the current Guided Navigation Object.
-	Level       uint8                    `json:"level,omitempty"`       // Level 1-6, for e.g. headings
-	Role        []GuidedNavigationRole   `json:"role,omitempty"`        // Convey the structural semantics of a publication
-	Children    []GuidedNavigationObject `json:"children,omitempty"`    // Items that are children of the containing Guided Navigation Object.
-	Description string                   `json:"description,omitempty"` // Text, audio or image description for the current Guided Navigation Object.
+	ID          string                      `json:"id,omitempty"`          // Identifier for the object, referenced from the SSML representation of a sibling text (e.g. <readium:image id="..."/>).
+	AudioRef    url.URL                     `json:"audioref,omitempty"`    // References an audio resource or a fragment of it.
+	ImgRef      url.URL                     `json:"imgref,omitempty"`      // References an image or a fragment of it.
+	TextRef     url.URL                     `json:"textref,omitempty"`     // References a textual resource or a fragment of it.
+	VideoRef    url.URL                     `json:"videoref,omitempty"`    // References a video resource or a fragment of it.
+	Text        GuidedNavigationText        `json:"text,omitempty"`        // Textual equivalent of the resources or fragment of the resources referenced by the current Guided Navigation Object.
+	Role        []GuidedNavigationRole      `json:"role,omitempty"`        // Convey the structural semantics of a publication
+	Children    []GuidedNavigationObject    `json:"children,omitempty"`    // Items that are children of the containing Guided Navigation Object.
+	Description GuidedNavigationDescription `json:"description,omitempty"` // Text, audio or image description for the current Guided Navigation Object.
 }
 
 func (o GuidedNavigationObject) Empty() bool {
-	return o.TextRef == nil && o.ImgRef == nil && o.AudioRef == nil && o.Text.Empty() && len(o.Children) == 0 && o.Description == ""
+	return o.TextRef == nil && o.ImgRef == nil && o.AudioRef == nil && o.VideoRef == nil &&
+		o.Text.Empty() && len(o.Children) == 0 && o.Description.Empty()
 }
 
+// ChildrenOnly reports whether the object carries no information of its own besides its children.
+// Such objects are transparent wrappers (e.g. from <div> or <span>) whose children can be
+// spliced into the parent's children.
 func (o GuidedNavigationObject) ChildrenOnly() bool {
-	return o.TextRef == nil && o.ImgRef == nil && o.AudioRef == nil && o.Text.Empty() && len(o.Children) > 0 && o.Description == "" && len(o.Role) == 0 && o.Level == 0
+	return o.TextRef == nil && o.ImgRef == nil && o.AudioRef == nil && o.VideoRef == nil &&
+		o.Text.Empty() && len(o.Children) > 0 && o.Description.Empty() && len(o.Role) == 0 && o.ID == ""
 }
 
 func (o GuidedNavigationObject) TextOnly() bool {
-	return o.TextRef == nil && o.ImgRef == nil && o.AudioRef == nil && !o.Text.Empty() && len(o.Children) == 0 && o.Description == "" && len(o.Role) == 0 && o.Level == 0
+	return o.TextRef == nil && o.ImgRef == nil && o.AudioRef == nil && o.VideoRef == nil &&
+		!o.Text.Empty() && len(o.Children) == 0 && o.Description.Empty() && len(o.Role) == 0 && o.ID == ""
 }
 
 func (o GuidedNavigationObject) MarshalJSON() ([]byte, error) {
@@ -45,27 +52,32 @@ func (o GuidedNavigationObject) MarshalJSON() ([]byte, error) {
 		return json.Marshal(res)
 	}
 
+	if o.ID != "" {
+		res["id"] = o.ID
+	}
 	if o.TextRef != nil {
 		if s := o.TextRef.String(); s != "" {
-			res["textref"] = o.TextRef.String()
+			res["textref"] = s
 		}
 	}
 	if o.ImgRef != nil {
 		if s := o.ImgRef.String(); s != "" {
-			res["imgref"] = o.ImgRef.String()
+			res["imgref"] = s
 		}
 	}
 	if o.AudioRef != nil {
 		if s := o.AudioRef.String(); s != "" {
-			res["audioref"] = o.AudioRef.String()
+			res["audioref"] = s
+		}
+	}
+	if o.VideoRef != nil {
+		if s := o.VideoRef.String(); s != "" {
+			res["videoref"] = s
 		}
 	}
 
-	if (o.Text != GuidedNavigationText{}) {
+	if !o.Text.Empty() {
 		res["text"] = o.Text
-	}
-	if o.Level != 0 {
-		res["level"] = o.Level
 	}
 	if len(o.Role) > 0 {
 		res["role"] = o.Role
@@ -73,7 +85,7 @@ func (o GuidedNavigationObject) MarshalJSON() ([]byte, error) {
 	if len(o.Children) > 0 {
 		res["children"] = o.Children
 	}
-	if o.Description != "" {
+	if !o.Description.Empty() {
 		res["description"] = o.Description
 	}
 
@@ -126,15 +138,104 @@ func (t GuidedNavigationText) MarshalJSON() ([]byte, error) {
 	return json.Marshal(res)
 }
 
-// Same as GuidedNavigationObject but without Children
-/*type GuidedNavigationDescriptionObject struct {
-	AudioRef url.URL  `json:"audioref,omitempty"` // References an audio resource or a fragment of it.
-	ImgRef   url.URL  `json:"imgref,omitempty"`   // References an image or a fragment of it.
-	TextRef  url.URL  `json:"textref,omitempty"`  // References a textual resource or a fragment of it.
-	Text     string   `json:"text,omitempty"`     // Textual equivalent of the resources or fragment of the resources referenced by the current Guided Navigation Object.
-	Level    uint8    `json:"level,omitempty"`    // TODO
-	Role     []string `json:"role,omitempty"`     // Convey the structural semantics of a publication
-}*/
+// Readium Guided Navigation Description Object
+// https://readium.org/guided-navigation/schema/description.schema.json
+// Serialized as a plain string when it only carries plain text.
+type GuidedNavigationDescription struct {
+	AudioRef url.URL              `json:"audioref,omitempty"` // References an audio resource or a fragment of it.
+	ImgRef   url.URL              `json:"imgref,omitempty"`   // References an image or a fragment of it.
+	TextRef  url.URL              `json:"textref,omitempty"`  // References a textual resource or a fragment of it.
+	VideoRef url.URL              `json:"videoref,omitempty"` // References a video resource or a fragment of it.
+	Text     GuidedNavigationText `json:"text,omitempty"`     // Textual description.
+}
 
-// TODO: functions for objects to get e.g. audio time, audio file, text file, fragment id, audio "clip", image xywh, etc.
-// This will come after the URL utility revamp to avoid implementation twice
+// NewTextDescription creates a description carrying only plain text.
+func NewTextDescription(text string) GuidedNavigationDescription {
+	return GuidedNavigationDescription{
+		Text: GuidedNavigationText{Plain: text},
+	}
+}
+
+func (d GuidedNavigationDescription) Empty() bool {
+	return d.AudioRef == nil && d.ImgRef == nil && d.TextRef == nil && d.VideoRef == nil && d.Text.Empty()
+}
+
+func (d *GuidedNavigationDescription) UnmarshalJSON(data []byte) error {
+	// Just plain text
+	var plain string
+	if err := json.Unmarshal(data, &plain); err == nil {
+		d.Text.Plain = plain
+		return nil
+	}
+
+	var obj struct {
+		AudioRef string               `json:"audioref"`
+		ImgRef   string               `json:"imgref"`
+		TextRef  string               `json:"textref"`
+		VideoRef string               `json:"videoref"`
+		Text     GuidedNavigationText `json:"text"`
+	}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+	var res GuidedNavigationDescription
+	var err error
+	if obj.AudioRef != "" {
+		if res.AudioRef, err = url.URLFromString(obj.AudioRef); err != nil {
+			return err
+		}
+	}
+	if obj.ImgRef != "" {
+		if res.ImgRef, err = url.URLFromString(obj.ImgRef); err != nil {
+			return err
+		}
+	}
+	if obj.TextRef != "" {
+		if res.TextRef, err = url.URLFromString(obj.TextRef); err != nil {
+			return err
+		}
+	}
+	if obj.VideoRef != "" {
+		if res.VideoRef, err = url.URLFromString(obj.VideoRef); err != nil {
+			return err
+		}
+	}
+	res.Text = obj.Text
+	*d = res
+	return nil
+}
+
+func (d GuidedNavigationDescription) MarshalJSON() ([]byte, error) {
+	// Plain-text-only descriptions are serialized as a string, matching the
+	// examples of the specification.
+	if d.AudioRef == nil && d.ImgRef == nil && d.TextRef == nil && d.VideoRef == nil &&
+		d.Text.SSML == "" && d.Text.Language == "" {
+		return json.Marshal(d.Text.Plain)
+	}
+
+	res := make(map[string]interface{})
+	if d.AudioRef != nil {
+		if s := d.AudioRef.String(); s != "" {
+			res["audioref"] = s
+		}
+	}
+	if d.ImgRef != nil {
+		if s := d.ImgRef.String(); s != "" {
+			res["imgref"] = s
+		}
+	}
+	if d.TextRef != nil {
+		if s := d.TextRef.String(); s != "" {
+			res["textref"] = s
+		}
+	}
+	if d.VideoRef != nil {
+		if s := d.VideoRef.String(); s != "" {
+			res["videoref"] = s
+		}
+	}
+	if !d.Text.Empty() {
+		res["text"] = d.Text
+	}
+	return json.Marshal(res)
+}
