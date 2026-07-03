@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 // Well-known XML namespaces used by EPUB DRM containers.
@@ -54,19 +53,20 @@ func mustCompileNS(expr string) *xpath.Expr {
 // IdentifyEPUBProtection inspects the well-known DRM metadata files inside an
 // EPUB container and returns the detected protection [Scheme]. Returns [NoDRM]
 // when no protection metadata is present.
-func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, error) {
-	links, err := f.Links(ctx)
-	if err != nil {
-		return NoDRM, err
-	}
 
+func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xmlquery.Node, error) {
 	hasLink := func(path string) (*manifest.Link, bool) {
-		u, uerr := url.URLFromString(path)
-		if uerr != nil {
+		href, err := manifest.NewHREFFromString(path, false)
+		if err != nil {
 			return nil, false
 		}
-		l := links.FirstWithHref(u)
-		return l, l != nil
+		link := manifest.Link{Href: href}
+		res := f.Get(ctx, link)
+		defer res.Close()
+		if _, lerr := res.Length(ctx); lerr != nil {
+			return nil, false
+		}
+		return &link, true
 	}
 
 	readXML := func(link *manifest.Link) (*xmlquery.Node, error) {
@@ -82,17 +82,17 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, err
 
 	// LCP: presence of the license file is the strongest signal.
 	if _, ok := hasLink(pathLCPLicense); ok {
-		return LCP, nil
+		return LCP, nil, nil
 	}
 
 	// Apple FairPlay: META-INF/sinf.xml containing <fairplay:sinf>.
 	if link, ok := hasLink(pathFairplaySinf); ok {
 		doc, derr := readXML(link)
 		if derr != nil {
-			return NoDRM, derr
+			return NoDRM, nil, derr
 		}
 		if doc != nil && xmlquery.QuerySelector(doc, xpFairplaySinf) != nil {
-			return Fairplay, nil
+			return Fairplay, nil, nil
 		}
 	}
 
@@ -100,14 +100,14 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, err
 	if link, ok := hasLink(pathAdeptRights); ok {
 		doc, derr := readXML(link)
 		if derr != nil {
-			return NoDRM, derr
+			return NoDRM, nil, derr
 		}
 		if doc != nil {
 			if op := xmlquery.QuerySelector(doc, xpAdeptOperator); op != nil {
 				if strings.Contains(strings.ToLower(op.InnerText()), barnesAndNobleTag) {
-					return BarnesAndNoble, nil
+					return BarnesAndNoble, nil, nil
 				}
-				return Adept, nil
+				return Adept, nil, nil
 			}
 		}
 	}
@@ -116,27 +116,28 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, err
 	if link, ok := hasLink(pathKoboRights); ok {
 		doc, derr := readXML(link)
 		if derr != nil {
-			return NoDRM, derr
+			return NoDRM, nil, derr
 		}
 		if doc != nil && xmlquery.QuerySelector(doc, xpKdrm) != nil {
-			return Kobo, nil
+			return Kobo, nil, nil
 		}
 	}
 
 	// Fall back to META-INF/encryption.xml: it may reveal LCP via the
-	// retrieval method, or indicate generic/unknown encryption otherwise.
+	// retrieval method, or indicate generic/unknown encryption otherwise. The
+	// parsed document is handed back so the caller can avoid re-parsing it.
 	if link, ok := hasLink(pathEncryption); ok {
 		doc, derr := readXML(link)
 		if derr != nil {
-			return NoDRM, derr
+			return NoDRM, nil, derr
 		}
 		if doc != nil {
 			if xmlquery.QuerySelector(doc, xpLCPRetrieval) != nil {
-				return LCP, nil
+				return LCP, doc, nil
 			}
-			return Generic, nil
+			return Generic, doc, nil
 		}
 	}
 
-	return NoDRM, nil
+	return NoDRM, nil, nil
 }

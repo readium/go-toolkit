@@ -92,20 +92,25 @@ func parseLiElement(li *xmlquery.Node, filePath url.URL) (link *manifest.Link) {
 	}
 	var title string
 	if first.Data != "ol" {
-		title = strings.TrimSpace(muchSpaceSuchWowMatcher.ReplaceAllString(first.InnerText(), " "))
+		title = collapseWhitespace(first.InnerText())
 	}
 	rawHref := first.SelectAttr("href")
-	href := url.MustURLFromString("#")
+	var href url.URL
 	if first.Data == "a" && rawHref != "" {
-		s, err := url.FromEPUBHref(rawHref)
-		if err == nil {
+		if s, err := url.FromEPUBHref(rawHref); err == nil {
 			href = filePath.Resolve(s)
 		}
 	}
 
 	children := parseOlElement(xmlquery.QuerySelector(li, xpNavOL), filePath)
-	if len(children) == 0 && (href.String() == "" || title == "") {
+	// A nil href here is the lazy stand-in for the old "#" default, whose
+	// String() is "" — so a missing or empty-resolved href drops the entry
+	// (unless it has children), exactly as before.
+	if len(children) == 0 && (href == nil || href.String() == "" || title == "") {
 		return nil
+	}
+	if href == nil {
+		href = url.MustURLFromString("#")
 	}
 	return &manifest.Link{
 		Title:    title,

@@ -1,8 +1,6 @@
 package epub
 
 import (
-	"strings"
-
 	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util/url"
@@ -92,7 +90,7 @@ func extractTitle(element *xmlquery.Node) string {
 	if tel == nil {
 		return ""
 	}
-	return strings.TrimSpace(muchSpaceSuchWowMatcher.ReplaceAllString(tel.InnerText(), " "))
+	return collapseWhitespace(tel.InnerText())
 }
 
 func extractHref(element *xmlquery.Node, filePath url.URL) url.URL {
