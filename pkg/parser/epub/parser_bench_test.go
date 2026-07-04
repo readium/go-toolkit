@@ -25,16 +25,18 @@ func BenchmarkParser(b *testing.B) {
 		b.Run(file.Name(), func(b *testing.B) {
 			path := filepath.Join(pubsDir, file.Name())
 
+			parser := NewParser(nil)
+			asset := fakeEPUBAsset{name: file.Name()}
 			for i := 0; i < b.N; i++ {
 				// We recreate fetcher in each iteration because in real world we parse from fresh fetcher.
 				f, err := fetcher.NewArchiveFetcherFromPath(context.Background(), path)
 				require.NoError(b, err)
-
-				parser := NewParser(nil)
-				builder, err := parser.Parse(context.Background(), fakeEPUBAsset{name: file.Name()}, f)
-				require.NoError(b, err)
-				require.NotNil(b, builder)
-				f.Close()
+				func() {
+					defer f.Close()
+					builder, err := parser.Parse(context.Background(), asset, f)
+					require.NoError(b, err)
+					require.NotNil(b, builder)
+				}()
 			}
 		})
 	}
