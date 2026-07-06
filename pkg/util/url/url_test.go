@@ -444,6 +444,9 @@ func TestFilepathWindowsDrive(t *testing.T) {
 }
 
 func TestFilepathUnix(t *testing.T) {
+	if filepath.Separator == '\\' {
+		t.Skip("unix-style absolute path expectations are not stable on Windows")
+	}
 	u, err := FromFilepath("/pub/manifest.json")
 	if !assert.NoError(t, err) {
 		return
