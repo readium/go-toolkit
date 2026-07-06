@@ -91,7 +91,14 @@ func SniffOPDS(ctx context.Context, context SnifferContext) *MediaType {
 	}
 
 	// OPDS 2 (Heavy)
-	// TODO requires context.ContentAsRWPM()
+	if js := context.ContentAsJSON(); js != nil {
+		if rwpmSelfLinkMatches(js, &OPDS2) {
+			return &OPDS2
+		}
+		if rwpmHasLinkWithRelPrefix(js, "http://opds-spec.org/acquisition") {
+			return &OPDS2Publication
+		}
+	}
 
 	// OPDS Authentication Document (Heavy)
 	if context.ContainsJSONKeys("id", "title", "authentication") {
@@ -210,9 +217,55 @@ func SniffWebpub(ctx context.Context, context SnifferContext) *MediaType {
 		return &LCPProtectedPDF
 	}
 
-	// isManifest := true
-	// TODO implement heavy sniffing, which requires context.ContentAsRWPM()
-	// https://github.com/readium/r2-shared-kotlin/blob/develop/r2-shared/src/main/java/org/readium/r2/shared/util/mediatype/Sniffer.kt#L165
+	// Heavy sniffing.
+	// Reads a RWPM, either as a bare manifest or from a `manifest.json` entry in a package.
+	isManifest := true
+	rwpm := context.ContentAsJSON()
+	if !isRWPMJSON(rwpm) {
+		rwpm = nil
+		if bin := context.ReadArchiveEntryAt(ctx, "manifest.json"); bin != nil {
+			var js map[string]interface{}
+			if json.Unmarshal(bin, &js) == nil && isRWPMJSON(js) {
+				isManifest = false
+				rwpm = js
+			}
+		}
+	}
+	if rwpm == nil {
+		return nil
+	}
+
+	isLCPProtected := !isManifest &&
+		(context.ContainsArchiveEntryAt(ctx, "license.lcpl") || rwpmHasLCPScheme(rwpm))
+
+	if rwpmConformsTo(rwpm, rwpmProfileAudiobook, MediaType.IsAudio) {
+		if isManifest {
+			return &ReadiumAudiobookManifest
+		}
+		if isLCPProtected {
+			return &LCPProtectedAudiobook
+		}
+		return &ReadiumAudiobook
+	}
+	if rwpmConformsTo(rwpm, rwpmProfileDivina, MediaType.IsBitmap) {
+		if isManifest {
+			return &ReadiumDivinaManifest
+		}
+		return &ReadiumDivina
+	}
+	if isLCPProtected && rwpmConformsTo(rwpm, rwpmProfilePDF, func(mt MediaType) bool { return mt.Matches(&PDF) }) {
+		return &LCPProtectedPDF
+	}
+	if rwpmSelfLinkMatches(rwpm, &ReadiumWebpubManifest) {
+		if isManifest {
+			return &ReadiumWebpubManifest
+		}
+		return &ReadiumWebpub
+	}
+	if !isManifest {
+		// Any package containing a RWPM is a Readium Web Publication.
+		return &ReadiumWebpub
+	}
 
 	return nil
 }

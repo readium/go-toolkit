@@ -13,16 +13,20 @@ import (
 var Sniffers = []Sniffer{
 	SniffEPUB,
 	SniffLPF,
+	// SniffOPDS must come before SniffWebpub: an OPDS 2 publication is a RWPM with
+	// acquisition links, which the WebPub content heuristics would otherwise claim.
+	SniffOPDS,
+	SniffLCPLicense,
+	// SniffWebpub must come before SniffArchive: a package containing a RWPM manifest.json
+	// could otherwise be claimed as a CBZ or ZAB by the archive content heuristics.
+	SniffWebpub,
 	SniffArchive,
 	SniffPDF,
 	SniffXHTML,
 	SniffHTML,
 	SniffBitmap,
 	SniffAudio,
-	SniffOPDS,
-	SniffLCPLicense,
 	SniffW3CWPUB,
-	SniffWebpub,
 	// Note SniffKnown and SniffSystem aren't here!
 }
 

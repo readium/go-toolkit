@@ -81,6 +81,18 @@ func (f *HTTPFetcher) Close() {
 	// No-op for HTTP
 }
 
+// Creates a [Resource] serving the contents of the given HTTP(S) URL.
+func NewHTTPResource(link manifest.Link, client *http.Client, url url.AbsoluteURL) Resource {
+	if client == nil {
+		panic("NewHTTPResource requires a non-nil client")
+	}
+	return &httpResource{
+		link:   link,
+		client: client,
+		url:    url,
+	}
+}
+
 // Resource from HTTP
 type httpResource struct {
 	link   manifest.Link

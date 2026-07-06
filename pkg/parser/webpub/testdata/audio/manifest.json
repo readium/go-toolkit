@@ -1,0 +1,50 @@
+{
+  "@context": "http://readium.org/webpub-manifest/context.jsonld",
+  "metadata": {
+    "@type": "http://schema.org/Audiobook",
+    "conformsTo": "https://readium.org/webpub-manifest/profiles/audiobook",
+    "identifier": "ArtLettersAudiobookTest",
+    "author": "Robert Lynd",
+    "title": "The Art of Letters",
+    "duration": 68512,
+    "language": "en",
+    "tracks": 82
+  },
+  "links": [
+    {
+      "type": "image/jpeg",
+      "rel": "cover",
+      "height": 180,
+      "width": 180,
+      "href": "img/art_letters_1809_librivox.jpeg"
+    },
+    {
+      "type": "application/audiobook+json",
+      "rel": "alternate",
+      "href": "https://mickael.menu/pub-samples/art_letters.json"
+    }
+  ],
+  "readingOrder": [
+    {
+      "type": "audio/opus",
+      "duration": 62,
+      "title": "00 - Dedication",
+      "href": "audio/artofletters_00_lynd.opus",
+      "bitrate": 32
+    },
+    {
+      "type": "audio/opus",
+      "duration": 1050,
+      "title": "01 - Mr. Pepys",
+      "href": "audio/artofletters_01_lynd.opus",
+      "bitrate": 32
+    },
+    {
+      "type": "audio/opus",
+      "duration": 789,
+      "title": "02 - John Bunyan",
+      "href": "audio/artofletters_02_lynd.opus",
+      "bitrate": 32
+    }
+  ]
+}

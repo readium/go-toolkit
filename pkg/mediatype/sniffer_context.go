@@ -162,9 +162,9 @@ func (s *SnifferContext) ContentAsArchive(ctx context.Context) (archive.Archive,
 	if !s._loadedContentAsArchive {
 		s._loadedContentAsArchive = true
 		switch s.content.(type) {
-		case SnifferFileContent:
+		case *SnifferFileContent:
 			{
-				fileSniffer := s.content.(SnifferFileContent)
+				fileSniffer := s.content.(*SnifferFileContent)
 				u, err := url.FromFilepath(fileSniffer.Name())
 				if err != nil {
 					return nil, err
@@ -209,11 +209,6 @@ func (s SnifferContext) ContentAsJSON() map[string]interface{} {
 		s._contentAsJSON = jd
 	}
 	return s._contentAsJSON
-}
-
-// Content parsed as a Readium Web Publication Manifest.
-func (s SnifferContext) ContentAsRWPM() {
-	panic("Not implemented!") // TODO think out the best go equivalent (without circular imports)
 }
 
 // Raw bytes stream of the content.

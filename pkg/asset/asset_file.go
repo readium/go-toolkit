@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -49,6 +50,10 @@ func (a *FileAsset) Name() string {
 }
 
 func (a *FileAsset) realPath() string {
+	// ToFilepath handles Windows drive paths in file URLs, e.g. file:///C:/dir.
+	if u, ok := a.uri.(url.AbsoluteURL); ok && u.IsFile() {
+		return filepath.ToSlash(u.ToFilepath())
+	}
 	return filepath.ToSlash(a.uri.Path())
 }
 
@@ -69,6 +74,42 @@ func (a *FileAsset) MediaType(ctx context.Context) mediatype.MediaType {
 		}
 	}
 	return *a.mediatype
+}
+
+// Location implements RelativePublicationAsset
+func (a *FileAsset) Location() url.URL {
+	return a.uri
+}
+
+// CreateRelativeFetcher implements RelativePublicationAsset
+func (a *FileAsset) CreateRelativeFetcher(ctx context.Context, root url.URL) (fetcher.Fetcher, error) {
+	var rootPath string
+	if u, ok := root.(url.AbsoluteURL); ok {
+		if !u.IsFile() {
+			return nil, errors.New("root of a file asset must be a file URL")
+		}
+		rootPath = u.ToFilepath()
+	} else {
+		rootPath = filepath.FromSlash(root.Path())
+	}
+
+	rootPath, err := filepath.Abs(rootPath)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasSuffix(rootPath, string(filepath.Separator)) {
+		// A trailing slash makes HREFs resolve inside the directory instead of next to it.
+		rootPath += string(filepath.Separator)
+	}
+	base, err := url.FromFilepath(rootPath)
+	if err != nil {
+		return nil, err
+	}
+	abase, ok := base.(url.AbsoluteURL)
+	if !ok {
+		return nil, errors.New("failed building a file URL for the asset")
+	}
+	return fetcher.NewRelativeFileFetcher(abase)
 }
 
 // CreateFetcher implements PublicationAsset
