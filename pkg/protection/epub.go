@@ -51,8 +51,9 @@ func mustCompileNS(expr string) *xpath.Expr {
 }
 
 // IdentifyEPUBProtection inspects the well-known DRM metadata files inside an
-// EPUB container and returns the detected protection [Scheme]. Returns [NoDRM]
-// when no protection metadata is present.
+// EPUB container and returns the detected protection [Scheme]. The second return
+// value is the parsed encryption.xml document when available (otherwise nil).
+// Returns [NoDRM] when no protection metadata is present.
 
 func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xmlquery.Node, error) {
 	hasLink := func(path string) (*manifest.Link, bool) {
