@@ -206,7 +206,7 @@ func (r *s3Resource) Read(ctx context.Context, start int64, end int64) ([]byte, 
 		obj.Range = aws.String(sb.String())
 	}
 
-	output, err := r.client.GetObject(ctx, r.object())
+	output, err := r.client.GetObject(ctx, obj)
 	if err != nil {
 		return nil, awsErrorToException(err)
 	}

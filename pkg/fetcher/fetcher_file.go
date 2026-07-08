@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"weak"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -132,8 +133,9 @@ func NewFileFetcher(href string, fpath string) *FileFetcher {
 type FileResource struct {
 	link manifest.Link
 	path string
+
+	mu   sync.Mutex // guards file and sequential (offset-based) access to it
 	file *os.File
-	read bool
 }
 
 // Link implements Resource
@@ -148,6 +150,8 @@ func (r *FileResource) Properties() manifest.Properties {
 
 // Close implements Resource
 func (r *FileResource) Close() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.file != nil {
 		r.file.Close()
 	}
@@ -158,11 +162,13 @@ func (r *FileResource) File() string {
 	return r.path
 }
 
+// open returns the lazily-opened file handle. The returned *os.File is only
+// safe for position-independent access (ReadAt, Stat); sequential access that
+// moves the file offset must hold r.mu.
 func (r *FileResource) open() (*os.File, *ResourceError) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.file != nil {
-		if _, err := r.file.Seek(0, io.SeekStart); err != nil {
-			return nil, Other(err)
-		}
 		return r.file, nil
 	}
 	f, err := os.Open(r.path)
@@ -183,18 +189,25 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 	return f, nil
 }
 
-// Read implements Resource
+// Read implements Resource. Ranged reads (end > 0) are safe for concurrent use.
 func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
 	defer runtime.KeepAlive(r)
 	if end < start {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
+	if start < 0 {
+		start = 0
+	}
 	f, ex := r.open()
 	if ex != nil {
 		return nil, ex
 	}
-	r.read = true
 	if start == 0 && end == 0 {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			return nil, Other(err)
+		}
 		data, err := io.ReadAll(f)
 		if err != nil {
 			return nil, Other(err)
@@ -202,19 +215,11 @@ func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte
 		return data, nil
 	}
 	data := make([]byte, end-start+1)
-	if start > 0 {
-		n, err := f.ReadAt(data, start)
-		if err != nil && err != io.EOF {
-			return nil, Other(err)
-		}
-		return data[:n], nil
-	} else {
-		n, err := io.ReadFull(f, data)
-		if err != nil && err != io.ErrUnexpectedEOF {
-			return nil, Other(err)
-		}
-		return data[:n], nil
+	n, err := f.ReadAt(data, start)
+	if err != nil && err != io.EOF {
+		return nil, Other(err)
 	}
+	return data[:n], nil
 }
 
 // Stream implements Resource
@@ -224,26 +229,27 @@ func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
 		return -1, err
 	}
+	if start < 0 {
+		start = 0
+	}
 	f, ex := r.open()
 	if ex != nil {
 		return -1, ex
 	}
-	r.read = true
 	if start == 0 && end == 0 {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			return -1, Other(err)
+		}
 		n, err := io.Copy(w, f)
 		if err != nil {
 			return -1, Other(err)
 		}
 		return n, nil
 	}
-	if start > 0 {
-		_, err := f.Seek(start, 0)
-		if err != nil {
-			return -1, Other(err)
-		}
-	}
-	n, err := io.CopyN(w, f, end-start+1)
-	if err != nil && err != io.EOF {
+	n, err := io.Copy(w, io.NewSectionReader(f, start, end-start+1))
+	if err != nil {
 		return n, Other(err)
 	}
 	return n, nil

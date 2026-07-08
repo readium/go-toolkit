@@ -54,7 +54,7 @@ func (p AudioParser) enrich(ctx context.Context, fetch fetcher.Fetcher, m *manif
 	for i := range readingOrder {
 		i, link, res := i, readingOrder[i], resources[i]
 		g.Go(func() error {
-			probed[i] = probeReadingOrderItem(ctx, res, link, extractChapters, blockSize)
+			probed[i] = probeReadingOrderItem(ctx, res, link, extractChapters, blockSize, concurrency)
 			return nil
 		})
 	}
@@ -117,17 +117,19 @@ type probedItem struct {
 
 // probeReadingOrderItem reads the tags and probes the duration/bitrate/chapters
 // of a single reading-order resource, always releasing the resource handle.
+// concurrency bounds the parallel reads used within the file (e.g. fetching
+// scattered chapter samples).
 //
 // All reads go through a per-file block cache so that the tag and duration
 // passes — which perform many small, overlapping reads of the header region —
 // coalesce into a handful of range requests rather than one request each. This
 // matters most for remote sources (HTTP, S3) and ZIP archives.
-func probeReadingOrderItem(ctx context.Context, res fetcher.Resource, link manifest.Link, extractChapters bool, blockSize int64) probedItem {
+func probeReadingOrderItem(ctx context.Context, res fetcher.Resource, link manifest.Link, extractChapters bool, blockSize int64, concurrency int) probedItem {
 	defer res.Close()
 	size, _ := res.Length(ctx)
 	cached := newReadCache(res, size, blockSize)
 	tags := readAudioTags(cached)
-	return probedItem{tags: tags, probe: probeAudioFile(ctx, cached, link, tags, extractChapters)}
+	return probedItem{tags: tags, probe: probeAudioFile(ctx, cached, link, tags, extractChapters, concurrency)}
 }
 
 // playlistTOC looks for the first parseable playlist file in the publication and
