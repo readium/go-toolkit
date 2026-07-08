@@ -441,6 +441,53 @@ func TestNormalize(t *testing.T) {
 	assert.Equal(t, "http://user:password@example.com:443/foo?b=b&a=a#fragment", u.Normalize().String())
 }
 
+// The methods documented as returning copies must not mutate the receiver's
+// underlying net/url.URL, which is shared between the copies.
+func TestRemoveFragmentReturnsCopy(t *testing.T) {
+	for _, urlTest := range []string{
+		"chapter.xhtml?q=1#fragment",
+		"http://example.com/chapter.xhtml?q=1#fragment",
+	} {
+		u := MustURLFromString(urlTest)
+		removed := u.RemoveFragment()
+		assert.Empty(t, removed.Fragment(), "for URL '%s'", urlTest)
+		assert.Equal(t, "fragment", u.Fragment(), "original URL '%s' must keep its fragment", urlTest)
+		assert.Equal(t, urlTest, u.String(), "original URL '%s' must be unchanged", urlTest)
+	}
+}
+
+func TestRemoveQueryReturnsCopy(t *testing.T) {
+	for _, urlTest := range []string{
+		"chapter.xhtml?q=1#fragment",
+		"http://example.com/chapter.xhtml?q=1#fragment",
+	} {
+		u := MustURLFromString(urlTest)
+		removed := u.RemoveQuery()
+		assert.Empty(t, removed.Raw().RawQuery, "for URL '%s'", urlTest)
+		assert.Equal(t, "fragment", removed.Fragment(), "RemoveQuery must keep the fragment of '%s'", urlTest)
+		assert.Equal(t, urlTest, u.String(), "original URL '%s' must be unchanged", urlTest)
+	}
+}
+
+func TestNormalizeReturnsCopy(t *testing.T) {
+	for _, urlTest := range []struct {
+		url        string
+		normalized string
+	}{
+		{"foo/../bar.xhtml", "bar.xhtml"},
+		{"http://example.com/foo/../bar.xhtml", "http://example.com/bar.xhtml"},
+	} {
+		u := MustURLFromString(urlTest.url)
+		assert.Equal(t, urlTest.normalized, u.Normalize().String())
+		assert.Equal(t, urlTest.url, u.String(), "original URL '%s' must be unchanged", urlTest.url)
+
+		// Equivalent uses Normalize internally and must not mutate either side
+		other := MustURLFromString(urlTest.normalized)
+		assert.True(t, u.Equivalent(other))
+		assert.Equal(t, urlTest.url, u.String(), "Equivalent must not mutate the receiver")
+	}
+}
+
 // Windows drive paths round-trip through file URLs in the file:///C:/dir form,
 // so that resolving relative references does not corrupt the drive letter.
 func TestFilepathWindowsDrive(t *testing.T) {

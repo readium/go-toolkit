@@ -6,7 +6,6 @@ import (
 	"github.com/antchfx/xmlquery"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/asset"
-	"github.com/readium/go-toolkit/pkg/content/iterator"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
@@ -83,9 +82,10 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 
 	builder := pub.NewServicesBuilder(map[pub.ServiceName]pub.ServiceFactory{
 		pub.PositionsService_Name: PositionsServiceFactory(p.reflowablePositionsStrategy),
-		pub.ContentService_Name: pub.DefaultContentServiceFactory([]iterator.ResourceContentIteratorFactory{
-			iterator.HTMLFactory(),
-		}),
+		// The guided navigation service replaces the content service
+		// pub.ContentService_Name: pub.DefaultContentServiceFactory([]iterator.ResourceContentIteratorFactory{
+		// 	iterator.HTMLFactory(),
+		// }),
 		pub.GuidedNavigationService_Name: MediaOverlayFactory(),
 	})
 	return pub.NewBuilder(manifest, ffetcher, builder), nil

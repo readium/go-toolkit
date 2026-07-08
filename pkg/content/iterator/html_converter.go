@@ -474,6 +474,7 @@ func (c *HTMLConverter) flushText() {
 	if len(c.breadcrumbs) > 0 {
 		el := c.breadcrumbs[len(c.breadcrumbs)-1].node
 		for _, at := range el.Attr {
+			// THIS IS WRONG! need epub:type so split the str
 			if at.Namespace == "http://www.idpf.org/2007/ops" && at.Key == "type" && at.Val == "footnote" {
 				bestRole = element.Footnote{}
 				break

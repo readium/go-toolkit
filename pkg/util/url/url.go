@@ -88,8 +88,10 @@ func (u RelativeURL) Extension() string {
 
 // RemoveQuery implements URL
 func (u RelativeURL) RemoveQuery() URL {
-	u.url.RawQuery = ""
-	return RelativeURL{url: u.url, normalized: u.normalized}
+	res := *u.url
+	res.ForceQuery = false
+	res.RawQuery = ""
+	return RelativeURL{url: &res, normalized: u.normalized}
 }
 
 // Fragment implements URL
@@ -99,8 +101,10 @@ func (u RelativeURL) Fragment() string {
 
 // RemoveFragment implements URL
 func (u RelativeURL) RemoveFragment() URL {
-	u.url.Fragment = ""
-	return RelativeURL{url: u.url, normalized: u.normalized}
+	res := *u.url
+	res.Fragment = ""
+	res.RawFragment = ""
+	return RelativeURL{url: &res, normalized: u.normalized}
 }
 
 // Resolve implements URL
@@ -168,16 +172,17 @@ func (u RelativeURL) Normalize() URL {
 		return u
 	}
 
+	res := *u.url
 	var hadSlash bool
-	if strings.HasSuffix(u.url.Path, "/") {
+	if strings.HasSuffix(res.Path, "/") {
 		hadSlash = true
 	}
-	u.url.Path = path.Clean(u.url.Path)
+	res.Path = path.Clean(res.Path)
 	if hadSlash {
-		u.url.Path += "/"
+		res.Path += "/"
 	}
 
-	return RelativeURL{url: u.url, normalized: true}
+	return RelativeURL{url: &res, normalized: true}
 }
 
 // String implements URL
@@ -238,8 +243,10 @@ func (u AbsoluteURL) Extension() string {
 
 // RemoveQuery implements URL
 func (u AbsoluteURL) RemoveQuery() URL {
-	u.url.RawQuery = ""
-	return AbsoluteURL{url: u.url, scheme: u.scheme, normalized: u.normalized}
+	res := *u.url
+	res.ForceQuery = false
+	res.RawQuery = ""
+	return AbsoluteURL{url: &res, scheme: u.scheme, normalized: u.normalized}
 }
 
 // Fragment implements URL
@@ -249,8 +256,10 @@ func (u AbsoluteURL) Fragment() string {
 
 // RemoveFragment implements URL
 func (u AbsoluteURL) RemoveFragment() URL {
-	u.url.Fragment = ""
-	return AbsoluteURL{url: u.url, scheme: u.scheme, normalized: u.normalized}
+	res := *u.url
+	res.Fragment = ""
+	res.RawFragment = ""
+	return AbsoluteURL{url: &res, scheme: u.scheme, normalized: u.normalized}
 }
 
 // Resolve implements URL
@@ -307,22 +316,23 @@ func (u AbsoluteURL) Normalize() URL {
 		return u
 	}
 
+	res := *u.url
 	var hadSlash bool
-	if strings.HasSuffix(u.url.Path, "/") {
+	if strings.HasSuffix(res.Path, "/") {
 		hadSlash = true
 	}
-	u.url.Path = path.Clean(u.url.Path)
+	res.Path = path.Clean(res.Path)
 	if hadSlash {
-		u.url.Path += "/"
+		res.Path += "/"
 	}
 
-	u.url.Scheme = SchemeFromString(u.url.Scheme).String()
-	asciiHost, err := idna.ToASCII(u.url.Host)
+	res.Scheme = SchemeFromString(res.Scheme).String()
+	asciiHost, err := idna.ToASCII(res.Host)
 	if err == nil {
-		u.url.Host = asciiHost
+		res.Host = asciiHost
 	}
 
-	return AbsoluteURL{url: u.url, scheme: Scheme(u.url.Scheme), normalized: true}
+	return AbsoluteURL{url: &res, scheme: Scheme(res.Scheme), normalized: true}
 }
 
 // String implements URL

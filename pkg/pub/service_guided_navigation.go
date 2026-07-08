@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/guidednavigation"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
@@ -27,7 +28,7 @@ func init() {
 // Provides a way to access guided navigation documents for resources of a [Publication].
 type GuidedNavigationService interface {
 	Service
-	GuideForResource(ctx context.Context, href string) (*manifest.GuidedNavigationDocument, error)
+	GuideForResource(ctx context.Context, href string) (*guidednavigation.GuidedNavigationDocument, error)
 	HasGuideForResource(href string) bool
 }
 

@@ -1,11 +1,12 @@
 package epub
 
 import (
-	"strconv"
+	"time"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/pkg/errors"
-	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/guidednavigation"
+	"github.com/readium/go-toolkit/pkg/guidednavigation/converter"
 	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
@@ -17,7 +18,7 @@ var (
 	xpSMILAudio     = mustCompileNS("smil:audio | smil2:audio")
 )
 
-func ParseSMILDocument(document *xmlquery.Node, filePath url.URL) (*manifest.GuidedNavigationDocument, error) {
+func ParseSMILDocument(document *xmlquery.Node, filePath url.URL) (*guidednavigation.GuidedNavigationDocument, error) {
 	smil := xmlquery.QuerySelector(document, xpSMILRoot)
 	if smil == nil {
 		return nil, errors.New("SMIL root element not found")
@@ -34,17 +35,17 @@ func ParseSMILDocument(document *xmlquery.Node, filePath url.URL) (*manifest.Gui
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing SMIL body")
 	}
-	return &manifest.GuidedNavigationDocument{
+	return &guidednavigation.GuidedNavigationDocument{
 		Guided: seqs,
 	}, nil
 }
 
-func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]manifest.GuidedNavigationObject, error) {
+func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]guidednavigation.GuidedNavigationObject, error) {
 	childElements := xmlquery.QuerySelectorAll(seq, xpSMILParOrSeq)
 	if len(childElements) == 0 && seq.Data == "body" {
 		return nil, errors.New("SMIL body is empty")
 	}
-	objects := make([]manifest.GuidedNavigationObject, 0, len(childElements))
+	objects := make([]guidednavigation.GuidedNavigationObject, 0, len(childElements))
 	for _, el := range childElements {
 		if el.Data == "par" {
 			// <par>
@@ -55,27 +56,28 @@ func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]manifest.GuidedNaviga
 			objects = append(objects, *o)
 		} else {
 			// <seq>
-			o := &manifest.GuidedNavigationObject{
-				TextRef: SelectNodeAttrNs(el, NamespaceOPS, "textref"),
-			}
-			if o.TextRef == "" {
+			textrefAttr := SelectNodeAttrNs(el, NamespaceOPS, "textref")
+			if textrefAttr == "" {
 				return nil, errors.New("SMIL seq has no textref")
 			}
-			u, err := url.URLFromString(o.TextRef)
+			u, err := url.URLFromString(textrefAttr)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed parsing SMIL seq textref")
 			}
-			o.TextRef = filePath.Resolve(u).String()
+			o := &guidednavigation.GuidedNavigationObject{
+				TextRef: filePath.Resolve(u),
+			}
 
 			// epub:type
 			pp := parseProperties(SelectNodeAttrNs(el, NamespaceOPS, "type"))
 			if len(pp) > 0 {
-				o.Role = make([]string, 0, len(pp))
+				o.Role = make([]guidednavigation.GuidedNavigationRole, 0, len(pp))
 				for _, prop := range pp {
-					if prop == "" {
+					p := converter.ConvertEPUBRole(prop)
+					if p == "" {
 						continue
 					}
-					o.Role = append(o.Role, prop)
+					o.Role = append(o.Role, p)
 				}
 			}
 
@@ -91,57 +93,62 @@ func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]manifest.GuidedNaviga
 	return objects, nil
 }
 
-func ParseSMILPar(par *xmlquery.Node, filePath url.URL) (*manifest.GuidedNavigationObject, error) {
+func secondsToDuration(seconds *float64) *time.Duration {
+	if seconds == nil {
+		return nil
+	}
+	d := time.Duration(*seconds * float64(time.Second))
+	return &d
+}
+
+func ParseSMILPar(par *xmlquery.Node, filePath url.URL) (*guidednavigation.GuidedNavigationObject, error) {
 	text := xmlquery.QuerySelector(par, xpSMILTextChild)
 	if text == nil {
 		return nil, errors.New("SMIL par has no text element")
 	}
-	o := &manifest.GuidedNavigationObject{
-		TextRef: text.SelectAttr("src"),
-	}
-	if o.TextRef == "" {
+	srcAttr := text.SelectAttr("src")
+	if srcAttr == "" {
 		return nil, errors.New("SMIL par text element has empty src attribute")
 	}
-	u, err := url.URLFromString(o.TextRef)
+	u, err := url.URLFromString(srcAttr)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing SMIL par text element textref")
 	}
-	o.TextRef = filePath.Resolve(u).String()
+	o := &guidednavigation.GuidedNavigationObject{
+		TextRef: filePath.Resolve(u),
+	}
 
 	// Audio is optional
 	if audio := xmlquery.QuerySelector(par, xpSMILAudio); audio != nil {
-		o.AudioRef = audio.SelectAttr("src")
-		if o.AudioRef == "" {
+		audioAttr := audio.SelectAttr("src")
+		if audioAttr == "" {
 			return nil, errors.New("SMIL par audio element has empty src attribute")
 		}
-		begin := ParseClockValue(audio.SelectAttr("clipBegin"))
-		end := ParseClockValue(audio.SelectAttr("clipEnd"))
-		if begin != nil || end != nil {
-			o.AudioRef += "#t="
+		clip := guidednavigation.Clip{
+			Begin: secondsToDuration(ParseClockValue(audio.SelectAttr("clipBegin"))),
+			End:   secondsToDuration(ParseClockValue(audio.SelectAttr("clipEnd"))),
 		}
-		if begin != nil {
-			o.AudioRef += strconv.FormatFloat(*begin, 'f', -1, 64)
-		}
-		if end != nil {
-			o.AudioRef += "," + strconv.FormatFloat(*end, 'f', -1, 64)
+		if fragment := clip.MediaFragment(); fragment != "" {
+			audioAttr += "#" + fragment
 		}
 
-		u, err := url.URLFromString(o.AudioRef)
+		u, err := url.URLFromString(audioAttr)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed parsing SMIL par audio element textref")
 		}
-		o.AudioRef = filePath.Resolve(u).String()
+		o.AudioRef = filePath.Resolve(u)
 	}
 
 	// epub:type
 	pp := parseProperties(SelectNodeAttrNs(par, NamespaceOPS, "type"))
 	if len(pp) > 0 {
-		o.Role = make([]string, 0, len(pp))
+		o.Role = make([]guidednavigation.GuidedNavigationRole, 0, len(pp))
 		for _, prop := range pp {
-			if prop == "" {
+			p := converter.ConvertEPUBRole(prop)
+			if p == "" {
 				continue
 			}
-			o.Role = append(o.Role, prop)
+			o.Role = append(o.Role, p)
 		}
 	}
 

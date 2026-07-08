@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -119,10 +120,11 @@ func TestPlaylistEntryName(t *testing.T) {
 	assert.Equal(t, "track.mp3", playlistEntryName("C:\\music\\track.mp3"))
 }
 
-func TestFormatFragmentTime(t *testing.T) {
-	assert.Equal(t, "0", formatFragmentTime(0))
-	assert.Equal(t, "1647.2", formatFragmentTime(1647.2))
-	assert.Equal(t, "62.011", formatFragmentTime(62.0109))
+func TestChapterLinkFragmentTime(t *testing.T) {
+	base := manifest.Link{Href: manifest.MustNewHREFFromString("track.m4b", false)}
+	assert.Equal(t, "track.m4b", chapterLink(base, "t", 0).Href.String())
+	assert.Equal(t, "track.m4b#t=1647.2", chapterLink(base, "t", 1647.2).Href.String())
+	assert.Equal(t, "track.m4b#t=62.011", chapterLink(base, "t", 62.0109).Href.String())
 }
 
 func TestParseTimecode(t *testing.T) {

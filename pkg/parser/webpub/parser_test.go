@@ -451,7 +451,7 @@ func TestParseExplodedPublicationSandboxed(t *testing.T) {
 
 func TestParseServiceFactories(t *testing.T) {
 	// An EPUB-profile WebPub gets a positions service and, having HTML contents,
-	// a content service.
+	// a guided navigation service.
 	dir := t.TempDir()
 	manifestJSON := `{
 		"@context": "https://readium.org/webpub-manifest/context.jsonld",
@@ -471,7 +471,7 @@ func TestParseServiceFactories(t *testing.T) {
 	require.NotNil(t, builder)
 
 	assert.NotNil(t, builder.ServicesBuilder.Get(pub.PositionsService_Name))
-	assert.NotNil(t, builder.ServicesBuilder.Get(pub.ContentService_Name))
+	assert.NotNil(t, builder.ServicesBuilder.Get(pub.GuidedNavigationService_Name))
 }
 
 // The parser must not swallow assets which aren't WebPub flavored.

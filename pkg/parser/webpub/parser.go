@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/asset"
-	"github.com/readium/go-toolkit/pkg/content/iterator"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
@@ -158,12 +157,15 @@ func (p WebPubParser) Parse(ctx context.Context, a asset.PublicationAsset, f fet
 		serviceFactories[pub.PositionsService_Name] = epub.PositionsServiceFactory(nil)
 	}
 
-	// Add content service for WebPubs with HTML contents.
+	// Add guided navigation service for WebPubs with HTML contents. It serves SMIL
+	// media overlays when reading order items have them, and converts the HTML
+	// resources themselves otherwise. It replaces the content service:
+	// serviceFactories[pub.ContentService_Name] = pub.DefaultContentServiceFactory([]iterator.ResourceContentIteratorFactory{
+	// 	iterator.HTMLFactory(),
+	// })
 	for _, link := range m.ReadingOrder {
 		if link.MediaType != nil && link.MediaType.IsHTML() {
-			serviceFactories[pub.ContentService_Name] = pub.DefaultContentServiceFactory([]iterator.ResourceContentIteratorFactory{
-				iterator.HTMLFactory(),
-			})
+			serviceFactories[pub.GuidedNavigationService_Name] = epub.MediaOverlayFactory()
 			break
 		}
 	}

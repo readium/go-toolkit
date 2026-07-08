@@ -86,7 +86,7 @@ func (e AudioElement) MarshalJSON() ([]byte, error) {
 	res := ElementToMap(e)
 	res["text"] = e.Text()
 	res["link"] = e.EmbeddedLink()
-	res["@type"] = "Video"
+	res["@type"] = "Audio"
 	return json.Marshal(res)
 }
 
