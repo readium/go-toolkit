@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.15.1]
+
+### Added
+
+- New `audio.WithRetainedCache()` option for the rich audiobook parser: the read-cache blocks fetched while probing stay attached to the parsed publication, and serving its audio files answers those byte ranges — plus the resources' lengths — straight from memory. Chapter-title samples are also pulled through the block cache (costing up to one block of extra transfer per chapter while parsing) so they are retained too. The retained ranges (container headers and chapter samples) are exactly what a browser's demuxer requests before starting playback of an M4B, so with the option enabled those startup requests are served without touching the remote source: in a replay of Chrome's real request sequence against an archive.org M4B with 18 chapters, time to playback dropped from ~6.5s to ~1.6s (and the per-chapter probes from ~0.4s to ~4ms), for roughly one block of memory per chapter and a slightly more expensive parse. Recommended for servers that open once and serve many times; skip it for one-shot parsing
+
+### Changed
+
+- The HTTP, S3 and GCS fetchers now share resource metadata (content length) across the resources they create, so serving many requests for the same bare file performs a single HEAD (or HeadObject/Attrs) call over the fetcher's lifetime instead of one per request. The size is typically already known from parsing the publication, which removes an origin round trip from the time-to-first-byte of every range request a browser makes while streaming media — this matters especially for M4B audiobooks with chapters, where browsers reads every chapter-title sample (one ranged request each) before starting playback
+
 ## [0.15.0] - 2026-07-08
 
 ### Added
