@@ -3,7 +3,6 @@ package fetcher
 import (
 	"context"
 	"errors"
-	"path"
 	"path/filepath"
 	"strings"
 	"weak"
@@ -35,11 +34,12 @@ func NewRelativeFileFetcher(base url.AbsoluteURL) (*RelativeFileFetcher, error) 
 // Lists the files in the base's directory. Resources only reachable through parent
 // (`..`) HREFs are not included; as documented on [Fetcher], the list is not exhaustive.
 func (f *RelativeFileFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
-	dir := f.base.Path()
-	if !strings.HasSuffix(dir, "/") {
-		dir = path.Dir(dir)
+	// ToFilepath handles Windows drive paths in file URLs, e.g. file:///C:/dir.
+	dir := f.base.ToFilepath()
+	if !strings.HasSuffix(dir, string(filepath.Separator)) {
+		dir = filepath.Dir(dir)
 	}
-	ff := &FileFetcher{paths: map[string]string{"": filepath.FromSlash(dir)}}
+	ff := &FileFetcher{paths: map[string]string{"": dir}}
 	return ff.Links(ctx)
 }
 

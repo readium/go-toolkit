@@ -22,7 +22,9 @@ import (
 // through the parser, the same way the Streamer would.
 func parseFileAsset(t *testing.T, client *http.Client, path string, mt *mediatype.MediaType) (*pub.Builder, error) {
 	t.Helper()
-	a := asset.FileWithMediaType(url.MustURLFromString(path), mt)
+	uri, err := url.FromFilepath(path)
+	require.NoError(t, err)
+	a := asset.FileWithMediaType(uri, mt)
 	f, err := a.CreateFetcher(t.Context(), asset.Dependencies{
 		ArchiveFactory: archive.NewArchiveFactory(),
 	}, "")
