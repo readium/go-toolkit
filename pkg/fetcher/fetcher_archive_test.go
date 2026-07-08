@@ -149,3 +149,21 @@ func TestArchiveFetcherAddsProperties(t *testing.T) {
 		}, resource.Properties())
 	})
 }
+
+// entryResource advertises efficient streaming for stored entries only:
+// deflated entries must keep using Read for ranged access from remote
+// sources, since their ranged Stream decompresses from the entry start.
+// This also pins CompressedAs(CompressionMethodStore) answering correctly.
+func TestArchiveFetcherEfficientStream(t *testing.T) {
+	withArchiveFetcher(t, func(a *ArchiveFetcher) {
+		stored := a.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString("mimetype", false)})
+		es, ok := stored.(EfficientStreamer)
+		require.True(t, ok)
+		assert.True(t, es.HasEfficientStream(), "stored entry should advertise efficient streaming")
+
+		deflated := a.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString("EPUB/cover.xhtml", false)})
+		es, ok = deflated.(EfficientStreamer)
+		require.True(t, ok)
+		assert.False(t, es.HasEfficientStream(), "deflated entry should not advertise efficient streaming")
+	})
+}

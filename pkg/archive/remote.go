@@ -182,19 +182,10 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 				// e.g. with Go, where if you write a streaming ZIP, the size is not known in advance.
 
 				// We can still at least cache the file header
-				r.cacheMutex.Lock()
-				if len(r.cachedRanges) >= int(r.cacheCountThreshold) {
-					// Remove the oldest range
-					r.cachedRanges = r.cachedRanges[1:]
-				}
-
-				r.cachedRanges = append(r.cachedRanges, readRange{
-					HeaderOffset: off,
-					Header:       fileHeaderBuf,
-				})
-				r.cacheMutex.Unlock()
+				r.cacheHeader(off, fileHeaderBuf)
 			} else if compressedSize == 0xFFFFFFFF && uncompressedSize == 0xFFFFFFFF {
-				// ZIP64 is not supported by this routine
+				// ZIP64 is not supported by this routine, but the header can still be cached
+				r.cacheHeader(off, fileHeaderBuf)
 			} else {
 				if compressionMethod == zip.Store {
 					// File is uncompressed
@@ -207,7 +198,13 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 				// Now the important part - we precache the actual file!
 
 				// ...but only if it's not too big
-				if int64(bodySize) <= r.cacheSizeThreshold {
+				if int64(bodySize) > r.cacheSizeThreshold {
+					// Too big to precache. Still remember the header, so that
+					// subsequent opens of this entry (every ranged read of a
+					// large media file opens it again) are served from memory
+					// instead of a new remote request.
+					r.cacheHeader(off, fileHeaderBuf)
+				} else {
 					// Remaining local file headers are needed to get the total size of useless stuff
 					filenameLength := binary.LittleEndian.Uint16(b[8:])
 					extraFieldLength := binary.LittleEndian.Uint16(b[10:])
@@ -252,8 +249,13 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 			}
 		}
 		copy(p, fileHeaderBuf[:]) // Copy the 30 read bytes
-		io.Copy(io.Discard, rdr)  // Discard the rest of the read
-		rdr.Close()               // Then close it
+		// The read was open-ended (the body size wasn't known upfront), so it
+		// must not be drained to EOF: everything left in it is the rest of
+		// the archive, which a remote reader would download in full. Drain a
+		// small amount so a keep-alive connection stays reusable when the
+		// remainder is tiny, then close, aborting the rest of the transfer.
+		io.CopyN(io.Discard, rdr, maxDrainBytes)
+		rdr.Close()
 	} else {
 		// Check all the cache ranges to see if what we're looking for is somewhere inside a cached range
 		// This is especially useful when doing a range read / stream of e.g. 4096-byte chunks
@@ -311,6 +313,25 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 	r.cacheMutex.Unlock()
 
 	return n, nil
+}
+
+// maxDrainBytes bounds how much of an open-ended remote read is drained before
+// closing it, to keep the connection reusable when the remainder is small.
+const maxDrainBytes = 4 << 10 // 4 KiB
+
+// cacheHeader remembers a local file header so subsequent opens of the same
+// entry serve it from memory instead of performing a new remote read.
+func (r *remoteZIPAdapter) cacheHeader(off int64, header [30]byte) {
+	r.cacheMutex.Lock()
+	if len(r.cachedRanges) >= int(r.cacheCountThreshold) {
+		// Remove the oldest range
+		r.cachedRanges = r.cachedRanges[1:]
+	}
+	r.cachedRanges = append(r.cachedRanges, readRange{
+		HeaderOffset: off,
+		Header:       header,
+	})
+	r.cacheMutex.Unlock()
 }
 
 func (r *remoteZIPAdapter) makeReady() {

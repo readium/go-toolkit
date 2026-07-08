@@ -256,6 +256,12 @@ func (r *s3Resource) Stream(ctx context.Context, w io.Writer, start int64, end i
 	return n, nil
 }
 
+// HasEfficientStream implements EfficientStreamer. Stream performs a single
+// ranged GetObject request and pipes the response body through as it arrives.
+func (r *s3Resource) HasEfficientStream() bool {
+	return true
+}
+
 // Length implements Resource
 func (r *s3Resource) Length(ctx context.Context) (int64, *ResourceError) {
 	head, rerr := r.head(ctx)

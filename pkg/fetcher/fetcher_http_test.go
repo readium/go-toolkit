@@ -1,8 +1,12 @@
 package fetcher
 
 import (
+	"bytes"
 	"net/http"
+	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util/url"
@@ -35,4 +39,59 @@ func TestHTTPFetcherContainsPath(t *testing.T) {
 		require.Truef(t, ok, "href %q should resolve", tt.href)
 		assert.Equal(t, tt.url, hres.url.String())
 	}
+}
+
+// The bare-file remote resources advertise efficient streaming; archive
+// entries advertise it based on their compression method.
+var (
+	_ EfficientStreamer = (*httpResource)(nil)
+	_ EfficientStreamer = (*s3Resource)(nil)
+	_ EfficientStreamer = (*gcsResource)(nil)
+	_ EfficientStreamer = (*entryResource)(nil)
+)
+
+// Stream must perform exactly one upstream request per call: an un-ranged GET
+// (answered with 200) when streaming the whole resource, and a single ranged
+// GET (answered with 206) when streaming a range.
+func TestHTTPResourceStream(t *testing.T) {
+	payload := make([]byte, 100_000)
+	for i := range payload {
+		payload[i] = byte(i % 251)
+	}
+
+	var mu sync.Mutex
+	var ranges []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		ranges = append(ranges, r.Header.Get("Range"))
+		mu.Unlock()
+		http.ServeContent(w, r, "file.bin", time.Time{}, bytes.NewReader(payload))
+	}))
+	defer srv.Close()
+
+	u, err := url.AbsoluteURLFromString(srv.URL + "/file.bin")
+	require.NoError(t, err)
+	res := NewHTTPResource(manifest.Link{}, srv.Client(), u)
+
+	// Whole resource: no Range header is sent, and the origin's 200 response
+	// must be accepted.
+	var buf bytes.Buffer
+	n, rerr := res.Stream(t.Context(), &buf, 0, 0)
+	require.Nil(t, rerr)
+	assert.Equal(t, int64(len(payload)), n)
+	assert.Equal(t, payload, buf.Bytes())
+	mu.Lock()
+	assert.Equal(t, []string{""}, ranges)
+	ranges = nil
+	mu.Unlock()
+
+	// Ranged: a single ranged request, answered with 206.
+	buf.Reset()
+	n, rerr = res.Stream(t.Context(), &buf, 100, 199)
+	require.Nil(t, rerr)
+	assert.Equal(t, int64(100), n)
+	assert.Equal(t, payload[100:200], buf.Bytes())
+	mu.Lock()
+	assert.Equal(t, []string{"bytes=100-199"}, ranges)
+	mu.Unlock()
 }
