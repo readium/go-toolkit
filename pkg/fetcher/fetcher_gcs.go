@@ -243,6 +243,12 @@ func (r *gcsResource) Stream(ctx context.Context, w io.Writer, start int64, end 
 	return n, nil
 }
 
+// HasEfficientStream implements EfficientStreamer. Stream performs a single
+// ranged object read and pipes the data through as it arrives.
+func (r *gcsResource) HasEfficientStream() bool {
+	return true
+}
+
 // Length implements Resource
 func (r *gcsResource) Length(ctx context.Context) (int64, *ResourceError) {
 	attrs, rerr := r.attrs(ctx)

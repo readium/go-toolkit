@@ -31,7 +31,8 @@ func (e explodedArchiveEntry) CRC32Checksum() *uint32 {
 }
 
 func (e explodedArchiveEntry) CompressedAs(compressionMethod CompressionMethod) bool {
-	return false
+	// Exploded-archive entries are plain files, i.e. stored uncompressed.
+	return compressionMethod == CompressionMethodStore
 }
 
 func (e explodedArchiveEntry) Read(start int64, end int64) ([]byte, error) {

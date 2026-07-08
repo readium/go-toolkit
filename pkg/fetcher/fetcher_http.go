@@ -189,6 +189,7 @@ func (r *httpResource) Read(ctx context.Context, start int64, end int64) ([]byte
 	if err != nil {
 		return nil, Other(err)
 	}
+	defer resp.Body.Close()
 
 	if (start == 0 && end == 0 && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent) || ((start != 0 || end != 0) && resp.StatusCode != http.StatusPartialContent) {
 		ex := httpStatusToException(resp.StatusCode)
@@ -197,7 +198,6 @@ func (r *httpResource) Read(ctx context.Context, start int64, end int64) ([]byte
 		}
 		return nil, ex
 	}
-	defer resp.Body.Close()
 
 	var data []byte
 	if resp.ContentLength >= 0 {
@@ -237,20 +237,29 @@ func (r *httpResource) Stream(ctx context.Context, w io.Writer, start int64, end
 	if err != nil {
 		return -1, Other(err)
 	}
-	if resp.StatusCode != http.StatusPartialContent {
+	defer resp.Body.Close()
+
+	// A request without a Range header (whole resource) is answered with 200,
+	// a ranged request must be answered with 206.
+	if (start == 0 && end == 0 && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent) || ((start != 0 || end != 0) && resp.StatusCode != http.StatusPartialContent) {
 		ex := httpStatusToException(resp.StatusCode)
 		if ex == nil {
 			return -1, Other(errors.New("unexpected HTTP status code: " + strconv.Itoa(resp.StatusCode)))
 		}
 		return -1, ex
 	}
-	defer resp.Body.Close()
 
 	n, err := io.Copy(w, resp.Body)
 	if err != nil {
 		return -1, Other(err)
 	}
 	return n, nil
+}
+
+// HasEfficientStream implements EfficientStreamer. Stream performs a single
+// ranged HTTP request and pipes the response body through as it arrives.
+func (r *httpResource) HasEfficientStream() bool {
+	return true
 }
 
 // Length implements Resource

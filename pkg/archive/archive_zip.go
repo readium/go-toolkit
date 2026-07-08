@@ -86,10 +86,14 @@ func (e *gozipArchiveEntry) CRC32Checksum() *uint32 {
 }
 
 func (e *gozipArchiveEntry) CompressedAs(compressionMethod CompressionMethod) bool {
-	if compressionMethod != CompressionMethodDeflate {
+	switch compressionMethod {
+	case CompressionMethodDeflate:
+		return e.file.Method == zip.Deflate
+	case CompressionMethodStore:
+		return e.file.Method == zip.Store
+	default:
 		return false
 	}
-	return e.file.Method == zip.Deflate
 }
 
 // This is a special mode to minimize the number of reads from the underlying reader.
@@ -113,6 +117,15 @@ func (e *gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	var f io.Reader
 	var err error
 	if minimizeReads {
+		f, err = e.file.OpenRaw()
+		if err != nil {
+			return nil, err
+		}
+	} else if e.CompressedLength() == 0 && e.file.Flags&zipFlagEncrypted == 0 {
+		// Raw bytes == content for stored entries; OpenRaw skips the CRC32
+		// pass and returns a seekable reader, so a ranged read seeks to the
+		// range start instead of reading and discarding the prefix — which
+		// for a remote archive would download the whole prefix.
 		f, err = e.file.OpenRaw()
 		if err != nil {
 			return nil, err
@@ -275,7 +288,11 @@ func (e *gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, 
 	}
 
 	if start == 0 && end == 0 {
-		return io.Copy(w, f)
+		n, err := copyRange(w, f, int64(e.file.UncompressedSize64))
+		if err == io.EOF {
+			err = nil
+		}
+		return n, err
 	}
 	if start > 0 {
 		if skr, ok := f.(io.Seeker); ok {
@@ -286,12 +303,75 @@ func (e *gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, 
 			return n, err
 		}
 	}
-	n, err := io.CopyN(w, f, end-start+1)
+	n, err := copyRange(w, f, end-start+1)
 	if n > 0 && err == io.EOF {
 		// Not EOF error if some data was read
 		err = nil
 	}
 	return n, err
+}
+
+// streamCopyBufferSize is the buffer size used when copying entry bytes to a
+// writer. The underlying archive is read at this granularity, and for a remote
+// archive each read can become its own range request — io.Copy's default 32KB
+// buffer would turn a large stream into one remote request per 32KB. It is
+// deliberately larger than the default remote range-cache threshold (1 MiB) so
+// that streamed media blocks are not needlessly copied into the range cache.
+const streamCopyBufferSize = 2 << 20 // 2 MiB
+
+// copyBufferSize bounds the copy buffer to the number of bytes actually being
+// copied, so streaming a small entry doesn't allocate the full buffer.
+func copyBufferSize(length int64) int {
+	if length <= 0 {
+		return 1
+	}
+	if length < streamCopyBufferSize {
+		return int(length)
+	}
+	return streamCopyBufferSize
+}
+
+// copyRange copies exactly length bytes from r to w using a full-sized read
+// per iteration, following io.CopyN semantics (io.EOF when r ends early).
+//
+// It deliberately avoids io.Copy/io.CopyBuffer: those delegate to the
+// destination's ReaderFrom when available (an http.ResponseWriter does), which
+// reads the source in its own small chunks — and every read of a remote
+// archive can be its own range request. io.ReadFull guarantees each iteration
+// asks the underlying reader for the whole buffer at once.
+func copyRange(w io.Writer, r io.Reader, length int64) (int64, error) {
+	if length <= 0 {
+		return 0, nil
+	}
+	buf := make([]byte, copyBufferSize(length))
+	var written int64
+	for written < length {
+		n := int64(len(buf))
+		if rem := length - written; rem < n {
+			n = rem
+		}
+		nr, rerr := io.ReadFull(r, buf[:n])
+		if nr > 0 {
+			nw, werr := w.Write(buf[:nr])
+			written += int64(nw)
+			if werr != nil {
+				return written, werr
+			}
+			if int64(nw) < int64(nr) {
+				return written, io.ErrShortWrite
+			}
+		}
+		if rerr == io.EOF || rerr == io.ErrUnexpectedEOF {
+			break // Source exhausted before the requested length
+		}
+		if rerr != nil {
+			return written, rerr
+		}
+	}
+	if written < length {
+		return written, io.EOF
+	}
+	return written, nil
 }
 
 func (e *gozipArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
