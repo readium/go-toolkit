@@ -77,6 +77,49 @@ func TestSnifferOPDS2RequiresManifestShape(t *testing.T) {
 	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"links":[{"rel":"self","href":"/feed","type":"application/opds+json"}]}`)))
 }
 
+// The archive opened during heavy sniffing is memoized (opened once, not per sniffer
+// or per entry read) and released when the sniffing context is closed.
+func TestSnifferContextArchiveLifecycle(t *testing.T) {
+	f, err := os.Open(filepath.Join("testdata", "webpub-package.unknown"))
+	require.NoError(t, err)
+	defer f.Close()
+
+	sc := &SnifferContext{content: NewSnifferFileContent(f)}
+
+	a1, err := sc.ContentAsArchive(t.Context())
+	require.NoError(t, err)
+	require.NotNil(t, a1)
+
+	// A second call, and archive-entry reads, reuse the same handle instead of reopening.
+	a2, err := sc.ContentAsArchive(t.Context())
+	require.NoError(t, err)
+	assert.True(t, a1 == a2, "archive should be memoized, not reopened")
+	assert.True(t, sc.ContainsArchiveEntryAt(t.Context(), "manifest.json"))
+
+	// Closing releases the handle, and accessing the archive afterwards fails
+	// gracefully rather than handing back a closed handle or panicking.
+	sc.Close()
+	assert.Nil(t, sc._contentAsArchive)
+	assert.False(t, sc.ContainsArchiveEntryAt(t.Context(), "manifest.json"))
+	assert.Nil(t, sc.ReadArchiveEntryAt(t.Context(), "manifest.json"))
+	sc.Close() // Idempotent.
+}
+
+// Opening non-archive content as an archive memoizes the error, so the archive-entry
+// helpers fail gracefully (no nil-handle panic) even when called repeatedly.
+func TestSnifferContextArchiveErrorMemoized(t *testing.T) {
+	f, err := os.Open(filepath.Join("testdata", "audiobook.json")) // Not an archive.
+	require.NoError(t, err)
+	defer f.Close()
+
+	sc := &SnifferContext{content: NewSnifferFileContent(f)}
+	_, err = sc.ContentAsArchive(t.Context())
+	require.Error(t, err)
+	assert.False(t, sc.ContainsArchiveEntryAt(t.Context(), "manifest.json"))
+	assert.Nil(t, sc.ReadArchiveEntryAt(t.Context(), "manifest.json"))
+	sc.Close() // Must not panic when nothing was opened.
+}
+
 // Content sniffing must not consume a non-seekable file: a sniffer running after one
 // which read the whole stream (e.g. as JSON) still sees the content.
 func TestSnifferNonSeekableFile(t *testing.T) {

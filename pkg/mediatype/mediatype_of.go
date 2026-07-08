@@ -71,6 +71,11 @@ func of(ctx context.Context, content SnifferContent, mediaTypes []string, fileEx
 			mediaTypes:     mediaTypes,
 			fileExtensions: fileExtensions,
 		}
+		// Open the archive (if the content is one) up front, so the sniffers that
+		// inspect archive entries share a single handle through the memoized context
+		// instead of each reopening and leaking it. It's closed once sniffing is done.
+		context.ContentAsArchive(ctx)
+		defer context.Close()
 		for _, sniffer := range sniffers {
 			mediaType := sniffer(ctx, context)
 			if mediaType != nil {
