@@ -108,14 +108,25 @@ func (f *S3Fetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 
 // Get implements Fetcher
 func (f *S3Fetcher) Get(ctx context.Context, link manifest.Link) Resource {
-	linkHref := link.Href.String()
+	// Use the decoded path for the object lookup: S3 keys are raw strings, so a
+	// percent-encoded HREF would never match, and queries/fragments don't belong in keys.
+	var linkHref string
+	if hrefURL := link.Href.Resolve(nil, nil); hrefURL != nil {
+		linkHref = hrefURL.Path()
+	} else {
+		linkHref = link.Href.String()
+	}
 	if strings.HasPrefix(linkHref, f.href) {
 		resourceFile := path.Join(f.key, strings.TrimPrefix(linkHref, f.href))
-		return &s3Resource{
-			link:   link,
-			client: f.client,
-			bucket: f.bucket,
-			key:    resourceFile,
+		// Keep the resource within the fetcher's key prefix: a `..` in the HREF must
+		// not let an incoming request reach objects elsewhere in the bucket.
+		if keyWithinRoot(f.key, resourceFile) {
+			return &s3Resource{
+				link:   link,
+				client: f.client,
+				bucket: f.bucket,
+				key:    resourceFile,
+			}
 		}
 	}
 

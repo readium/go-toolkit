@@ -86,6 +86,24 @@ func (a *GCSAsset) MediaType(ctx context.Context) mediatype.MediaType {
 	return *a.mediatype
 }
 
+// Location implements RelativePublicationAsset
+func (a *GCSAsset) Location() url.URL {
+	return a.uri
+}
+
+// CreateRelativeFetcher implements RelativePublicationAsset
+func (a *GCSAsset) CreateRelativeFetcher(ctx context.Context, root url.URL) (fetcher.Fetcher, error) {
+	u, ok := root.(url.AbsoluteURL)
+	if !ok {
+		return nil, errors.New("root of a GCS asset must be an absolute GS URL")
+	}
+	handle, err := u.ToGSObject(a.client)
+	if err != nil {
+		return nil, err
+	}
+	return fetcher.NewGCSFetcher("", a.client, handle), nil
+}
+
 // CreateFetcher implements PublicationAsset
 func (a *GCSAsset) CreateFetcher(ctx context.Context, dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
 	handle, err := a.handle()

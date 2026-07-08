@@ -2,6 +2,7 @@ package url
 
 import (
 	gurl "net/url"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -337,6 +338,20 @@ func TestRelativizeHttpURL(t *testing.T) {
 	assert.Equal(t, ur, base.Relativize(u))
 }
 
+// A URL that differs from the base only by host (or only by scheme) must not be
+// relativized, even when its path shares the base's path prefix: dropping the host
+// would silently repoint the URL at the base's origin.
+func TestRelativizeDifferentOriginSamePath(t *testing.T) {
+	base, _ := URLFromString("http://example.com/foo/")
+	for _, k := range []string{
+		"http://other-host.invalid/foo/quz/baz", // Same scheme, different host
+		"https://example.com/foo/quz/baz",       // Different scheme, same host
+	} {
+		u, _ := URLFromString(k)
+		assert.Equal(t, u, base.Relativize(u), k)
+	}
+}
+
 func TestRelativizeFileURL(t *testing.T) {
 	base, _ := URLFromString("file:///root/foo")
 	for k, v := range map[string]string{
@@ -424,4 +439,46 @@ func TestNormalize(t *testing.T) {
 	// The other components are left as-is.
 	u, _ = URLFromString("http://user:password@example.com:443/foo?b=b&a=a#fragment")
 	assert.Equal(t, "http://user:password@example.com:443/foo?b=b&a=a#fragment", u.Normalize().String())
+}
+
+// Windows drive paths round-trip through file URLs in the file:///C:/dir form,
+// so that resolving relative references does not corrupt the drive letter.
+func TestFilepathWindowsDrive(t *testing.T) {
+	base, err := AbsoluteURLFromString("file:///C:/pub/manifest.json")
+	if !assert.NoError(t, err) {
+		return
+	}
+	rel, err := RelativeURLFromString("../audio/track.mp3")
+	if !assert.NoError(t, err) {
+		return
+	}
+	resolved := base.Resolve(rel).(AbsoluteURL)
+	assert.Equal(t, "file:///C:/audio/track.mp3", resolved.String())
+	assert.Equal(t, filepath.FromSlash("C:/audio/track.mp3"), resolved.ToFilepath())
+}
+
+func TestFilepathUnix(t *testing.T) {
+	if filepath.Separator == '\\' {
+		t.Skip("unix-style absolute path expectations are not stable on Windows")
+	}
+	u, err := FromFilepath("/pub/manifest.json")
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, "file:///pub/manifest.json", u.String())
+	assert.Equal(t, filepath.FromSlash("/pub/manifest.json"), u.(AbsoluteURL).ToFilepath())
+}
+
+// A relative filepath is made absolute, so that resolving relative references against
+// the resulting URL cannot silently turn it into a file system-absolute path.
+func TestFilepathRelative(t *testing.T) {
+	u, err := FromFilepath(filepath.Join("some", "relative", "file.txt"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	abs, err := filepath.Abs(filepath.Join("some", "relative", "file.txt"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, abs, u.(AbsoluteURL).ToFilepath())
 }

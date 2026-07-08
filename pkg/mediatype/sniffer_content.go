@@ -20,14 +20,17 @@ type SnifferFileContent struct {
 	buffer []byte
 }
 
-func NewSnifferFileContent(file fs.File) SnifferFileContent {
-	return SnifferFileContent{file: file}
+// The returned pointer must be shared by every reader of the content: for a file which
+// is not an [io.ReadSeeker], the content is buffered on first read, and a copy would
+// lose the buffer while the underlying file is already drained.
+func NewSnifferFileContent(file fs.File) *SnifferFileContent {
+	return &SnifferFileContent{file: file}
 }
 
 const MaxReadSize = 5 * 1024 * 1024 // 5MB
 
 // Read implements SnifferContent
-func (s SnifferFileContent) Read() []byte {
+func (s *SnifferFileContent) Read() []byte {
 	info, err := s.file.Stat()
 	if err != nil {
 		return nil
@@ -53,7 +56,7 @@ func (s SnifferFileContent) Read() []byte {
 }
 
 // Stream implements SnifferContent
-func (s SnifferFileContent) Stream() io.Reader {
+func (s *SnifferFileContent) Stream() io.Reader {
 	if of, ok := s.file.(*os.File); ok {
 		of.Seek(0, io.SeekStart)
 		return bufio.NewReader(s.file)

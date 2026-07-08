@@ -28,6 +28,7 @@ type SnifferContext struct {
 	_contentAsJSON          map[string]interface{}
 	_loadedContentAsJSON    bool
 	_contentAsArchive       archive.Archive
+	_contentAsArchiveErr    error
 	_loadedContentAsArchive bool
 }
 
@@ -158,40 +159,45 @@ func (s SnifferContext) ContentAsXML() *XMLNode {
 
 // Content as an Archive instance.
 // Warning: Archive is only supported for a local file, for now.
+// The archive is opened once and memoized (both the handle and any error), so callers
+// must not close it; it's released when the sniffing context is closed with [Close].
 func (s *SnifferContext) ContentAsArchive(ctx context.Context) (archive.Archive, error) {
 	if !s._loadedContentAsArchive {
 		s._loadedContentAsArchive = true
-		switch s.content.(type) {
-		case SnifferFileContent:
-			{
-				fileSniffer := s.content.(SnifferFileContent)
-				u, err := url.FromFilepath(fileSniffer.Name())
-				if err != nil {
-					return nil, err
-				}
-				a, err := archive.NewArchiveFactory().Open(ctx, u, "")
-				if err != nil {
-					return nil, err
-				}
-				s._contentAsArchive = a
-			}
-		case SnifferBytesContent:
-			{
-				fileSniffer := s.content.(SnifferBytesContent)
-				a, err := archive.NewArchiveFactory().OpenBytes(ctx, fileSniffer.bytes, "")
-				if err != nil {
-					return nil, err
-				}
-				s._contentAsArchive = a
-			}
-		default:
-			{
-				return nil, errors.New("SnifferContent type does not support opening as an archive")
-			}
-		}
+		s._contentAsArchive, s._contentAsArchiveErr = s.openArchive(ctx)
 	}
-	return s._contentAsArchive, nil
+	return s._contentAsArchive, s._contentAsArchiveErr
 }
+
+func (s *SnifferContext) openArchive(ctx context.Context) (archive.Archive, error) {
+	switch content := s.content.(type) {
+	case *SnifferFileContent:
+		u, err := url.FromFilepath(content.Name())
+		if err != nil {
+			return nil, err
+		}
+		return archive.NewArchiveFactory().Open(ctx, u, "")
+	case SnifferBytesContent:
+		return archive.NewArchiveFactory().OpenBytes(ctx, content.bytes, "")
+	default:
+		return nil, errors.New("SnifferContent type does not support opening as an archive")
+	}
+}
+
+// Close releases any resources opened while sniffing the content, such as the archive
+// handle memoized by [ContentAsArchive] (which otherwise leaks its underlying file
+// until garbage collection). Safe to call more than once. Accessing the archive after
+// closing fails gracefully rather than returning a closed handle.
+func (s *SnifferContext) Close() {
+	if s._contentAsArchive != nil {
+		s._contentAsArchive.Close()
+		s._contentAsArchive = nil
+	}
+	s._loadedContentAsArchive = true
+	s._contentAsArchiveErr = errClosedSnifferContext
+}
+
+var errClosedSnifferContext = errors.New("the sniffing context is closed")
 
 // Content parsed as generic JSON interface.
 func (s SnifferContext) ContentAsJSON() map[string]interface{} {
@@ -209,11 +215,6 @@ func (s SnifferContext) ContentAsJSON() map[string]interface{} {
 		s._contentAsJSON = jd
 	}
 	return s._contentAsJSON
-}
-
-// Content parsed as a Readium Web Publication Manifest.
-func (s SnifferContext) ContentAsRWPM() {
-	panic("Not implemented!") // TODO think out the best go equivalent (without circular imports)
 }
 
 // Raw bytes stream of the content.
@@ -279,7 +280,7 @@ func (s SnifferContext) ContainsJSONKeys(keys ...string) bool {
 }
 
 // Returns whether an Archive entry exists in this file.
-func (s SnifferContext) ContainsArchiveEntryAt(ctx context.Context, path string) bool {
+func (s *SnifferContext) ContainsArchiveEntryAt(ctx context.Context, path string) bool {
 	a, err := s.ContentAsArchive(ctx)
 	if err != nil {
 		return false
@@ -292,7 +293,7 @@ func (s SnifferContext) ContainsArchiveEntryAt(ctx context.Context, path string)
 }
 
 // Returns the Archive entry data at the given [path] in this file.
-func (s SnifferContext) ReadArchiveEntryAt(ctx context.Context, path string) []byte {
+func (s *SnifferContext) ReadArchiveEntryAt(ctx context.Context, path string) []byte {
 	a, err := s.ContentAsArchive(ctx)
 	if err != nil {
 		return nil

@@ -134,7 +134,7 @@ func (u RelativeURL) Relativize(url URL) URL {
 		if len(u.url.Opaque) > 0 || len(url.url.Opaque) > 0 {
 			return url
 		}
-		if u.url.Scheme != url.url.Scheme && u.url.Host != url.url.Host {
+		if u.url.Scheme != url.url.Scheme || u.url.Host != url.url.Host {
 			return url
 		}
 
@@ -273,7 +273,7 @@ func (u AbsoluteURL) Relativize(url URL) URL {
 		if len(u.url.Opaque) > 0 || len(url.url.Opaque) > 0 {
 			return url
 		}
-		if u.url.Scheme != url.url.Scheme && u.url.Host != url.url.Host {
+		if u.url.Scheme != url.url.Scheme || u.url.Host != url.url.Host {
 			return url
 		}
 
@@ -365,7 +365,13 @@ func (u AbsoluteURL) ToFilepath() string {
 	if !u.IsFile() {
 		return ""
 	}
-	return filepath.FromSlash(u.url.Path)
+	p := u.url.Path
+	// Strip the root slash of a Windows drive path: file:///C:/dir is the path C:/dir.
+	if len(p) >= 3 && p[0] == '/' && p[2] == ':' &&
+		(('a' <= p[1] && p[1] <= 'z') || ('A' <= p[1] && p[1] <= 'Z')) {
+		p = p[1:]
+	}
+	return filepath.FromSlash(p)
 }
 
 // Creates a [AbsoluteURL] from its encoded string representation.
@@ -410,9 +416,28 @@ func FromEPUBHref(href string) (URL, error) {
 	return u, nil
 }
 
+// Creates a file URL from a filepath, made absolute against the current working
+// directory when relative: a file URL path must be rooted, since resolving relative
+// references against it prepends a root slash anyway (RFC 3986 merge), silently
+// turning a working-directory-relative path into a file system-absolute one.
 func FromFilepath(path string) (URL, error) {
+	apath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	p := filepath.ToSlash(apath)
+	// filepath.Abs drops any trailing separator, but in a URL it distinguishes a
+	// directory, keeping relative references inside it when resolved against the URL.
+	if !strings.HasSuffix(p, "/") &&
+		(strings.HasSuffix(path, "/") || strings.HasSuffix(path, string(filepath.Separator))) {
+		p += "/"
+	}
+	// A Windows drive path like C:\dir becomes file:///C:/dir.
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
 	return AbsoluteURLFromGo(&gurl.URL{
-		Path:   filepath.ToSlash(path),
+		Path:   p,
 		Scheme: SchemeFile.String(),
 	})
 }
