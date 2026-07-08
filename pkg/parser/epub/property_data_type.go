@@ -78,15 +78,34 @@ func parsePrefixes(prefixes string) map[string]string {
 	return p
 }
 
-var muchSpaceSuchWowMatcher = regexp.MustCompile(`\s+`)
-
 func parseProperties(raw string) []string {
-	vals := muchSpaceSuchWowMatcher.Split(raw, -1)
-	s := make([]string, 0, len(vals))
-	for _, v := range vals {
-		if v != "" {
-			s = append(s, v)
+	return strings.Fields(raw)
+}
+
+// collapseWhitespace trims leading/trailing ASCII whitespace and replaces every
+// internal run of it with a single space. It reproduces the previous
+// regexp.ReplaceAllString(`\s+`, " ") + TrimSpace behavior — deliberately ASCII
+// only (the same set RE2's \s matches), so non-ASCII spaces such as the U+3000
+// ideographic space common in CJK titles are preserved. Scanning byte-wise is
+// safe because UTF-8 continuation bytes are always >= 0x80 and never collide
+// with ASCII whitespace.
+func collapseWhitespace(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	pendingSpace := false
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case ' ', '\t', '\n', '\f', '\r':
+			if b.Len() > 0 {
+				pendingSpace = true
+			}
+		default:
+			if pendingSpace {
+				b.WriteByte(' ')
+				pendingSpace = false
+			}
+			b.WriteByte(s[i])
 		}
 	}
-	return s
+	return b.String()
 }

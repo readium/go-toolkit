@@ -107,10 +107,10 @@ func TestParseEncryptionDataScheme(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := openProtectionFixture(t, tt.file)
 
-			scheme, err := protection.IdentifyEPUBProtection(t.Context(), f)
+			scheme, encryptionDoc, err := protection.IdentifyEPUBProtection(t.Context(), f)
 			require.NoError(t, err)
 
-			enc, err := parseEncryptionData(t.Context(), f, scheme.URI())
+			enc, err := parseEncryptionData(t.Context(), f, scheme.URI(), encryptionDoc)
 			require.NoError(t, err)
 			if !tt.expectEntries {
 				assert.Empty(t, enc)
