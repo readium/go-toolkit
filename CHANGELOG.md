@@ -4,6 +4,60 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.15.0] - 2026-07-08
+
+### Added
+
+- Parsing of bare Readium Web Publication Manifests (e.g. a standalone `manifest.json`, `.audiobook` or `.divina` manifest file) is now implemented. Previously, trying to open one would panic with `remote HttpFetcher not implemented!`. The publication's resources are served relative to the manifest's location, whether it lives on a local file system or on a remote source (HTTP(S), S3, GCS):
+    - HREFs climbing above the manifest's directory (e.g. `../audio/track.mp3`) are supported: the publication is rooted at the topmost directory reached by the manifest's HREFs, and all HREFs are normalized relative to that root
+    - Absolute HTTP(S) HREFs in a manifest are fetched as-is using the parser's HTTP client, since a manifest is free to reference resources hosted anywhere
+    - For implementers: this is enabled by the new `asset.RelativePublicationAsset` interface (`Location` + `CreateRelativeFetcher`), which the file, HTTP, S3 and GCS assets all implement
+- Publications parsed from a WebPub manifest or package now get services attached: a positions service for publications conforming to the PDF (single-PDF reading order only), Divina, or EPUB profiles, and a content (text extraction) service when the reading order contains HTML resources. Previously, WebPubs got no services at all
+- "Heavy" (content-based) sniffing of Readium Web Publications is now implemented in the `mediatype` package, closing a long-standing TODO. Bare manifests and packages containing a `manifest.json` are now recognized by their content, including the profile-specific (audiobook, Divina) and LCP-protected variants
+- OPDS 2 feeds and publications are now also detected by heavy sniffing, matching the behavior of the other toolkits
+- New `TransformHREFs` functions on `Manifest`, `Metadata`, `Link`, `LinkList`, `Contributors` and `PublicationCollectionMap` to apply a transformation to every HREF in a manifest (used for the HREF normalization mentioned above)
+- New `fetcher.NewHTTPResource` function to create a `Resource` serving the contents of an HTTP(S) URL
+- New `fetcher.EfficientStreamer` interface: a `Resource` can report whether its `Stream` retrieves only the requested byte range from the underlying source, making it at least as efficient as `Read` even for remote sources. The HTTP, S3 and GCS resources report true (their `Stream` is a single ranged request piped through as it arrives), and archive entry resources report true for stored entries but false for deflate-compressed ones (whose ranged `Stream` decompresses from the entry start, unlike `Read` which uses a persistent random-access index). Consumers serving remote publications over HTTP can use this to stream media instead of buffering entire ranges in memory
+- Guided navigation documents can now be generated from XHTML/HTML content (*alpha*): the new `guidednavigation/converter` package converts an HTML resource into a guided navigation document
+- The EPUB guided navigation service now covers the entire reading order: resources with a SMIL media overlay are served from it as before, while XHTML/HTML resources without one fall back to the new HTML conversion. Next/prev links traverse all guidable resources in reading order
+- WebPubs with (X)HTML contents now get a guided navigation service too
+
+### Changed
+
+- EPUB parsing has been optimized:
+    - ZIP archive entries are now looked up through a lazily-built index instead of scanning the archive's entire file list for every resource access
+    - `encryption.xml` is now read and parsed only once: `protection.IdentifyEPUBProtection` returns the document it already parsed as a new second return value, and the EPUB parser reuses it
+    - DRM detection now probes directly for the well-known protection files instead of listing every resource in the publication first
+    - Whitespace collapsing of navigation titles no longer uses a regexp
+- Streaming publication resources to network connections (e.g. HTTP responses) can now use the kernel's zero-copy `sendfile` fast path: `Stream` calls on local file resources (whole and ranged), stored (uncompressed) entries of local ZIP archives, and the raw deflate passthrough (`StreamCompressed`/`StreamCompressedGzip`) all copy straight from a bare file handle instead of bouncing through userspace buffers. Streams also use a private file handle per call, so concurrent streams of the same resource no longer serialize
+- Streaming stored ZIP entries no longer pays a CRC32 verification pass on every serve; checksums are still verified by `Read`-based access
+- Streaming stored entries of remote (or otherwise reader-backed) ZIP archives now copies with a 2 MiB buffer instead of `io.Copy`'s 32 KiB, so a large media stream costs one range request per 2 MiB rather than one per 32 KiB. The buffer is deliberately larger than the default remote range-cache threshold so streamed media blocks don't churn the range cache
+- `CompressedAs(CompressionMethodStore)` now correctly reports true for stored ZIP entries and exploded-archive entries; it previously returned false for anything but the deflate method
+- MP4 (M4B) chapter-title samples, which are often scattered throughout the file, are now fetched in parallel. This can significantly reduce the time it takes to open remote audiobooks with many chapters. The audio parser's `WithConcurrency` option now also bounds this within-file read parallelism
+- Parsing a publication whose mediatype promises a profile is now validated like the existing LCPDF check: an Audiobook or Divina publication (or manifest) that doesn't conform to its profile is rejected
+- The order of content sniffers has changed: OPDS, LCP license, and WebPub sniffing now run before archive sniffing, so that a package containing a RWPM `manifest.json` isn't misdetected as a CBZ or ZAB
+- `mediatype.NewSnifferFileContent` now returns a pointer, and the sniffer context has a new `Close` function which the sniffer uses to release resources once sniffing is done. Previously, archives opened during sniffing were leaked until garbage collection
+- `url.FromFilepath` now makes relative paths absolute against the working directory, and handles Windows drive paths (`C:\dir` becomes `file:///C:/dir`). `AbsoluteURL.ToFilepath` performs the reverse conversion, fixing the opening of publications via file URLs on Windows
+- Updated dependencies
+
+### Fixed
+
+- Ranged `Read` calls on S3 resources ignored the computed byte range and downloaded the entire object
+- Path traversal in fetchers: a `..` in a link HREF handed to the HTTP, S3, or GCS fetcher could address resources outside the fetcher's root (base URL, key or object name prefix). Resources are now contained within the root, the way the file fetcher sandboxes its directory. The file fetcher also no longer matches sibling paths sharing a prefix (e.g. `dir-other` passing as inside `dir`)
+- The S3 and GCS fetchers now decode percent-encoded HREFs before looking up objects, so links to object keys containing e.g. spaces resolve correctly
+- Concurrent ranged reads of the same local file resource could interfere with each other because they shared the file handle's offset; ranged reads are now position-independent and full reads are serialized
+- `Relativize` on URLs only gave up when both the scheme and the host differed, so URLs could get relativized across different schemes or hosts
+- Errors while probing for EPUB DRM files (e.g. a timeout on a remote source) are now surfaced instead of being treated as "no DRM"
+- Archive entries treated a negative range start as widening the requested range; it is now clamped to 0, consistent with the file fetcher
+- Opening an entry of a remote ZIP archive could download the rest of the archive from the origin: the local-file-header probe issued an open-ended range request and then drained it to EOF before closing. Since an entry is re-opened for every ranged read, seeking through a large media file inside a remote archive re-downloaded the archive tail on every request. The probe now drains at most 4 KiB before aborting the transfer, and the headers of entries too large to precache are now cached, so subsequent opens of the same entry make no remote request at all
+- Ranged `Read` calls on stored ZIP entries read and discarded every byte before the range start — downloading the whole prefix, for remote archives — instead of seeking. They now seek directly to the range via the raw entry reader (also skipping the CRC32 pass, consistent with `Stream`)
+- `Stream` on an HTTP resource required a `206 Partial Content` response even when streaming the whole resource, where no `Range` header is sent and origins correctly answer with `200 OK`, so whole-resource streams always failed. HTTP response bodies are now also closed on error paths in the HTTP resource's `Read` and `Stream`
+
+### Removed
+
+- `SnifferContext.ContentAsRWPM`, a placeholder that panicked when called, has been removed. Heavy sniffing of RWPM content is now actually implemented (see above)
+- The content (text extraction) service is no longer attached to EPUB and WebPub publications; the guided navigation service replaces it. It's still available in the code if you need it
+
 ## [0.14.0] - 2026-06-06
 
 ### Added
