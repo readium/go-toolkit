@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"weak"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -99,7 +100,10 @@ func (f *FileFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 			if err != nil {
 				continue // TODO somehow get this error out?
 			}
-			if strings.HasPrefix(rapath, iapath) {
+			// The path must be [itemFile] itself, or sit below it beyond a separator:
+			// a plain prefix check would let "dir-other" pass as a descendant of "dir".
+			sep := string(filepath.Separator)
+			if rapath == iapath || strings.HasPrefix(rapath, strings.TrimSuffix(iapath, sep)+sep) {
 				resource := NewFileResource(link, resourceFile)
 				f.resources = append(f.resources, weak.Make(resource))
 				return resource
@@ -129,8 +133,9 @@ func NewFileFetcher(href string, fpath string) *FileFetcher {
 type FileResource struct {
 	link manifest.Link
 	path string
+
+	mu   sync.Mutex // guards lazily opening and closing file
 	file *os.File
-	read bool
 }
 
 // Link implements Resource
@@ -145,6 +150,8 @@ func (r *FileResource) Properties() manifest.Properties {
 
 // Close implements Resource
 func (r *FileResource) Close() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.file != nil {
 		r.file.Close()
 	}
@@ -155,11 +162,13 @@ func (r *FileResource) File() string {
 	return r.path
 }
 
+// open returns the lazily-opened file handle. The returned *os.File is only
+// safe for position-independent access (ReadAt, Stat); sequential access that
+// moves the file offset must hold r.mu.
 func (r *FileResource) open() (*os.File, *ResourceError) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.file != nil {
-		if _, err := r.file.Seek(0, io.SeekStart); err != nil {
-			return nil, Other(err)
-		}
 		return r.file, nil
 	}
 	f, err := os.Open(r.path)
@@ -180,52 +189,66 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 	return f, nil
 }
 
-// Read implements Resource
+// Read implements Resource. Ranged reads (end > 0) are safe for concurrent use.
 func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
 	defer runtime.KeepAlive(r)
 	if end < start {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
+	if start < 0 {
+		start = 0
+	}
 	f, ex := r.open()
 	if ex != nil {
 		return nil, ex
 	}
-	r.read = true
 	if start == 0 && end == 0 {
-		data, err := io.ReadAll(f)
+		fi, err := f.Stat()
 		if err != nil {
 			return nil, Other(err)
 		}
-		return data, nil
-	}
-	data := make([]byte, end-start+1)
-	if start > 0 {
-		n, err := f.ReadAt(data, start)
+		data := make([]byte, fi.Size())
+		n, err := f.ReadAt(data, 0)
 		if err != nil && err != io.EOF {
 			return nil, Other(err)
 		}
 		return data[:n], nil
-	} else {
-		n, err := io.ReadFull(f, data)
-		if err != nil && err != io.ErrUnexpectedEOF {
-			return nil, Other(err)
-		}
-		return data[:n], nil
 	}
+	data := make([]byte, end-start+1)
+	n, err := f.ReadAt(data, start)
+	if err != nil && err != io.EOF {
+		return nil, Other(err)
+	}
+	return data[:n], nil
 }
 
 // Stream implements Resource
 func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
-	defer runtime.KeepAlive(r)
 	if end < start {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
 		return -1, err
 	}
-	f, ex := r.open()
-	if ex != nil {
-		return -1, ex
+	if start < 0 {
+		start = 0
 	}
-	r.read = true
+	// Streaming uses a private handle per call: the offset-based access below
+	// never contends with concurrent streams of the same resource, and the
+	// source stays a bare *os.File (wrapped only by io.CopyN's
+	// *io.LimitedReader, which the runtime unwraps), preserving the kernel
+	// sendfile fast path when w is a network connection. An io.SectionReader
+	// here would force a userspace copy loop.
+	f, err := os.Open(r.path)
+	if err != nil {
+		return -1, OsErrorToException(err)
+	}
+	defer f.Close()
+	fi, err := f.Stat()
+	if err != nil {
+		return -1, Other(err)
+	}
+	if fi.IsDir() {
+		return -1, NotFound(errors.New("is a directory"))
+	}
 	if start == 0 && end == 0 {
 		n, err := io.Copy(w, f)
 		if err != nil {
@@ -233,11 +256,8 @@ func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end
 		}
 		return n, nil
 	}
-	if start > 0 {
-		_, err := f.Seek(start, 0)
-		if err != nil {
-			return -1, Other(err)
-		}
+	if _, err := f.Seek(start, io.SeekStart); err != nil {
+		return -1, Other(err)
 	}
 	n, err := io.CopyN(w, f, end-start+1)
 	if err != nil && err != io.EOF {

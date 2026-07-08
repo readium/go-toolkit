@@ -122,12 +122,23 @@ func (f *GCSFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 
 // Get implements Fetcher
 func (f *GCSFetcher) Get(ctx context.Context, link manifest.Link) Resource {
-	linkHref := link.Href.String()
+	// Use the decoded path for the object lookup: GCS object names are raw strings, so a
+	// percent-encoded HREF would never match, and queries/fragments don't belong in names.
+	var linkHref string
+	if hrefURL := link.Href.Resolve(nil, nil); hrefURL != nil {
+		linkHref = hrefURL.Path()
+	} else {
+		linkHref = link.Href.String()
+	}
 	if strings.HasPrefix(linkHref, f.href) {
 		resourceFile := path.Join(f.handle.ObjectName(), strings.TrimPrefix(linkHref, f.href))
-		return &gcsResource{
-			handle: f.client.Bucket(f.handle.BucketName()).Object(resourceFile),
-			link:   link,
+		// Keep the resource within the fetcher's object-name prefix: a `..` in the HREF
+		// must not let an incoming request reach objects elsewhere in the bucket.
+		if keyWithinRoot(f.handle.ObjectName(), resourceFile) {
+			return &gcsResource{
+				handle: f.client.Bucket(f.handle.BucketName()).Object(resourceFile),
+				link:   link,
+			}
 		}
 	}
 
@@ -230,6 +241,12 @@ func (r *gcsResource) Stream(ctx context.Context, w io.Writer, start int64, end 
 		return -1, Other(err)
 	}
 	return n, nil
+}
+
+// HasEfficientStream implements EfficientStreamer. Stream performs a single
+// ranged object read and pipes the data through as it arrives.
+func (r *gcsResource) HasEfficientStream() bool {
+	return true
 }
 
 // Length implements Resource

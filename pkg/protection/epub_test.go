@@ -26,7 +26,7 @@ func TestIdentifyEPUBProtection(t *testing.T) {
 			require.NoError(t, err)
 			defer f.Close()
 
-			got, err := IdentifyEPUBProtection(t.Context(), f)
+			got, _, err := IdentifyEPUBProtection(t.Context(), f)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got, "unexpected scheme for %s", tt.file)
 		})
@@ -34,7 +34,7 @@ func TestIdentifyEPUBProtection(t *testing.T) {
 }
 
 func TestIdentifyEPUBProtectionNoDRM(t *testing.T) {
-	got, err := IdentifyEPUBProtection(t.Context(), fetcher.EmptyFetcher{})
+	got, _, err := IdentifyEPUBProtection(t.Context(), fetcher.EmptyFetcher{})
 	require.NoError(t, err)
 	assert.Equal(t, NoDRM, got)
 }

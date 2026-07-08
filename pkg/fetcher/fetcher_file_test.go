@@ -2,6 +2,8 @@ package fetcher
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -81,6 +83,27 @@ func TestFileFetcherDirectoryTraversalNotFound(t *testing.T) {
 	assert.Equal(t, NotFound(err.Cause), err, "cannot traverse up a directory using '..'")
 	_, err = resource.Stream(t.Context(), &bytes.Buffer{}, 0, 0)
 	assert.Equal(t, NotFound(err.Cause), err, "cannot traverse up a directory using '..'")
+}
+
+func TestFileFetcherSiblingDirectoryNotFound(t *testing.T) {
+	// A directory sharing a name prefix with the fetcher's root must not be reachable.
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "pub"), 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "pub-secret"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "pub", "inside.txt"), []byte("inside"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "pub-secret", "leak.txt"), []byte("leak"), 0o644))
+
+	fetcher := NewFileFetcher("", filepath.Join(dir, "pub"))
+	defer fetcher.Close()
+
+	resource := fetcher.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString("inside.txt", false)})
+	bin, err := resource.Read(t.Context(), 0, 0)
+	require.Nil(t, err)
+	assert.Equal(t, "inside", string(bin))
+
+	resource = fetcher.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString("../pub-secret/leak.txt", false)})
+	_, err = resource.Read(t.Context(), 0, 0)
+	assert.Equal(t, NotFound(err.Cause), err, "cannot escape into a prefix-sharing sibling directory")
 }
 
 func TestFileFetcherReadRange(t *testing.T) {

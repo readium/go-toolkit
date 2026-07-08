@@ -31,14 +31,15 @@ func (e DefaultArchiveFactory) Open(ctx context.Context, location url.URL, passw
 		return nil, errors.New("unsupported scheme " + u.Scheme().String())
 	}
 
-	st, err := os.Stat(u.Path())
+	path := u.ToFilepath()
+	st, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 	if st.IsDir() {
-		return e.explodedFactory.Open(u.Path(), password)
+		return e.explodedFactory.Open(path, password)
 	} else {
-		return e.gozipFactory.Open(u.Path(), password)
+		return e.gozipFactory.Open(path, password)
 	}
 }
 

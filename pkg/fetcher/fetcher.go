@@ -2,9 +2,25 @@ package fetcher
 
 import (
 	"context"
+	"path"
+	"strings"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
 )
+
+// Reports whether the slash-separated object key [key] stays within [root]: it is
+// [root] itself or sits below it. Used by the object-store fetchers to keep a `..`
+// in an HREF from addressing objects outside the fetcher's prefix, the way
+// [FileFetcher] contains resources within its directory. An empty [root] is the
+// bucket root, which only forbids upward (`..`) escapes.
+func keyWithinRoot(root, key string) bool {
+	root = path.Clean(root)
+	key = path.Clean(key)
+	if root == "." || root == "/" {
+		return key != ".." && !strings.HasPrefix(key, "../")
+	}
+	return key == root || strings.HasPrefix(key, root+"/")
+}
 
 // Fetcher provides access to a Resource from a Link.
 type Fetcher interface {

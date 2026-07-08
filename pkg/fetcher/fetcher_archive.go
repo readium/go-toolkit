@@ -191,6 +191,16 @@ func (r *entryResource) Stream(ctx context.Context, w io.Writer, start int64, en
 	return -1, Other(err)
 }
 
+// HasEfficientStream implements EfficientStreamer. Stored (uncompressed)
+// entries are streamed by seeking straight to the requested range of the
+// archive, so Stream reads only what is requested even from a remote archive.
+// Deflate-compressed entries are excluded: a ranged Stream has to decompress
+// from the start of the entry on every call, whereas Read uses a random-access
+// index that persists across calls.
+func (r *entryResource) HasEfficientStream() bool {
+	return r.entry.CompressedAs(archive.CompressionMethodStore)
+}
+
 // CompressedAs implements CompressedResource
 func (r *entryResource) CompressedAs(compressionMethod archive.CompressionMethod) bool {
 	return r.entry.CompressedAs(compressionMethod)

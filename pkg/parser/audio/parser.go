@@ -33,9 +33,10 @@ type AudioParser struct {
 	// range requests; smaller blocks transfer less for scattered reads.
 	cacheBlockSize int
 
-	// concurrency caps how many audio files are probed in parallel. Zero means
-	// the default. Higher values hide more per-file latency on remote sources at
-	// the cost of more in-flight requests.
+	// concurrency caps how many audio files are probed in parallel, and how many
+	// parallel reads are used within a file (e.g. fetching scattered chapter
+	// samples). Zero means the default. Higher values hide more per-file latency
+	// on remote sources at the cost of more in-flight requests.
 	concurrency int
 }
 
@@ -64,8 +65,12 @@ func WithCacheBlockSize(size int) Option {
 }
 
 // WithConcurrency sets how many audio files are probed in parallel while
-// extracting rich metadata. The default is 8. A value <= 0 is ignored and keeps
-// the default. Use 1 to probe sequentially.
+// extracting rich metadata, and also bounds the parallel reads used within a
+// single file (e.g. fetching the scattered chapter-title samples of an MP4
+// chapter track). The default is 8. A value <= 0 is ignored and keeps the
+// default. Use 1 to probe and read fully sequentially. Note that both levels
+// can be in flight at once, so the worst-case number of concurrent requests is
+// roughly the square of this value.
 func WithConcurrency(n int) Option {
 	return func(p *AudioParser) {
 		if n > 0 {

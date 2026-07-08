@@ -19,16 +19,17 @@ type probeResult struct {
 }
 
 // probeAudioFile extracts the duration, bitrate and any embedded chapters from a
-// single audio resource. The bitrate is computed as the average over the whole
-// resource, which is the most portable definition across the many supported
-// container formats.
-func probeAudioFile(ctx context.Context, res fetcher.Resource, link manifest.Link, tags *audioTags, extractChapters bool) probeResult {
+// single audio resource. concurrency bounds the parallel reads used to fetch
+// scattered chapter samples (<= 0 for the default). The bitrate is computed as
+// the average over the whole resource, which is the most portable definition
+// across the many supported container formats.
+func probeAudioFile(ctx context.Context, res fetcher.Resource, link manifest.Link, tags *audioTags, extractChapters bool, concurrency int) probeResult {
 	size, _ := res.Length(ctx)
 
 	var result probeResult
 	switch audioFamily(link) {
 	case familyMP4:
-		duration, chapters, _ := probeMP4(ctx, res, extractChapters)
+		duration, chapters, _ := probeMP4(ctx, res, extractChapters, concurrency)
 		result.Duration = duration
 		result.Chapters = chapters
 	case familyOgg:

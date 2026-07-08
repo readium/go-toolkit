@@ -31,12 +31,16 @@ func (e explodedArchiveEntry) CRC32Checksum() *uint32 {
 }
 
 func (e explodedArchiveEntry) CompressedAs(compressionMethod CompressionMethod) bool {
-	return false
+	// Exploded-archive entries are plain files, i.e. stored uncompressed.
+	return compressionMethod == CompressionMethodStore
 }
 
 func (e explodedArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	if end < start {
 		return nil, errors.New("range not satisfiable")
+	}
+	if start < 0 {
+		start = 0
 	}
 	f, err := os.Open(filepath.Join(e.dir, e.filepath))
 	if err != nil {
@@ -69,6 +73,9 @@ func (e explodedArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 func (e explodedArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, error) {
 	if end < start {
 		return -1, errors.New("range not satisfiable")
+	}
+	if start < 0 {
+		start = 0
 	}
 	f, err := os.Open(filepath.Join(e.dir, e.filepath))
 	if err != nil {

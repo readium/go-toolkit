@@ -9,6 +9,7 @@ import (
 
 	mp4 "github.com/abema/go-mp4"
 	"github.com/readium/go-toolkit/pkg/fetcher"
+	"golang.org/x/sync/errgroup"
 )
 
 // chapterCoalesceGap is the largest gap between two chapter text samples that is
@@ -16,14 +17,23 @@ import (
 // chapter track stored contiguously into one read.
 const chapterCoalesceGap = 64 << 10
 
+// defaultChapterReadConcurrency bounds how many coalesced sample runs are
+// fetched in parallel when the parser doesn't configure a concurrency. Chapter
+// titles are often interleaved with the audio (one tiny sample every chapter),
+// so a book can need dozens of scattered reads; fetching them concurrently
+// hides the per-request latency of remote sources.
+const defaultChapterReadConcurrency = 8
+
 // probeMP4 extracts the total duration (in seconds) and any embedded chapters
-// from an ISO-BMFF / MP4 container (m4a, m4b, m4p, mp4, …).
+// from an ISO-BMFF / MP4 container (m4a, m4b, m4p, mp4, …). concurrency bounds
+// the parallel reads used to fetch scattered chapter samples (<= 0 for the
+// default).
 //
 // The duration is read from the movie header (`mvhd`). Chapters are read from a
 // QuickTime/iTunes chapter track: a track whose media handler is `text`, whose
 // samples are length-prefixed UTF strings located in `mdat`, and whose
 // per-sample timing comes from the `stts` table.
-func probeMP4(ctx context.Context, res fetcher.Resource, extractChapters bool) (duration float64, chapters []chapterEntry, err error) {
+func probeMP4(ctx context.Context, res fetcher.Resource, extractChapters bool, concurrency int) (duration float64, chapters []chapterEntry, err error) {
 	rs := fetcher.NewResourceReadSeeker(res)
 
 	// Total duration from the movie header.
@@ -34,7 +44,7 @@ func probeMP4(ctx context.Context, res fetcher.Resource, extractChapters bool) (
 	}
 
 	if extractChapters {
-		chapters = extractMP4Chapters(ctx, res, rs)
+		chapters = extractMP4Chapters(ctx, res, rs, concurrency)
 	}
 	return duration, chapters, nil
 }
@@ -45,7 +55,7 @@ func probeMP4(ctx context.Context, res fetcher.Resource, extractChapters bool) (
 // the movie header, which has already been fetched, so it costs no extra reads.
 // Otherwise it falls back to a QuickTime text chapter track, whose title samples
 // live in `mdat` and may be scattered throughout the file.
-func extractMP4Chapters(ctx context.Context, res fetcher.Resource, rs *fetcher.ResourceReadSeeker) []chapterEntry {
+func extractMP4Chapters(ctx context.Context, res fetcher.Resource, rs *fetcher.ResourceReadSeeker, concurrency int) []chapterEntry {
 	if chapters := extractNeroChapters(ctx, res, rs); len(chapters) > 0 {
 		return chapters
 	}
@@ -146,7 +156,7 @@ func extractMP4Chapters(ctx context.Context, res fetcher.Resource, rs *fetcher.R
 			}
 		}
 
-		titles := readChapterTitles(ctx, res, offsets, sampleSizes)
+		titles := readChapterTitles(ctx, res, offsets, sampleSizes, concurrency)
 
 		chapters := make([]chapterEntry, 0, len(offsets))
 		for i := range offsets {
@@ -208,10 +218,13 @@ func sampleOffsets(sampleSizes []uint32, chunkOffsets []uint64, stsc []mp4.StscE
 // per title, so instead this reuses already-cached blocks where possible and
 // otherwise reads the exact sample bytes from the underlying resource, coalescing
 // neighbouring samples into a single read.
-func readChapterTitles(ctx context.Context, res fetcher.Resource, offsets []uint64, sizes []uint32) []string {
+func readChapterTitles(ctx context.Context, res fetcher.Resource, offsets []uint64, sizes []uint32, concurrency int) []string {
 	titles := make([]string, len(offsets))
 	if len(offsets) == 0 {
 		return titles
+	}
+	if concurrency <= 0 {
+		concurrency = defaultChapterReadConcurrency
 	}
 
 	// Underlying resource for exact reads, plus the cache (if any) to reuse.
@@ -229,6 +242,12 @@ func readChapterTitles(ctx context.Context, res fetcher.Resource, offsets []uint
 	}
 	sort.Slice(order, func(a, b int) bool { return offsets[order[a]] < offsets[order[b]] })
 
+	// Coalesce neighbouring samples into runs of [lo, hi] covering order[i:j].
+	type sampleRun struct {
+		i, j   int
+		lo, hi int64
+	}
+	var runs []sampleRun
 	for i := 0; i < len(order); {
 		runStart := offsets[order[i]]
 		runEnd := runStart + uint64(sizes[order[i]]) // exclusive
@@ -243,30 +262,41 @@ func readChapterTitles(ctx context.Context, res fetcher.Resource, offsets []uint
 			}
 			j++
 		}
-
-		lo, hi := int64(runStart), int64(runEnd)-1
-		var data []byte
-		if cache != nil {
-			if b, hit := cache.cachedSlice(lo, hi); hit {
-				data = b
-			}
-		}
-		if data == nil {
-			if b, err := raw.Read(ctx, lo, hi); err == nil {
-				data = b
-			}
-		}
-
-		for k := i; k < j; k++ {
-			idx := order[k]
-			start := int64(offsets[idx]) - lo
-			end := start + int64(sizes[idx])
-			if start >= 0 && end <= int64(len(data)) {
-				titles[idx] = decodeChapterTitle(data[start:end])
-			}
-		}
+		runs = append(runs, sampleRun{i: i, j: j, lo: int64(runStart), hi: int64(runEnd) - 1})
 		i = j
 	}
+
+	// Fetch the runs concurrently: titles are often interleaved with the audio,
+	// one run per chapter, and sequential round trips would dominate the open
+	// time on remote sources. Each goroutine writes to distinct title indexes.
+	var g errgroup.Group
+	g.SetLimit(concurrency)
+	for _, run := range runs {
+		g.Go(func() error {
+			var data []byte
+			if cache != nil {
+				if b, hit := cache.cachedSlice(run.lo, run.hi); hit {
+					data = b
+				}
+			}
+			if data == nil {
+				if b, err := raw.Read(ctx, run.lo, run.hi); err == nil {
+					data = b
+				}
+			}
+
+			for k := run.i; k < run.j; k++ {
+				idx := order[k]
+				start := int64(offsets[idx]) - run.lo
+				end := start + int64(sizes[idx])
+				if start >= 0 && end <= int64(len(data)) {
+					titles[idx] = decodeChapterTitle(data[start:end])
+				}
+			}
+			return nil
+		})
+	}
+	_ = g.Wait()
 	return titles
 }
 
