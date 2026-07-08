@@ -54,20 +54,27 @@ func mustCompileNS(expr string) *xpath.Expr {
 // EPUB container and returns the detected protection [Scheme]. The second return
 // value is the parsed encryption.xml document when available (otherwise nil).
 // Returns [NoDRM] when no protection metadata is present.
-
 func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xmlquery.Node, error) {
-	hasLink := func(path string) (*manifest.Link, bool) {
+	// hasLink probes for the presence of a resource. It returns a non-nil link
+	// when the resource exists, (nil, nil) when it is genuinely absent
+	// (NotFound), and a non-nil error when the resource exists but can't be read
+	// (e.g. Forbidden, Offline, Timeout) so detection can surface the failure
+	// instead of silently falling through to NoDRM.
+	hasLink := func(path string) (*manifest.Link, error) {
 		href, err := manifest.NewHREFFromString(path, false)
 		if err != nil {
-			return nil, false
+			return nil, err
 		}
 		link := manifest.Link{Href: href}
 		res := f.Get(ctx, link)
 		defer res.Close()
 		if _, lerr := res.Length(ctx); lerr != nil {
-			return nil, false
+			if lerr.Code == fetcher.CodeNotFound {
+				return nil, nil
+			}
+			return nil, errors.Wrap(lerr.Cause, "unable to probe "+path)
 		}
-		return &link, true
+		return &link, nil
 	}
 
 	readXML := func(link *manifest.Link) (*xmlquery.Node, error) {
@@ -82,12 +89,16 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xm
 	}
 
 	// LCP: presence of the license file is the strongest signal.
-	if _, ok := hasLink(pathLCPLicense); ok {
+	if link, err := hasLink(pathLCPLicense); err != nil {
+		return NoDRM, nil, err
+	} else if link != nil {
 		return LCP, nil, nil
 	}
 
 	// Apple FairPlay: META-INF/sinf.xml containing <fairplay:sinf>.
-	if link, ok := hasLink(pathFairplaySinf); ok {
+	if link, err := hasLink(pathFairplaySinf); err != nil {
+		return NoDRM, nil, err
+	} else if link != nil {
 		doc, derr := readXML(link)
 		if derr != nil {
 			return NoDRM, nil, derr
@@ -98,7 +109,9 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xm
 	}
 
 	// Adobe ADEPT (and Barnes & Noble): META-INF/rights.xml with <adept:operatorURL>.
-	if link, ok := hasLink(pathAdeptRights); ok {
+	if link, err := hasLink(pathAdeptRights); err != nil {
+		return NoDRM, nil, err
+	} else if link != nil {
 		doc, derr := readXML(link)
 		if derr != nil {
 			return NoDRM, nil, derr
@@ -114,7 +127,9 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xm
 	}
 
 	// Kobo: rights.xml at the container root containing <kdrm>.
-	if link, ok := hasLink(pathKoboRights); ok {
+	if link, err := hasLink(pathKoboRights); err != nil {
+		return NoDRM, nil, err
+	} else if link != nil {
 		doc, derr := readXML(link)
 		if derr != nil {
 			return NoDRM, nil, derr
@@ -127,7 +142,9 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xm
 	// Fall back to META-INF/encryption.xml: it may reveal LCP via the
 	// retrieval method, or indicate generic/unknown encryption otherwise. The
 	// parsed document is handed back so the caller can avoid re-parsing it.
-	if link, ok := hasLink(pathEncryption); ok {
+	if link, err := hasLink(pathEncryption); err != nil {
+		return NoDRM, nil, err
+	} else if link != nil {
 		doc, derr := readXML(link)
 		if derr != nil {
 			return NoDRM, nil, derr
