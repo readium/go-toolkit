@@ -271,9 +271,9 @@ func readChapterTitles(ctx context.Context, res fetcher.Resource, offsets []uint
 	// time on remote sources. Each goroutine writes to distinct title indexes.
 	var g errgroup.Group
 	g.SetLimit(concurrency)
-for _, run := range runs {
-	run := run
-	g.Go(func() error {
+	for _, run := range runs {
+		g.Go(func() error {
+			var data []byte
 			if cache != nil {
 				if b, hit := cache.cachedSlice(run.lo, run.hi); hit {
 					data = b
