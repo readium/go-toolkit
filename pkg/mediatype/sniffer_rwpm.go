@@ -17,6 +17,30 @@ const (
 
 const lcpSchemeURI = "http://readium.org/2014/01/lcp"
 
+// Returns whether the JSON has a `metadata` object bearing a valid title: a plain
+// string or a localized-string object whose translations are all strings, as
+// [manifest.LocalizedStringFromJSON] requires. This is the minimal RWPM signature,
+// shared by Readium manifests and OPDS 2 documents.
+func rwpmHasMetadataTitle(js map[string]interface{}) bool {
+	metadata, ok := js["metadata"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	switch title := metadata["title"].(type) {
+	case string: // Plain title
+		return true
+	case map[string]interface{}: // Localized title: every translation must be a string
+		for _, v := range title {
+			if _, ok := v.(string); !ok {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}
+
 // Returns whether the JSON has the shape of a RWPM that [manifest.ManifestFromJSON]
 // would accept: a `metadata` object bearing a title, along with a `readingOrder`
 // (or legacy `spine`) array of link objects which have an `href` and a valid `type`.
@@ -25,13 +49,7 @@ func isRWPMJSON(js map[string]interface{}) bool {
 		return false
 	}
 
-	metadata, ok := js["metadata"].(map[string]interface{})
-	if !ok {
-		return false
-	}
-	switch metadata["title"].(type) {
-	case string, map[string]interface{}: // Plain or localized title
-	default:
+	if !rwpmHasMetadataTitle(js) {
 		return false
 	}
 

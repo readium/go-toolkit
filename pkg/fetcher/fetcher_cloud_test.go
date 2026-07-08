@@ -33,6 +33,43 @@ func TestS3FetcherGetKey(t *testing.T) {
 	}
 }
 
+// A `..` in an HREF must not let a request reach objects outside the fetcher's
+// key prefix, the way [FileFetcher] contains resources within its directory.
+func TestS3FetcherContainsKey(t *testing.T) {
+	f := NewS3Fetcher("", &s3.Client{}, "bucket", "pub")
+	for _, href := range []string{
+		"../secret.txt",
+		"../../secret.txt",
+		"audio/../../secret.txt",
+		"../pub-other/x.txt",
+	} {
+		res := f.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString(href, false)})
+		_, ok := res.(*s3Resource)
+		assert.Falsef(t, ok, "escaping href %q should not resolve to an object", href)
+	}
+
+	// Resources within the prefix still resolve, including a `..` that stays inside.
+	for _, tt := range []struct{ href, key string }{
+		{"audio/track.mp3", "pub/audio/track.mp3"},
+		{"audio/../cover.jpg", "pub/cover.jpg"},
+	} {
+		res := f.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString(tt.href, false)})
+		s3res, ok := res.(*s3Resource)
+		require.Truef(t, ok, "href %q should resolve", tt.href)
+		assert.Equal(t, tt.key, s3res.key)
+	}
+}
+
+func TestGCSFetcherContainsObjectName(t *testing.T) {
+	client := &storage.Client{}
+	f := NewGCSFetcher("", client, client.Bucket("bucket").Object("pub"))
+	for _, href := range []string{"../secret.txt", "../../secret.txt", "audio/../../secret.txt"} {
+		res := f.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString(href, false)})
+		_, ok := res.(*gcsResource)
+		assert.Falsef(t, ok, "escaping href %q should not resolve to an object", href)
+	}
+}
+
 func TestGCSFetcherGetObjectName(t *testing.T) {
 	client := &storage.Client{}
 	f := NewGCSFetcher("", client, client.Bucket("bucket").Object("pub"))

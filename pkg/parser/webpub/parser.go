@@ -116,7 +116,21 @@ func (p WebPubParser) Parse(ctx context.Context, a asset.PublicationAsset, f fet
 				if u == nil {
 					return h
 				}
-				return manifest.NewHREF(root.Relativize(dir.Resolve(u)))
+				// Fragment-only and query-only HREFs (e.g. a `#part1` TOC entry) point
+				// within the manifest itself and must not become path links.
+				if u.Path() == "" {
+					return h
+				}
+				rel := root.Relativize(dir.Resolve(u))
+				if _, ok := rel.(url.AbsoluteURL); ok {
+					// The HREF points outside the publication root: an absolute URL
+					// (e.g. a resource hosted elsewhere) or a root-absolute path.
+					// Leave it untouched rather than storing a mangled absolute form;
+					// absolute HTTP(S) HREFs are fetched as-is and other HREFs resolve
+					// against the publication root by the relative fetcher.
+					return h
+				}
+				return manifest.NewHREF(rel)
 			})
 		}
 

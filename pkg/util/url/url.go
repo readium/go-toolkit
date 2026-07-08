@@ -134,7 +134,7 @@ func (u RelativeURL) Relativize(url URL) URL {
 		if len(u.url.Opaque) > 0 || len(url.url.Opaque) > 0 {
 			return url
 		}
-		if u.url.Scheme != url.url.Scheme && u.url.Host != url.url.Host {
+		if u.url.Scheme != url.url.Scheme || u.url.Host != url.url.Host {
 			return url
 		}
 
@@ -273,7 +273,7 @@ func (u AbsoluteURL) Relativize(url URL) URL {
 		if len(u.url.Opaque) > 0 || len(url.url.Opaque) > 0 {
 			return url
 		}
-		if u.url.Scheme != url.url.Scheme && u.url.Host != url.url.Host {
+		if u.url.Scheme != url.url.Scheme || u.url.Host != url.url.Host {
 			return url
 		}
 

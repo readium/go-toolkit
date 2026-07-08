@@ -118,11 +118,15 @@ func (f *S3Fetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	}
 	if strings.HasPrefix(linkHref, f.href) {
 		resourceFile := path.Join(f.key, strings.TrimPrefix(linkHref, f.href))
-		return &s3Resource{
-			link:   link,
-			client: f.client,
-			bucket: f.bucket,
-			key:    resourceFile,
+		// Keep the resource within the fetcher's key prefix: a `..` in the HREF must
+		// not let an incoming request reach objects elsewhere in the bucket.
+		if keyWithinRoot(f.key, resourceFile) {
+			return &s3Resource{
+				link:   link,
+				client: f.client,
+				bucket: f.bucket,
+				key:    resourceFile,
+			}
 		}
 	}
 

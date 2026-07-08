@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -97,19 +96,10 @@ func (a *FileAsset) CreateRelativeFetcher(ctx context.Context, root url.URL) (fe
 	if err != nil {
 		return nil, err
 	}
-	if !strings.HasSuffix(rootPath, string(filepath.Separator)) {
-		// A trailing slash makes HREFs resolve inside the directory instead of next to it.
-		rootPath += string(filepath.Separator)
-	}
-	base, err := url.FromFilepath(rootPath)
-	if err != nil {
-		return nil, err
-	}
-	abase, ok := base.(url.AbsoluteURL)
-	if !ok {
-		return nil, errors.New("failed building a file URL for the asset")
-	}
-	return fetcher.NewRelativeFileFetcher(abase)
+	// The fetcher is sandboxed to the publication root: the parser normalizes the
+	// manifest's HREFs so that none escapes it, and HREFs handed to the publication
+	// later (e.g. from an incoming server request) must not reach outside it either.
+	return fetcher.NewFileFetcher("", rootPath), nil
 }
 
 // CreateFetcher implements PublicationAsset

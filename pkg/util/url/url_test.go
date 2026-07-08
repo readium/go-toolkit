@@ -338,6 +338,20 @@ func TestRelativizeHttpURL(t *testing.T) {
 	assert.Equal(t, ur, base.Relativize(u))
 }
 
+// A URL that differs from the base only by host (or only by scheme) must not be
+// relativized, even when its path shares the base's path prefix: dropping the host
+// would silently repoint the URL at the base's origin.
+func TestRelativizeDifferentOriginSamePath(t *testing.T) {
+	base, _ := URLFromString("http://example.com/foo/")
+	for _, k := range []string{
+		"http://other-host.invalid/foo/quz/baz", // Same scheme, different host
+		"https://example.com/foo/quz/baz",       // Different scheme, same host
+	} {
+		u, _ := URLFromString(k)
+		assert.Equal(t, u, base.Relativize(u), k)
+	}
+}
+
 func TestRelativizeFileURL(t *testing.T) {
 	base, _ := URLFromString("file:///root/foo")
 	for k, v := range map[string]string{

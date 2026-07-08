@@ -91,7 +91,10 @@ func SniffOPDS(ctx context.Context, context SnifferContext) *MediaType {
 	}
 
 	// OPDS 2 (Heavy)
-	if js := context.ContentAsJSON(); js != nil {
+	// Only classify JSON that decodes as a RWPM (a `metadata` object with a title),
+	// like the Kotlin toolkit, so arbitrary JSON carrying an OPDS-vocabulary link
+	// isn't misread as an OPDS 2 document.
+	if js := context.ContentAsJSON(); js != nil && rwpmHasMetadataTitle(js) {
 		if rwpmSelfLinkMatches(js, &OPDS2) {
 			return &OPDS2
 		}

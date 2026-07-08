@@ -64,6 +64,17 @@ func TestSnifferRejectsInvalidRWPM(t *testing.T) {
 	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"metadata":{"title":"T"},"readingOrder":[{"type":"audio/mpeg"}]}`)))
 	// A reading order link with an unparsable type.
 	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"metadata":{"title":"T"},"readingOrder":[{"href":"a.mp3","type":"!!!"}]}`)))
+	// A localized title with a non-string translation, which ManifestFromJSON rejects.
+	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"metadata":{"title":{"en":5}},"readingOrder":[{"href":"a.mp3","type":"audio/mpeg"}]}`)))
+}
+
+// The OPDS 2 heavy sniffing only classifies JSON that decodes as a RWPM, so arbitrary
+// JSON carrying an OPDS-vocabulary link is not misread as an OPDS 2 document.
+func TestSnifferOPDS2RequiresManifestShape(t *testing.T) {
+	// An acquisition link but no metadata: not an OPDS 2 publication.
+	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"links":[{"rel":"http://opds-spec.org/acquisition/buy","href":"/buy"}]}`)))
+	// A self link to an OPDS feed but no metadata: not an OPDS 2 feed.
+	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"links":[{"rel":"self","href":"/feed","type":"application/opds+json"}]}`)))
 }
 
 // Content sniffing must not consume a non-seekable file: a sniffer running after one
