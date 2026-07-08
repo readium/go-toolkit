@@ -277,6 +277,14 @@ func readChapterTitles(ctx context.Context, res fetcher.Resource, offsets []uint
 			if cache != nil {
 				if b, hit := cache.cachedSlice(run.lo, run.hi); hit {
 					data = b
+				} else if cache.retain {
+					// The cache is being retained for serving the publication:
+					// pull whole blocks through it (costing up to a block of
+					// extra transfer per run) so the ranges a browser requests
+					// around each chapter are later served from memory.
+					if b, err := cache.Read(ctx, run.lo, run.hi); err == nil {
+						data = b
+					}
 				}
 			}
 			if data == nil {

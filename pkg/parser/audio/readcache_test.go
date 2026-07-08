@@ -39,7 +39,7 @@ func TestReadCacheCorrectnessAndCoalescing(t *testing.T) {
 	}
 	base, _ := bytesResource(data)
 	src := &countingResource{Resource: base, data: data}
-	c := newReadCache(src, int64(len(data)), 0) // 0 -> default 256 KiB blocks
+	c := newReadCache(src, int64(len(data)), 0, false) // 0 -> default 256 KiB blocks
 	require.EqualValues(t, defaultCacheBlockSize, c.blockSize)
 	ctx := t.Context()
 
@@ -77,7 +77,7 @@ func TestReadCacheCustomBlockSize(t *testing.T) {
 	}
 	base, _ := bytesResource(data)
 	src := &countingResource{Resource: base, data: data}
-	c := newReadCache(src, int64(len(data)), 128<<10) // 128 KiB blocks
+	c := newReadCache(src, int64(len(data)), 128<<10, false) // 128 KiB blocks
 	require.EqualValues(t, 128<<10, c.blockSize)
 	ctx := t.Context()
 
