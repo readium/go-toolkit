@@ -111,6 +111,20 @@ func (a *HTTPAsset) MediaType(ctx context.Context) mediatype.MediaType {
 	return *a.mediatype
 }
 
+// Location implements RelativePublicationAsset
+func (a *HTTPAsset) Location() url.URL {
+	return a.url
+}
+
+// CreateRelativeFetcher implements RelativePublicationAsset
+func (a *HTTPAsset) CreateRelativeFetcher(ctx context.Context, root url.URL) (fetcher.Fetcher, error) {
+	u, ok := root.(url.AbsoluteURL)
+	if !ok || !u.IsHTTP() {
+		return nil, errors.New("root of an HTTP asset must be an absolute HTTP(S) URL")
+	}
+	return fetcher.NewHTTPFetcher("", a.client, u), nil
+}
+
 // CreateFetcher implements PublicationAsset
 func (a *HTTPAsset) CreateFetcher(ctx context.Context, dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
 	// We can't determine if the provided path is a directory or not unless it ends in a "/"

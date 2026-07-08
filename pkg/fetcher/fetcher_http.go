@@ -66,10 +66,16 @@ func (f *HTTPFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	if strings.HasPrefix(linkHref, f.href) {
 		rurl, err := url.RelativeURLFromString(strings.TrimPrefix(linkHref, f.href))
 		if err == nil {
-			return &httpResource{
-				link:   link,
-				client: f.client,
-				url:    f.url.Resolve(rurl).(url.AbsoluteURL),
+			resolved := f.url.Resolve(rurl).(url.AbsoluteURL)
+			// Keep the resource within the base URL: a `..` or root-absolute HREF must
+			// not let an incoming request reach a path outside the fetcher's location.
+			// Relativize returns a relative URL only when [resolved] is under [f.url].
+			if _, ok := f.url.Relativize(resolved).(url.RelativeURL); ok {
+				return &httpResource{
+					link:   link,
+					client: f.client,
+					url:    resolved,
+				}
 			}
 		}
 	}
@@ -79,6 +85,18 @@ func (f *HTTPFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 
 func (f *HTTPFetcher) Close() {
 	// No-op for HTTP
+}
+
+// Creates a [Resource] serving the contents of the given HTTP(S) URL.
+func NewHTTPResource(link manifest.Link, client *http.Client, url url.AbsoluteURL) Resource {
+	if client == nil {
+		panic("NewHTTPResource requires a non-nil client")
+	}
+	return &httpResource{
+		link:   link,
+		client: client,
+		url:    url,
+	}
 }
 
 // Resource from HTTP

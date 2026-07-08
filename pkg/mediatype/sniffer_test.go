@@ -1,6 +1,8 @@
 package mediatype
 
 import (
+	"archive/zip"
+	"bytes"
 	"io"
 	"mime"
 	"os"
@@ -32,15 +34,17 @@ func TestSnifferFromMetadata(t *testing.T) {
 	assert.Equal(t, &ReadiumAudiobook, Of([]string{"application/audiobook+zip"}, []string{"audiobook"}, Sniffers), "\"audiobook\" in a slice + \"application/audiobook+zip\" in a slice should be a Readium audiobook")
 }
 
-/*
-TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
-CBZ sniffing is implemented below as a temporary alternative.
+// Opens a file in testdata and sniffs its media type from the content alone.
+func sniffFixture(t *testing.T, filename string) *MediaType {
+	t.Helper()
+	f, err := os.Open(filepath.Join("testdata", filename))
+	require.NoError(t, err)
+	defer f.Close()
+	return OfFileOnly(t.Context(), f)
+}
 
 func TestSnifferFromFile(t *testing.T) {
-	testAudiobook, err := os.Open(filepath.Join("testdata", "audiobook.json"))
-	require.NoError(t, err)
-	defer testAudiobook.Close()
-	assert.Equal(t, &ReadiumAudiobookManifest, OfFileOnly(testAudiobook))
+	assert.Equal(t, &ReadiumAudiobookManifest, sniffFixture(t, "audiobook.json"))
 }
 
 func TestSnifferFromBytes(t *testing.T) {
@@ -49,24 +53,92 @@ func TestSnifferFromBytes(t *testing.T) {
 	testAudiobookBytes, err := io.ReadAll(testAudiobook)
 	testAudiobook.Close()
 	require.NoError(t, err)
-	assert.Equal(t, &ReadiumAudiobookManifest, MediaTypeOfBytesOnly(testAudiobookBytes))
-}
-*/
-
-func TestSnifferFromFile(t *testing.T) {
-	testCbz, err := os.Open(filepath.Join("testdata", "cbz.unknown"))
-	require.NoError(t, err)
-	defer testCbz.Close()
-	assert.Equal(t, &CBZ, OfFileOnly(t.Context(), testCbz), "test CBZ should be identified by heavy Sniffer")
+	assert.Equal(t, &ReadiumAudiobookManifest, OfBytesOnly(t.Context(), testAudiobookBytes))
 }
 
-func TestSnifferFromBytes(t *testing.T) {
-	testCbz, err := os.Open(filepath.Join("testdata", "cbz.unknown"))
+// JSON which manifest.ManifestFromJSON would reject must not sniff as a RWPM.
+func TestSnifferRejectsInvalidRWPM(t *testing.T) {
+	// No metadata title.
+	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"metadata":{"whatever":1},"readingOrder":[{"href":"a.mp3","type":"audio/mpeg"}]}`)))
+	// A reading order link without href.
+	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"metadata":{"title":"T"},"readingOrder":[{"type":"audio/mpeg"}]}`)))
+	// A reading order link with an unparsable type.
+	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"metadata":{"title":"T"},"readingOrder":[{"href":"a.mp3","type":"!!!"}]}`)))
+	// A localized title with a non-string translation, which ManifestFromJSON rejects.
+	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"metadata":{"title":{"en":5}},"readingOrder":[{"href":"a.mp3","type":"audio/mpeg"}]}`)))
+}
+
+// The OPDS 2 heavy sniffing only classifies JSON that decodes as a RWPM, so arbitrary
+// JSON carrying an OPDS-vocabulary link is not misread as an OPDS 2 document.
+func TestSnifferOPDS2RequiresManifestShape(t *testing.T) {
+	// An acquisition link but no metadata: not an OPDS 2 publication.
+	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"links":[{"rel":"http://opds-spec.org/acquisition/buy","href":"/buy"}]}`)))
+	// A self link to an OPDS feed but no metadata: not an OPDS 2 feed.
+	assert.Nil(t, OfBytesOnly(t.Context(), []byte(`{"links":[{"rel":"self","href":"/feed","type":"application/opds+json"}]}`)))
+}
+
+// The archive opened during heavy sniffing is memoized (opened once, not per sniffer
+// or per entry read) and released when the sniffing context is closed.
+func TestSnifferContextArchiveLifecycle(t *testing.T) {
+	f, err := os.Open(filepath.Join("testdata", "webpub-package.unknown"))
 	require.NoError(t, err)
-	testCbzBytes, err := io.ReadAll(testCbz)
-	testCbz.Close()
+	defer f.Close()
+
+	sc := &SnifferContext{content: NewSnifferFileContent(f)}
+
+	a1, err := sc.ContentAsArchive(t.Context())
 	require.NoError(t, err)
-	assert.Equal(t, &CBZ, OfBytesOnly(t.Context(), testCbzBytes), "test CBZ's bytes should be identified by heavy Sniffer")
+	require.NotNil(t, a1)
+
+	// A second call, and archive-entry reads, reuse the same handle instead of reopening.
+	a2, err := sc.ContentAsArchive(t.Context())
+	require.NoError(t, err)
+	assert.True(t, a1 == a2, "archive should be memoized, not reopened")
+	assert.True(t, sc.ContainsArchiveEntryAt(t.Context(), "manifest.json"))
+
+	// Closing releases the handle, and accessing the archive afterwards fails
+	// gracefully rather than handing back a closed handle or panicking.
+	sc.Close()
+	assert.Nil(t, sc._contentAsArchive)
+	assert.False(t, sc.ContainsArchiveEntryAt(t.Context(), "manifest.json"))
+	assert.Nil(t, sc.ReadArchiveEntryAt(t.Context(), "manifest.json"))
+	sc.Close() // Idempotent.
+}
+
+// Opening non-archive content as an archive memoizes the error, so the archive-entry
+// helpers fail gracefully (no nil-handle panic) even when called repeatedly.
+func TestSnifferContextArchiveErrorMemoized(t *testing.T) {
+	f, err := os.Open(filepath.Join("testdata", "audiobook.json")) // Not an archive.
+	require.NoError(t, err)
+	defer f.Close()
+
+	sc := &SnifferContext{content: NewSnifferFileContent(f)}
+	_, err = sc.ContentAsArchive(t.Context())
+	require.Error(t, err)
+	assert.False(t, sc.ContainsArchiveEntryAt(t.Context(), "manifest.json"))
+	assert.Nil(t, sc.ReadArchiveEntryAt(t.Context(), "manifest.json"))
+	sc.Close() // Must not panic when nothing was opened.
+}
+
+// Content sniffing must not consume a non-seekable file: a sniffer running after one
+// which read the whole stream (e.g. as JSON) still sees the content.
+func TestSnifferNonSeekableFile(t *testing.T) {
+	pdf, err := os.ReadFile(filepath.Join("testdata", "pdf.unknown"))
+	require.NoError(t, err)
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	w, err := zw.Create("doc") // No extension, so only the content identifies it
+	require.NoError(t, err)
+	_, err = w.Write(pdf)
+	require.NoError(t, err)
+	require.NoError(t, zw.Close())
+
+	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	require.NoError(t, err)
+	f, err := zr.Open("doc")
+	require.NoError(t, err)
+	defer f.Close()
+	assert.Equal(t, &PDF, OfFileOnly(t.Context(), f))
 }
 
 func TestSnifferUnknownFormat(t *testing.T) {
@@ -89,15 +161,13 @@ func TestSnifferValidMediaTypeFallback(t *testing.T) {
 func TestSniffAudiobook(t *testing.T) {
 	assert.Equal(t, &ReadiumAudiobook, OfExtension("audiobook"))
 	assert.Equal(t, &ReadiumAudiobook, OfString("application/audiobook+zip"))
-	// TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
-	// assert.Equal(t, &ReadiumAudiobook, OfFileOnly("audiobook"))
+	assert.Equal(t, &ReadiumAudiobook, sniffFixture(t, "audiobook-package.unknown"))
 }
 
 func TestSniffAudiobookManifest(t *testing.T) {
 	assert.Equal(t, &ReadiumAudiobookManifest, OfString("application/audiobook+json"))
-	// TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
-	// assert.Equal(t, &ReadiumAudiobookManifest, OfFileOnly("audiobook.json"))
-	// assert.Equal(t, &ReadiumAudiobookManifest, OfFileOnly("audiobook-wrongtype.json"))
+	assert.Equal(t, &ReadiumAudiobookManifest, sniffFixture(t, "audiobook.json"))
+	assert.Equal(t, &ReadiumAudiobookManifest, sniffFixture(t, "audiobook-wrongtype.json"))
 }
 
 func TestSniffAVIF(t *testing.T) {
@@ -127,14 +197,12 @@ func TestSniffCBZ(t *testing.T) {
 func TestSniffDiViNa(t *testing.T) {
 	assert.Equal(t, &ReadiumDivina, OfExtension("divina"))
 	assert.Equal(t, &ReadiumDivina, OfString("application/divina+zip"))
-	// TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
-	// assert.Equal(t, &DIVINA, OfFileOnly("divina-package.unknown"))
+	assert.Equal(t, &ReadiumDivina, sniffFixture(t, "divina-package.unknown"))
 }
 
 func TestSniffDiViNaManifest(t *testing.T) {
 	assert.Equal(t, &ReadiumDivinaManifest, OfString("application/divina+json"))
-	// TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
-	// assert.Equal(t, &DIVINA_MANIFEST, OfFileOnly("divina.json"))
+	assert.Equal(t, &ReadiumDivinaManifest, sniffFixture(t, "divina.json"))
 }
 
 func TestSniffEPUB(t *testing.T) {
@@ -209,65 +277,44 @@ func TestSniffOPDS1Entry(t *testing.T) {
 
 func TestSniffOPDS2Feed(t *testing.T) {
 	assert.Equal(t, &OPDS2, OfString("application/opds+json"))
-
-	/*
-		// TODO needs webpub heavy parsing. See func SniffOPDS in sniffer.go for details.
-		testOPDS2Feed, err := os.Open(filepath.Join("testdata", "opds2-feed.json"))
-		assert.NoError(t, err)
-		defer testOPDS2Feed.Close()
-		assert.Equal(t, &OPDS2, OfFileOnly(testOPDS2Feed))
-	*/
+	assert.Equal(t, &OPDS2, sniffFixture(t, "opds2-feed.json"))
 }
 
 func TestSniffOPDS2Publication(t *testing.T) {
 	assert.Equal(t, &OPDS2Publication, OfString("application/opds-publication+json"))
+	assert.Equal(t, &OPDS2Publication, sniffFixture(t, "opds2-publication.json"))
+}
 
-	/*
-		// TODO needs webpub heavy parsing. See func SniffOPDS in sniffer.go for details.
-		testOPDS2Feed, err := os.Open(filepath.Join("testdata", "opds2-publication.json"))
-		assert.NoError(t, err)
-		defer testOPDS2Feed.Close()
-		assert.Equal(t, &OPDS2_PUBLICATION, OfFileOnly(testOPDS2Feed))
-	*/
+// An OPDS 2 publication with a reading order is also a valid RWPM: the acquisition
+// links must take precedence over the Readium manifest heuristics.
+func TestSniffOPDS2PublicationWithReadingOrder(t *testing.T) {
+	pub := []byte(`{
+		"metadata": {"title": "An audiobook for sale"},
+		"links": [
+			{"rel": "self", "href": "http://example.org/pub", "type": "application/opds-publication+json"},
+			{"rel": "http://opds-spec.org/acquisition/buy", "href": "/buy", "type": "application/audiobook+zip"}
+		],
+		"readingOrder": [{"href": "chapter1.mp3", "type": "audio/mpeg"}]
+	}`)
+	assert.Equal(t, &OPDS2Publication, OfBytesOnly(t.Context(), pub))
 }
 
 func TestSniffOPDSAuthenticationDocument(t *testing.T) {
 	assert.Equal(t, &OPDSAuthentication, OfString("application/opds-authentication+json"))
 	assert.Equal(t, &OPDSAuthentication, OfString("application/vnd.opds.authentication.v1.0+json"))
-
-	/*
-		// TODO needs webpub heavy parsing. See func SniffOPDS in sniffer.go for details.
-		testOPDSAuthDoc, err := os.Open(filepath.Join("testdata", "opds-authentication.json"))
-		assert.NoError(t, err)
-		defer testOPDSAuthDoc.Close()
-		assert.Equal(t, &OPDS_AUTHENTICATION, OfFileOnly(testOPDSAuthDoc))
-	*/
+	assert.Equal(t, &OPDSAuthentication, sniffFixture(t, "opds-authentication.json"))
 }
 
 func TestSniffLCPProtectedAudiobook(t *testing.T) {
 	assert.Equal(t, &LCPProtectedAudiobook, OfExtension("lcpa"))
 	assert.Equal(t, &LCPProtectedAudiobook, OfString("application/audiobook+lcp"))
-
-	/*
-		// TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
-		testLCPAudiobook, err := os.Open(filepath.Join("testdata", "audiobook-lcp.unknown"))
-		assert.NoError(t, err)
-		defer testLCPAudiobook.Close()
-		assert.Equal(t, &LCP_PROTECTED_AUDIOBOOK, OfFileOnly(testLCPAudiobook))
-	*/
+	assert.Equal(t, &LCPProtectedAudiobook, sniffFixture(t, "audiobook-lcp.unknown"))
 }
 
 func TestSniffLCPProtectedPDF(t *testing.T) {
 	assert.Equal(t, &LCPProtectedPDF, OfExtension("lcpdf"))
 	assert.Equal(t, &LCPProtectedPDF, OfString("application/pdf+lcp"))
-
-	/*
-		// TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
-		testLCPPDF, err := os.Open(filepath.Join("testdata", "pdf-lcp.unknown"))
-		assert.NoError(t, err)
-		defer testLCPPDF.Close()
-		assert.Equal(t, &LCP_PROTECTED_PDF, OfFileOnly(testLCPPDF))
-	*/
+	assert.Equal(t, &LCPProtectedPDF, sniffFixture(t, "pdf-lcp.unknown"))
 }
 
 func TestSniffLCPLicenseDocument(t *testing.T) {
@@ -325,16 +372,12 @@ func TestSniffWEBP(t *testing.T) {
 func TestSniffWebPub(t *testing.T) {
 	assert.Equal(t, &ReadiumWebpub, OfExtension("webpub"))
 	assert.Equal(t, &ReadiumWebpub, OfString("application/webpub+zip"))
-
-	// TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
-	// assert.Equal(t, &ReadiumWebpub, OfFileOnly("webpub-package.unknown"))
+	assert.Equal(t, &ReadiumWebpub, sniffFixture(t, "webpub-package.unknown"))
 }
 
 func TestSniffWebPubManifest(t *testing.T) {
 	assert.Equal(t, &ReadiumWebpubManifest, OfString("application/webpub+json"))
-
-	// TODO needs webpub heavy parsing. See func SniffWebpub in sniffer.go for details.
-	// assert.Equal(t, &ReadiumWebpubManifest, OfFileOnly("webpub.json"))
+	assert.Equal(t, &ReadiumWebpubManifest, sniffFixture(t, "webpub.json"))
 }
 
 func TestSniffW3CWPUBManifest(t *testing.T) {

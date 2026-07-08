@@ -3,6 +3,7 @@ package epub
 import (
 	"context"
 
+	"github.com/antchfx/xmlquery"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/content/iterator"
@@ -57,12 +58,12 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 	// themselves through other well-known files (rights.xml / sinf.xml).
 	// TODO: surface the publication-level scheme on the manifest itself so
 	// consumers can detect protection even when encryption.xml is absent.
-	scheme, err := protection.IdentifyEPUBProtection(ctx, f)
+	scheme, encryptionDoc, err := protection.IdentifyEPUBProtection(ctx, f)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed identifying EPUB protection scheme")
 	}
 
-	encryptionData, err := parseEncryptionData(ctx, f, scheme.URI())
+	encryptionData, err := parseEncryptionData(ctx, f, scheme.URI(), encryptionDoc)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing encryption data")
 	}
@@ -94,12 +95,19 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 // each entry with the supplied DRM scheme URI (typically obtained by calling
 // [protection.IdentifyEPUBProtection] at a higher level). A missing
 // encryption.xml is normal and returns (nil, nil).
-func parseEncryptionData(ctx context.Context, f fetcher.Fetcher, scheme string) (map[string]manifest.Encryption, error) {
-	n, rerr := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/encryption.xml", false)}))
-	if rerr != nil {
-		return nil, nil
+//
+// When doc is non-nil it is used directly, avoiding a redundant read+parse of
+// encryption.xml — [protection.IdentifyEPUBProtection] returns the document it
+// already parsed for exactly this purpose.
+func parseEncryptionData(ctx context.Context, f fetcher.Fetcher, scheme string, doc *xmlquery.Node) (map[string]manifest.Encryption, error) {
+	if doc == nil {
+		var rerr *fetcher.ResourceError
+		doc, rerr = fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/encryption.xml", false)}))
+		if rerr != nil {
+			return nil, nil
+		}
 	}
-	return ParseEncryption(n, scheme), nil
+	return ParseEncryption(doc, scheme), nil
 }
 
 func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f fetcher.Fetcher) (ret map[string]manifest.LinkList) {

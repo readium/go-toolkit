@@ -99,7 +99,10 @@ func (f *FileFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 			if err != nil {
 				continue // TODO somehow get this error out?
 			}
-			if strings.HasPrefix(rapath, iapath) {
+			// The path must be [itemFile] itself, or sit below it beyond a separator:
+			// a plain prefix check would let "dir-other" pass as a descendant of "dir".
+			sep := string(filepath.Separator)
+			if rapath == iapath || strings.HasPrefix(rapath, strings.TrimSuffix(iapath, sep)+sep) {
 				resource := NewFileResource(link, resourceFile)
 				f.resources = append(f.resources, weak.Make(resource))
 				return resource

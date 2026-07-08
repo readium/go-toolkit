@@ -13,16 +13,20 @@ import (
 var Sniffers = []Sniffer{
 	SniffEPUB,
 	SniffLPF,
+	// SniffOPDS must come before SniffWebpub: an OPDS 2 publication is a RWPM with
+	// acquisition links, which the WebPub content heuristics would otherwise claim.
+	SniffOPDS,
+	SniffLCPLicense,
+	// SniffWebpub must come before SniffArchive: a package containing a RWPM manifest.json
+	// could otherwise be claimed as a CBZ or ZAB by the archive content heuristics.
+	SniffWebpub,
 	SniffArchive,
 	SniffPDF,
 	SniffXHTML,
 	SniffHTML,
 	SniffBitmap,
 	SniffAudio,
-	SniffOPDS,
-	SniffLCPLicense,
 	SniffW3CWPUB,
-	SniffWebpub,
 	// Note SniffKnown and SniffSystem aren't here!
 }
 
@@ -67,6 +71,11 @@ func of(ctx context.Context, content SnifferContent, mediaTypes []string, fileEx
 			mediaTypes:     mediaTypes,
 			fileExtensions: fileExtensions,
 		}
+		// Open the archive (if the content is one) up front, so the sniffers that
+		// inspect archive entries share a single handle through the memoized context
+		// instead of each reopening and leaking it. It's closed once sniffing is done.
+		context.ContentAsArchive(ctx)
+		defer context.Close()
 		for _, sniffer := range sniffers {
 			mediaType := sniffer(ctx, context)
 			if mediaType != nil {

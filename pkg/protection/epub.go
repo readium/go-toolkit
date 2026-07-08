@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
-	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
 // Well-known XML namespaces used by EPUB DRM containers.
@@ -52,21 +51,30 @@ func mustCompileNS(expr string) *xpath.Expr {
 }
 
 // IdentifyEPUBProtection inspects the well-known DRM metadata files inside an
-// EPUB container and returns the detected protection [Scheme]. Returns [NoDRM]
-// when no protection metadata is present.
-func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, error) {
-	links, err := f.Links(ctx)
-	if err != nil {
-		return NoDRM, err
-	}
-
-	hasLink := func(path string) (*manifest.Link, bool) {
-		u, uerr := url.URLFromString(path)
-		if uerr != nil {
-			return nil, false
+// EPUB container and returns the detected protection [Scheme]. The second return
+// value is the parsed encryption.xml document when available (otherwise nil).
+// Returns [NoDRM] when no protection metadata is present.
+func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xmlquery.Node, error) {
+	// hasLink probes for the presence of a resource. It returns a non-nil link
+	// when the resource exists, (nil, nil) when it is genuinely absent
+	// (NotFound), and a non-nil error when the resource exists but can't be read
+	// (e.g. Forbidden, Offline, Timeout) so detection can surface the failure
+	// instead of silently falling through to NoDRM.
+	hasLink := func(path string) (*manifest.Link, error) {
+		href, err := manifest.NewHREFFromString(path, false)
+		if err != nil {
+			return nil, err
 		}
-		l := links.FirstWithHref(u)
-		return l, l != nil
+		link := manifest.Link{Href: href}
+		res := f.Get(ctx, link)
+		defer res.Close()
+		if _, lerr := res.Length(ctx); lerr != nil {
+			if lerr.Code == fetcher.CodeNotFound {
+				return nil, nil
+			}
+			return nil, errors.Wrap(lerr.Cause, "unable to probe "+path)
+		}
+		return &link, nil
 	}
 
 	readXML := func(link *manifest.Link) (*xmlquery.Node, error) {
@@ -81,62 +89,73 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, err
 	}
 
 	// LCP: presence of the license file is the strongest signal.
-	if _, ok := hasLink(pathLCPLicense); ok {
-		return LCP, nil
+	if link, err := hasLink(pathLCPLicense); err != nil {
+		return NoDRM, nil, err
+	} else if link != nil {
+		return LCP, nil, nil
 	}
 
 	// Apple FairPlay: META-INF/sinf.xml containing <fairplay:sinf>.
-	if link, ok := hasLink(pathFairplaySinf); ok {
+	if link, err := hasLink(pathFairplaySinf); err != nil {
+		return NoDRM, nil, err
+	} else if link != nil {
 		doc, derr := readXML(link)
 		if derr != nil {
-			return NoDRM, derr
+			return NoDRM, nil, derr
 		}
 		if doc != nil && xmlquery.QuerySelector(doc, xpFairplaySinf) != nil {
-			return Fairplay, nil
+			return Fairplay, nil, nil
 		}
 	}
 
 	// Adobe ADEPT (and Barnes & Noble): META-INF/rights.xml with <adept:operatorURL>.
-	if link, ok := hasLink(pathAdeptRights); ok {
+	if link, err := hasLink(pathAdeptRights); err != nil {
+		return NoDRM, nil, err
+	} else if link != nil {
 		doc, derr := readXML(link)
 		if derr != nil {
-			return NoDRM, derr
+			return NoDRM, nil, derr
 		}
 		if doc != nil {
 			if op := xmlquery.QuerySelector(doc, xpAdeptOperator); op != nil {
 				if strings.Contains(strings.ToLower(op.InnerText()), barnesAndNobleTag) {
-					return BarnesAndNoble, nil
+					return BarnesAndNoble, nil, nil
 				}
-				return Adept, nil
+				return Adept, nil, nil
 			}
 		}
 	}
 
 	// Kobo: rights.xml at the container root containing <kdrm>.
-	if link, ok := hasLink(pathKoboRights); ok {
+	if link, err := hasLink(pathKoboRights); err != nil {
+		return NoDRM, nil, err
+	} else if link != nil {
 		doc, derr := readXML(link)
 		if derr != nil {
-			return NoDRM, derr
+			return NoDRM, nil, derr
 		}
 		if doc != nil && xmlquery.QuerySelector(doc, xpKdrm) != nil {
-			return Kobo, nil
+			return Kobo, nil, nil
 		}
 	}
 
 	// Fall back to META-INF/encryption.xml: it may reveal LCP via the
-	// retrieval method, or indicate generic/unknown encryption otherwise.
-	if link, ok := hasLink(pathEncryption); ok {
+	// retrieval method, or indicate generic/unknown encryption otherwise. The
+	// parsed document is handed back so the caller can avoid re-parsing it.
+	if link, err := hasLink(pathEncryption); err != nil {
+		return NoDRM, nil, err
+	} else if link != nil {
 		doc, derr := readXML(link)
 		if derr != nil {
-			return NoDRM, derr
+			return NoDRM, nil, derr
 		}
 		if doc != nil {
 			if xmlquery.QuerySelector(doc, xpLCPRetrieval) != nil {
-				return LCP, nil
+				return LCP, doc, nil
 			}
-			return Generic, nil
+			return Generic, doc, nil
 		}
 	}
 
-	return NoDRM, nil
+	return NoDRM, nil, nil
 }

@@ -92,6 +92,24 @@ func (a *S3Asset) MediaType(ctx context.Context) mediatype.MediaType {
 	return *a.mediatype
 }
 
+// Location implements RelativePublicationAsset
+func (a *S3Asset) Location() url.URL {
+	return a.uri
+}
+
+// CreateRelativeFetcher implements RelativePublicationAsset
+func (a *S3Asset) CreateRelativeFetcher(ctx context.Context, root url.URL) (fetcher.Fetcher, error) {
+	u, ok := root.(url.AbsoluteURL)
+	if !ok {
+		return nil, errors.New("root of an S3 asset must be an absolute S3 URL")
+	}
+	obj, err := u.ToS3Object()
+	if err != nil {
+		return nil, err
+	}
+	return fetcher.NewS3Fetcher("", a.client, *obj.Bucket, *obj.Key), nil
+}
+
 // CreateFetcher implements PublicationAsset
 func (a *S3Asset) CreateFetcher(ctx context.Context, dependencies Dependencies, credentials string) (fetcher.Fetcher, error) {
 	obj, err := a.object()

@@ -320,8 +320,45 @@ func (e *gozipArchiveEntry) ReadCompressedGzip() ([]byte, error) {
 type gozipArchive struct {
 	zip           *zip.Reader
 	closer        func() error
-	cachedEntries sync.Map
 	minimizeReads bool
+
+	// nameIndex maps each entry's cleaned path to its *zip.File, giving O(1)
+	// lookups instead of a linear scan. It's built once, lazily, on the first
+	// Entry call that misses the wrapper cache.
+	indexOnce sync.Once
+	nameIndex map[string]*zip.File
+
+	// cachedEntries holds lazily-created *gozipArchiveEntry wrappers, keyed by
+	// cleaned path. Wrappers are shared so per-entry read state (e.g. the
+	// deflate random-access index) persists across reads of the same entry.
+	cachedEntries sync.Map
+}
+
+// buildIndex populates nameIndex from the archive's central directory. First
+// occurrence of a cleaned path wins, matching the previous linear-scan lookup.
+func (a *gozipArchive) buildIndex() {
+	nameIndex := make(map[string]*zip.File, len(a.zip.File))
+	for _, f := range a.zip.File {
+		cp := path.Clean(f.Name)
+		if _, ok := nameIndex[cp]; !ok {
+			nameIndex[cp] = f
+		}
+	}
+	a.nameIndex = nameIndex
+}
+
+// wrap returns the shared entry wrapper for f, creating it on first access.
+// LoadOrStore guarantees a single wrapper per entry even under concurrent Get.
+func (a *gozipArchive) wrap(cleanPath string, f *zip.File) *gozipArchiveEntry {
+	if e, ok := a.cachedEntries.Load(cleanPath); ok {
+		return e.(*gozipArchiveEntry)
+	}
+	entry := &gozipArchiveEntry{
+		file:          f,
+		minimizeReads: a.minimizeReads,
+	}
+	actual, _ := a.cachedEntries.LoadOrStore(cleanPath, entry)
+	return actual.(*gozipArchiveEntry)
 }
 
 // Close implements Archive
@@ -336,16 +373,7 @@ func (a *gozipArchive) Entries() []Entry {
 		if f.FileInfo().IsDir() {
 			continue
 		}
-
-		aentry, ok := a.cachedEntries.Load(f.Name)
-		if !ok {
-			aentry = &gozipArchiveEntry{
-				file:          f,
-				minimizeReads: a.minimizeReads,
-			}
-			a.cachedEntries.Store(f.Name, aentry)
-		}
-		entries = append(entries, aentry.(Entry))
+		entries = append(entries, a.wrap(path.Clean(f.Name), f))
 	}
 	return entries
 }
@@ -357,24 +385,17 @@ func (a *gozipArchive) Entry(p string) (Entry, error) {
 	}
 	cpath := path.Clean(p)
 
-	// Check for entry in cache
-	aentry, ok := a.cachedEntries.Load(cpath)
-	if ok { // Found entry in cache
+	// Check for an already-wrapped entry first.
+	if aentry, ok := a.cachedEntries.Load(cpath); ok {
 		return aentry.(Entry), nil
 	}
 
-	for _, f := range a.zip.File {
-		fp := path.Clean(f.Name)
-		if fp == cpath {
-			aentry := &gozipArchiveEntry{
-				file:          f,
-				minimizeReads: a.minimizeReads,
-			}
-			a.cachedEntries.Store(fp, aentry) // Put entry in cache
-			return aentry, nil
-		}
+	a.indexOnce.Do(a.buildIndex)
+	f, ok := a.nameIndex[cpath]
+	if !ok {
+		return nil, fs.ErrNotExist
 	}
-	return nil, fs.ErrNotExist
+	return a.wrap(cpath, f), nil
 }
 
 func NewGoZIPArchive(zip *zip.Reader, closer func() error, minimizeReads bool) Archive {
