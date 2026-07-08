@@ -134,7 +134,7 @@ type FileResource struct {
 	link manifest.Link
 	path string
 
-	mu   sync.Mutex // guards file and sequential (offset-based) access to it
+	mu   sync.Mutex // guards lazily opening and closing file
 	file *os.File
 }
 
@@ -203,16 +203,16 @@ func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte
 		return nil, ex
 	}
 	if start == 0 && end == 0 {
-		r.mu.Lock()
-		defer r.mu.Unlock()
-		if _, err := f.Seek(0, io.SeekStart); err != nil {
-			return nil, Other(err)
-		}
-		data, err := io.ReadAll(f)
+		fi, err := f.Stat()
 		if err != nil {
 			return nil, Other(err)
 		}
-		return data, nil
+		data := make([]byte, fi.Size())
+		n, err := f.ReadAt(data, 0)
+		if err != nil && err != io.EOF {
+			return nil, Other(err)
+		}
+		return data[:n], nil
 	}
 	data := make([]byte, end-start+1)
 	n, err := f.ReadAt(data, start)
@@ -224,7 +224,6 @@ func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte
 
 // Stream implements Resource
 func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
-	defer runtime.KeepAlive(r)
 	if end < start {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
 		return -1, err
@@ -232,24 +231,36 @@ func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end
 	if start < 0 {
 		start = 0
 	}
-	f, ex := r.open()
-	if ex != nil {
-		return -1, ex
+	// Streaming uses a private handle per call: the offset-based access below
+	// never contends with concurrent streams of the same resource, and the
+	// source stays a bare *os.File (wrapped only by io.CopyN's
+	// *io.LimitedReader, which the runtime unwraps), preserving the kernel
+	// sendfile fast path when w is a network connection. An io.SectionReader
+	// here would force a userspace copy loop.
+	f, err := os.Open(r.path)
+	if err != nil {
+		return -1, OsErrorToException(err)
+	}
+	defer f.Close()
+	fi, err := f.Stat()
+	if err != nil {
+		return -1, Other(err)
+	}
+	if fi.IsDir() {
+		return -1, NotFound(errors.New("is a directory"))
 	}
 	if start == 0 && end == 0 {
-		r.mu.Lock()
-		defer r.mu.Unlock()
-		if _, err := f.Seek(0, io.SeekStart); err != nil {
-			return -1, Other(err)
-		}
 		n, err := io.Copy(w, f)
 		if err != nil {
 			return -1, Other(err)
 		}
 		return n, nil
 	}
-	n, err := io.Copy(w, io.NewSectionReader(f, start, end-start+1))
-	if err != nil {
+	if _, err := f.Seek(start, io.SeekStart); err != nil {
+		return -1, Other(err)
+	}
+	n, err := io.CopyN(w, f, end-start+1)
+	if err != nil && err != io.EOF {
 		return n, Other(err)
 	}
 	return n, nil

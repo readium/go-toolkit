@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"math"
+	"os"
 	"path"
 	"sync"
 
@@ -19,8 +20,49 @@ type gozipArchiveEntry struct {
 	file          *zip.File
 	minimizeReads bool
 
+	// path is the filesystem path of the archive when it was opened from a
+	// local file, or empty otherwise. It unlocks streaming an entry's raw
+	// bytes straight from a file handle (kernel sendfile fast path).
+	path string
+
 	gi zran.Index
 	gm sync.Mutex
+}
+
+// zipFlagEncrypted is the general-purpose bit flag marking an encrypted entry,
+// whose raw bytes are not the actual content.
+const zipFlagEncrypted = 0x1
+
+// hasRawFileAccess reports whether the entry's raw bytes can be served
+// directly from the archive's file on disk.
+func (e *gozipArchiveEntry) hasRawFileAccess() bool {
+	return e.path != "" && e.file.Flags&zipFlagEncrypted == 0
+}
+
+// streamRawFromFile copies length raw bytes of the entry, skipping the first
+// start bytes, straight from a fresh handle on the archive file. The source
+// reaching w is a bare *os.File (wrapped only by io.CopyN's *io.LimitedReader,
+// which the runtime unwraps), so the kernel sendfile fast path is preserved
+// when w is a network connection. handled is false when the fast path could
+// not be attempted and the caller should fall back before writing anything.
+func (e *gozipArchiveEntry) streamRawFromFile(w io.Writer, start int64, length int64) (n int64, err error, handled bool) {
+	offset, err := e.file.DataOffset()
+	if err != nil {
+		return 0, nil, false
+	}
+	f, err := os.Open(e.path)
+	if err != nil {
+		return 0, nil, false
+	}
+	defer f.Close()
+	if _, err := f.Seek(offset+start, io.SeekStart); err != nil {
+		return 0, nil, false
+	}
+	n, err = io.CopyN(w, f, length)
+	if err == io.EOF {
+		err = nil
+	}
+	return n, err, true
 }
 
 func (e *gozipArchiveEntry) Path() string {
@@ -61,6 +103,9 @@ func (e *gozipArchiveEntry) couldMinimizeReads() bool {
 func (e *gozipArchiveEntry) Read(start int64, end int64) ([]byte, error) {
 	if end < start {
 		return nil, errors.New("range not satisfiable")
+	}
+	if start < 0 {
+		start = 0
 	}
 
 	minimizeReads := e.couldMinimizeReads()
@@ -169,12 +214,42 @@ func (e *gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, 
 	if end < start {
 		return -1, errors.New("range not satisfiable")
 	}
+	if start < 0 {
+		start = 0
+	}
+
+	// For stored entries the raw bytes are the content, so they can be
+	// streamed directly from the archive file on disk, bypassing both the
+	// CRC32 pass of zip's checksum reader and userspace copy loops.
+	if e.CompressedLength() == 0 && e.hasRawFileAccess() {
+		size := int64(e.file.UncompressedSize64)
+		length := size
+		if !(start == 0 && end == 0) {
+			if start >= size {
+				return 0, nil
+			}
+			length = end - start + 1
+			if length > size-start {
+				length = size - start
+			}
+		}
+		if n, err, handled := e.streamRawFromFile(w, start, length); handled {
+			return n, err
+		}
+	}
 
 	minimizeReads := e.couldMinimizeReads() && start == 0 && end == 0
 
 	var f io.Reader
 	var err error
 	if minimizeReads {
+		f, err = e.file.OpenRaw()
+		if err != nil {
+			return -1, err
+		}
+	} else if e.CompressedLength() == 0 && e.file.Flags&zipFlagEncrypted == 0 {
+		// Raw bytes == content for stored entries; OpenRaw skips the CRC32
+		// pass and returns a seekable reader for cheap range starts.
 		f, err = e.file.OpenRaw()
 		if err != nil {
 			return -1, err
@@ -203,8 +278,11 @@ func (e *gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, 
 		return io.Copy(w, f)
 	}
 	if start > 0 {
-		n, err := io.CopyN(io.Discard, f, start)
-		if err != nil {
+		if skr, ok := f.(io.Seeker); ok {
+			if _, err := skr.Seek(start, io.SeekStart); err != nil {
+				return -1, err
+			}
+		} else if n, err := io.CopyN(io.Discard, f, start); err != nil {
 			return n, err
 		}
 	}
@@ -219,6 +297,11 @@ func (e *gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, 
 func (e *gozipArchiveEntry) StreamCompressed(w io.Writer) (int64, error) {
 	if e.file.Method != zip.Deflate {
 		return -1, errors.New("not a compressed resource")
+	}
+	if e.hasRawFileAccess() {
+		if n, err, handled := e.streamRawFromFile(w, 0, int64(e.file.CompressedSize64)); handled {
+			return n, err
+		}
 	}
 	f, err := e.file.OpenRaw()
 	if err != nil {
@@ -235,9 +318,13 @@ func (e *gozipArchiveEntry) StreamCompressedGzip(w io.Writer) (int64, error) {
 	if e.file.UncompressedSize64 > math.MaxUint32 {
 		return -1, errors.New("uncompressed size > 2^32 too large for GZIP")
 	}
-	f, err := e.file.OpenRaw()
-	if err != nil {
-		return -1, err
+	var f io.Reader
+	if !e.hasRawFileAccess() {
+		var err error
+		f, err = e.file.OpenRaw()
+		if err != nil {
+			return -1, err
+		}
 	}
 
 	// Header
@@ -249,7 +336,23 @@ func (e *gozipArchiveEntry) StreamCompressedGzip(w io.Writer) (int64, error) {
 		return -1, errors.Wrap(err, "failed to write GZIP header")
 	}
 
-	nn, err := io.Copy(w, f)
+	var nn int64
+	if f == nil {
+		// The deflate body is copied straight from the archive file so the
+		// kernel sendfile fast path applies between header and trailer.
+		var handled bool
+		nn, err, handled = e.streamRawFromFile(w, 0, int64(e.file.CompressedSize64))
+		if !handled {
+			var oerr error
+			f, oerr = e.file.OpenRaw()
+			if oerr != nil {
+				return int64(n), oerr
+			}
+			nn, err = io.Copy(w, f)
+		}
+	} else {
+		nn, err = io.Copy(w, f)
+	}
 	if err != nil {
 		return int64(n), errors.Wrap(err, "failed copying deflated bytes")
 	}
@@ -322,6 +425,10 @@ type gozipArchive struct {
 	closer        func() error
 	minimizeReads bool
 
+	// path is the filesystem path of the archive when it was opened from a
+	// local file, or empty otherwise. See gozipArchiveEntry.path.
+	path string
+
 	// nameIndex maps each entry's cleaned path to its *zip.File, giving O(1)
 	// lookups instead of a linear scan. It's built once, lazily, on the first
 	// Entry call that misses the wrapper cache.
@@ -356,6 +463,7 @@ func (a *gozipArchive) wrap(cleanPath string, f *zip.File) *gozipArchiveEntry {
 	entry := &gozipArchiveEntry{
 		file:          f,
 		minimizeReads: a.minimizeReads,
+		path:          a.path,
 	}
 	actual, _ := a.cachedEntries.LoadOrStore(cleanPath, entry)
 	return actual.(*gozipArchiveEntry)
@@ -419,7 +527,11 @@ func (e gozipArchiveFactory) Open(filepath string, password string) (Archive, er
 	if err != nil {
 		return nil, err
 	}
-	return NewGoZIPArchive(&rc.Reader, rc.Close, false), nil
+	return &gozipArchive{
+		zip:    &rc.Reader,
+		closer: rc.Close,
+		path:   filepath,
+	}, nil
 }
 
 // OpenBytes implements ArchiveFactory
