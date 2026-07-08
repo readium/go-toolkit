@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -19,6 +20,12 @@ type HTTPFetcher struct {
 	href   string
 	client *http.Client
 	url    url.AbsoluteURL
+
+	// sizes shares resource sizes (resolved URL -> int64) across the resources
+	// created by Get, so serving many requests for the same resource — every
+	// one of which needs the length — performs a single HEAD request over the
+	// fetcher's lifetime instead of one per request.
+	sizes sync.Map
 }
 
 func NewHTTPFetcher(href string, client *http.Client, url url.AbsoluteURL) *HTTPFetcher {
@@ -75,6 +82,7 @@ func (f *HTTPFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 					link:   link,
 					client: f.client,
 					url:    resolved,
+					sizes:  &f.sizes,
 				}
 			}
 		}
@@ -106,6 +114,7 @@ type httpResource struct {
 	url    url.AbsoluteURL
 
 	cachedSize *int64
+	sizes      *sync.Map // Optional fetcher-shared size cache, see HTTPFetcher
 }
 
 // Link implements Resource
@@ -129,6 +138,12 @@ func (r *httpResource) File() string {
 }
 
 func (r *httpResource) size(ctx context.Context) (int64, *ResourceError) {
+	if r.cachedSize == nil && r.sizes != nil {
+		if v, ok := r.sizes.Load(r.url.String()); ok {
+			length := v.(int64)
+			r.cachedSize = &length
+		}
+	}
 	if r.cachedSize == nil {
 		req, err := http.NewRequestWithContext(ctx, http.MethodHead, r.url.String(), nil)
 		if err != nil {
@@ -159,7 +174,9 @@ func (r *httpResource) size(ctx context.Context) (int64, *ResourceError) {
 			return 0, Other(errors.Wrap(err, "failed to parse Content-Length header"))
 		}
 		r.cachedSize = &length
-
+		if r.sizes != nil {
+			r.sizes.Store(r.url.String(), length)
+		}
 	}
 	return *r.cachedSize, nil
 }

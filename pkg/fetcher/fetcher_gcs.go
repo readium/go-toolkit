@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"sync"
 
 	"cloud.google.com/go/storage"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -22,6 +23,12 @@ type GCSFetcher struct {
 	handle *storage.ObjectHandle
 
 	cachedLinks manifest.LinkList
+
+	// attrsCache shares object metadata (object name -> *storage.ObjectAttrs)
+	// across the resources created by Get, so serving many requests for the
+	// same object — every one of which needs the length — performs a single
+	// attributes call over the fetcher's lifetime instead of one per request.
+	attrsCache sync.Map
 }
 
 func NewGCSFetcher(href string, client *storage.Client, handle *storage.ObjectHandle) *GCSFetcher {
@@ -136,8 +143,9 @@ func (f *GCSFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 		// must not let an incoming request reach objects elsewhere in the bucket.
 		if keyWithinRoot(f.handle.ObjectName(), resourceFile) {
 			return &gcsResource{
-				handle: f.client.Bucket(f.handle.BucketName()).Object(resourceFile),
-				link:   link,
+				handle:     f.client.Bucket(f.handle.BucketName()).Object(resourceFile),
+				link:       link,
+				attrsCache: &f.attrsCache,
 			}
 		}
 	}
@@ -154,6 +162,7 @@ type gcsResource struct {
 	link        manifest.Link
 	handle      *storage.ObjectHandle
 	cachedAttrs *storage.ObjectAttrs
+	attrsCache  *sync.Map // Optional fetcher-shared metadata cache, see GCSFetcher
 }
 
 // Link implements Resource
@@ -177,12 +186,20 @@ func (r *gcsResource) File() string {
 }
 
 func (r *gcsResource) attrs(ctx context.Context) (*storage.ObjectAttrs, *ResourceError) {
+	if r.cachedAttrs == nil && r.attrsCache != nil {
+		if v, ok := r.attrsCache.Load(r.handle.ObjectName()); ok {
+			r.cachedAttrs = v.(*storage.ObjectAttrs)
+		}
+	}
 	if r.cachedAttrs == nil {
 		head, err := r.handle.Attrs(ctx)
 		if err != nil {
 			return nil, gcsErrorToException(err)
 		}
 		r.cachedAttrs = head
+		if r.attrsCache != nil {
+			r.attrsCache.Store(r.handle.ObjectName(), head)
+		}
 	}
 	return r.cachedAttrs, nil
 }

@@ -7,6 +7,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -24,6 +25,12 @@ type S3Fetcher struct {
 	key    string
 
 	cachedLinks manifest.LinkList
+
+	// heads shares object metadata (key -> *s3.HeadObjectOutput) across the
+	// resources created by Get, so serving many requests for the same object —
+	// every one of which needs the length — performs a single HeadObject call
+	// over the fetcher's lifetime instead of one per request.
+	heads sync.Map
 }
 
 func NewS3Fetcher(href string, client *s3.Client, bucket, key string) *S3Fetcher {
@@ -126,6 +133,7 @@ func (f *S3Fetcher) Get(ctx context.Context, link manifest.Link) Resource {
 				client: f.client,
 				bucket: f.bucket,
 				key:    resourceFile,
+				heads:  &f.heads,
 			}
 		}
 	}
@@ -145,6 +153,7 @@ type s3Resource struct {
 	key    string
 
 	cachedHead *s3.HeadObjectOutput
+	heads      *sync.Map // Optional fetcher-shared metadata cache, see S3Fetcher
 }
 
 // Link implements Resource
@@ -175,6 +184,11 @@ func (r *s3Resource) object() *s3.GetObjectInput {
 }
 
 func (r *s3Resource) head(ctx context.Context) (*s3.HeadObjectOutput, *ResourceError) {
+	if r.cachedHead == nil && r.heads != nil {
+		if v, ok := r.heads.Load(r.key); ok {
+			r.cachedHead = v.(*s3.HeadObjectOutput)
+		}
+	}
 	if r.cachedHead == nil {
 		head, err := r.client.HeadObject(ctx, &s3.HeadObjectInput{
 			Bucket: &r.bucket,
@@ -184,6 +198,9 @@ func (r *s3Resource) head(ctx context.Context) (*s3.HeadObjectOutput, *ResourceE
 			return nil, awsErrorToException(err)
 		}
 		r.cachedHead = head
+		if r.heads != nil {
+			r.heads.Store(r.key, head)
+		}
 	}
 	return r.cachedHead, nil
 }

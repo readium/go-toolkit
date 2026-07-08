@@ -95,3 +95,39 @@ func TestHTTPResourceStream(t *testing.T) {
 	assert.Equal(t, []string{"bytes=100-199"}, ranges)
 	mu.Unlock()
 }
+
+// Resources created by the same HTTPFetcher share learned sizes, so serving
+// many requests for the same file — each of which needs Length for the
+// Content-Length header — performs a single HEAD request in total.
+func TestHTTPFetcherSharesResourceSize(t *testing.T) {
+	payload := make([]byte, 1234)
+
+	var mu sync.Mutex
+	heads := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead {
+			mu.Lock()
+			heads++
+			mu.Unlock()
+		}
+		http.ServeContent(w, r, "file.bin", time.Time{}, bytes.NewReader(payload))
+	}))
+	defer srv.Close()
+
+	base, err := url.AbsoluteURLFromString(srv.URL + "/")
+	require.NoError(t, err)
+	f := NewHTTPFetcher("", srv.Client(), base)
+	link := manifest.Link{Href: manifest.MustNewHREFFromString("file.bin", false)}
+
+	for range 3 {
+		res := f.Get(t.Context(), link)
+		n, rerr := res.Length(t.Context())
+		require.Nil(t, rerr)
+		assert.Equal(t, int64(1234), n)
+		res.Close()
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, 1, heads, "size should be learned once and shared across resources")
+}
