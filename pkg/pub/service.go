@@ -17,6 +17,7 @@ const (
 	SearchService_Name            ServiceName = "SearchService"
 	ContentService_Name           ServiceName = "ContentService"
 	GuidedNavigationService_Name  ServiceName = "GuidedNavigationService"
+	MediaOverlayService_Name      ServiceName = "MediaOverlayService"
 )
 
 // Base interface to be implemented by all publication services.

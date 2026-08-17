@@ -86,7 +86,8 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 		// pub.ContentService_Name: pub.DefaultContentServiceFactory([]iterator.ResourceContentIteratorFactory{
 		// 	iterator.HTMLFactory(),
 		// }),
-		pub.GuidedNavigationService_Name: MediaOverlayFactory(),
+		pub.GuidedNavigationService_Name: pub.HTMLGuidedNavigationServiceFactory(),
+		pub.MediaOverlayService_Name:     MediaOverlayFactory(),
 	})
 	return pub.NewBuilder(manifest, ffetcher, builder), nil
 }
