@@ -200,12 +200,36 @@ func TestTextFragmentID(t *testing.T) {
 		{"chapter1.html#id:~:text=highlighted", "id"},
 		{"chapter1.html#:~:text=highlighted", ""},
 		{"chapter1.html", ""},
+		// A css() fragment is a selector, not an id
+		{"chapter1.html#css(body%20%3E%20p:nth-child(3))", ""},
 	}
 	for _, tt := range tests {
 		obj := GuidedNavigationObject{TextRef: url.MustURLFromString(tt.ref)}
 		assert.Equal(t, tt.id, obj.TextFragmentID(), tt.ref)
 	}
 	assert.Empty(t, GuidedNavigationObject{}.TextFragmentID())
+}
+
+func TestTextCSSSelector(t *testing.T) {
+	tests := []struct {
+		ref      string
+		selector string
+	}{
+		{"chapter1.html#css(body%20%3E%20p:nth-child(3))", "body > p:nth-child(3)"},
+		{"chapter1.html#css(%23s2%20%3E%20p)", "#s2 > p"},
+		{"chapter1.html#css(body%20%3E%20img)", "body > img"},
+		{"chapter1.html#start", ""},
+		{"chapter1.html#css(unterminated", ""},
+		{"chapter1.html", ""},
+	}
+	for _, tt := range tests {
+		obj := GuidedNavigationObject{TextRef: url.MustURLFromString(tt.ref)}
+		assert.Equal(t, tt.selector, obj.TextCSSSelector(), tt.ref)
+		desc := GuidedNavigationDescription{TextRef: url.MustURLFromString(tt.ref)}
+		assert.Equal(t, tt.selector, desc.TextCSSSelector(), tt.ref)
+	}
+	assert.Empty(t, GuidedNavigationObject{}.TextCSSSelector())
+	assert.Empty(t, GuidedNavigationDescription{}.TextCSSSelector())
 }
 
 func TestTextFragments(t *testing.T) {

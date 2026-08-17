@@ -48,3 +48,50 @@ func TestCSSSelector(t *testing.T) {
 	assert.Equal(t, qf("#pgepubid00498 > p:nth-child(5)"), "#pgepubid00498 > p:nth-child(5)")
 	assert.Equal(t, qf("#pgepubid00498 > p:nth-child(4) > span"), "#pgepubid00498 > p:nth-child(4) > span")
 }
+
+// Hostile identifiers must never panic the selector generator, and the escaped
+// selectors should round-trip: parsing them back finds exactly the source element.
+func TestCSSSelectorHostileIdentifiers(t *testing.T) {
+	docs := []string{
+		`<html><body><div><p class="foo(bar)">x</p><p class="foo(bar)">y</p></div></body></html>`,
+		`<html><body><div><p class="123">x</p></div></body></html>`,
+		`<html><body><div><p class="--x">x</p></div></body></html>`,
+		`<html><body><div><p class="-5x">x</p></div></body></html>`,
+		`<html><body><div><p class="a.b">x</p></div></body></html>`,
+		`<html><body><div><p class="a:b(c)">x</p></div></body></html>`,
+		`<html><body><div><p class="&gt;,+~*">x</p></div></body></html>`,
+		`<html><body><div><p class="foo.">x</p></div></body></html>`,
+		`<html><body><div><p class="a\b">x</p></div></body></html>`,
+		`<html><body><div><p class="émoji😀">x</p></div></body></html>`,
+		`<html><body><div><p class="[foo]">x</p><p class="'quo&quot;te'">y</p></div></body></html>`,
+		`<html><body><div><epub:switch><epub:case>x</epub:case></epub:switch></div></body></html>`,
+	}
+	for _, doc := range docs {
+		root, err := html.Parse(strings.NewReader(doc))
+		require.NoError(t, err)
+
+		// The target is the first <p> (or unknown prefixed element) in the doc
+		var target *html.Node
+		var walk func(*html.Node)
+		walk = func(n *html.Node) {
+			if n.Type == html.ElementNode && (n.Data == "p" || strings.Contains(n.Data, ":")) {
+				target = n
+				return
+			}
+			for c := n.FirstChild; c != nil && target == nil; c = c.NextSibling {
+				walk(c)
+			}
+		}
+		walk(root)
+		require.NotNil(t, target, doc)
+
+		sel := CSSSelector(target)
+		assert.NotEmpty(t, sel, doc)
+
+		s, err := cascadia.Parse(sel)
+		if !assert.NoError(t, err, "generated selector %q should parse", sel) {
+			continue
+		}
+		assert.Equal(t, target, cascadia.Query(root, s), "%q should round-trip", sel)
+	}
+}

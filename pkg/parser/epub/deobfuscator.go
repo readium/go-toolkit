@@ -63,6 +63,12 @@ func (d DeobfuscatingResource) Read(ctx context.Context, start, end int64) ([]by
 			shasum := sha1.Sum([]byte(d.identifier))
 			obfuscationKey = shasum[:]
 		}
+
+		// If getHashKeyAdobe() is blank, meaning the hex decoding of the UUID failed
+		if len(obfuscationKey) == 0 {
+			return nil, fetcher.Other(errors.New("error deriving font deobfuscation key"))
+		}
+
 		deobfuscateFont(data, start, obfuscationKey, v)
 		return data, nil
 	}
@@ -231,7 +237,7 @@ func (d DeobfuscatingResource) getHashKeyAdobe() []byte {
 }
 
 func deobfuscateFont(data []byte, start int64, obfuscationKey []byte, obfuscationLength int64) {
-	if start >= obfuscationLength {
+	if start >= obfuscationLength || len(obfuscationKey) == 0 {
 		return
 	}
 	max := obfuscationLength - start

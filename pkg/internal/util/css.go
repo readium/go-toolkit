@@ -7,7 +7,6 @@ import (
 
 	"github.com/agext/regexp"
 	"github.com/andybalholm/cascadia"
-	"github.com/pkg/errors"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -101,11 +100,15 @@ func CSSSelector(n *html.Node) string {
 		return selector.String()
 	}
 
-	s, err := cascadia.Parse(selector.String())
-	if err != nil {
-		panic(errors.Wrap(err, "failed parsing generated CSS selector"))
+	// Check whether the selector needs disambiguation among the parent's contents.
+	// When the rudimentary escaping above produces a selector cascadia fails to
+	// parse, matches cannot be counted: conservatively pin the element's position,
+	// a redundant nth-child is still correct.
+	ambiguous := true
+	if s, err := cascadia.Parse(selector.String()); err == nil {
+		ambiguous = len(cascadia.QueryAll(n.Parent, s)) > 1
 	}
-	if nodes := cascadia.QueryAll(n.Parent, s); len(nodes) > 1 {
+	if ambiguous {
 		// Figure out the index of this node among its siblings
 		idx := 1
 		for ps := n.PrevSibling; ps != nil; ps = ps.PrevSibling {

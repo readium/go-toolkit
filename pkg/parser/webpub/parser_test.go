@@ -474,6 +474,38 @@ func TestParseServiceFactories(t *testing.T) {
 	assert.NotNil(t, builder.ServicesBuilder.Get(pub.GuidedNavigationService_Name))
 }
 
+// HTML documents among the resources are enough to get a guided navigation service,
+// even when the reading order has none. Without SMIL alternates there is no media
+// overlay service.
+func TestParseGuidedNavigationForHTMLResources(t *testing.T) {
+	dir := t.TempDir()
+	manifestJSON := `{
+		"@context": "https://readium.org/webpub-manifest/context.jsonld",
+		"metadata": {
+			"conformsTo": "https://readium.org/webpub-manifest/profiles/audiobook",
+			"title": "Audiobook with sync text",
+			"duration": 60
+		},
+		"links": [],
+		"readingOrder": [
+			{"href": "track1.mp3", "type": "audio/mpeg", "duration": 60}
+		],
+		"resources": [
+			{"href": "sync.xhtml", "type": "application/xhtml+xml"}
+		]
+	}`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "manifest.json"), []byte(manifestJSON), 0o644))
+
+	builder, err := parseFileAsset(t, nil, filepath.ToSlash(filepath.Join(dir, "manifest.json")), &mediatype.ReadiumWebpubManifest)
+	require.NoError(t, err)
+	require.NotNil(t, builder)
+
+	p := builder.Build()
+	defer p.Close()
+	assert.NotNil(t, p.FindService(pub.GuidedNavigationService_Name))
+	assert.Nil(t, p.FindService(pub.MediaOverlayService_Name))
+}
+
 // The parser must not swallow assets which aren't WebPub flavored.
 func TestParseSkipsOtherMediaTypes(t *testing.T) {
 	builder, err := parseFileAsset(t, nil, "testdata/audio/manifest.json", &mediatype.JSON)
