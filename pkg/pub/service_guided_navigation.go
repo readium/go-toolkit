@@ -12,16 +12,30 @@ import (
 	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
+// GuidedNavigationLink is the templated link of the guided navigation service,
+// which generates guided navigation documents from the publication's (X)HTML
+// documents. It is advertised in the manifest's links when the service is public.
 var GuidedNavigationLink = manifest.Link{
 	Href:      manifest.MustNewHREFFromString("~readium/guided-navigation.json{?ref}", true),
 	MediaType: &mediatype.ReadiumGuidedNavigationDocument,
 }
 
-// Pre-cached value of the guided navigation link's path
+// MediaOverlayLink is the templated link of the media overlay service, which
+// converts a resource's SMIL media overlay into a guided navigation document.
+// It is never advertised in the manifest's links: the service replaces each SMIL
+// alternate with an expansion of this link instead.
+var MediaOverlayLink = manifest.Link{
+	Href:      manifest.MustNewHREFFromString("~readium/media-overlay.json{?ref}", true),
+	MediaType: &mediatype.ReadiumGuidedNavigationDocument,
+}
+
+// Pre-cached values of the service links' paths
 var resolvedGuidedNavigation url.URL
+var resolvedMediaOverlay url.URL
 
 func init() {
 	resolvedGuidedNavigation = GuidedNavigationLink.URL(nil, nil)
+	resolvedMediaOverlay = MediaOverlayLink.URL(nil, nil)
 }
 
 // GuidedNavigationService implements Service
@@ -32,11 +46,21 @@ type GuidedNavigationService interface {
 	HasGuideForResource(href string) bool
 }
 
+// GetForGuidedNavigationService serves a [GuidedNavigationLink] expansion from the given service.
 func GetForGuidedNavigationService(ctx context.Context, service GuidedNavigationService, link manifest.Link) (fetcher.Resource, bool) {
+	return getForGuideService(ctx, service, link, GuidedNavigationLink, resolvedGuidedNavigation)
+}
+
+// GetForMediaOverlayService serves a [MediaOverlayLink] expansion from the given service.
+func GetForMediaOverlayService(ctx context.Context, service GuidedNavigationService, link manifest.Link) (fetcher.Resource, bool) {
+	return getForGuideService(ctx, service, link, MediaOverlayLink, resolvedMediaOverlay)
+}
+
+func getForGuideService(ctx context.Context, service GuidedNavigationService, link manifest.Link, template manifest.Link, resolved url.URL) (fetcher.Resource, bool) {
 	u := link.URL(nil, nil)
 
-	if u.Path() != resolvedGuidedNavigation.Path() {
-		// Not the guided navigation link
+	if u.Path() != resolved.Path() {
+		// Not the service's link
 		return nil, false
 	}
 
@@ -48,8 +72,8 @@ func GetForGuidedNavigationService(ctx context.Context, service GuidedNavigation
 		return nil, false
 	}
 
-	// Overrride the link's href with the expanded guided navigation link
-	expandedHref := GuidedNavigationLink.URL(nil, map[string]string{
+	// Overrride the link's href with the expanded service link
+	expandedHref := template.URL(nil, map[string]string{
 		"ref": ref,
 	})
 	link.Href = manifest.NewHREF(expandedHref)

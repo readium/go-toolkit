@@ -21,6 +21,9 @@ import (
 //     https://idpf.org/epub/renditions/region-nav/#sec-3.5.1
 //   - Text: fragment ids ("chapter.html#par1") and text fragments
 //     https://wicg.github.io/scroll-to-text-fragment/
+//   - Text: css() selector fragments locating an element of an (X)HTML resource,
+//     e.g. "chapter.html#css(body%20%3E%20p:nth-child(3))", as emitted by the
+//     converter package's WithTextRefLocators option
 
 // The unit of a spatial fragment's coordinates.
 type RegionUnit string
@@ -161,6 +164,13 @@ func (o GuidedNavigationObject) TextFragments() []TextFragment {
 	return refTextFragments(o.TextRef)
 }
 
+// TextCSSSelector returns the CSS selector of the object's text reference
+// (e.g. "body > p:nth-child(3)" for "chapter.html#css(body%20%3E%20p:nth-child(3))"),
+// or an empty string when the reference has no css() fragment.
+func (o GuidedNavigationObject) TextCSSSelector() string {
+	return refCSSSelector(o.TextRef)
+}
+
 // AudioFile returns the audio resource referenced by the description, without its media fragment.
 func (d GuidedNavigationDescription) AudioFile() url.URL {
 	return refFile(d.AudioRef)
@@ -221,6 +231,12 @@ func (d GuidedNavigationDescription) TextFragmentID() string {
 // or nil when there are none.
 func (d GuidedNavigationDescription) TextFragments() []TextFragment {
 	return refTextFragments(d.TextRef)
+}
+
+// TextCSSSelector returns the CSS selector of the description's text reference,
+// or an empty string when the reference has no css() fragment.
+func (d GuidedNavigationDescription) TextCSSSelector() string {
+	return refCSSSelector(d.TextRef)
 }
 
 // The reference without its fragment.
@@ -503,9 +519,38 @@ func refFragmentID(ref url.URL) string {
 	// A fragment directive doesn't belong to the fragment id preceding it
 	fragment, _, _ = strings.Cut(fragment, textDirectiveDelimiter)
 	if decoded, err := nurl.PathUnescape(fragment); err == nil {
-		return decoded
+		fragment = decoded
+	}
+	if _, ok := cssSelectorFragment(fragment); ok {
+		// A css() fragment is a selector, not an id
+		return ""
 	}
 	return fragment
+}
+
+// The selector of a css() fragment, e.g. "css(body > p)" -> "body > p".
+// The fragment is expected in decoded form.
+func cssSelectorFragment(fragment string) (string, bool) {
+	inner, ok := strings.CutPrefix(fragment, "css(")
+	if !ok {
+		return "", false
+	}
+	inner, ok = strings.CutSuffix(inner, ")")
+	if !ok {
+		return "", false
+	}
+	return inner, true
+}
+
+func refCSSSelector(ref url.URL) string {
+	if ref == nil {
+		return ""
+	}
+	fragment := ref.Fragment()
+	// A fragment directive doesn't belong to the fragment preceding it
+	fragment, _, _ = strings.Cut(fragment, textDirectiveDelimiter)
+	sel, _ := cssSelectorFragment(fragment)
+	return sel
 }
 
 func refTextFragments(ref url.URL) []TextFragment {

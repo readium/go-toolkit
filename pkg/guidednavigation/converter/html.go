@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"github.com/readium/go-toolkit/pkg/guidednavigation"
+	iutil "github.com/readium/go-toolkit/pkg/internal/util"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"golang.org/x/net/html"
@@ -340,9 +341,24 @@ func (a *idAllocator) allocate(prefix string) string {
 // contain noterefs. Beyond it, notes are referenced by textref instead.
 const maxNoterefDepth = 3
 
+// An Option configures an [HTMLConverter].
+type Option func(*HTMLConverter)
+
+// WithTextRefLocators makes every emitted object whose element carries roles
+// reference its location in the source document through textref: the element's
+// fragment id when it has one (e.g. "chapter.xhtml#par1"), a css() fragment with
+// a unique CSS selector otherwise (e.g. "chapter.xhtml#css(body%20%3E%20p:nth-child(3))").
+// The selectors are anchored to the closest ancestor with an id when there is one.
+func WithTextRefLocators() Option {
+	return func(c *HTMLConverter) {
+		c.textRefLocators = true
+	}
+}
+
 type HTMLConverter struct {
-	baseLocator manifest.Locator
-	xmlParsed   bool // Whether the tree comes from an XML parser (self-closing tags handled correctly).
+	baseLocator     manifest.Locator
+	xmlParsed       bool // Whether the tree comes from an XML parser (self-closing tags handled correctly).
+	textRefLocators bool // Whether every object with roles gets a textref locating its source element.
 
 	segments          []textSegment       // Closed segments of the text flow accumulated for the current block.
 	textAcc           strings.Builder     // Text of the currently open segment, with coalesced whitespace.
@@ -362,10 +378,14 @@ type HTMLConverter struct {
 	allowNode    *html.Node // Node exempt from suppression/visibility checks (target of a noteref sub-conversion).
 }
 
-func NewHTMLConverter(baseLocator manifest.Locator) *HTMLConverter {
-	return &HTMLConverter{
+func NewHTMLConverter(baseLocator manifest.Locator, opts ...Option) *HTMLConverter {
+	c := &HTMLConverter{
 		baseLocator: baseLocator,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 // Whether an element opens (and closes) a navigation object during the traversal.
@@ -387,6 +407,24 @@ func (c *HTMLConverter) fragmentRef(id string) url.URL {
 		return nil
 	}
 	frag, err := url.URLFromGo(&nurl.URL{Fragment: id})
+	if err != nil {
+		return nil
+	}
+	return c.baseLocator.Href.Resolve(frag)
+}
+
+// Builds a reference locating an element of the converted resource: the element's
+// fragment id when it has one, a css() fragment with a unique CSS selector otherwise,
+// e.g. "chapter.xhtml#css(body%20%3E%20p:nth-child(3))".
+func (c *HTMLConverter) nodeRef(n *html.Node) url.URL {
+	if id := getAttr(n, "id"); id != "" {
+		return c.fragmentRef(id)
+	}
+	sel := iutil.CSSSelector(n)
+	if sel == "" || c.baseLocator.Href == nil {
+		return nil
+	}
+	frag, err := url.URLFromGo(&nurl.URL{Fragment: "css(" + sel + ")"})
 	if err != nil {
 		return nil
 	}
@@ -703,6 +741,11 @@ func (c *HTMLConverter) head(n *html.Node) {
 	if n.DataAtom == atom.Body {
 		// Contextualize the top-level object per the specification
 		cur.TextRef = c.baseLocator.Href
+	} else if c.textRefLocators {
+		// Locate every object carrying roles in the source document
+		if len(roles) > 0 {
+			cur.TextRef = c.nodeRef(n)
+		}
 	} else if len(roles) > 0 && !c.current.noText {
 		if id := getAttr(n, "id"); id != "" {
 			cur.TextRef = c.fragmentRef(id)
@@ -808,6 +851,11 @@ func (c *HTMLConverter) placeholderWithID(n *html.Node, tag string, object guide
 		// Registering it anyway would leave a dangling id in the SSML.
 		return
 	}
+	if c.textRefLocators && object.TextRef == nil {
+		// Locate the object's source element (checked after Empty so that
+		// skipped elements don't come back as bare locators)
+		object.TextRef = c.nodeRef(n)
+	}
 	child := &navigationObject{node: n, object: object}
 	if c.current.noText {
 		// The surrounding text is suppressed: keep the object, without a placeholder
@@ -875,13 +923,14 @@ func (c *HTMLConverter) noteref(n *html.Node, roles []guidednavigation.GuidedNav
 		// section) are only referenced, never embedded.
 		if target := c.ids[fragment]; target != nil && !isAncestorOf(target, n) && c.noterefDepth < maxNoterefDepth {
 			sub := &HTMLConverter{
-				baseLocator:  c.baseLocator,
-				xmlParsed:    c.xmlParsed,
-				ids:          c.ids,
-				suppressed:   c.suppressed,
-				idAlloc:      c.idAlloc,
-				noterefDepth: c.noterefDepth + 1,
-				allowNode:    target,
+				baseLocator:     c.baseLocator,
+				xmlParsed:       c.xmlParsed,
+				textRefLocators: c.textRefLocators,
+				ids:             c.ids,
+				suppressed:      c.suppressed,
+				idAlloc:         c.idAlloc,
+				noterefDepth:    c.noterefDepth + 1,
+				allowNode:       target,
 			}
 			sub.Convert(target)
 			obj.Children = sub.Result()

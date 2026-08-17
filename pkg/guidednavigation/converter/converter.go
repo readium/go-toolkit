@@ -13,7 +13,7 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-func Do(ctx context.Context, resource fetcher.Resource, locator manifest.Locator) (*guidednavigation.GuidedNavigationDocument, error) {
+func Do(ctx context.Context, resource fetcher.Resource, locator manifest.Locator, opts ...Option) (*guidednavigation.GuidedNavigationDocument, error) {
 	raw, rerr := fetcher.ReadResourceAsString(ctx, resource)
 	if rerr != nil {
 		return nil, errors.Wrap(rerr, "failed reading HTML string of "+resource.Link().Href.String())
@@ -45,7 +45,7 @@ func Do(ctx context.Context, resource fetcher.Resource, locator manifest.Locator
 		return nil, errors.New("HTML of " + resource.Link().Href.String() + " doesn't have a <body>")
 	}
 
-	contentConverter := NewHTMLConverter(locator)
+	contentConverter := NewHTMLConverter(locator, opts...)
 	contentConverter.xmlParsed = xmlParsed
 
 	// Traverse the document's HTML
