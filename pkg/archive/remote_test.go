@@ -239,3 +239,75 @@ func TestRemoteDeflatedEntryRead(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []byte("deflated"), data)
 }
+
+// shortReadRemoteReader is an in-memory RemoteArchiveReader whose readers
+// return at most a few bytes per Read call, the way a network stream delivers
+// data on TCP segment boundaries. Reads through the adapter must be immune to
+// such short reads.
+type shortReadRemoteReader struct {
+	data  []byte
+	chunk int
+}
+
+func (r *shortReadRemoteReader) Size() int64 {
+	return int64(len(r.data))
+}
+
+func (r *shortReadRemoteReader) ReadRange(ctx context.Context, offset, length int64) (io.ReadCloser, error) {
+	end := int64(len(r.data))
+	if length >= 0 && offset+length < end {
+		end = offset + length
+	}
+	if offset > end {
+		offset = end
+	}
+	return &shortReadCloser{r: bytes.NewReader(r.data[offset:end]), chunk: r.chunk}, nil
+}
+
+type shortReadCloser struct {
+	r     *bytes.Reader
+	chunk int
+}
+
+func (c *shortReadCloser) Read(p []byte) (int, error) {
+	if len(p) > c.chunk {
+		p = p[:c.chunk]
+	}
+	return c.r.Read(p)
+}
+
+func (c *shortReadCloser) Close() error {
+	return nil
+}
+
+// Local file headers are probed with a single 30-byte read of the remote
+// stream. A stream returning fewer bytes per Read call must not result in a
+// truncated header being parsed (wrong data offsets, "flate: corrupt input").
+// Go's zip writer emits data-descriptor entries (zero sizes in the local
+// header), matching the real-world EPUBs this was seen with.
+func TestRemoteShortNetworkReads(t *testing.T) {
+	zipBytes, big := buildRemoteTestZIP(t, 256<<10)
+	reader := &shortReadRemoteReader{data: zipBytes, chunk: 7}
+	rdr := newRemoteZIPAdapter(reader, RemoteArchiveConfig{
+		Timeout:             time.Minute,
+		CacheSizeThreshold:  1024 * 1024,
+		CacheCountThreshold: 32,
+		CacheAllThreshold:   1024, // Below the archive size, so nothing is fully cached
+	})
+	zr, err := zip.NewReader(rdr, int64(len(zipBytes)))
+	require.NoError(t, err)
+	rdr.makeReady()
+	a := &gozipArchive{zip: zr, minimizeReads: true, closer: rdr.Close}
+
+	entry, err := a.Entry("small.txt")
+	require.NoError(t, err)
+	data, err := entry.Read(0, 0)
+	require.NoError(t, err)
+	assert.Equal(t, []byte("hello deflated world"), data)
+
+	entry, err = a.Entry("big.bin")
+	require.NoError(t, err)
+	data, err = entry.Read(1000, 1999)
+	require.NoError(t, err)
+	assert.Equal(t, big[1000:2000], data)
+}
