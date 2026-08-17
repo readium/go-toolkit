@@ -158,13 +158,17 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 		}
 
 		var fileHeaderBuf [30]byte
-		n, err = rdr.Read(fileHeaderBuf[:])
+		// The stream can return fewer bytes per Read call than requested
+		// (e.g. on network chunk boundaries), so the buffer must be filled
+		// completely before parsing it, or offsets read from the truncated
+		// header corrupt every later read of the entry.
+		n, err = io.ReadFull(rdr, fileHeaderBuf[:])
 		if err != nil {
 			rdr.Close()
 			return 0, errors.Wrap(err, "failed reading local file header bytes")
 		}
 		if fileHeaderBuf[0] == 'P' && fileHeaderBuf[1] == 'K' && fileHeaderBuf[2] == 0x03 && fileHeaderBuf[3] == 0x04 {
-			// PK\x05\x06 is the signature of a ZIP's local file header. This confirms our suspsicion that it's
+			// PK\x03\x04 is the signature of a ZIP's local file header. This confirms our suspsicion that it's
 			// what it seems. The possibility of it being something else is very very low at this point.
 
 			// Get compression method
