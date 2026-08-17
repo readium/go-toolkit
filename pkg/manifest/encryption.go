@@ -27,9 +27,9 @@ func EncryptionFromJSON(rawJson map[string]interface{}) (*Encryption, error) {
 	e := new(Encryption)
 	e.Algorithm = algorithm
 	e.Compression = parseOptString(rawJson["compression"])
-	e.OriginalLength = int64(parseOptFloat64(rawJson["originalLength"]))
+	e.OriginalLength = parseOptInt64(rawJson["originalLength"])
 	if e.OriginalLength == 0 {
-		e.OriginalLength = int64(parseOptFloat64(rawJson["original-length"]))
+		e.OriginalLength = parseOptInt64(rawJson["original-length"])
 	}
 	e.Profile = parseOptString(rawJson["profile"])
 	e.Scheme = parseOptString(rawJson["scheme"])

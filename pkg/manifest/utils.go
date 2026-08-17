@@ -95,6 +95,22 @@ func parseOptFloat64(raw interface{}) float64 {
 	return rb
 }
 
+// parseOptInt64 reads an integer that may come from JSON (float64) or from
+// in-memory maps built with native integer types.
+func parseOptInt64(raw interface{}) int64 {
+	switch v := raw.(type) {
+	case float64:
+		return int64(v)
+	case int64:
+		return v
+	case int:
+		return int64(v)
+	case uint64:
+		return int64(v)
+	}
+	return 0
+}
+
 func float64ToUint(f float64) uint {
 	if f < 0 {
 		return 0
