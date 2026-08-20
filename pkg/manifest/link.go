@@ -257,7 +257,7 @@ func (ll LinkList) FilterByRel(rel string) LinkList {
 // Finds the first link matching the given media type.
 func (ll LinkList) FirstWithMediaType(mt *mediatype.MediaType) *Link {
 	for _, link := range ll {
-		if link.MediaType.Matches(mt) {
+		if link.MediaType != nil && link.MediaType.Matches(mt) {
 			return &link
 		}
 	}
@@ -268,7 +268,7 @@ func (ll LinkList) FirstWithMediaType(mt *mediatype.MediaType) *Link {
 func (ll LinkList) FilterByMediaType(mt ...*mediatype.MediaType) LinkList {
 	flinks := make(LinkList, 0)
 	for _, link := range ll {
-		if link.MediaType.Matches(mt...) {
+		if link.MediaType != nil && link.MediaType.Matches(mt...) {
 			flinks = append(flinks, link)
 		}
 	}
@@ -278,7 +278,7 @@ func (ll LinkList) FilterByMediaType(mt ...*mediatype.MediaType) LinkList {
 // Returns whether all the resources in the collection are bitmaps.
 func (ll LinkList) AllAreBitmap() bool {
 	for _, link := range ll {
-		if !link.MediaType.IsBitmap() {
+		if link.MediaType == nil || !link.MediaType.IsBitmap() {
 			return false
 		}
 	}
@@ -288,7 +288,7 @@ func (ll LinkList) AllAreBitmap() bool {
 // Returns whether all the resources in the collection are audio clips.
 func (ll LinkList) AllAreAudio() bool {
 	for _, link := range ll {
-		if !link.MediaType.IsAudio() {
+		if link.MediaType == nil || !link.MediaType.IsAudio() {
 			return false
 		}
 	}
@@ -298,7 +298,7 @@ func (ll LinkList) AllAreAudio() bool {
 // Returns whether all the resources in the collection are video clips.
 func (ll LinkList) AllAreVideo() bool {
 	for _, link := range ll {
-		if !link.MediaType.IsVideo() {
+		if link.MediaType == nil || !link.MediaType.IsVideo() {
 			return false
 		}
 	}
@@ -308,7 +308,7 @@ func (ll LinkList) AllAreVideo() bool {
 // Returns whether all the resources in the collection are bitmaps or video clips.
 func (ll LinkList) AllAreVisual() bool {
 	for _, link := range ll {
-		if !link.MediaType.IsBitmap() && !link.MediaType.IsVideo() {
+		if link.MediaType == nil || (!link.MediaType.IsBitmap() && !link.MediaType.IsVideo()) {
 			return false
 		}
 	}
@@ -318,7 +318,7 @@ func (ll LinkList) AllAreVisual() bool {
 // Returns whether all the resources in the collection are HTML documents.
 func (ll LinkList) AllAreHTML() bool {
 	for _, link := range ll {
-		if !link.MediaType.IsHTML() {
+		if link.MediaType == nil || !link.MediaType.IsHTML() {
 			return false
 		}
 	}
@@ -328,7 +328,7 @@ func (ll LinkList) AllAreHTML() bool {
 // Returns whether all the resources in the collection are matching the given media type.
 func (ll LinkList) AllMatchMediaType(mt ...*mediatype.MediaType) bool {
 	for _, link := range ll {
-		if !link.MediaType.Matches(mt...) {
+		if link.MediaType == nil || !link.MediaType.Matches(mt...) {
 			return false
 		}
 	}
