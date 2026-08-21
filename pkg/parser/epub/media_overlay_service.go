@@ -26,7 +26,7 @@ func MediaOverlayFactory() pub.ServiceFactory {
 			alts := context.Manifest.ReadingOrder[i].Alternates
 			for j := range alts {
 				alt := context.Manifest.ReadingOrder[i].Alternates[j]
-				if alt.MediaType.Equal(&mediatype.SMIL) {
+				if alt.MediaType != nil && alt.MediaType.Equal(&mediatype.SMIL) {
 					// SMIL alternate for reading order item found
 
 					// Create a guided navigation link for the SMIL alt
