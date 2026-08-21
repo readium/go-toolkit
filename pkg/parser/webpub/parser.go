@@ -157,18 +157,15 @@ func (p WebPubParser) Parse(ctx context.Context, a asset.PublicationAsset, f fet
 		serviceFactories[pub.PositionsService_Name] = epub.PositionsServiceFactory(nil)
 	}
 
-	// Add guided navigation service for WebPubs with HTML contents. It serves SMIL
-	// media overlays when reading order items have them, and converts the HTML
-	// resources themselves otherwise. It replaces the content service:
+	// Guided navigation for (X)HTML contents in the reading order or the resources,
+	// and media overlays for items with SMIL alternates. Both factories create no
+	// service when the publication has nothing for them. The guided navigation
+	// service replaces the content service:
 	// serviceFactories[pub.ContentService_Name] = pub.DefaultContentServiceFactory([]iterator.ResourceContentIteratorFactory{
 	// 	iterator.HTMLFactory(),
 	// })
-	for _, link := range m.ReadingOrder {
-		if link.MediaType != nil && link.MediaType.IsHTML() {
-			serviceFactories[pub.GuidedNavigationService_Name] = epub.MediaOverlayFactory()
-			break
-		}
-	}
+	serviceFactories[pub.GuidedNavigationService_Name] = pub.HTMLGuidedNavigationServiceFactory()
+	serviceFactories[pub.MediaOverlayService_Name] = epub.MediaOverlayFactory()
 
 	var servicesBuilder *pub.ServicesBuilder
 	if len(serviceFactories) > 0 {

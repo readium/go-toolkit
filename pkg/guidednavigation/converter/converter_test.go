@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func convertDoc(t *testing.T, doc string, mt *mediatype.MediaType) string {
+func convertDoc(t *testing.T, doc string, mt *mediatype.MediaType, opts ...Option) string {
 	t.Helper()
 	f := fetcher.NewBytesResource(manifest.Link{
 		Href:      manifest.MustNewHREFFromString("hello.xhtml", false),
@@ -23,7 +23,7 @@ func convertDoc(t *testing.T, doc string, mt *mediatype.MediaType) string {
 
 	nav, err := Do(context.Background(), f, manifest.Locator{
 		Href: f.Link().Href.Resolve(nil, nil),
-	})
+	}, opts...)
 	require.NoError(t, err)
 	bin, err := json.Marshal(nav)
 	require.NoError(t, err)
@@ -43,6 +43,12 @@ func wrapXHTML(bodyAttrs, body string) string {
 func convertBody(t *testing.T, body string) string {
 	t.Helper()
 	return convertDoc(t, wrapXHTML("", body), &mediatype.XHTML)
+}
+
+// Like convertBody, with textref locators enabled.
+func convertBodyWithLocators(t *testing.T, body string) string {
+	t.Helper()
+	return convertDoc(t, wrapXHTML("", body), &mediatype.XHTML, WithTextRefLocators())
 }
 
 // The expected guided navigation document JSON for the given children of <body>.
@@ -735,4 +741,59 @@ func TestDoErrorsWithoutBody(t *testing.T) {
 		Href: f.Link().Href.Resolve(nil, nil),
 	})
 	require.Error(t, err)
+}
+
+// With WithTextRefLocators, every object carrying roles points back at its source
+// element: by fragment id when the element has one, by css() selector otherwise.
+// Selectors are anchored to the closest ancestor with an id.
+func TestConvertTextRefLocators(t *testing.T) {
+	res := convertBodyWithLocators(t, `
+		<section><p>Hello <img src="img.png" alt="An image"/> world</p></section>
+		<section id="s2"><p>Two</p></section>`)
+	assert.JSONEq(t, guidedJSON(`{
+		"role": ["section"],
+		"textref": "hello.xhtml#css(body%20%3E%20section:nth-child(1))",
+		"children": [{
+			"role": ["paragraph"],
+			"textref": "hello.xhtml#css(body%20%3E%20section:nth-child(1)%20%3E%20p)",
+			"text": {
+				"plain": "Hello world",
+				"ssml": "Hello <readium:image id=\"image1\"/> world"
+			},
+			"children": [{
+				"id": "image1",
+				"role": ["image"],
+				"imgref": "img.png",
+				"textref": "hello.xhtml#css(body%20%3E%20section:nth-child(1)%20%3E%20p%20%3E%20img)",
+				"description": "An image"
+			}]
+		}]
+	},
+	{
+		"role": ["section"],
+		"textref": "hello.xhtml#s2",
+		"children": [{
+			"role": ["paragraph"],
+			"textref": "hello.xhtml#css(%23s2%20%3E%20p)",
+			"text": "Two"
+		}]
+	}`), res)
+}
+
+// Objects that carry nothing but a role are still emitted when locators are
+// enabled, since the locator alone makes them useful. Pagebreaks without an id
+// fall back to a css() selector too.
+func TestConvertTextRefLocatorsStandalone(t *testing.T) {
+	res := convertBodyWithLocators(t, `
+		<hr/>
+		<span epub:type="pagebreak" title="5"></span>`)
+	assert.JSONEq(t, guidedJSON(`{
+		"role": ["separator"],
+		"textref": "hello.xhtml#css(body%20%3E%20hr)"
+	},
+	{
+		"role": ["pagebreak"],
+		"text": "5",
+		"textref": "hello.xhtml#css(body%20%3E%20span)"
+	}`), res)
 }
