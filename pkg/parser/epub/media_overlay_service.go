@@ -22,35 +22,7 @@ import (
 func MediaOverlayFactory() pub.ServiceFactory {
 	return func(context pub.Context, public bool) pub.Service {
 		smilMap := make(map[string]manifest.Link)
-		htmlMap := make(map[string]manifest.Link)
-		var guideIndexes []string
-		for i := range context.Manifest.ReadingOrder {
-			href := context.Manifest.ReadingOrder[i].Href.String()
-			hasGuide := false
-
-			alts := context.Manifest.ReadingOrder[i].Alternates
-			for j := range alts {
-				alt := context.Manifest.ReadingOrder[i].Alternates[j]
-				if alt.MediaType != nil && alt.MediaType.Equal(&mediatype.SMIL) {
-					// SMIL alternate for reading order item found
-
-					// Create a guided navigation link for the SMIL alt
-					gnLink := pub.GuidedNavigationLink
-					gnLink.Href = manifest.NewHREF(gnLink.URL(nil,
-						map[string]string{
-							"ref": href,
-						},
-					))
-
-					// Store the original SMIL alt in an internal map
-					smilMap[href] = alt
-					hasGuide = true
-
-					// Swap the original SMIL alt with the new guided navigation link
-					alts = append(append(alts[:j], gnLink), alts[j+1:]...)
-				}
-			}
-
+		
 		// Find and replace SMIL alternates with media overlay links
 		process := func(link *manifest.Link) (hasOverlay bool) {
 			href := link.Href.String()
