@@ -22,7 +22,7 @@ import (
 func MediaOverlayFactory() pub.ServiceFactory {
 	return func(context pub.Context, public bool) pub.Service {
 		smilMap := make(map[string]manifest.Link)
-		
+
 		// Find and replace SMIL alternates with media overlay links
 		process := func(link *manifest.Link) (hasOverlay bool) {
 			href := link.Href.String()
