@@ -1032,9 +1032,10 @@ func (m *PubMetadataAdapter) Layout() manifest.Layout {
 		}
 
 		m._layout = manifest.LayoutReflowable
-		if layoutProp == "pre-paginated" {
+		switch layoutProp {
+		case "pre-paginated":
 			m._layout = manifest.LayoutFixed
-		} else if layoutProp == "scrolled" {
+		case "roll":
 			m._layout = manifest.LayoutScrolled
 		}
 	}
