@@ -1018,6 +1018,15 @@ func (m *PubMetadataAdapter) ReadingProgression() manifest.ReadingProgression {
 	return m.readingProgression
 }
 
+// This is a specification based on Kadokawa's spec for production vertically-scrolling
+// comics (webtoons, "roll" in EPUB), a.k.a. "KADOKAWA タテスク（縦スクロール型）コミック制作仕様".
+// The spec is pretty widespread in Japan and some other countries, so we have no choice
+// but to implement support for it to maintain compatibility with EPUBs in the wild.
+func (m *PubMetadataAdapter) checkJapaneseWebtoon() bool {
+	return m.FirstValue(VocabularyMeta+"scroll-direction") == "ttb" &&
+		m.FirstValue(VocabularyRendition+"flow") == "scrolled-continuous"
+}
+
 func (m *PubMetadataAdapter) Layout() manifest.Layout {
 	if m._layout == manifest.LayoutNone {
 		var layoutProp string
@@ -1035,6 +1044,10 @@ func (m *PubMetadataAdapter) Layout() manifest.Layout {
 		switch layoutProp {
 		case "pre-paginated":
 			m._layout = manifest.LayoutFixed
+
+			if m.checkJapaneseWebtoon() {
+				m._layout = manifest.LayoutScrolled
+			}
 		case "roll":
 			m._layout = manifest.LayoutScrolled
 		}
@@ -1075,6 +1088,8 @@ func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 			VocabularyMedia + "active-class":          {},
 			VocabularyMedia + "playback-active-class": {},
 			VocabularyRendition + "layout":            {},
+			// TODO: should we add rendition:flow and scroll-direction
+			// when a webtoon was detected using them?
 
 			VocabularyDCTerms + "conformsto":          {},
 			VocabularyDCTerms + "conformsTo":          {},
