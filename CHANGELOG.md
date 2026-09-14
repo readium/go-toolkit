@@ -4,7 +4,26 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
-## [0.15.1]
+## [0.16.0] - 2026-09-14
+
+### Changed
+
+- **Breaking:** The guided navigation service of EPUBs and WebPubs (*alpha*) has been split into two services:
+    - The media overlay service (`epub.MediaOverlayFactory`, registered as `pub.MediaOverlayService_Name`) only converts SMIL media overlays. It still replaces each SMIL alternate in the manifest, now with an expansion of the new `~readium/media-overlay.json{?ref}` link (`pub.MediaOverlayLink`). The swapped alternates are the only way it surfaces in the manifest, it is never advertised in the manifest's `links`, and it serves them regardless of the service being public. It no longer falls back to converting (X)HTML content, and when the publication has no SMIL alternates, the service doesn't exist
+    - The new `pub.HTMLGuidedNavigationServiceFactory` (registered as `pub.GuidedNavigationService_Name`, advertised as `~readium/guided-navigation.json{?ref}` in the manifest's `links` when public) only converts (X)HTML documents, including ones that also have a SMIL overlay. No alternates are added to `readingOrder`/`resources` items. It accepts converter options, e.g. `converter.WithTextRefLocators()`
+    - Both services cover documents in `resources` as well as the reading order now (previously reading order only); next/prev links only chain reading order items, each service pointing at its own endpoint
+    - `epub.MediaOverlayFactory` takes no configuration anymore, and both parsers register both services
+
+### Added
+
+- The HTML -> guided navigation converter (*alpha*) can now locate every object in its source document: with the new `converter.WithTextRefLocators()` option, each object carrying roles gets a `textref` pointing at its source element — the element's fragment id when it has one (`chapter.xhtml#par1`), or a `css()` fragment with a unique CSS selector otherwise (`chapter.xhtml#css(body%20%3E%20p:nth-child(3))`, anchored to the closest ancestor with an id). Objects that carry nothing but a role (e.g. a separator) are emitted when the option is on, since the locator alone makes them useful. New `TextCSSSelector()` accessors on `GuidedNavigationObject` and `GuidedNavigationDescription` parse the selector back out of a reference; `TextFragmentID()` no longer reports a `css()` fragment as if it were an id
+
+### Fixed
+
+- The media overlay service factory no longer panics when a manifest link has an alternate without a media type
+- The CSS selector generator shared by the content service and the guided navigation textref locators no longer panics when its escaping produces a selector cascadia cannot parse back. It now pins the element's position with an nth-child instead
+
+## [0.15.1] - 2026-07-08
 
 ### Added
 
