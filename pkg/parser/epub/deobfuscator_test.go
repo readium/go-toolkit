@@ -2,6 +2,7 @@ package epub
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/readium/go-toolkit/pkg/fetcher"
@@ -75,6 +76,25 @@ func TestDeobfuscatorAdobe(t *testing.T) {
 	withDeobfuscator(t, "deobfuscation/cut-cut.adb.woff", "http://ns.adobe.com/pdf/enc#RC", 0, 0, func(clean, obfu []byte) {
 		assert.Equal(t, clean, obfu)
 	})
+}
+
+func TestDeobfuscatorRanges(t *testing.T) {
+	for _, algorithm := range []struct {
+		name string
+		href string
+		uri  string
+	}{
+		{"IDPF", "deobfuscation/cut-cut.obf.woff", "http://www.idpf.org/2008/embedding"},
+		{"Adobe", "deobfuscation/cut-cut.adb.woff", "http://ns.adobe.com/pdf/enc#RC"},
+	} {
+		for _, span := range [][2]int64{{1, 2}, {13, 31}, {13, 2000}, {1023, 2000}, {1024, 2000}, {1039, 2000}, {1040, 2000}} {
+			t.Run(fmt.Sprintf("%s/%d-%d", algorithm.name, span[0], span[1]), func(t *testing.T) {
+				withDeobfuscator(t, algorithm.href, algorithm.uri, span[0], span[1], func(clean, obfu []byte) {
+					assert.Equal(t, clean, obfu)
+				})
+			})
+		}
+	}
 }
 
 func TestDeobfuscatorNoAlgorithm(t *testing.T) {
