@@ -137,8 +137,8 @@ func (f *GCSFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	} else {
 		linkHref = link.Href.String()
 	}
-	if strings.HasPrefix(linkHref, f.href) {
-		resourceFile := path.Join(f.handle.ObjectName(), strings.TrimPrefix(linkHref, f.href))
+	if after, ok := strings.CutPrefix(linkHref, f.href); ok {
+		resourceFile := path.Join(f.handle.ObjectName(), after)
 		// Keep the resource within the fetcher's object-name prefix: a `..` in the HREF
 		// must not let an incoming request reach objects elsewhere in the bucket.
 		if keyWithinRoot(f.handle.ObjectName(), resourceFile) {

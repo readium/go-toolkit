@@ -31,7 +31,7 @@ func withDeobfuscator(t *testing.T, href string, algorithm string, start, end in
 	}
 	if algorithm != "" {
 		link.Properties = manifest.Properties{
-			"encrypted": map[string]interface{}{
+			"encrypted": map[string]any{
 				"algorithm": algorithm,
 			},
 		}

@@ -138,9 +138,9 @@ func TestMetadataUnmarshalFullJSON(t *testing.T) {
 			"collection": {{LocalizedName: NewLocalizedStringFromString("Collection")}},
 			"series":     {{LocalizedName: NewLocalizedStringFromString("Series")}},
 		},
-		OtherMetadata: map[string]interface{}{
+		OtherMetadata: map[string]any{
 			"other-metadata1": "value",
-			"other-metadata2": []interface{}{float64(42)},
+			"other-metadata2": []any{float64(42)},
 		},
 	}, m, "parsed JSON object should be equal to Metadata object")
 }
@@ -277,9 +277,9 @@ func TestMetadataFullJSON(t *testing.T) {
 			"collection": {{LocalizedName: NewLocalizedStringFromString("Collection")}},
 			"series":     {{LocalizedName: NewLocalizedStringFromString("Series")}},
 		},
-		OtherMetadata: map[string]interface{}{
+		OtherMetadata: map[string]any{
 			"other-metadata1": "value",
-			"other-metadata2": []interface{}{float64(42)},
+			"other-metadata2": []any{float64(42)},
 		},
 	})
 	require.NoError(t, err)

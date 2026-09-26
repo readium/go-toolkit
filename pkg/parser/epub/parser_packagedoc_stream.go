@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"io"
+	"maps"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
@@ -122,12 +123,8 @@ func parsePackageDocumentStream(data []byte, filePath url.URL) (*PackageDocument
 				root = &node
 				xmlquery.AddChild(document, root)
 				vocabulary = make(map[string]string, len(PackageReservedPrefixes))
-				for key, value := range PackageReservedPrefixes {
-					vocabulary[key] = value
-				}
-				for key, value := range parsePrefixes(root.SelectAttr("prefix")) {
-					vocabulary[key] = value
-				}
+				maps.Copy(vocabulary, PackageReservedPrefixes)
+				maps.Copy(vocabulary, parsePrefixes(root.SelectAttr("prefix")))
 				continue
 			}
 			if token.Name.Space == NamespaceOPF && token.Name.Local == "metadata" {

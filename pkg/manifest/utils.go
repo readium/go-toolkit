@@ -2,16 +2,17 @@ package manifest
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 )
 
-func parseSliceOrString(value interface{}, deduplicate bool) (result []string, err error) {
+func parseSliceOrString(value any, deduplicate bool) (result []string, err error) {
 	switch v := value.(type) {
 	case string:
 		result = []string{v} // Just a single item
-	case []interface{}:
+	case []any:
 		result = make([]string, 0, len(v))
 		for i, vv := range v {
 			str, ok := vv.(string)
@@ -58,10 +59,8 @@ func nilboolEq(source *bool, val bool) bool {
 
 func firstLinkWithRel(links []Link, rel string) *Link {
 	for _, link := range links {
-		for _, linkRel := range link.Rels {
-			if linkRel == rel {
-				return &link
-			}
+		if slices.Contains(link.Rels, rel) {
+			return &link
 		}
 	}
 	return nil
@@ -70,7 +69,7 @@ func firstLinkWithRel(links []Link, rel string) *Link {
 // Utilities for convenient JSON unmarshalling
 // TODO replace a lot of these with generics!
 
-func parseOptTime(raw interface{}) *time.Time {
+func parseOptTime(raw any) *time.Time {
 	rt, ok := raw.(string)
 	if !ok {
 		return nil
@@ -80,24 +79,24 @@ func parseOptTime(raw interface{}) *time.Time {
 	return t
 }
 
-func parseOptString(raw interface{}) string {
+func parseOptString(raw any) string {
 	rs, _ := raw.(string)
 	return rs
 }
 
-func parseOptBool(raw interface{}) bool {
+func parseOptBool(raw any) bool {
 	rb, _ := raw.(bool)
 	return rb
 }
 
-func parseOptFloat64(raw interface{}) float64 {
+func parseOptFloat64(raw any) float64 {
 	rb, _ := raw.(float64)
 	return rb
 }
 
 // parseOptInt64 reads an integer that may come from JSON (float64) or from
 // in-memory maps built with native integer types.
-func parseOptInt64(raw interface{}) int64 {
+func parseOptInt64(raw any) int64 {
 	switch v := raw.(type) {
 	case float64:
 		return int64(v)

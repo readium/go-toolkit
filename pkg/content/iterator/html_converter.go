@@ -343,7 +343,7 @@ func (c *HTMLConverter) Head(n *html.Node, depth int) {
 				Title:     c.baseLocator.Title,
 				Text:      c.baseLocator.Text,
 				Locations: manifest.Locations{
-					OtherLocations: map[string]interface{}{
+					OtherLocations: map[string]any{
 						"cssSelector": cssSelector,
 					},
 				},
@@ -519,7 +519,7 @@ func (c *HTMLConverter) flushText() {
 			MediaType: c.baseLocator.MediaType,
 			Title:     c.baseLocator.Title,
 			Locations: manifest.Locations{
-				OtherLocations: map[string]interface{}{},
+				OtherLocations: map[string]any{},
 			},
 			Text: trimText(c.elementRawTextAcc, before),
 		},
@@ -571,7 +571,7 @@ func (c *HTMLConverter) flushSegment() {
 				Title:     c.baseLocator.Title,
 				Locations: manifest.Locations{
 					// TODO fix: needs to use baseLocator locations too!
-					OtherLocations: map[string]interface{}{},
+					OtherLocations: map[string]any{},
 				},
 				Text: trimText(c.rawTextAcc, before),
 			},

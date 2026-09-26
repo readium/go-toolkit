@@ -36,8 +36,8 @@ func perceptualHash(img image.Image) uint64 {
 	}
 	thumbnail := imaging.Resize(img, phashSize, phashSize, imaging.Lanczos)
 	var pixels [phashSize * phashSize]float64
-	for x := 0; x < phashSize; x++ {
-		for y := 0; y < phashSize; y++ {
+	for x := range phashSize {
+		for y := range phashSize {
 			// NRGBAAt avoids boxing each pixel as color.Color. RGBA preserves
 			// the reference's 16-bit, alpha-premultiplied color conversion.
 			r, g, b, _ := thumbnail.NRGBAAt(x, y).RGBA()
@@ -46,11 +46,11 @@ func perceptualHash(img image.Image) uint64 {
 	}
 
 	var coefficients [phashFrequencies * phashFrequencies]float64
-	for u := 0; u < phashFrequencies; u++ {
-		for v := 0; v < phashFrequencies; v++ {
+	for u := range phashFrequencies {
+		for v := range phashFrequencies {
 			var sum float64
-			for x := 0; x < phashSize; x++ {
-				for y := 0; y < phashSize; y++ {
+			for x := range phashSize {
+				for y := range phashSize {
 					sum += phashCosines[u][x] * phashCosines[v][y] * pixels[x*phashSize+y]
 				}
 			}

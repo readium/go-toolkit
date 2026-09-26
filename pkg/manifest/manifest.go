@@ -233,13 +233,13 @@ func (m Manifest) LocatorFromLink(link Link) *Locator {
 // TODO log [warnings] ?
 // https://readium.org/webpub-manifest/
 // https://readium.org/webpub-manifest/schema/publication.schema.json
-func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest, error) {
+func ManifestFromJSON(rawJson map[string]any, packaged bool) (*Manifest, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
 
 	// Parse links
-	rawLinks, ok := rawJson["links"].([]interface{})
+	rawLinks, ok := rawJson["links"].([]any)
 	var links []Link
 	var err error
 	if ok {
@@ -261,7 +261,7 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	}
 
 	// Metadata
-	rmt, ok := rawJson["metadata"].(map[string]interface{})
+	rmt, ok := rawJson["metadata"].(map[string]any)
 	if !ok {
 		errors.New("'metadata' JSON object is required")
 	}
@@ -295,10 +295,10 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	manifest.Links = links
 
 	// ReadingOrder
-	readingOrderRaw, ok := rawJson["readingOrder"].([]interface{})
+	readingOrderRaw, ok := rawJson["readingOrder"].([]any)
 	if !ok {
 		// [readingOrder] used to be [spine], so we parse [spine] as a fallback.
-		readingOrderRaw, ok = rawJson["spine"].([]interface{})
+		readingOrderRaw, ok = rawJson["spine"].([]any)
 		if !ok {
 			return nil, errors.New("Manifest has no valid 'readingOrder' or 'spine'")
 		}
@@ -316,7 +316,7 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	}
 
 	// Resources
-	resourcesRaw, ok := rawJson["resources"].([]interface{})
+	resourcesRaw, ok := rawJson["resources"].([]any)
 	if ok {
 		resources, err := LinksFromJSONArray(resourcesRaw)
 		if err != nil {
@@ -332,7 +332,7 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 	}
 
 	// TOC
-	tocRaw, ok := rawJson["toc"].([]interface{})
+	tocRaw, ok := rawJson["toc"].([]any)
 	if ok {
 		toc, err := LinksFromJSONArray(tocRaw)
 		if err != nil {
@@ -361,7 +361,7 @@ func ManifestFromJSON(rawJson map[string]interface{}, packaged bool) (*Manifest,
 }
 
 func (m *Manifest) UnmarshalJSON(b []byte) error {
-	var object map[string]interface{}
+	var object map[string]any
 	err := json.Unmarshal(b, &object)
 	if err != nil {
 		return err
@@ -374,8 +374,8 @@ func (m *Manifest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (m Manifest) ToMap(selfLink *Link) map[string]interface{} {
-	res := make(map[string]interface{})
+func (m Manifest) ToMap(selfLink *Link) map[string]any {
+	res := make(map[string]any)
 	if len(m.Context) > 1 {
 		res["@context"] = m.Context
 	} else if len(m.Context) == 1 {

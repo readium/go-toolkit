@@ -31,7 +31,7 @@ func (s Subject) SortAs() string {
 // Parses a [Subject] from its RWPM JSON representation.
 // A subject can be parsed from a single string, or a full-fledged object.
 // The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
-func SubjectFromJSON(rawJson interface{}) (*Subject, error) {
+func SubjectFromJSON(rawJson any) (*Subject, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -42,7 +42,7 @@ func SubjectFromJSON(rawJson interface{}) (*Subject, error) {
 			return nil, errors.Wrap(err, "failed parsing Subject as LocalizedString")
 		}
 		return &Subject{LocalizedName: *localizedName}, nil
-	case map[string]interface{}:
+	case map[string]any:
 		localizedName, err := LocalizedStringFromJSON(rjs["name"])
 		if err != nil {
 			return nil, errors.Wrap(err, "failed parsing Subject 'name' as LocalizedString")
@@ -65,7 +65,7 @@ func SubjectFromJSON(rawJson interface{}) (*Subject, error) {
 		}
 
 		// links
-		lln, ok := rjs["links"].([]interface{})
+		lln, ok := rjs["links"].([]any)
 		if ok {
 			links, err := LinksFromJSONArray(lln)
 			if err != nil {
@@ -82,10 +82,10 @@ func SubjectFromJSON(rawJson interface{}) (*Subject, error) {
 
 // Creates a list of [Subject] from its RWPM JSON representation.
 // The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
-func SubjectFromJSONArray(rawJsonArray interface{}) ([]Subject, error) {
+func SubjectFromJSONArray(rawJsonArray any) ([]Subject, error) {
 	var subjects []Subject
 	switch rjx := rawJsonArray.(type) {
-	case []interface{}:
+	case []any:
 		subjects = make([]Subject, 0, len(rjx))
 		for i, entry := range rjx {
 			rs, err := SubjectFromJSON(entry)
@@ -110,7 +110,7 @@ func SubjectFromJSONArray(rawJsonArray interface{}) ([]Subject, error) {
 }
 
 func (s *Subject) UnmarshalJSON(data []byte) error {
-	var object interface{}
+	var object any
 	err := json.Unmarshal(data, &object)
 	if err != nil {
 		return err

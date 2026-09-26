@@ -70,8 +70,8 @@ func (f *HTTPFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 // Get implements Fetcher
 func (f *HTTPFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	linkHref := link.Href.String()
-	if strings.HasPrefix(linkHref, f.href) {
-		rurl, err := url.RelativeURLFromString(strings.TrimPrefix(linkHref, f.href))
+	if after, ok := strings.CutPrefix(linkHref, f.href); ok {
+		rurl, err := url.RelativeURLFromString(after)
 		if err == nil {
 			resolved := f.url.Resolve(rurl).(url.AbsoluteURL)
 			// Keep the resource within the base URL: a `..` or root-absolute HREF must

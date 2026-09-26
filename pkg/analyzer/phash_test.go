@@ -47,8 +47,8 @@ func TestPerceptualHashCompatibility(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("solid-%v", c), func(t *testing.T) {
 			img := image.NewNRGBA(image.Rect(0, 0, 32, 32))
-			for y := 0; y < 32; y++ {
-				for x := 0; x < 32; x++ {
+			for y := range 32 {
+				for x := range 32 {
 					img.SetNRGBA(x, y, c)
 				}
 			}
@@ -58,7 +58,7 @@ func TestPerceptualHashCompatibility(t *testing.T) {
 		})
 	}
 
-	for seed := int64(0); seed < 32; seed++ {
+	for seed := range int64(32) {
 		t.Run(fmt.Sprintf("random-%d", seed), func(t *testing.T) {
 			rng := rand.New(rand.NewSource(seed))
 			width, height := 1+rng.Intn(160), 1+rng.Intn(160)

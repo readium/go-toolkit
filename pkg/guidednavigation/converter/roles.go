@@ -25,8 +25,8 @@ func ExtractNamespaces(el *html.Node) (namespaces map[string]string) {
 					// Only the first xmlns gets set
 					namespaces[""] = at.Val
 				}
-			} else if strings.HasPrefix(at.Key, "xmlns:") {
-				namespace := strings.TrimPrefix(at.Key, "xmlns:")
+			} else if after, ok := strings.CutPrefix(at.Key, "xmlns:"); ok {
+				namespace := after
 				if _, ok := namespaces[namespace]; !ok {
 					// Only the first unique xmlns:prefix gets set
 					namespaces[namespace] = at.Val
@@ -243,7 +243,7 @@ func ExtractNodeRoles(el *html.Node) (roles []guidednavigation.GuidedNavigationR
 			key = prefix
 			// ARIA role
 			if key == "role" {
-				for _, val := range strings.Fields(at.Val) {
+				for val := range strings.FieldsSeq(at.Val) {
 					if val == "presentation" || val == "none" {
 						presentational = true
 					}
@@ -279,7 +279,7 @@ func ExtractNodeRoles(el *html.Node) (roles []guidednavigation.GuidedNavigationR
 			}
 
 			if at.Namespace == "http://www.idpf.org/2007/ops" && key == "type" {
-				for _, val := range strings.Fields(at.Val) {
+				for val := range strings.FieldsSeq(at.Val) {
 					if role, ok := epubTypeRoles[val]; ok {
 						attrRoles = append(attrRoles, role)
 					}

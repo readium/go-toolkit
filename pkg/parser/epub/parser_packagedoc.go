@@ -1,6 +1,7 @@
 package epub
 
 import (
+	"maps"
 	"strconv"
 
 	"github.com/antchfx/xmlquery"
@@ -35,12 +36,8 @@ func ParsePackageDocument(document *xmlquery.Node, filePath url.URL) (*PackageDo
 	}
 	packagePrefixes := parsePrefixes(pkg.SelectAttr("prefix"))
 	prefixMap := make(map[string]string)
-	for k, v := range PackageReservedPrefixes {
-		prefixMap[k] = v
-	}
-	for k, v := range packagePrefixes {
-		prefixMap[k] = v
-	}
+	maps.Copy(prefixMap, PackageReservedPrefixes)
+	maps.Copy(prefixMap, packagePrefixes)
 
 	// Version
 	epubVersionString := pkg.SelectAttr("version")

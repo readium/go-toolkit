@@ -72,7 +72,7 @@ func TestManifestUnmarshalFullJSON(t *testing.T) {
 		},
 		Subcollections: PublicationCollectionMap{
 			"sub": {{
-				Metadata: map[string]interface{}{},
+				Metadata: map[string]any{},
 				Links:    []Link{{Href: MustNewHREFFromString("sublink", false)}},
 			}},
 		},
@@ -239,7 +239,7 @@ func TestManifestFullJSON(t *testing.T) {
 		},
 		Subcollections: PublicationCollectionMap{
 			"sub": {{
-				Metadata: map[string]interface{}{},
+				Metadata: map[string]any{},
 				Links:    []Link{{Href: MustNewHREFFromString("sublink", false)}},
 			}},
 		},
@@ -272,7 +272,7 @@ func TestManifestFullJSON(t *testing.T) {
 }
 
 func TestManifestSelfLinkReplacedWhenPackaged(t *testing.T) {
-	var rm map[string]interface{}
+	var rm map[string]any
 	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {"title": "Title"},
 		"links": [
@@ -295,7 +295,7 @@ func TestManifestSelfLinkReplacedWhenPackaged(t *testing.T) {
 }
 
 func TestManifestSelfLinkKeptWhenRemote(t *testing.T) {
-	var rm map[string]interface{}
+	var rm map[string]any
 	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {"title": "Title"},
 		"links": [
@@ -318,7 +318,7 @@ func TestManifestSelfLinkKeptWhenRemote(t *testing.T) {
 }
 
 func TestManifestHrefResolvedToRoot(t *testing.T) {
-	var rm map[string]interface{}
+	var rm map[string]any
 	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {"title": "Title"},
 		"links": [
@@ -337,7 +337,7 @@ func TestManifestHrefResolvedToRoot(t *testing.T) {
 }
 
 func TestManifestHrefResolvedToRootRemotePackage(t *testing.T) {
-	var rm map[string]interface{}
+	var rm map[string]any
 	require.NoError(t, json.Unmarshal([]byte(`{
 		"metadata": {"title": "Title"},
 		"links": [

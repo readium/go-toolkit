@@ -25,19 +25,17 @@ func TestArchiveResourcePropertiesConcurrent(t *testing.T) {
 	start := make(chan struct{})
 	var wg sync.WaitGroup
 	for i := range properties {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-start
 			properties[i] = r.Properties()
-		}()
+		})
 	}
 	close(start)
 	wg.Wait()
 
 	const archiveKey = "https://readium.org/webpub-manifest/properties#archive"
 	for _, p := range properties {
-		require.Equal(t, map[string]interface{}{
+		require.Equal(t, map[string]any{
 			"entryLength":       uint64(595),
 			"isEntryCompressed": true,
 		}, p[archiveKey])
@@ -46,10 +44,10 @@ func TestArchiveResourcePropertiesConcurrent(t *testing.T) {
 	// Mutate only after the concurrent readers finish: callers still need to
 	// synchronize their own modifications to the returned maps.
 	properties[0]["custom"] = "extension"
-	properties[0][archiveKey].(map[string]interface{})["custom"] = "nested extension"
+	properties[0][archiveKey].(map[string]any)["custom"] = "nested extension"
 	for _, p := range properties {
 		assert.Equal(t, "extension", p["custom"])
-		assert.Equal(t, "nested extension", p[archiveKey].(map[string]interface{})["custom"])
+		assert.Equal(t, "nested extension", p[archiveKey].(map[string]any)["custom"])
 	}
 	assert.Equal(t, "extension", r.Properties()["custom"])
 }
@@ -66,9 +64,9 @@ func TestArchiveResourcePropertiesIndependent(t *testing.T) {
 
 	const archiveKey = "https://readium.org/webpub-manifest/properties#archive"
 	first.Properties()["custom"] = "extension"
-	first.Properties()[archiveKey].(map[string]interface{})["entryLength"] = uint64(1)
+	first.Properties()[archiveKey].(map[string]any)["entryLength"] = uint64(1)
 	assert.Equal(t, manifest.Properties{
-		archiveKey: map[string]interface{}{
+		archiveKey: map[string]any{
 			"entryLength":       uint64(20),
 			"isEntryCompressed": false,
 		},

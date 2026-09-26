@@ -2,6 +2,7 @@ package epub
 
 import (
 	"context"
+	"slices"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/pkg/errors"
@@ -141,11 +142,8 @@ func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f
 	} else {
 		var navItem *Item
 		for _, v := range packageDocument.Manifest {
-			for _, st := range v.Properties {
-				if st == VocabularyItem+"nav" {
-					navItem = &v
-					break
-				}
+			if slices.Contains(v.Properties, VocabularyItem+"nav") {
+				navItem = &v
 			}
 			if navItem != nil {
 				break

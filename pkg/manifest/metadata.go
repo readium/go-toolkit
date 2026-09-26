@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"encoding/json"
+	"maps"
 	"strings"
 	"time"
 
@@ -58,7 +59,7 @@ type Metadata struct {
 	BelongsTo          map[string]Collections `json:"belongsTo,omitempty"`
 	MediaOverlay       *MediaOverlay          `json:"mediaOverlay,omitempty"`
 
-	OtherMetadata map[string]interface{} `json:"-"` // Extension point for other metadata.
+	OtherMetadata map[string]any `json:"-"` // Extension point for other metadata.
 }
 
 func (m Metadata) Title() string {
@@ -128,7 +129,7 @@ const InferredAccessibilityMetadataKey = "https://readium.org/webpub-manifest#in
 // manifest and stored in OtherMetadata.
 func (m Metadata) InferredAccessibility() *A11y {
 	var a11y *A11y
-	if a11yJSON, ok := m.OtherMetadata[InferredAccessibilityMetadataKey].(map[string]interface{}); ok {
+	if a11yJSON, ok := m.OtherMetadata[InferredAccessibilityMetadataKey].(map[string]any); ok {
 		a11y, _ = A11yFromJSON(a11yJSON)
 	}
 	return a11y
@@ -136,7 +137,7 @@ func (m Metadata) InferredAccessibility() *A11y {
 
 // SetOtherMetadata marshalls the value to a JSON map before storing it in
 // OtherMetadata under the given key.
-func (m Metadata) SetOtherMetadata(key string, value interface{}) error {
+func (m Metadata) SetOtherMetadata(key string, value any) error {
 	value, err := toJSONMap(value)
 	if err != nil {
 		return err
@@ -145,7 +146,7 @@ func (m Metadata) SetOtherMetadata(key string, value interface{}) error {
 	return nil
 }
 
-func toJSONMap(value interface{}) (map[string]interface{}, error) {
+func toJSONMap(value any) (map[string]any, error) {
 	if value, ok := value.(util.JSONMappable); ok {
 		return value.JSONMap()
 	}
@@ -154,7 +155,7 @@ func toJSONMap(value interface{}) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	var object map[string]interface{}
+	var object map[string]any
 	err = json.Unmarshal(bytes, &object)
 	if err != nil {
 		return nil, err
@@ -162,7 +163,7 @@ func toJSONMap(value interface{}) (map[string]interface{}, error) {
 	return object, nil
 }
 
-func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
+func MetadataFromJSON(rawJson map[string]any) (*Metadata, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -184,7 +185,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 
 	// Accessibility
 	var a11y *A11y
-	if a11yJSON, ok := rawJson["accessibility"].(map[string]interface{}); ok {
+	if a11yJSON, ok := rawJson["accessibility"].(map[string]any); ok {
 		a11y, err = A11yFromJSON(a11yJSON)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed parsing 'accessibility'")
@@ -193,7 +194,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 
 	// TDMRep (Text & Data Mining Reservation Protocol)
 	var tdm *TDM
-	if tdmJSON, ok := rawJson["tdm"].(map[string]interface{}); ok {
+	if tdmJSON, ok := rawJson["tdm"].(map[string]any); ok {
 		tdm, err = TDMFromJSON(tdmJSON)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed parsing 'tdm'")
@@ -367,9 +368,9 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 	}
 
 	// BelongsTo
-	belongsToRaw, ok := rawJson["belongsTo"].(map[string]interface{})
+	belongsToRaw, ok := rawJson["belongsTo"].(map[string]any)
 	if !ok {
-		belongsToRaw, _ = rawJson["belongs_to"].(map[string]interface{})
+		belongsToRaw, _ = rawJson["belongs_to"].(map[string]any)
 	}
 	if belongsToRaw != nil {
 		belongsTo := make(map[string]Collections)
@@ -387,7 +388,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 	}
 
 	// Media Overlay
-	if mediaOverlay, ok := rawJson["mediaOverlay"].(map[string]interface{}); ok {
+	if mediaOverlay, ok := rawJson["mediaOverlay"].(map[string]any); ok {
 		metadata.MediaOverlay = &MediaOverlay{}
 
 		decoder, _ := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
@@ -448,7 +449,7 @@ func MetadataFromJSON(rawJson map[string]interface{}) (*Metadata, error) {
 }
 
 func (m *Metadata) UnmarshalJSON(b []byte) error {
-	var object map[string]interface{}
+	var object map[string]any
 	err := json.Unmarshal(b, &object)
 	if err != nil {
 		return err
@@ -465,11 +466,9 @@ func (m *Metadata) UnmarshalJSON(b []byte) error {
 var ToolkitVersionKey = "https://github.com/readium/go-toolkit#version"
 
 func (m Metadata) MarshalJSON() ([]byte, error) {
-	j := make(map[string]interface{})
+	j := make(map[string]any)
 	if m.OtherMetadata != nil {
-		for k, v := range m.OtherMetadata {
-			j[k] = v
-		}
+		maps.Copy(j, m.OtherMetadata)
 	}
 
 	if ToolkitVersionKey != "" {

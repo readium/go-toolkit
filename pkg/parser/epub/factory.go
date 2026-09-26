@@ -1,6 +1,8 @@
 package epub
 
 import (
+	"maps"
+
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 )
@@ -178,14 +180,14 @@ func (f PublicationFactory) computeLink(item Item, fallbackChain []string) manif
 }
 
 func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef) ([]string, manifest.Properties) {
-	var properties map[string]interface{}
+	var properties map[string]any
 	var rels []string
 	manifestRels, contains, others := parseItemProperties(item.Properties)
 	for _, v := range manifestRels {
 		rels = extensions.AddToSet(rels, v)
 	}
 	if len(contains) > 0 || len(others) > 0 {
-		properties = make(map[string]interface{}, len(others)+1)
+		properties = make(map[string]any, len(others)+1)
 	}
 	if len(contains) > 0 {
 		properties["contains"] = contains
@@ -198,9 +200,7 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 		if properties == nil {
 			properties = itemrefProperties
 		} else {
-			for k, v := range itemrefProperties {
-				properties[k] = v
-			}
+			maps.Copy(properties, itemrefProperties)
 		}
 	}
 
@@ -211,7 +211,7 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 	if len(f.EncryptionData) > 0 {
 		if edat, ok := f.EncryptionData[item.Href.Normalize().String()]; ok {
 			if properties == nil {
-				properties = make(map[string]interface{}, 1)
+				properties = make(map[string]any, 1)
 			}
 			properties["encrypted"] = edat.ToMap() // ToMap makes it JSON-like
 		}
@@ -268,7 +268,7 @@ func parseItemProperties(properties []string) (rels []string, contains []string,
 	return
 }
 
-func parseItemrefProperties(properties []string) map[string]interface{} {
+func parseItemrefProperties(properties []string) map[string]any {
 	var page string
 	for _, property := range properties {
 		switch property {
@@ -288,5 +288,5 @@ func parseItemrefProperties(properties []string) map[string]interface{} {
 	if page == "" {
 		return nil
 	}
-	return map[string]interface{}{"page": page}
+	return map[string]any{"page": page}
 }

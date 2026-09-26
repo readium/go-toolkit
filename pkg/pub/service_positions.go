@@ -38,7 +38,7 @@ func GetForPositionsService(ctx context.Context, service PositionsService, link 
 
 	return fetcher.NewBytesResource(PositionsLink, func() []byte {
 		positions := service.Positions(ctx)
-		bin, _ := json.Marshal(map[string]interface{}{
+		bin, _ := json.Marshal(map[string]any{
 			"total":     len(positions),
 			"positions": positions,
 		})

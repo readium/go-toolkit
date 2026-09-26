@@ -162,7 +162,7 @@ func (r *entryResource) Link() manifest.Link {
 func (r *entryResource) Properties() manifest.Properties {
 	r.propertiesOnce.Do(func() {
 		r.properties = manifest.Properties{
-			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]any{
 				"entryLength":       r.entryLength,
 				"isEntryCompressed": r.isCompressed,
 			},

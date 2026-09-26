@@ -76,7 +76,7 @@ func (a *A11y) Merge(other *A11y) {
 	}
 }
 
-func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
+func A11yFromJSON(rawJSON map[string]any) (*A11y, error) {
 	if rawJSON == nil {
 		return nil, nil
 	}
@@ -90,7 +90,7 @@ func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
 	a.ConformsTo = A11yProfilesFromStrings(conformsTo)
 	a.ConformsTo.Sort()
 
-	if certJSON, ok := rawJSON["certification"].(map[string]interface{}); ok {
+	if certJSON, ok := rawJSON["certification"].(map[string]any); ok {
 		c := A11yCertification{
 			CertifiedBy: parseOptString(certJSON["certifiedBy"]),
 			Credential:  parseOptString(certJSON["credential"]),
@@ -110,7 +110,7 @@ func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
 	a.AccessModes = A11yAccessModesFromStrings(accessModes)
 
 	ams := [][]A11yPrimaryAccessMode{}
-	if amsJSON, ok := rawJSON["accessModeSufficient"].([]interface{}); ok {
+	if amsJSON, ok := rawJSON["accessModeSufficient"].([]any); ok {
 		for _, l := range amsJSON {
 			strings, err := parseSliceOrString(l, true)
 			if err != nil {
@@ -145,13 +145,13 @@ func A11yFromJSON(rawJSON map[string]interface{}) (*A11y, error) {
 }
 
 func (e *A11y) UnmarshalJSON(data []byte) error {
-	var d interface{}
+	var d any
 	err := json.Unmarshal(data, &d)
 	if err != nil {
 		return err
 	}
 
-	mp, ok := d.(map[string]interface{})
+	mp, ok := d.(map[string]any)
 	if !ok {
 		return errors.New("accessibility object not a map with string keys")
 	}

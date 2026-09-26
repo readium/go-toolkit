@@ -144,10 +144,7 @@ func (c *readCache) fetch(ctx context.Context, first, last int64) *fetcher.Resou
 				c.blocks[bi] = []byte{}
 				continue
 			}
-			hi := lo + c.blockSize
-			if hi > int64(len(data)) {
-				hi = int64(len(data))
-			}
+			hi := min(lo+c.blockSize, int64(len(data)))
 			c.blocks[bi] = data[lo:hi]
 		}
 		c.mu.Unlock()

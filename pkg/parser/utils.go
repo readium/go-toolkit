@@ -11,7 +11,7 @@ import (
 func hrefCommonFirstComponent(links manifest.LinkList) string {
 	latest := ""
 	for _, link := range links {
-		normalized := strings.SplitN(link.URL(nil, nil).Path(), "/", 2)[0]
+		normalized, _, _ := strings.Cut(link.URL(nil, nil).Path(), "/")
 		if latest != "" {
 			if latest != normalized {
 				latest = "" // No distinct prefix

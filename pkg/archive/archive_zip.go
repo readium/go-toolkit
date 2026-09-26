@@ -241,10 +241,7 @@ func (e *gozipArchiveEntry) Stream(w io.Writer, start int64, end int64) (int64, 
 			if start >= size {
 				return 0, nil
 			}
-			length = end - start + 1
-			if length > size-start {
-				length = size - start
-			}
+			length = min(end-start+1, size-start)
 		}
 		if n, err, handled := e.streamRawFromFile(w, start, length); handled {
 			return n, err

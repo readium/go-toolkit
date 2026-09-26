@@ -84,13 +84,13 @@ func ReadResourceAsString(ctx context.Context, r Resource) (string, *ResourceErr
 	return string(utf8bytes), nil
 }
 
-func ReadResourceAsJSON(ctx context.Context, r Resource) (map[string]interface{}, *ResourceError) {
+func ReadResourceAsJSON(ctx context.Context, r Resource) (map[string]any, *ResourceError) {
 	str, ex := ReadResourceAsString(ctx, r)
 	if ex != nil {
 		return nil, ex
 	}
 
-	var object map[string]interface{}
+	var object map[string]any
 	err := json.Unmarshal([]byte(str), &object)
 	if err != nil {
 		return nil, Other(err)

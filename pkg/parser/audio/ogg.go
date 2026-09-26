@@ -31,10 +31,7 @@ func probeOggDuration(ctx context.Context, res fetcher.Resource, size int64) flo
 	}
 
 	// Read a window at the end of the file large enough to contain the last page.
-	tailLen := int64(65536)
-	if tailLen > size {
-		tailLen = size
-	}
+	tailLen := min(int64(65536), size)
 	tail, err := res.Read(ctx, size-tailLen, size-1)
 	if err != nil || len(tail) == 0 {
 		return 0
