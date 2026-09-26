@@ -2,6 +2,7 @@ package epub
 
 import (
 	"errors"
+	"maps"
 	"sort"
 	"strings"
 	"time"
@@ -353,9 +354,7 @@ func (m MetadataParser) computeMetaItem(expr MetadataItem, metas map[string][]Me
 	}
 
 	children := make(map[string][]MetadataItem)
-	for k, v := range expr.children {
-		children[k] = v
-	}
+	maps.Copy(children, expr.children)
 	for _, child := range newChildren {
 		children[child.property] = append(children[child.property], child)
 	}
@@ -468,10 +467,14 @@ type PubMetadataAdapter struct {
 	_subjects        []manifest.Subject
 	_allContributors map[string][]manifest.Contributor
 	_layout          manifest.Layout
-	_otherMetadata   map[string]interface{}
+	_otherMetadata   map[string]any
 }
 
 func (m PubMetadataAdapter) Metadata() manifest.Metadata {
+	// The public getters use value receivers. Seed their shared derived data on
+	// this local adapter once so each getter does not rebuild the same values.
+	m.seedTitleData()
+	m.seedBelongsToData()
 	identifier, altIdentifiers := m.Identifiers()
 	metadata := manifest.Metadata{
 		Identifier:         identifier,
@@ -597,6 +600,11 @@ func (m *PubMetadataAdapter) seedTitleData() {
 	}
 	if mainTitle != nil {
 		m._localizedTitle = (*mainTitle).value
+		if mainTitle.typ == "subtitle" {
+			// With no main title, the first subtitle can also serve as the
+			// publication title. Keep their mutable translations independent.
+			m._localizedTitle.Translations = maps.Clone(m._localizedTitle.Translations)
+		}
 	}
 	if m._localizedTitle.String() == "" {
 		m._localizedTitle = manifest.NewLocalizedStringFromString(m.fallbackTitle)
@@ -1068,7 +1076,7 @@ func (m *PubMetadataAdapter) MediaOverlay() *manifest.MediaOverlay {
 	}
 }
 
-func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
+func (m *PubMetadataAdapter) OtherMetadata() map[string]any {
 	if m._otherMetadata == nil {
 		usedProperties := map[string]struct{}{
 			VocabularyMeta + "cover": {}, // EPUB 2 cover meta
@@ -1103,7 +1111,7 @@ func (m *PubMetadataAdapter) OtherMetadata() map[string]interface{} {
 			VocabularySchema + "accessibilityHazard":  {},
 		}
 
-		m._otherMetadata = make(map[string]interface{})
+		m._otherMetadata = make(map[string]any)
 		for k, v := range m.items {
 			if _, ok := usedProperties[k]; ok {
 				continue
@@ -1131,7 +1139,7 @@ type MetadataItem struct {
 	refines       string
 	id            string
 	children      map[string][]MetadataItem
-	otherMetadata map[string]interface{}
+	otherMetadata map[string]any
 }
 
 func (m MetadataItem) ToSubject() (*manifest.Subject, error) {
@@ -1251,11 +1259,11 @@ func (m MetadataItem) ToCollection() (string, *manifest.Contributor, error) {
 	return m.ToContributor()
 }
 
-func (m MetadataItem) ToMap() interface{} {
+func (m MetadataItem) ToMap() any {
 	if len(m.children) == 0 {
 		return m.value
 	} else {
-		cm := make(map[string]interface{})
+		cm := make(map[string]any)
 		for _, child := range m.children {
 			for _, item := range child {
 				cm[item.property] = item.ToMap()
@@ -1331,9 +1339,7 @@ func (m MetadataItem) LocalizedString() manifest.LocalizedString {
 	values := make(map[string]string)
 	values[m.lang] = m.value
 	if as := m.AlternateScript(); as != nil {
-		for k, v := range as {
-			values[k] = v
-		}
+		maps.Copy(values, as)
 	}
 	return manifest.NewLocalizedStringFromStrings(values)
 }

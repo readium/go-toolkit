@@ -7,7 +7,7 @@ import (
 )
 
 // Properties associated with a linked resource
-type Properties map[string]interface{}
+type Properties map[string]any
 
 // Properties should be immutable, therefore these functions have been removed.
 // The code is left here in case it's useful in a future implementation.
@@ -30,7 +30,7 @@ func (p *Properties) Delete(key string) Properties {
 	return *p
 }*/
 
-func (p *Properties) Get(key string) interface{} {
+func (p *Properties) Get(key string) any {
 	if p != nil {
 		return (*p)[key]
 	}
@@ -90,7 +90,7 @@ func (p Properties) Encryption() *Encryption {
 	if v == nil {
 		return nil
 	}
-	mp, ok := v.(map[string]interface{})
+	mp, ok := v.(map[string]any)
 	if mp == nil || !ok {
 		return nil
 	}
@@ -119,7 +119,7 @@ func (p Properties) Hash() HashList {
 	if v == nil {
 		return nil
 	}
-	cv, ok := v.([]interface{})
+	cv, ok := v.([]any)
 	if !ok {
 		return nil
 	}
@@ -130,12 +130,12 @@ func (p Properties) Hash() HashList {
 	return hashes
 }
 
-func PropertiesFromJSON(rawJson interface{}) (Properties, error) {
+func PropertiesFromJSON(rawJson any) (Properties, error) {
 	if rawJson == nil {
 		return make(Properties), nil
 	}
 
-	properties, ok := rawJson.(map[string]interface{})
+	properties, ok := rawJson.(map[string]any)
 	if !ok {
 		return nil, errors.New("Properties has invalid JSON object")
 	}
@@ -143,7 +143,7 @@ func PropertiesFromJSON(rawJson interface{}) (Properties, error) {
 }
 
 func (p *Properties) UnmarshalJSON(data []byte) error {
-	var d interface{}
+	var d any
 	err := json.Unmarshal(data, &d)
 	if err != nil {
 		return err

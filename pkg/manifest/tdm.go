@@ -29,7 +29,7 @@ func (t TDMReservation) String() string {
 	return string(t)
 }
 
-func TDMFromJSON(rawJSON map[string]interface{}) (*TDM, error) {
+func TDMFromJSON(rawJSON map[string]any) (*TDM, error) {
 	if rawJSON == nil {
 		return nil, nil
 	}
@@ -52,13 +52,13 @@ func TDMFromJSON(rawJSON map[string]interface{}) (*TDM, error) {
 }
 
 func (t *TDM) UnmarshalJSON(data []byte) error {
-	var d interface{}
+	var d any
 	err := json.Unmarshal(data, &d)
 	if err != nil {
 		return err
 	}
 
-	mp, ok := d.(map[string]interface{})
+	mp, ok := d.(map[string]any)
 	if !ok {
 		return errors.New("tdm object not a map with string keys")
 	}

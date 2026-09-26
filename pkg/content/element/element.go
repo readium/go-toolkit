@@ -22,8 +22,8 @@ type Element interface {
 	Locator() manifest.Locator // Locator targeting this element in the Publication.
 }
 
-func ElementToMap(e Element) map[string]interface{} {
-	res := make(map[string]interface{})
+func ElementToMap(e Element) map[string]any {
+	res := make(map[string]any)
 	res["locator"] = e.Locator()
 	if l := e.Language(); l != "" {
 		res["language"] = l
@@ -223,9 +223,9 @@ func (e TextElement) Role() TextRole {
 func (e TextElement) MarshalJSON() ([]byte, error) {
 	res := ElementToMap(e)
 	res["role"] = e.role.Role()
-	textElements := make([]interface{}, len(e.segments))
+	textElements := make([]any, len(e.segments))
 	for i, s := range e.segments {
-		te := map[string]interface{}{
+		te := map[string]any{
 			"locator": s.Locator,
 			"text":    s.Text,
 		}

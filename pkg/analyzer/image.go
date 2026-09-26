@@ -268,7 +268,7 @@ func InspectImage(system fs.FS, link manifest.Link, algorithms []manifest.HashAl
 		if slices.Contains(neededAlgorithms, manifest.HashAlgorithmPhashDCT) {
 			// Create phash and put it in a byte array
 			p.Hashes.PhashDCT = make([]byte, 8)
-			binary.BigEndian.PutUint64(p.Hashes.PhashDCT, phash.DTC(img))
+			binary.BigEndian.PutUint64(p.Hashes.PhashDCT, perceptualHash(img))
 		}
 		if slices.Contains(neededAlgorithms, blurHashAlgorithm) {
 			// Create the blurhash

@@ -227,7 +227,7 @@ func SniffWebpub(ctx context.Context, context SnifferContext) *MediaType {
 	if !isRWPMJSON(rwpm) {
 		rwpm = nil
 		if bin := context.ReadArchiveEntryAt(ctx, "manifest.json"); bin != nil {
-			var js map[string]interface{}
+			var js map[string]any
 			if json.Unmarshal(bin, &js) == nil && isRWPMJSON(js) {
 				isManifest = false
 				rwpm = js
@@ -277,7 +277,7 @@ func SniffWebpub(ctx context.Context, context SnifferContext) *MediaType {
 func SniffW3CWPUB(ctx context.Context, context SnifferContext) *MediaType {
 	if js := context.ContentAsJSON(); js != nil {
 		if ctx, ok := js["@context"]; ok {
-			if context, ok := ctx.([]interface{}); ok {
+			if context, ok := ctx.([]any); ok {
 				for _, v := range context {
 					if val, ok := v.(string); ok {
 						if val == "https://www.w3.org/ns/wp-context" {
@@ -321,10 +321,10 @@ func SniffLPF(ctx context.Context, context SnifferContext) *MediaType {
 	}
 
 	if entry := context.ReadArchiveEntryAt(ctx, "publication.json"); entry != nil {
-		var js map[string]interface{}
+		var js map[string]any
 		if err := json.Unmarshal(entry, &js); err == nil && js != nil {
 			if ctx, ok := js["@context"]; ok {
-				if context, ok := ctx.([]interface{}); ok {
+				if context, ok := ctx.([]any); ok {
 					for _, v := range context {
 						if val, ok := v.(string); ok {
 							if val == "https://www.w3.org/ns/pub-context" {

@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/internal/obfuscation"
 )
 
 var algorithm2length = map[string]int64{
@@ -245,8 +246,5 @@ func deobfuscateFont(data []byte, start int64, obfuscationKey []byte, obfuscatio
 	if max > dlen {
 		max = dlen
 	}
-	olen := int64(len(obfuscationKey))
-	for i := int64(0); i < max; i++ {
-		data[i] ^= obfuscationKey[(start+i)%olen]
-	}
+	obfuscation.XOR(data[:max], obfuscationKey, start)
 }

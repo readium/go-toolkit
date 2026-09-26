@@ -10,23 +10,25 @@ import (
 	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
-var (
-	xpSMILRoot      = mustCompileNS("/smil:smil | /smil2:smil")
-	xpSMILBody      = mustCompileNS("smil:body | smil2:body")
-	xpSMILParOrSeq  = mustCompileNS("smil:par | smil:seq | smil2:par | smil2:seq")
-	xpSMILTextChild = mustCompileNS("smil:text | smil2:text")
-	xpSMILAudio     = mustCompileNS("smil:audio | smil2:audio")
-)
+// The previous XPath unions select the SMIL namespace before SMIL 2, even
+// when a SMIL 2 sibling appears earlier in the document. Keep that precedence
+// while avoiding the XPath union's costly node hashing and deduplication.
+func firstSMILChild(parent *xmlquery.Node, name string) *xmlquery.Node {
+	if child := firstNavigationChild(parent, NamespaceSMIL, name); child != nil {
+		return child
+	}
+	return firstNavigationChild(parent, NamespaceSMIL2, name)
+}
 
 func ParseSMILDocument(document *xmlquery.Node, filePath url.URL) (*guidednavigation.GuidedNavigationDocument, error) {
-	smil := xmlquery.QuerySelector(document, xpSMILRoot)
+	smil := firstSMILChild(document, "smil")
 	if smil == nil {
 		return nil, errors.New("SMIL root element not found")
 	}
 
 	// Ignore the <head>, we don't need it with the current implementation
 
-	body := xmlquery.QuerySelector(smil, xpSMILBody)
+	body := firstSMILChild(smil, "body")
 	if body == nil {
 		return nil, errors.New("SMIL body not found")
 	}
@@ -41,56 +43,78 @@ func ParseSMILDocument(document *xmlquery.Node, filePath url.URL) (*guidednaviga
 }
 
 func ParseSMILSeq(seq *xmlquery.Node, filePath url.URL) ([]guidednavigation.GuidedNavigationObject, error) {
-	childElements := xmlquery.QuerySelectorAll(seq, xpSMILParOrSeq)
-	if len(childElements) == 0 && seq.Data == "body" {
+	childCount := 0
+	for child := seq.FirstChild; child != nil; child = child.NextSibling {
+		if child.Data == "par" || child.Data == "seq" {
+			if matchesNavigationElement(child, NamespaceSMIL, child.Data) ||
+				matchesNavigationElement(child, NamespaceSMIL2, child.Data) {
+				childCount++
+			}
+		}
+	}
+	if childCount == 0 && seq.Data == "body" {
 		return nil, errors.New("SMIL body is empty")
 	}
-	objects := make([]guidednavigation.GuidedNavigationObject, 0, len(childElements))
-	for _, el := range childElements {
-		if el.Data == "par" {
-			// <par>
-			o, err := ParseSMILPar(el, filePath)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed parsing SMIL par")
-			}
-			objects = append(objects, *o)
-		} else {
-			// <seq>
-			textrefAttr := SelectNodeAttrNs(el, NamespaceOPS, "textref")
-			if textrefAttr == "" {
-				return nil, errors.New("SMIL seq has no textref")
-			}
-			u, err := url.URLFromString(textrefAttr)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed parsing SMIL seq textref")
-			}
-			o := &guidednavigation.GuidedNavigationObject{
-				TextRef: filePath.Resolve(u),
-			}
-
-			// epub:type
-			pp := parseProperties(SelectNodeAttrNs(el, NamespaceOPS, "type"))
-			if len(pp) > 0 {
-				o.Role = make([]guidednavigation.GuidedNavigationRole, 0, len(pp))
-				for _, prop := range pp {
-					p := converter.ConvertEPUBRole(prop)
-					if p == "" {
-						continue
-					}
-					o.Role = append(o.Role, p)
+	objects := make([]guidednavigation.GuidedNavigationObject, 0, childCount)
+	// Match the original union's branch order: SMIL par, SMIL seq, SMIL 2
+	// par, then SMIL 2 seq. Within each branch, retain sibling order.
+	for _, namespace := range [...]string{NamespaceSMIL, NamespaceSMIL2} {
+		for _, name := range [...]string{"par", "seq"} {
+			for child := seq.FirstChild; child != nil; child = child.NextSibling {
+				if !matchesNavigationElement(child, namespace, name) {
+					continue
 				}
+				o, err := parseSMILSequenceChild(child, filePath)
+				if err != nil {
+					return nil, err
+				}
+				objects = append(objects, *o)
 			}
-
-			// <seq> child elements
-			children, err := ParseSMILSeq(el, filePath)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed parsing SMIL seq children")
-			}
-			o.Children = children
-			objects = append(objects, *o)
 		}
 	}
 	return objects, nil
+}
+
+func parseSMILSequenceChild(el *xmlquery.Node, filePath url.URL) (*guidednavigation.GuidedNavigationObject, error) {
+	if el.Data == "par" {
+		o, err := ParseSMILPar(el, filePath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed parsing SMIL par")
+		}
+		return o, nil
+	}
+
+	textrefAttr := SelectNodeAttrNs(el, NamespaceOPS, "textref")
+	if textrefAttr == "" {
+		return nil, errors.New("SMIL seq has no textref")
+	}
+	u, err := url.URLFromString(textrefAttr)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing SMIL seq textref")
+	}
+	o := &guidednavigation.GuidedNavigationObject{
+		TextRef: filePath.Resolve(u),
+	}
+
+	// epub:type
+	pp := parseProperties(SelectNodeAttrNs(el, NamespaceOPS, "type"))
+	if len(pp) > 0 {
+		o.Role = make([]guidednavigation.GuidedNavigationRole, 0, len(pp))
+		for _, prop := range pp {
+			p := converter.ConvertEPUBRole(prop)
+			if p == "" {
+				continue
+			}
+			o.Role = append(o.Role, p)
+		}
+	}
+
+	children, err := ParseSMILSeq(el, filePath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing SMIL seq children")
+	}
+	o.Children = children
+	return o, nil
 }
 
 func secondsToDuration(seconds *float64) *time.Duration {
@@ -102,7 +126,7 @@ func secondsToDuration(seconds *float64) *time.Duration {
 }
 
 func ParseSMILPar(par *xmlquery.Node, filePath url.URL) (*guidednavigation.GuidedNavigationObject, error) {
-	text := xmlquery.QuerySelector(par, xpSMILTextChild)
+	text := firstSMILChild(par, "text")
 	if text == nil {
 		return nil, errors.New("SMIL par has no text element")
 	}
@@ -119,7 +143,7 @@ func ParseSMILPar(par *xmlquery.Node, filePath url.URL) (*guidednavigation.Guide
 	}
 
 	// Audio is optional
-	if audio := xmlquery.QuerySelector(par, xpSMILAudio); audio != nil {
+	if audio := firstSMILChild(par, "audio"); audio != nil {
 		audioAttr := audio.SelectAttr("src")
 		if audioAttr == "" {
 			return nil, errors.New("SMIL par audio element has empty src attribute")

@@ -89,8 +89,8 @@ func (f *FileFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 		linkHref = link.Href.String()
 	}
 	for itemHref, itemFile := range f.paths {
-		if strings.HasPrefix(linkHref, itemHref) {
-			resourceFile := filepath.Join(itemFile, strings.TrimPrefix(linkHref, itemHref))
+		if after, ok := strings.CutPrefix(linkHref, itemHref); ok {
+			resourceFile := filepath.Join(itemFile, after)
 			// Make sure that the requested resource is [path] or one of its descendant.
 			rapath, err := filepath.Abs(filepath.ToSlash(resourceFile))
 			if err != nil {

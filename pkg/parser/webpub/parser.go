@@ -38,7 +38,7 @@ func (p WebPubParser) Parse(ctx context.Context, a asset.PublicationAsset, f fet
 	isPackage := !mediaType.IsRwpm()
 
 	lFetcher := f
-	var manifestJSON map[string]interface{}
+	var manifestJSON map[string]any
 	if isPackage {
 		res := lFetcher.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("manifest.json", false)})
 		mjr, rerr := fetcher.ReadResourceAsJSON(ctx, res)

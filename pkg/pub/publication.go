@@ -64,7 +64,7 @@ func (p Publication) PositionsFromManifest(ctx context.Context) []manifest.Locat
 	if !ok {
 		return []manifest.Locator{}
 	}
-	positions, ok := rawPositions.([]map[string]interface{})
+	positions, ok := rawPositions.([]map[string]any)
 	if !ok {
 		return []manifest.Locator{}
 	}

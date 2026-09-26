@@ -137,7 +137,7 @@ func TestParseTimecode(t *testing.T) {
 }
 
 func TestVorbisChapters(t *testing.T) {
-	tags := &audioTags{Raw: map[string]interface{}{
+	tags := &audioTags{Raw: map[string]any{
 		"CHAPTER000":     "00:00:00.000",
 		"CHAPTER000NAME": "Opening",
 		"CHAPTER001":     "00:01:30.000",

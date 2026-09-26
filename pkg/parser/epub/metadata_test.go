@@ -554,17 +554,17 @@ func TestMetadataOtherMetadata(t *testing.T) {
 	m3, err := loadMetadata(t.Context(), "meta-others")
 	require.NoError(t, err)
 
-	assert.Equal(t, m3.OtherMetadata, map[string]interface{}{
-		VocabularyDCTerms + "source": []interface{}{
+	assert.Equal(t, m3.OtherMetadata, map[string]any{
+		VocabularyDCTerms + "source": []any{
 			"Feedbooks",
-			map[string]interface{}{"@value": "Web", "http://my.url/#scheme": "http"},
+			map[string]any{"@value": "Web", "http://my.url/#scheme": "http"},
 			"Internet",
 		},
 		"http://idpf.org/epub/vocab/package/meta/#Sigil%20version": "1.9.20",
 		"http://www.idpf.org/2007/opf#version":                     "3.0",
-		"http://my.url/#property0": map[string]interface{}{
+		"http://my.url/#property0": map[string]any{
 			"@value": "refines0",
-			"http://my.url/#property1": map[string]interface{}{
+			"http://my.url/#property1": map[string]any{
 				"@value":                   "refines1",
 				"http://my.url/#property2": "refines2",
 				"http://my.url/#property3": "refines3",

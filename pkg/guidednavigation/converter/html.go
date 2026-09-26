@@ -276,11 +276,19 @@ type navigationObject struct {
 
 func (n *navigationObject) convert() guidednavigation.GuidedNavigationObject {
 	result := n.object
+	childrenReserved := false
 
-	for _, child := range n.children {
+	for i, child := range n.children {
 		res := child.convert()
 		if res.Empty() {
 			continue
+		}
+		if !childrenReserved {
+			// Reserve room for the remaining children once, instead of repeatedly
+			// copying large navigation objects as the slice grows. Wait until a
+			// child is emitted so an empty result retains its original nilness.
+			result.Children = slices.Grow(result.Children, len(n.children)-i)
+			childrenReserved = true
 		}
 		if res.ChildrenOnly() {
 			// Splice transparent wrappers (e.g. plain <div>s) into the parent
@@ -1154,7 +1162,7 @@ func startsWithBindingPunct(s string) bool {
 	if s == "" {
 		return false
 	}
-	switch []rune(s)[0] {
+	switch s[0] {
 	case '.', ',', ';', ':', '!', '?', ')', ']', '}':
 		return true
 	}

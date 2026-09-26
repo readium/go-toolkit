@@ -1,5 +1,7 @@
 package extensions
 
+import "slices"
+
 import "encoding/json"
 
 func Pointer[T any](val T) *T {
@@ -7,12 +9,7 @@ func Pointer[T any](val T) *T {
 }
 
 func Contains[T comparable](slice []T, element T) bool {
-	for _, v := range slice {
-		if v == element {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, element)
 }
 
 func Equal[T comparable](a, b []T) bool {
@@ -35,10 +32,8 @@ func AppendIfMissing[T comparable](slice []T, elems ...T) []T {
 }
 
 func AppendElementIfMissing[T comparable](slice []T, elem T) []T {
-	for _, v := range slice {
-		if v == elem {
-			return slice
-		}
+	if slices.Contains(slice, elem) {
+		return slice
 	}
 	return append(slice, elem)
 }

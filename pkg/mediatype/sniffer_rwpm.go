@@ -21,15 +21,15 @@ const lcpSchemeURI = "http://readium.org/2014/01/lcp"
 // string or a localized-string object whose translations are all strings, as
 // [manifest.LocalizedStringFromJSON] requires. This is the minimal RWPM signature,
 // shared by Readium manifests and OPDS 2 documents.
-func rwpmHasMetadataTitle(js map[string]interface{}) bool {
-	metadata, ok := js["metadata"].(map[string]interface{})
+func rwpmHasMetadataTitle(js map[string]any) bool {
+	metadata, ok := js["metadata"].(map[string]any)
 	if !ok {
 		return false
 	}
 	switch title := metadata["title"].(type) {
 	case string: // Plain title
 		return true
-	case map[string]interface{}: // Localized title: every translation must be a string
+	case map[string]any: // Localized title: every translation must be a string
 		for _, v := range title {
 			if _, ok := v.(string); !ok {
 				return false
@@ -44,7 +44,7 @@ func rwpmHasMetadataTitle(js map[string]interface{}) bool {
 // Returns whether the JSON has the shape of a RWPM that [manifest.ManifestFromJSON]
 // would accept: a `metadata` object bearing a title, along with a `readingOrder`
 // (or legacy `spine`) array of link objects which have an `href` and a valid `type`.
-func isRWPMJSON(js map[string]interface{}) bool {
+func isRWPMJSON(js map[string]any) bool {
 	if js == nil {
 		return false
 	}
@@ -53,14 +53,14 @@ func isRWPMJSON(js map[string]interface{}) bool {
 		return false
 	}
 
-	rawLinks, ok := js["readingOrder"].([]interface{})
+	rawLinks, ok := js["readingOrder"].([]any)
 	if !ok {
-		if rawLinks, ok = js["spine"].([]interface{}); !ok {
+		if rawLinks, ok = js["spine"].([]any); !ok {
 			return false
 		}
 	}
 	for _, raw := range rawLinks {
-		link, ok := raw.(map[string]interface{})
+		link, ok := raw.(map[string]any)
 		if !ok {
 			return false
 		}
@@ -79,14 +79,14 @@ func isRWPMJSON(js map[string]interface{}) bool {
 }
 
 // Returns the link objects of the given collection ("readingOrder", "resources", "links"...).
-func rwpmLinks(js map[string]interface{}, key string) []map[string]interface{} {
-	raw, ok := js[key].([]interface{})
+func rwpmLinks(js map[string]any, key string) []map[string]any {
+	raw, ok := js[key].([]any)
 	if !ok {
 		return nil
 	}
-	links := make([]map[string]interface{}, 0, len(raw))
+	links := make([]map[string]any, 0, len(raw))
 	for _, v := range raw {
-		if link, ok := v.(map[string]interface{}); ok {
+		if link, ok := v.(map[string]any); ok {
 			links = append(links, link)
 		}
 	}
@@ -95,7 +95,7 @@ func rwpmLinks(js map[string]interface{}, key string) []map[string]interface{} {
 
 // Returns the media types of the reading order (or legacy spine) links.
 // Links without a valid media type are skipped, like [manifest.ManifestFromJSON] drops them.
-func rwpmReadingOrderTypes(js map[string]interface{}) []MediaType {
+func rwpmReadingOrderTypes(js map[string]any) []MediaType {
 	links := rwpmLinks(js, "readingOrder")
 	if links == nil {
 		links = rwpmLinks(js, "spine")
@@ -118,19 +118,19 @@ func rwpmReadingOrderTypes(js map[string]interface{}) []MediaType {
 // Returns whether the RWPM conforms to the given profile, mirroring
 // [manifest.Manifest.ConformsTo]: either the profile is declared in
 // `metadata.conformsTo`, or every reading order resource satisfies [matches].
-func rwpmConformsTo(js map[string]interface{}, profile string, matches func(mt MediaType) bool) bool {
+func rwpmConformsTo(js map[string]any, profile string, matches func(mt MediaType) bool) bool {
 	types := rwpmReadingOrderTypes(js)
 	if len(types) == 0 {
 		return false
 	}
 
-	metadata, _ := js["metadata"].(map[string]interface{})
+	metadata, _ := js["metadata"].(map[string]any)
 	switch conformsTo := metadata["conformsTo"].(type) {
 	case string:
 		if conformsTo == profile {
 			return true
 		}
-	case []interface{}:
+	case []any:
 		for _, v := range conformsTo {
 			if v == profile {
 				return true
@@ -147,11 +147,11 @@ func rwpmConformsTo(js map[string]interface{}, profile string, matches func(mt M
 }
 
 // Returns whether the `self` link of the RWPM matches one of the given media types.
-func rwpmSelfLinkMatches(js map[string]interface{}, mediaTypes ...*MediaType) bool {
+func rwpmSelfLinkMatches(js map[string]any, mediaTypes ...*MediaType) bool {
 	for _, link := range rwpmLinks(js, "links") {
-		rels, ok := link["rel"].([]interface{})
+		rels, ok := link["rel"].([]any)
 		if !ok {
-			rels = []interface{}{link["rel"]}
+			rels = []any{link["rel"]}
 		}
 		isSelf := false
 		for _, rel := range rels {
@@ -180,11 +180,11 @@ func rwpmSelfLinkMatches(js map[string]interface{}, mediaTypes ...*MediaType) bo
 
 // Returns whether a link of the RWPM's `links` collection has a relation starting with
 // the given prefix.
-func rwpmHasLinkWithRelPrefix(js map[string]interface{}, prefix string) bool {
+func rwpmHasLinkWithRelPrefix(js map[string]any, prefix string) bool {
 	for _, link := range rwpmLinks(js, "links") {
-		rels, ok := link["rel"].([]interface{})
+		rels, ok := link["rel"].([]any)
 		if !ok {
-			rels = []interface{}{link["rel"]}
+			rels = []any{link["rel"]}
 		}
 		for _, rel := range rels {
 			if s, ok := rel.(string); ok && strings.HasPrefix(s, prefix) {
@@ -196,17 +196,17 @@ func rwpmHasLinkWithRelPrefix(js map[string]interface{}, prefix string) bool {
 }
 
 // Returns whether a reading order resource of the RWPM is encrypted with the LCP scheme.
-func rwpmHasLCPScheme(js map[string]interface{}) bool {
+func rwpmHasLCPScheme(js map[string]any) bool {
 	links := rwpmLinks(js, "readingOrder")
 	if links == nil {
 		links = rwpmLinks(js, "spine")
 	}
 	for _, link := range links {
-		properties, ok := link["properties"].(map[string]interface{})
+		properties, ok := link["properties"].(map[string]any)
 		if !ok {
 			continue
 		}
-		encrypted, ok := properties["encrypted"].(map[string]interface{})
+		encrypted, ok := properties["encrypted"].(map[string]any)
 		if !ok {
 			continue
 		}

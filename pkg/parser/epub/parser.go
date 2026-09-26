@@ -2,6 +2,7 @@ package epub
 
 import (
 	"context"
+	"slices"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/pkg/errors"
@@ -41,14 +42,14 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 
 	// Detect DRM
 
-	opfXmlDocument, errx := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(opfPath)}))
+	opfData, errx := f.Get(ctx, manifest.Link{Href: manifest.NewHREF(opfPath)}).Read(ctx, 0, 0)
 	if errx != nil {
 		return nil, errx
 	}
 
-	packageDocument, err := ParsePackageDocument(opfXmlDocument, opfPath)
+	packageDocument, err := parsePackageDocumentData(opfData, opfPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid OPF file")
+		return nil, err
 	}
 
 	// Detect the container-level DRM scheme. This is done unconditionally,
@@ -141,11 +142,8 @@ func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f
 	} else {
 		var navItem *Item
 		for _, v := range packageDocument.Manifest {
-			for _, st := range v.Properties {
-				if st == VocabularyItem+"nav" {
-					navItem = &v
-					break
-				}
+			if slices.Contains(v.Properties, VocabularyItem+"nav") {
+				navItem = &v
 			}
 			if navItem != nil {
 				break

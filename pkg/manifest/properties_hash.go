@@ -75,10 +75,10 @@ func (h *HashList) Deduplicate() {
 	*h = unique
 }
 
-func HashListFromJSONArray(rawJsonArray []interface{}) (HashList, error) {
+func HashListFromJSONArray(rawJsonArray []any) (HashList, error) {
 	var hashes HashList
 	for _, item := range rawJsonArray {
-		itemMap, ok := item.(map[string]interface{})
+		itemMap, ok := item.(map[string]any)
 		if !ok {
 			return nil, errors.Errorf("invalid hash item: %v", item)
 		}
@@ -91,10 +91,10 @@ func HashListFromJSONArray(rawJsonArray []interface{}) (HashList, error) {
 	return hashes, nil
 }
 
-func (h HashList) ToJSONArray() []interface{} {
-	jsonArray := make([]interface{}, 0, len(h))
+func (h HashList) ToJSONArray() []any {
+	jsonArray := make([]any, 0, len(h))
 	for _, hash := range h {
-		jsonArray = append(jsonArray, map[string]interface{}{
+		jsonArray = append(jsonArray, map[string]any{
 			"algorithm": hash.Algorithm,
 			"value":     hash.Value,
 		})

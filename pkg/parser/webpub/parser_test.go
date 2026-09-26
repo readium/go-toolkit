@@ -70,7 +70,7 @@ func TestParseBareAudiobookManifest(t *testing.T) {
 	// The manifest itself is reachable at its own name.
 	data, err = readPublicationResource(t, p, "manifest.json")
 	require.NoError(t, err)
-	var mjson map[string]interface{}
+	var mjson map[string]any
 	require.NoError(t, json.Unmarshal(data, &mjson))
 
 	// A missing sibling fails.

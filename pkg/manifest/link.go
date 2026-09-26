@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"encoding/json"
+	"slices"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/mediatype"
@@ -34,7 +35,7 @@ func (l Link) URL(base url.URL, parameters map[string]string) url.URL {
 }
 
 // Creates an [Link] from its RWPM JSON representation.
-func LinkFromJSON(rawJson map[string]interface{}) (*Link, error) {
+func LinkFromJSON(rawJson map[string]any) (*Link, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -85,7 +86,7 @@ func LinkFromJSON(rawJson map[string]interface{}) (*Link, error) {
 	}
 
 	// Properties
-	properties, ok := rawJson["properties"].(map[string]interface{})
+	properties, ok := rawJson["properties"].(map[string]any)
 	if ok {
 		link.Properties = properties
 	}
@@ -105,7 +106,7 @@ func LinkFromJSON(rawJson map[string]interface{}) (*Link, error) {
 	link.Languages = languages
 
 	// Alternates
-	rawAlternates, ok := rawJson["alternate"].([]interface{})
+	rawAlternates, ok := rawJson["alternate"].([]any)
 	if ok {
 		alternates, err := LinksFromJSONArray(rawAlternates)
 		if err != nil {
@@ -115,7 +116,7 @@ func LinkFromJSON(rawJson map[string]interface{}) (*Link, error) {
 	}
 
 	// Children
-	rawChildren, ok := rawJson["children"].([]interface{})
+	rawChildren, ok := rawJson["children"].([]any)
 	if ok {
 		children, err := LinksFromJSONArray(rawChildren)
 		if err != nil {
@@ -127,10 +128,10 @@ func LinkFromJSON(rawJson map[string]interface{}) (*Link, error) {
 	return link, nil
 }
 
-func LinksFromJSONArray(rawJsonArray []interface{}) (LinkList, error) {
+func LinksFromJSONArray(rawJsonArray []any) (LinkList, error) {
 	links := make(LinkList, 0, len(rawJsonArray))
 	for i, entry := range rawJsonArray {
-		entry, ok := entry.(map[string]interface{})
+		entry, ok := entry.(map[string]any)
 		if !ok {
 			// TODO: Should this be a "warning", an error, or completely ignored?
 			continue
@@ -148,7 +149,7 @@ func LinksFromJSONArray(rawJsonArray []interface{}) (LinkList, error) {
 }
 
 func (l *Link) UnmarshalJSON(b []byte) error {
-	var object map[string]interface{}
+	var object map[string]any
 	err := json.Unmarshal(b, &object)
 	if err != nil {
 		return err
@@ -162,7 +163,7 @@ func (l *Link) UnmarshalJSON(b []byte) error {
 }
 
 func (l Link) MarshalJSON() ([]byte, error) {
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 	res["href"] = l.Href.String()
 	if l.MediaType != nil {
 		res["type"] = l.MediaType.String()
@@ -232,10 +233,8 @@ func (ll LinkList) FirstWithHref(href url.URL) *Link {
 // Finds the first link with the given relation.
 func (ll LinkList) FirstWithRel(rel string) *Link {
 	for _, link := range ll {
-		for _, r := range link.Rels {
-			if r == rel {
-				return &link
-			}
+		if slices.Contains(link.Rels, rel) {
+			return &link
 		}
 	}
 	return nil

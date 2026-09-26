@@ -27,7 +27,7 @@ func TestArchiveFetcherLinks(t *testing.T) {
 			MediaType: typ,
 		}
 		p := manifest.Properties{
-			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]any{
 				"entryLength":       entryLength,
 				"isEntryCompressed": isCompressed,
 			},
@@ -142,7 +142,7 @@ func TestArchiveFetcherAddsProperties(t *testing.T) {
 	withArchiveFetcher(t, func(a *ArchiveFetcher) {
 		resource := a.Get(t.Context(), manifest.Link{Href: manifest.MustNewHREFFromString("EPUB/css/epub.css", false)})
 		assert.Equal(t, manifest.Properties{
-			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]any{
 				"entryLength":       uint64(595),
 				"isEntryCompressed": true,
 			},

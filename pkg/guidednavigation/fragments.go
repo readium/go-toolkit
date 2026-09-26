@@ -3,6 +3,7 @@ package guidednavigation
 import (
 	"math"
 	nurl "net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -286,11 +287,11 @@ func fragmentDimensions(ref url.URL) []fragmentDimension {
 // https://www.w3.org/TR/media-frags/#error-uri-general
 func lastValidDimension[T any](ref url.URL, name string, parse func(string) *T) *T {
 	dims := fragmentDimensions(ref)
-	for i := len(dims) - 1; i >= 0; i-- {
-		if dims[i].name != name {
+	for _, dim := range slices.Backward(dims) {
+		if dim.name != name {
 			continue
 		}
-		if res := parse(dims[i].value); res != nil {
+		if res := parse(dim.value); res != nil {
 			return res
 		}
 	}

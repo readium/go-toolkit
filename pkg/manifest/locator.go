@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"encoding/json"
+	"maps"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/mediatype"
@@ -11,14 +12,14 @@ import (
 // One or more alternative expressions of the location.
 // https://github.com/readium/architecture/tree/master/models/locators#the-location-object
 type Locations struct {
-	Fragments        []string               `json:"fragments,omitempty"`        // Contains one or more fragment in the resource referenced by the [Locator].
-	Progression      *float64               `json:"progression,omitempty"`      // Progression in the resource expressed as a percentage (between 0 and 1).
-	Position         *uint                  `json:"position,omitempty"`         // An index in the publication (>= 1).
-	TotalProgression *float64               `json:"totalProgression,omitempty"` // Progression in the publication expressed as a percentage (between 0 and 1).
-	OtherLocations   map[string]interface{} // Additional locations for extensions.
+	Fragments        []string       `json:"fragments,omitempty"`        // Contains one or more fragment in the resource referenced by the [Locator].
+	Progression      *float64       `json:"progression,omitempty"`      // Progression in the resource expressed as a percentage (between 0 and 1).
+	Position         *uint          `json:"position,omitempty"`         // An index in the publication (>= 1).
+	TotalProgression *float64       `json:"totalProgression,omitempty"` // Progression in the publication expressed as a percentage (between 0 and 1).
+	OtherLocations   map[string]any // Additional locations for extensions.
 }
 
-func LocationsFromJSON(rawJson map[string]interface{}) (l Locations, err error) {
+func LocationsFromJSON(rawJson map[string]any) (l Locations, err error) {
 	if rawJson == nil {
 		return
 	}
@@ -81,7 +82,7 @@ func LocationsFromJSON(rawJson map[string]interface{}) (l Locations, err error) 
 }
 
 func (l *Locations) UnmarshalJSON(b []byte) error {
-	var object map[string]interface{}
+	var object map[string]any
 	err := json.Unmarshal(b, &object)
 	if err != nil {
 		return err
@@ -95,11 +96,9 @@ func (l *Locations) UnmarshalJSON(b []byte) error {
 }
 
 func (l Locations) MarshalJSON() ([]byte, error) {
-	j := make(map[string]interface{})
+	j := make(map[string]any)
 	if l.OtherLocations != nil {
-		for k, v := range l.OtherLocations {
-			j[k] = v
-		}
+		maps.Copy(j, l.OtherLocations)
 	}
 
 	if len(l.Fragments) > 0 {
@@ -140,7 +139,7 @@ type Text struct {
 	After     string `json:"after,omitempty"`     // The text after the locator.
 }
 
-func TextFromJSON(rawJson map[string]interface{}) (t Text) {
+func TextFromJSON(rawJson map[string]any) (t Text) {
 	if rawJson == nil {
 		return
 	}
@@ -191,11 +190,11 @@ type Locator struct {
 	Href      url.URL             `json:"href"`
 	MediaType mediatype.MediaType `json:"type"`
 	Title     string              `json:"title,omitempty"`
-	Locations Locations           `json:"locations,omitempty"`
-	Text      Text                `json:"text,omitempty"`
+	Locations Locations           `json:"locations"`
+	Text      Text                `json:"text"`
 }
 
-func LocatorFromJSON(rawJson map[string]interface{}) (Locator, error) {
+func LocatorFromJSON(rawJson map[string]any) (Locator, error) {
 	if rawJson == nil {
 		return Locator{}, nil
 	}
@@ -221,7 +220,7 @@ func LocatorFromJSON(rawJson map[string]interface{}) (Locator, error) {
 		return Locator{}, errors.Wrap(err, "failed unmarshalling 'type' as valid mimetype")
 	}
 
-	if rawLocations, ok := rawJson["locations"].(map[string]interface{}); ok {
+	if rawLocations, ok := rawJson["locations"].(map[string]any); ok {
 		locations, err := LocationsFromJSON(rawLocations)
 		if err != nil {
 			return Locator{}, err
@@ -229,7 +228,7 @@ func LocatorFromJSON(rawJson map[string]interface{}) (Locator, error) {
 		locator.Locations = locations
 	}
 
-	if rawText, ok := rawJson["text"].(map[string]interface{}); ok {
+	if rawText, ok := rawJson["text"].(map[string]any); ok {
 		locator.Text = TextFromJSON(rawText)
 	}
 
@@ -237,7 +236,7 @@ func LocatorFromJSON(rawJson map[string]interface{}) (Locator, error) {
 }
 
 func (l *Locator) UnmarshalJSON(b []byte) error {
-	var object map[string]interface{}
+	var object map[string]any
 	err := json.Unmarshal(b, &object)
 	if err != nil {
 		return err
@@ -251,7 +250,7 @@ func (l *Locator) UnmarshalJSON(b []byte) error {
 }
 
 func (l Locator) MarshalJSON() ([]byte, error) {
-	j := make(map[string]interface{})
+	j := make(map[string]any)
 
 	if l.Href == nil {
 		return nil, errors.New("href is required in Locator")

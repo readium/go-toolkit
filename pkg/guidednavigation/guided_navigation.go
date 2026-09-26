@@ -17,15 +17,15 @@ type GuidedNavigationDocument struct {
 // Readium Guided Navigation Object
 // https://readium.org/guided-navigation/schema/object.schema.json
 type GuidedNavigationObject struct {
-	ID          string                      `json:"id,omitempty"`          // Identifier for the object, referenced from the SSML representation of a sibling text (e.g. <readium:image id="..."/>).
-	AudioRef    url.URL                     `json:"audioref,omitempty"`    // References an audio resource or a fragment of it.
-	ImgRef      url.URL                     `json:"imgref,omitempty"`      // References an image or a fragment of it.
-	TextRef     url.URL                     `json:"textref,omitempty"`     // References a textual resource or a fragment of it.
-	VideoRef    url.URL                     `json:"videoref,omitempty"`    // References a video resource or a fragment of it.
-	Text        GuidedNavigationText        `json:"text,omitempty"`        // Textual equivalent of the resources or fragment of the resources referenced by the current Guided Navigation Object.
-	Role        []GuidedNavigationRole      `json:"role,omitempty"`        // Convey the structural semantics of a publication
-	Children    []GuidedNavigationObject    `json:"children,omitempty"`    // Items that are children of the containing Guided Navigation Object.
-	Description GuidedNavigationDescription `json:"description,omitempty"` // Text, audio or image description for the current Guided Navigation Object.
+	ID          string                      `json:"id,omitempty"`       // Identifier for the object, referenced from the SSML representation of a sibling text (e.g. <readium:image id="..."/>).
+	AudioRef    url.URL                     `json:"audioref,omitempty"` // References an audio resource or a fragment of it.
+	ImgRef      url.URL                     `json:"imgref,omitempty"`   // References an image or a fragment of it.
+	TextRef     url.URL                     `json:"textref,omitempty"`  // References a textual resource or a fragment of it.
+	VideoRef    url.URL                     `json:"videoref,omitempty"` // References a video resource or a fragment of it.
+	Text        GuidedNavigationText        `json:"text"`               // Textual equivalent of the resources or fragment of the resources referenced by the current Guided Navigation Object.
+	Role        []GuidedNavigationRole      `json:"role,omitempty"`     // Convey the structural semantics of a publication
+	Children    []GuidedNavigationObject    `json:"children,omitempty"` // Items that are children of the containing Guided Navigation Object.
+	Description GuidedNavigationDescription `json:"description"`        // Text, audio or image description for the current Guided Navigation Object.
 }
 
 func (o GuidedNavigationObject) Empty() bool {
@@ -47,7 +47,7 @@ func (o GuidedNavigationObject) TextOnly() bool {
 }
 
 func (o GuidedNavigationObject) MarshalJSON() ([]byte, error) {
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 	if o.Empty() {
 		return json.Marshal(res)
 	}
@@ -120,7 +120,7 @@ func (t *GuidedNavigationText) UnmarshalJSON(data []byte) error {
 }
 
 func (t GuidedNavigationText) MarshalJSON() ([]byte, error) {
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 
 	if t.SSML == "" && t.Language == "" {
 		return json.Marshal(t.Plain)
@@ -146,7 +146,7 @@ type GuidedNavigationDescription struct {
 	ImgRef   url.URL              `json:"imgref,omitempty"`   // References an image or a fragment of it.
 	TextRef  url.URL              `json:"textref,omitempty"`  // References a textual resource or a fragment of it.
 	VideoRef url.URL              `json:"videoref,omitempty"` // References a video resource or a fragment of it.
-	Text     GuidedNavigationText `json:"text,omitempty"`     // Textual description.
+	Text     GuidedNavigationText `json:"text"`               // Textual description.
 }
 
 // NewTextDescription creates a description carrying only plain text.
@@ -213,7 +213,7 @@ func (d GuidedNavigationDescription) MarshalJSON() ([]byte, error) {
 		return json.Marshal(d.Text.Plain)
 	}
 
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 	if d.AudioRef != nil {
 		if s := d.AudioRef.String(); s != "" {
 			res["audioref"] = s

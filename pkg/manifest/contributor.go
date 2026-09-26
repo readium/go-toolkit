@@ -34,7 +34,7 @@ func (c Contributor) SortAs() string {
 // Parses a [Contributor] from its RWPM JSON representation.
 // A contributor can be parsed from a single string, or a full-fledged object.
 // The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
-func ContributorFromJSON(rawJson interface{}) (*Contributor, error) {
+func ContributorFromJSON(rawJson any) (*Contributor, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -43,7 +43,7 @@ func ContributorFromJSON(rawJson interface{}) (*Contributor, error) {
 	switch dd := rawJson.(type) {
 	case string: // Just a single string Contributor
 		c.LocalizedName = NewLocalizedStringFromString(dd)
-	case map[string]interface{}: // Actual object Contributor
+	case map[string]any: // Actual object Contributor
 		// LocalizedName
 		nr, ok := dd["name"]
 		if !ok {
@@ -74,7 +74,7 @@ func ContributorFromJSON(rawJson interface{}) (*Contributor, error) {
 		c.Roles = roles
 
 		// Links
-		rawLinks, ok := dd["links"].([]interface{})
+		rawLinks, ok := dd["links"].([]any)
 		if ok {
 			links, err := LinksFromJSONArray(rawLinks)
 			if err != nil {
@@ -108,10 +108,10 @@ func ContributorFromJSON(rawJson interface{}) (*Contributor, error) {
 	return c, nil
 }
 
-func ContributorFromJSONArray(rawJsonArray interface{}) ([]Contributor, error) {
+func ContributorFromJSONArray(rawJsonArray any) ([]Contributor, error) {
 	var contributors []Contributor
 	switch rjx := rawJsonArray.(type) {
-	case []interface{}:
+	case []any:
 		contributors = make([]Contributor, 0, len(rjx))
 		for i, entry := range rjx {
 			rc, err := ContributorFromJSON(entry)
@@ -145,7 +145,7 @@ func (c Contributor) MarshalJSON() ([]byte, error) {
 }
 
 func (c *Contributor) UnmarshalJSON(data []byte) error {
-	var d interface{}
+	var d any
 	err := json.Unmarshal(data, &d)
 	if err != nil {
 		return err
