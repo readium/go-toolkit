@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"unicode/utf8"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/archive"
@@ -60,18 +61,23 @@ type Resource interface {
 }
 
 func ReadResourceAsString(ctx context.Context, r Resource) (string, *ResourceError) {
-	bytes, ex := r.Read(ctx, 0, 0)
+	bin, ex := r.Read(ctx, 0, 0)
 	if ex != nil {
 		return "", ex
 	}
 	var cs encoding.Encoding
-	if r.Link().MediaType != nil {
-		cs = r.Link().MediaType.Charset()
+	if mediaType := r.Link().MediaType; mediaType != nil {
+		cs = mediaType.Charset()
 	}
 	if cs == nil {
 		cs = unicode.UTF8
 	}
-	utf8bytes, err := cs.NewDecoder().Bytes(bytes)
+	// Valid UTF-8 needs no decoding. Keep the decoder for malformed input so
+	// replacement characters and legacy character encodings remain unchanged.
+	if cs == unicode.UTF8 && utf8.Valid(bin) {
+		return string(bin), nil
+	}
+	utf8bytes, err := cs.NewDecoder().Bytes(bin)
 	if err != nil {
 		return "", Other(err)
 	}

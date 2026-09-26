@@ -2,6 +2,7 @@ package epub
 
 import (
 	"errors"
+	"maps"
 	"sort"
 	"strings"
 	"time"
@@ -472,6 +473,10 @@ type PubMetadataAdapter struct {
 }
 
 func (m PubMetadataAdapter) Metadata() manifest.Metadata {
+	// The public getters use value receivers. Seed their shared derived data on
+	// this local adapter once so each getter does not rebuild the same values.
+	m.seedTitleData()
+	m.seedBelongsToData()
 	identifier, altIdentifiers := m.Identifiers()
 	metadata := manifest.Metadata{
 		Identifier:         identifier,
@@ -597,6 +602,11 @@ func (m *PubMetadataAdapter) seedTitleData() {
 	}
 	if mainTitle != nil {
 		m._localizedTitle = (*mainTitle).value
+		if mainTitle.typ == "subtitle" {
+			// With no main title, the first subtitle can also serve as the
+			// publication title. Keep their mutable translations independent.
+			m._localizedTitle.Translations = maps.Clone(m._localizedTitle.Translations)
+		}
 	}
 	if m._localizedTitle.String() == "" {
 		m._localizedTitle = manifest.NewLocalizedStringFromString(m.fallbackTitle)

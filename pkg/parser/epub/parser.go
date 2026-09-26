@@ -41,14 +41,14 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 
 	// Detect DRM
 
-	opfXmlDocument, errx := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(opfPath)}))
+	opfData, errx := f.Get(ctx, manifest.Link{Href: manifest.NewHREF(opfPath)}).Read(ctx, 0, 0)
 	if errx != nil {
 		return nil, errx
 	}
 
-	packageDocument, err := ParsePackageDocument(opfXmlDocument, opfPath)
+	packageDocument, err := parsePackageDocumentData(opfData, opfPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid OPF file")
+		return nil, err
 	}
 
 	// Detect the container-level DRM scheme. This is done unconditionally,

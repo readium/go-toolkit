@@ -237,10 +237,10 @@ func ExtractNodeRoles(el *html.Node) (roles []guidednavigation.GuidedNavigationR
 	presentational := false
 	for _, at := range el.Attr {
 		// Remove namespace prefix if it exists
-		frags := strings.SplitN(at.Key, ":", 2)
-		key := frags[len(frags)-1]
+		prefix, key, hasPrefix := strings.Cut(at.Key, ":")
 
-		if len(frags) == 1 {
+		if !hasPrefix {
+			key = prefix
 			// ARIA role
 			if key == "role" {
 				for _, val := range strings.Fields(at.Val) {
@@ -272,7 +272,7 @@ func ExtractNodeRoles(el *html.Node) (roles []guidednavigation.GuidedNavigationR
 					// Save namespaces so they're only extracted once per element
 					namespaces = ExtractNamespaces(el)
 				}
-				if namespace, ok := namespaces[frags[0]]; ok {
+				if namespace, ok := namespaces[prefix]; ok {
 					// Set the namespace if we found it
 					at.Namespace = namespace
 				}

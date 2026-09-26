@@ -16,6 +16,7 @@ type PublicationFactory struct {
 	pubMetadata    PubMetadataAdapter
 	itemrefByIdref map[string]ItemRef
 	itemMetadata   map[string]LinkMetadataAdapter
+	coverID        string
 }
 
 func (f PublicationFactory) Create() manifest.Manifest {
@@ -35,20 +36,25 @@ func (f PublicationFactory) Create() manifest.Manifest {
 		readingProgression: spine.direction,
 		displayOptions:     f.DisplayOptions,
 	}
-	f.itemMetadata = make(map[string]LinkMetadataAdapter)
+	f.coverID = f.pubMetadata.Cover()
+	f.itemMetadata = make(map[string]LinkMetadataAdapter, len(f.PackageDocument.metadata.refine))
 	for k, v := range f.PackageDocument.metadata.refine {
 		f.itemMetadata[k] = LinkMetadataAdapter{
 			epubVersion: epubVersion,
 			items:       v,
 		}
 	}
-	f.itemById = make(map[string]Item)
+	f.itemById = make(map[string]Item, len(mani))
 	for _, item := range mani {
 		f.itemById[item.ID] = item
 	}
-	f.itemrefByIdref = make(map[string]ItemRef)
+	f.itemrefByIdref = make(map[string]ItemRef, len(spine.itemrefs))
+	linearCount := 0
 	for _, v := range spine.itemrefs {
 		f.itemrefByIdref[v.idref] = v
+		if v.linear {
+			linearCount++
+		}
 	}
 
 	// Compute Metadata
@@ -60,28 +66,31 @@ func (f PublicationFactory) Create() manifest.Manifest {
 	}
 
 	// Compute Links
-	var readingOrderIds []string
+	readingOrderIDs := make(map[string]struct{}, linearCount)
+	readingOrder := make(manifest.LinkList, 0, linearCount)
 	for _, v := range spine.itemrefs {
-		if v.linear {
-			readingOrderIds = append(readingOrderIds, v.idref)
+		if !v.linear {
+			continue
 		}
-	}
-	readingOrder := make(manifest.LinkList, 0, len(readingOrderIds))
-	for _, id := range readingOrderIds {
-		item, ok := f.itemById[id]
+		readingOrderIDs[v.idref] = struct{}{}
+		item, ok := f.itemById[v.idref]
 		if ok {
-			readingOrder = append(readingOrder, f.computeLink(item, []string{}))
+			readingOrder = append(readingOrder, f.computeLink(item, nil))
 		}
 	}
-	var resourceItems []Item
+	// Count first to size the link slice without retaining a second copy of the
+	// manifest items. Membership checks must not scan the whole spine per item.
+	resourceCount := 0
 	for _, item := range mani {
-		if !extensions.Contains(readingOrderIds, item.ID) {
-			resourceItems = append(resourceItems, item)
+		if _, linear := readingOrderIDs[item.ID]; !linear {
+			resourceCount++
 		}
 	}
-	resources := make(manifest.LinkList, 0, len(resourceItems))
-	for _, item := range resourceItems {
-		resources = append(resources, f.computeLink(item, []string{}))
+	resources := make(manifest.LinkList, 0, resourceCount)
+	for _, item := range mani {
+		if _, linear := readingOrderIDs[item.ID]; !linear {
+			resources = append(resources, f.computeLink(item, nil))
+		}
 	}
 
 	ret := manifest.Manifest{
@@ -169,11 +178,14 @@ func (f PublicationFactory) computeLink(item Item, fallbackChain []string) manif
 }
 
 func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef) ([]string, manifest.Properties) {
-	properties := make(map[string]interface{})
+	var properties map[string]interface{}
 	var rels []string
 	manifestRels, contains, others := parseItemProperties(item.Properties)
 	for _, v := range manifestRels {
 		rels = extensions.AddToSet(rels, v)
+	}
+	if len(contains) > 0 || len(others) > 0 {
+		properties = make(map[string]interface{}, len(others)+1)
 	}
 	if len(contains) > 0 {
 		properties["contains"] = contains
@@ -182,18 +194,27 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 		properties[v] = true
 	}
 	if itemref != nil {
-		for k, v := range parseItemrefProperties(itemref.properties) {
-			properties[k] = v
+		itemrefProperties := parseItemrefProperties(itemref.properties)
+		if properties == nil {
+			properties = itemrefProperties
+		} else {
+			for k, v := range itemrefProperties {
+				properties[k] = v
+			}
 		}
 	}
 
-	coverId := f.pubMetadata.Cover()
-	if coverId == item.ID {
+	if f.coverID == item.ID {
 		rels = extensions.AddToSet(rels, "cover")
 	}
 
-	if edat, ok := f.EncryptionData[item.Href.Normalize().String()]; ok {
-		properties["encrypted"] = edat.ToMap() // ToMap makes it JSON-like
+	if len(f.EncryptionData) > 0 {
+		if edat, ok := f.EncryptionData[item.Href.Normalize().String()]; ok {
+			if properties == nil {
+				properties = make(map[string]interface{}, 1)
+			}
+			properties["encrypted"] = edat.ToMap() // ToMap makes it JSON-like
+		}
 	}
 
 	return rels, manifest.Properties(properties)
@@ -248,21 +269,24 @@ func parseItemProperties(properties []string) (rels []string, contains []string,
 }
 
 func parseItemrefProperties(properties []string) map[string]interface{} {
-	linkProperties := make(map[string]interface{})
+	var page string
 	for _, property := range properties {
 		switch property {
 		// Page
 		case VocabularyRendition + "page-spread-center":
-			linkProperties["page"] = "center"
+			page = "center"
 		case VocabularyRendition + "page-spread-left":
 			fallthrough
 		case VocabularyItemref + "page-spread-left":
-			linkProperties["page"] = "left"
+			page = "left"
 		case VocabularyRendition + "page-spread-right":
 			fallthrough
 		case VocabularyItemref + "page-spread-right":
-			linkProperties["page"] = "right"
+			page = "right"
 		}
 	}
-	return linkProperties
+	if page == "" {
+		return nil
+	}
+	return map[string]interface{}{"page": page}
 }
