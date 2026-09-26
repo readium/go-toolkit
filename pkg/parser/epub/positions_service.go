@@ -107,7 +107,7 @@ func (s *PositionsService) createReflowable(ctx context.Context, link manifest.L
 	positionCount := s.reflowableStrategy.PositionCount(resource)
 
 	positions := make([]manifest.Locator, positionCount)
-	for p := uint(0); p < positionCount; p++ {
+	for p := range positionCount {
 		positions[p] = s.createLocator(
 			link,
 			float64(p)/float64(positionCount),
@@ -185,7 +185,7 @@ func (l ArchiveEntryLength) PositionCount(resource fetcher.Resource) uint {
 	var length uint64
 	props := resource.Properties()
 	if p := props.Get("https://readium.org/webpub-manifest/properties#archive"); p != nil {
-		if pm, ok := p.(map[string]interface{}); ok {
+		if pm, ok := p.(map[string]any); ok {
 			if el, ok := pm["entryLength"].(uint64); ok {
 				length = el
 			}

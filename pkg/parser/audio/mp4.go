@@ -358,7 +358,7 @@ func parseNeroChapters(b []byte) []chapterEntry {
 	pos++
 
 	chapters := make([]chapterEntry, 0, count)
-	for c := 0; c < count; c++ {
+	for range count {
 		if pos+9 > len(b) {
 			break
 		}

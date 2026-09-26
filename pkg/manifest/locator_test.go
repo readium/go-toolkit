@@ -108,7 +108,7 @@ func TestLocationsUnmarshalJSON(t *testing.T) {
 		Progression:      extensions.Pointer(0.74),
 		TotalProgression: extensions.Pointer(0.32),
 		Position:         extensions.Pointer[uint](42),
-		OtherLocations: map[string]interface{}{
+		OtherLocations: map[string]any{
 			"other": "other-location",
 		},
 	}, l)
@@ -196,7 +196,7 @@ func TestLocationsJSON(t *testing.T) {
 		Progression:      extensions.Pointer(0.74),
 		Position:         extensions.Pointer[uint](42),
 		TotalProgression: extensions.Pointer(25.32),
-		OtherLocations: map[string]interface{}{
+		OtherLocations: map[string]any{
 			"other": "other-location",
 		},
 	})

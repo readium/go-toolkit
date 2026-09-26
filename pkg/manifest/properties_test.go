@@ -29,7 +29,7 @@ func TestPropertiesUnmarshalFullJSON(t *testing.T) {
 
 	assert.Equal(t, Properties{
 		"other-property1": "value",
-		"other-property2": []interface{}{float64(42)},
+		"other-property2": []any{float64(42)},
 	}, p)
 }
 

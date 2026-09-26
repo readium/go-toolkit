@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/archive"
@@ -25,7 +26,7 @@ type SnifferContext struct {
 	_loadedContentAsString  bool
 	_contentAsXML           *XMLNode
 	_loadedContentAsXML     bool
-	_contentAsJSON          map[string]interface{}
+	_contentAsJSON          map[string]any
 	_loadedContentAsJSON    bool
 	_contentAsArchive       archive.Archive
 	_contentAsArchiveErr    error
@@ -73,10 +74,8 @@ func (s SnifferContext) HasFileExtension(fileExtensions ...string) bool {
 	selfExtensions := s.FileExtensions()
 	for _, fileExtension := range fileExtensions {
 		lowerExt := strings.ToLower(fileExtension)
-		for _, fext := range selfExtensions {
-			if fext == lowerExt {
-				return true
-			}
+		if slices.Contains(selfExtensions, lowerExt) {
+			return true
 		}
 	}
 	return false
@@ -200,14 +199,14 @@ func (s *SnifferContext) Close() {
 var errClosedSnifferContext = errors.New("the sniffing context is closed")
 
 // Content parsed as generic JSON interface.
-func (s SnifferContext) ContentAsJSON() map[string]interface{} {
+func (s SnifferContext) ContentAsJSON() map[string]any {
 	if !s._loadedContentAsJSON {
 		s._loadedContentAsJSON = true
 		stream := s.Stream()
 		if stream == nil {
 			return nil // No stream
 		}
-		var jd map[string]interface{}
+		var jd map[string]any
 		err := json.NewDecoder(stream).Decode(&jd)
 		if err != nil {
 			return nil

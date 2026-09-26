@@ -18,7 +18,7 @@ import (
 // themselves and pass it to [Parser.Parse] directly.
 type fakeEPUBAsset struct{ name string }
 
-func (a fakeEPUBAsset) Name() string                                 { return a.name }
+func (a fakeEPUBAsset) Name() string                                  { return a.name }
 func (a fakeEPUBAsset) MediaType(context.Context) mediatype.MediaType { return mediatype.EPUB }
 func (a fakeEPUBAsset) CreateFetcher(context.Context, asset.Dependencies, string) (fetcher.Fetcher, error) {
 	return nil, errors.New("unused in tests")
@@ -67,7 +67,7 @@ func TestParserEndToEnd(t *testing.T) {
 
 			encryptedCount := 0
 			for _, link := range append(m.ReadingOrder, m.Resources...) {
-				enc, ok := link.Properties["encrypted"].(map[string]interface{})
+				enc, ok := link.Properties["encrypted"].(map[string]any)
 				if !ok {
 					continue
 				}

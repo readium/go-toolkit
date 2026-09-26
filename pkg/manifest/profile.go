@@ -27,7 +27,7 @@ type Profiles []Profile
 
 // Convert to string slice
 func (p Profiles) toss() []string {
-	return interface{}(p).([]string) // Ugly...
+	return any(p).([]string) // Ugly...
 }
 
 func (p Profiles) MarshalJSON() ([]byte, error) {

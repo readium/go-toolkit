@@ -18,7 +18,7 @@ func TestPubCollectionUnmarshalMinimalJSON(t *testing.T) {
 
 	assert.Equal(t, PublicationCollection{
 		Links:    []Link{{Href: NewHREF(url.MustURLFromString("/link"))}},
-		Metadata: map[string]interface{}{},
+		Metadata: map[string]any{},
 	}, pc, "unmarshalled JSON object should be equal to PublicationCollection object")
 }
 
@@ -56,21 +56,21 @@ func TestPubCollectionUnmarshalFullJSON(t *testing.T) {
 
 	assert.Equal(t, PublicationCollection{
 		Links: []Link{{Href: NewHREF(url.MustURLFromString("/link"))}},
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"metadata1": "value",
 		},
 		Subcollections: PublicationCollectionMap{
 			"sub1": {{
-				Metadata: map[string]interface{}{},
+				Metadata: map[string]any{},
 				Links:    []Link{{Href: NewHREF(url.MustURLFromString("/sublink"))}},
 			}},
 			"sub2": {{
-				Metadata: map[string]interface{}{},
+				Metadata: map[string]any{},
 				Links:    []Link{{Href: NewHREF(url.MustURLFromString("/sublink1"))}, {Href: NewHREF(url.MustURLFromString("/sublink2"))}},
 			}},
 			"sub3": {
-				{Metadata: map[string]interface{}{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink3"))}}},
-				{Metadata: map[string]interface{}{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink4"))}}},
+				{Metadata: map[string]any{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink3"))}}},
+				{Metadata: map[string]any{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink4"))}}},
 			},
 		},
 	}, pc, "unmarshalled JSON object should be equal to PublicationCollection object")
@@ -83,7 +83,7 @@ func TestPubCollectionUnmarshalNilJSON(t *testing.T) {
 }
 
 func TestPubCollectionUnmarshalJSONMultipleCollections(t *testing.T) {
-	var pcsr map[string]interface{}
+	var pcsr map[string]any
 	require.NoError(t, json.Unmarshal([]byte(`{
 		"sub1": {
 			"links": [
@@ -112,23 +112,23 @@ func TestPubCollectionUnmarshalJSONMultipleCollections(t *testing.T) {
 
 	assert.Equal(t, PublicationCollectionMap{
 		"sub1": {{
-			Metadata: map[string]interface{}{},
+			Metadata: map[string]any{},
 			Links:    []Link{{Href: NewHREF(url.MustURLFromString("/sublink"))}},
 		}},
 		"sub2": {{
-			Metadata: map[string]interface{}{},
+			Metadata: map[string]any{},
 			Links:    []Link{{Href: NewHREF(url.MustURLFromString("/sublink1"))}, {Href: NewHREF(url.MustURLFromString("/sublink2"))}},
 		}},
 		"sub3": {
-			{Metadata: map[string]interface{}{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink3"))}}},
-			{Metadata: map[string]interface{}{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink4"))}}},
+			{Metadata: map[string]any{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink3"))}}},
+			{Metadata: map[string]any{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink4"))}}},
 		},
 	}, pcs, "unmarshalled JSON object should be equal to map of PublicationCollection to role")
 }
 
 func TestPubCollectionMinimalJSON(t *testing.T) {
 	bin, err := json.Marshal(&PublicationCollection{
-		Metadata: map[string]interface{}{},
+		Metadata: map[string]any{},
 		Links:    []Link{{Href: NewHREF(url.MustURLFromString("/link"))}},
 	})
 	require.NoError(t, err)
@@ -140,22 +140,22 @@ func TestPubCollectionMinimalJSON(t *testing.T) {
 
 func TestPubCollectionFullJSON(t *testing.T) {
 	bin, err := json.Marshal(&PublicationCollection{
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"metadata1": "value",
 		},
 		Links: []Link{{Href: NewHREF(url.MustURLFromString("/link"))}},
 		Subcollections: PublicationCollectionMap{
 			"sub1": {{
-				Metadata: map[string]interface{}{},
+				Metadata: map[string]any{},
 				Links:    []Link{{Href: NewHREF(url.MustURLFromString("/sublink"))}},
 			}},
 			"sub2": {{
-				Metadata: map[string]interface{}{},
+				Metadata: map[string]any{},
 				Links:    []Link{{Href: NewHREF(url.MustURLFromString("/sublink1"))}, {Href: NewHREF(url.MustURLFromString("/sublink2"))}},
 			}},
 			"sub3": {
-				{Metadata: map[string]interface{}{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink3"))}}},
-				{Metadata: map[string]interface{}{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink4"))}}},
+				{Metadata: map[string]any{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink3"))}}},
+				{Metadata: map[string]any{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink4"))}}},
 			},
 		},
 	})
@@ -200,16 +200,16 @@ func TestPubCollectionFullJSON(t *testing.T) {
 func TestPubCollectionMultipleCollectionsJSON(t *testing.T) {
 	bin, err := json.Marshal(PublicationCollectionMap{
 		"sub1": {{
-			Metadata: map[string]interface{}{},
+			Metadata: map[string]any{},
 			Links:    []Link{{Href: NewHREF(url.MustURLFromString("/sublink"))}},
 		}},
 		"sub2": {{
-			Metadata: map[string]interface{}{},
+			Metadata: map[string]any{},
 			Links:    []Link{{Href: NewHREF(url.MustURLFromString("/sublink1"))}, {Href: NewHREF(url.MustURLFromString("/sublink2"))}},
 		}},
 		"sub3": {
-			{Metadata: map[string]interface{}{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink3"))}}},
-			{Metadata: map[string]interface{}{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink4"))}}},
+			{Metadata: map[string]any{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink3"))}}},
+			{Metadata: map[string]any{}, Links: []Link{{Href: NewHREF(url.MustURLFromString("/sublink4"))}}},
 		},
 	})
 	require.NoError(t, err)

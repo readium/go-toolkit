@@ -363,10 +363,7 @@ const (
 // the Duration element from the Segment Info, scaled by the TimecodeScale.
 func probeWebMDuration(ctx context.Context, res fetcher.Resource, size int64) float64 {
 	// The Segment Info element is normally near the beginning of the file.
-	readLen := int64(1 << 20)
-	if readLen > size {
-		readLen = size
-	}
+	readLen := min(int64(1<<20), size)
 	buf := readRange(ctx, res, 0, readLen)
 	if len(buf) < 4 || !bytes.HasPrefix(buf, []byte{0x1A, 0x45, 0xDF, 0xA3}) {
 		return 0
@@ -500,10 +497,7 @@ func probeAACDuration(ctx context.Context, res fetcher.Resource, size int64) flo
 		return 0
 	}
 	remaining := size - start
-	readLen := remaining
-	if readLen > aacScanWindow {
-		readLen = aacScanWindow
-	}
+	readLen := min(remaining, aacScanWindow)
 	data := readRange(ctx, res, start, readLen)
 	if len(data) < 7 {
 		return 0

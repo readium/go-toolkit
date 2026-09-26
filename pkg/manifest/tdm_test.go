@@ -9,7 +9,7 @@ import (
 )
 
 func TestTDMFromJSON(t *testing.T) {
-	rawJSON := map[string]interface{}{
+	rawJSON := map[string]any{
 		"policy":      "https://provider.com/policies/policy.json",
 		"reservation": "all",
 	}
@@ -19,7 +19,7 @@ func TestTDMFromJSON(t *testing.T) {
 	assert.Equal(t, "https://provider.com/policies/policy.json", tdm.Policy)
 	assert.Equal(t, TDMReservationAll, tdm.Reservation)
 
-	rawJSON = map[string]interface{}{
+	rawJSON = map[string]any{
 		"reservation": "none",
 	}
 	tdm, err = TDMFromJSON(rawJSON)

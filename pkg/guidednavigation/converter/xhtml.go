@@ -80,8 +80,11 @@ func ParseXHTML(r io.Reader) (*html.Node, error) {
 				DataAtom:  atom.Lookup([]byte(local)),
 				Namespace: elementNamespace(t.Name.Space),
 			}
-			for _, a := range t.Attr {
-				n.Attr = append(n.Attr, attrFromXML(a, scope))
+			if len(t.Attr) > 0 {
+				n.Attr = make([]html.Attribute, len(t.Attr))
+				for i, a := range t.Attr {
+					n.Attr[i] = attrFromXML(a, scope)
+				}
 			}
 			cur.AppendChild(n)
 			cur = n

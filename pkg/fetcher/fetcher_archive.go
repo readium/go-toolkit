@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"path"
+	"sync"
 
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -58,19 +59,16 @@ func (f *ArchiveFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 
 	// Compute archive properties
 	cl := entry.CompressedLength()
+	isCompressed := cl > 0
 	if cl == 0 {
 		cl = entry.Length()
 	}
 
 	er := &entryResource{
-		link:  link,
-		entry: entry,
-		properties: manifest.Properties{
-			"https://readium.org/webpub-manifest/properties#archive": map[string]interface{}{
-				"entryLength":       cl,
-				"isEntryCompressed": entry.CompressedLength() > 0,
-			},
-		},
+		link:         link,
+		entry:        entry,
+		entryLength:  cl,
+		isCompressed: isCompressed,
 	}
 
 	return er
@@ -134,9 +132,15 @@ func NewArchiveFetcherFromURLWithFactoryAndContext(ctx context.Context, url url.
 
 // Resource from archive entry
 type entryResource struct {
-	link       manifest.Link
-	entry      archive.Entry
-	properties manifest.Properties
+	link         manifest.Link
+	entry        archive.Entry
+	entryLength  uint64
+	isCompressed bool
+
+	// Most metadata reads only need the entry bytes or length. Allocate the
+	// extension maps only when requested, keeping one mutable map per resource.
+	propertiesOnce sync.Once
+	properties     manifest.Properties
 }
 
 // File implements Resource
@@ -156,6 +160,14 @@ func (r *entryResource) Link() manifest.Link {
 
 // Properties implements Resource
 func (r *entryResource) Properties() manifest.Properties {
+	r.propertiesOnce.Do(func() {
+		r.properties = manifest.Properties{
+			"https://readium.org/webpub-manifest/properties#archive": map[string]any{
+				"entryLength":       r.entryLength,
+				"isEntryCompressed": r.isCompressed,
+			},
+		}
+	})
 	return r.properties
 }
 

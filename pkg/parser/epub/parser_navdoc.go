@@ -11,8 +11,6 @@ import (
 var (
 	xpNavBody = mustCompileNS("//html:body")
 	xpNavNav  = mustCompileNS("//html:nav")
-	xpNavOL   = mustCompileNS("html:ol")
-	xpNavLI   = mustCompileNS("html:li")
 )
 
 func ParseNavDoc(document *xmlquery.Node, filePath url.URL) map[string]manifest.LinkList {
@@ -60,7 +58,7 @@ func parseNavElement(nav *xmlquery.Node, filePath url.URL, prefixMap map[string]
 		types = append(types, resolveProperty(prop, prefixMap, DefaultVocabType))
 	}
 
-	links := parseOlElement(xmlquery.QuerySelector(nav, xpNavOL), filePath)
+	links := parseOlElement(firstNavigationChild(nav, NamespaceXHTML, "ol"), filePath)
 	if len(links) > 0 && len(types) > 0 {
 		return types, links
 	}
@@ -71,9 +69,11 @@ func parseOlElement(ol *xmlquery.Node, filePath url.URL) manifest.LinkList {
 	if ol == nil {
 		return nil
 	}
-	lis := xmlquery.QuerySelectorAll(ol, xpNavLI)
-	links := make(manifest.LinkList, 0, len(lis))
-	for _, li := range lis {
+	links := make(manifest.LinkList, 0, countNavigationChildren(ol, NamespaceXHTML, "li"))
+	for li := ol.FirstChild; li != nil; li = li.NextSibling {
+		if !matchesNavigationElement(li, NamespaceXHTML, "li") {
+			continue
+		}
 		l := parseLiElement(li, filePath)
 		if l != nil {
 			links = append(links, *l)
@@ -86,7 +86,12 @@ func parseLiElement(li *xmlquery.Node, filePath url.URL) (link *manifest.Link) {
 	if li == nil {
 		return nil
 	}
-	first := li.SelectElement("*") // should be <a>, <span>, or <ol>
+	first := li.FirstChild // should be <a>, <span>, or <ol>, in any namespace
+	for first != nil && first.Type != xmlquery.ElementNode && first.Type != xmlquery.ProcessingInstruction {
+		first = first.NextSibling
+	}
+	// xmlquery's XPath navigator treats processing instructions as elements;
+	// retain that behavior when replacing its previous "*" selection.
 	if first == nil {
 		return nil
 	}
@@ -102,7 +107,7 @@ func parseLiElement(li *xmlquery.Node, filePath url.URL) (link *manifest.Link) {
 		}
 	}
 
-	children := parseOlElement(xmlquery.QuerySelector(li, xpNavOL), filePath)
+	children := parseOlElement(firstNavigationChild(li, NamespaceXHTML, "ol"), filePath)
 	// A nil href here is the lazy stand-in for the old "#" default, whose
 	// String() is "" — so a missing or empty-resolved href drops the entry
 	// (unless it has children), exactly as before.
@@ -117,4 +122,30 @@ func parseLiElement(li *xmlquery.Node, filePath url.URL) (link *manifest.Link) {
 		Href:     manifest.NewHREF(href),
 		Children: children,
 	}
+}
+
+// These helpers implement the direct-child steps used repeatedly by navigation
+// parsing, without constructing an XPath iterator for each short selection.
+func matchesNavigationElement(node *xmlquery.Node, namespace, name string) bool {
+	return (node.Type == xmlquery.ElementNode || node.Type == xmlquery.ProcessingInstruction) &&
+		node.NamespaceURI == namespace && node.Data == name
+}
+
+func firstNavigationChild(parent *xmlquery.Node, namespace, name string) *xmlquery.Node {
+	for child := parent.FirstChild; child != nil; child = child.NextSibling {
+		if matchesNavigationElement(child, namespace, name) {
+			return child
+		}
+	}
+	return nil
+}
+
+func countNavigationChildren(parent *xmlquery.Node, namespace, name string) int {
+	count := 0
+	for child := parent.FirstChild; child != nil; child = child.NextSibling {
+		if matchesNavigationElement(child, namespace, name) {
+			count++
+		}
+	}
+	return count
 }

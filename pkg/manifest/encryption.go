@@ -14,7 +14,7 @@ type Encryption struct {
 	OriginalLength int64  `json:"originalLength,omitempty"`
 }
 
-func EncryptionFromJSON(rawJson map[string]interface{}) (*Encryption, error) {
+func EncryptionFromJSON(rawJson map[string]any) (*Encryption, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -38,13 +38,13 @@ func EncryptionFromJSON(rawJson map[string]interface{}) (*Encryption, error) {
 }
 
 func (e *Encryption) UnmarshalJSON(data []byte) error {
-	var d interface{}
+	var d any
 	err := json.Unmarshal(data, &d)
 	if err != nil {
 		return err
 	}
 
-	mp, ok := d.(map[string]interface{})
+	mp, ok := d.(map[string]any)
 	if !ok {
 		return errors.New("encryption object not a map with string keys")
 	}
@@ -57,8 +57,8 @@ func (e *Encryption) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (m Encryption) ToMap() map[string]interface{} {
-	mp := make(map[string]interface{})
+func (m Encryption) ToMap() map[string]any {
+	mp := make(map[string]any)
 	mp["algorithm"] = m.Algorithm
 	if m.Compression != "" {
 		mp["compression"] = m.Compression

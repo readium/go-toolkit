@@ -7,12 +7,8 @@ import (
 )
 
 var (
-	xpNCXNavMap    = mustCompileNS("//ncx:navMap")
-	xpNCXPageList  = mustCompileNS("//ncx:pageList")
-	xpNCXNavPoint  = mustCompileNS("ncx:navPoint")
-	xpNCXPageTgt   = mustCompileNS("ncx:pageTarget")
-	xpNCXContent   = mustCompileNS("ncx:content")
-	xpNCXNavLblTxt = mustCompileNS("ncx:navLabel/ncx:text")
+	xpNCXNavMap   = mustCompileNS("//ncx:navMap")
+	xpNCXPageList = mustCompileNS("//ncx:pageList")
 )
 
 func ParseNCX(document *xmlquery.Node, filePath url.URL) map[string]manifest.LinkList {
@@ -38,8 +34,14 @@ func ParseNCX(document *xmlquery.Node, filePath url.URL) map[string]manifest.Lin
 
 func parseNavMapElement(element *xmlquery.Node, filePath url.URL) manifest.LinkList {
 	var links manifest.LinkList
-	for _, el := range xmlquery.QuerySelectorAll(element, xpNCXNavPoint) {
+	for el := element.FirstChild; el != nil; el = el.NextSibling {
+		if !matchesNavigationElement(el, NamespaceNCX, "navPoint") {
+			continue
+		}
 		if p := parseNavPointElement(el, filePath); p != nil {
+			if links == nil {
+				links = make(manifest.LinkList, 0, countNavigationChildren(element, NamespaceNCX, "navPoint"))
+			}
 			links = append(links, *p)
 		}
 	}
@@ -47,9 +49,11 @@ func parseNavMapElement(element *xmlquery.Node, filePath url.URL) manifest.LinkL
 }
 
 func parsePageListElement(element *xmlquery.Node, filePath url.URL) manifest.LinkList {
-	selectedElements := xmlquery.QuerySelectorAll(element, xpNCXPageTgt)
-	links := make([]manifest.Link, 0, len(selectedElements))
-	for _, el := range selectedElements {
+	links := make([]manifest.Link, 0, countNavigationChildren(element, NamespaceNCX, "pageTarget"))
+	for el := element.FirstChild; el != nil; el = el.NextSibling {
+		if !matchesNavigationElement(el, NamespaceNCX, "pageTarget") {
+			continue
+		}
 		href := extractHref(el, filePath)
 		title := extractTitle(el)
 		if href == nil || title == "" {
@@ -66,12 +70,7 @@ func parsePageListElement(element *xmlquery.Node, filePath url.URL) manifest.Lin
 func parseNavPointElement(element *xmlquery.Node, filePath url.URL) *manifest.Link {
 	title := extractTitle(element)
 	href := extractHref(element, filePath)
-	var children manifest.LinkList
-	for _, el := range xmlquery.QuerySelectorAll(element, xpNCXNavPoint) {
-		if p := parseNavPointElement(el, filePath); p != nil {
-			children = append(children, *p)
-		}
-	}
+	children := parseNavMapElement(element, filePath)
 	if len(children) == 0 && (href == nil || title == "") {
 		return nil
 	}
@@ -86,15 +85,18 @@ func parseNavPointElement(element *xmlquery.Node, filePath url.URL) *manifest.Li
 }
 
 func extractTitle(element *xmlquery.Node) string {
-	tel := xmlquery.QuerySelector(element, xpNCXNavLblTxt)
-	if tel == nil {
-		return ""
+	for label := element.FirstChild; label != nil; label = label.NextSibling {
+		if matchesNavigationElement(label, NamespaceNCX, "navLabel") {
+			if text := firstNavigationChild(label, NamespaceNCX, "text"); text != nil {
+				return collapseWhitespace(text.InnerText())
+			}
+		}
 	}
-	return collapseWhitespace(tel.InnerText())
+	return ""
 }
 
 func extractHref(element *xmlquery.Node, filePath url.URL) url.URL {
-	el := xmlquery.QuerySelector(element, xpNCXContent)
+	el := firstNavigationChild(element, NamespaceNCX, "content")
 	if el == nil {
 		return nil
 	}

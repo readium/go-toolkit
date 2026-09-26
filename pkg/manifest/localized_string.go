@@ -102,7 +102,7 @@ func (l LocalizedString) MarshalJSON() ([]byte, error) {
 	return json.Marshal(l.DefaultTranslation())
 }
 
-func LocalizedStringFromJSON(d interface{}) (*LocalizedString, error) {
+func LocalizedStringFromJSON(d any) (*LocalizedString, error) {
 	if d == nil {
 		return nil, errors.New("LocalizedString is nil")
 	}
@@ -110,7 +110,7 @@ func LocalizedStringFromJSON(d interface{}) (*LocalizedString, error) {
 	switch lsx := d.(type) {
 	case string:
 		l.SetDefaultTranslation(lsx)
-	case map[string]interface{}:
+	case map[string]any:
 		for k, v := range lsx {
 			val, ok := v.(string)
 			if !ok {
@@ -125,7 +125,7 @@ func LocalizedStringFromJSON(d interface{}) (*LocalizedString, error) {
 }
 
 func (l *LocalizedString) UnmarshalJSON(data []byte) error {
-	var d interface{}
+	var d any
 	err := json.Unmarshal(data, &d)
 	if err != nil {
 		return err

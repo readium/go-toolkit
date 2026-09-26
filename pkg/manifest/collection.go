@@ -15,12 +15,12 @@ type PublicationCollectionMap map[string][]PublicationCollection
 // PublicationCollection can be used as extension point in the Readium Web Publication Manifest.
 // https://readium.org/webpub-manifest/schema/subcollection.schema.json
 type PublicationCollection struct {
-	Metadata       map[string]interface{}   `json:"metadata,omitempty"`
+	Metadata       map[string]any           `json:"metadata,omitempty"`
 	Links          LinkList                 `json:"links,omitempty"`
 	Subcollections PublicationCollectionMap `json:"-"`
 }
 
-func appendPublicationCollectionToJSON(pc PublicationCollectionMap, obj map[string]interface{}) {
+func appendPublicationCollectionToJSON(pc PublicationCollectionMap, obj map[string]any) {
 	for role, collections := range pc {
 		if len(collections) == 0 {
 			continue
@@ -38,7 +38,7 @@ func appendPublicationCollectionToJSON(pc PublicationCollectionMap, obj map[stri
 // TODO log [warnings] ?
 //
 //	The [links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
-func PublicationCollectionFromJSON(rawJson interface{}) (*PublicationCollection, error) {
+func PublicationCollectionFromJSON(rawJson any) (*PublicationCollection, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -46,13 +46,13 @@ func PublicationCollectionFromJSON(rawJson interface{}) (*PublicationCollection,
 	var err error
 	var links []Link
 	// var metadata map[string]interface{}
-	metadata := make(map[string]interface{})
+	metadata := make(map[string]any)
 	var subcollections PublicationCollectionMap
 	//subcollections := make(PublicationCollectionMap)
 
 	switch dd := rawJson.(type) {
-	case map[string]interface{}:
-		lkz, ok := dd["links"].([]interface{})
+	case map[string]any:
+		lkz, ok := dd["links"].([]any)
 		if ok {
 			links, err = LinksFromJSONArray(lkz)
 			if err != nil {
@@ -60,7 +60,7 @@ func PublicationCollectionFromJSON(rawJson interface{}) (*PublicationCollection,
 			}
 		}
 
-		mtd, ok := dd["metadata"].(map[string]interface{})
+		mtd, ok := dd["metadata"].(map[string]any)
 		if ok {
 			metadata = mtd
 		}
@@ -72,7 +72,7 @@ func PublicationCollectionFromJSON(rawJson interface{}) (*PublicationCollection,
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling subcollections")
 		}
-	case []interface{}:
+	case []any:
 		links, err = LinksFromJSONArray(dd)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling as Link array")
@@ -93,7 +93,7 @@ func PublicationCollectionFromJSON(rawJson interface{}) (*PublicationCollection,
 }
 
 func (pc *PublicationCollection) UnmarshalJSON(b []byte) error {
-	var object map[string]interface{}
+	var object map[string]any
 	err := json.Unmarshal(b, &object)
 	if err != nil {
 		return err
@@ -110,7 +110,7 @@ func (pc PublicationCollection) MarshalJSON() ([]byte, error) {
 	if pc.Metadata == nil && pc.Subcollections == nil {
 		return json.Marshal(pc.Links)
 	}
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 	res["metadata"] = pc.Metadata
 	res["links"] = pc.Links
 	appendPublicationCollectionToJSON(pc.Subcollections, res)
@@ -121,7 +121,7 @@ func (pc PublicationCollection) MarshalJSON() ([]byte, error) {
 // Parses a map of [PublicationCollection] indexed by their roles from its RWPM JSON representation.
 //
 // The [Links]' href and their children's will be normalized recursively using the provided [normalizeHref] closure.
-func PublicationCollectionsFromJSON(rawJson map[string]interface{}) (PublicationCollectionMap, error) {
+func PublicationCollectionsFromJSON(rawJson map[string]any) (PublicationCollectionMap, error) {
 	if rawJson == nil {
 		return nil, nil
 	}
@@ -144,7 +144,7 @@ func PublicationCollectionsFromJSON(rawJson map[string]interface{}) (Publication
 			} else {
 				collections[role] = []PublicationCollection{*collection}
 			}
-		} else if subArr, ok := sub.([]interface{}); ok {
+		} else if subArr, ok := sub.([]any); ok {
 			// Parses a list of collection objects.
 			var newCollections []PublicationCollection
 			for j, v := range subArr {
@@ -174,7 +174,7 @@ func PublicationCollectionsFromJSON(rawJson map[string]interface{}) (Publication
 }
 
 func (pcm *PublicationCollectionMap) UnmarshalJSON(b []byte) error {
-	var object map[string]interface{}
+	var object map[string]any
 	err := json.Unmarshal(b, &object)
 	if err != nil {
 		return err
@@ -192,7 +192,7 @@ func (pcm PublicationCollectionMap) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 
 	for k, v := range pcm {
 		if len(v) == 0 {
