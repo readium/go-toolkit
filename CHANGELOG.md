@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.16.1] - 2026-09-26
+
+### Changed
+
+- Takes AI with drilling down and finding ways to increase the performance of the code, in particular the EPUB parsing
+    - Various XML parsing (OPF, container.xml, navdoc, SMIL) have been optimized, such as by skipping XML queries and crawling the DOM tree directly. Allocations have been reduced, and speed increased
+    - HTML parsing for guided navigation documents was improved, decreasing allocations
+    - The OPF is parsed in a "streaming" manner, which takes advantage of the layout almost always being the same in EPUBs - metadata -> manifest -> spine. Across ~73 various EPUBs, the OPF optimizations together reduced decoding time by ~20%, allocate ~29% fewer bytes, and decrease total opening time by ~10%
+    - Some of the image analyzer code was optimized, in particular the code related to visual hashes
+    - Benchmarks were added to the tests for future performance optimization
+- Ran `go fix` on the codebase, which applied various modernizations to the code, such as replacing `interface{}` with `any`
+- Updated dependencies
+
 ## [0.16.0] - 2026-09-14
 
 ### Changed
