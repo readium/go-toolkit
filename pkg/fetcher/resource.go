@@ -14,6 +14,7 @@ import (
 	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"
 )
@@ -101,6 +102,8 @@ func ReadResourceAsXML(ctx context.Context, r Resource) (*xmlquery.Node, *Resour
 		Decoder: &xmlquery.DecoderOptions{
 			Strict: true,
 			Entity: xml.HTMLEntity,
+			// xmlquery copies this field over its parser default, so nil rejects every non-UTF-8 declaration: https://github.com/antchfx/xmlquery/blob/v1.5.1/options.go#L29-L34
+			CharsetReader: charset.NewReaderLabel,
 		},
 	})
 	if err != nil {
