@@ -214,7 +214,7 @@ func (p AudioParser) accepts(ctx context.Context, asset asset.PublicationAsset, 
 		if extensions.IsHiddenOrThumbs(path) {
 			continue
 		}
-		if link.MediaType.IsBitmap() {
+		if link.MediaType != nil && link.MediaType.IsBitmap() {
 			continue
 		}
 		fext := filepath.Ext(strings.ToLower(path))

@@ -65,6 +65,9 @@ func inferA11yMetadataInPublicationManifest(ctx context.Context, pub *pub.Public
 
 		for _, link := range allResources {
 			mt := link.MediaType
+			if mt == nil {
+				continue
+			}
 			if mt.IsAudio() ||
 				mt.IsVideo() ||
 				mt.Matches(&mediatype.PDF) {
@@ -109,7 +112,7 @@ func inferA11yMetadataInPublicationManifest(ctx context.Context, pub *pub.Public
 		// audio or video resource (inspect "resources" and "readingOrder" in
 		// RWPM).
 		for _, link := range allResources {
-			if link.MediaType.IsAudio() || link.MediaType.IsVideo() {
+			if link.MediaType != nil && (link.MediaType.IsAudio() || link.MediaType.IsVideo()) {
 				inferredA11y.AccessModes = append(inferredA11y.AccessModes, manifest.A11yAccessModeAuditory)
 				break
 			}
@@ -119,7 +122,7 @@ func inferA11yMetadataInPublicationManifest(ctx context.Context, pub *pub.Public
 		// or a video resource (inspect "resources" and "readingOrder" in
 		// RWPM).
 		for _, link := range allResources {
-			if link.MediaType.IsBitmap() || link.MediaType.IsVideo() {
+			if link.MediaType != nil && (link.MediaType.IsBitmap() || link.MediaType.IsVideo()) {
 				inferredA11y.AccessModes = append(inferredA11y.AccessModes, manifest.A11yAccessModeVisual)
 				break
 			}
@@ -170,7 +173,7 @@ func inferA11yMetadataInPublicationManifest(ctx context.Context, pub *pub.Public
 		}
 
 		for _, link := range mf.Resources {
-			if link.MediaType.Matches(&mediatype.SMIL) {
+			if link.MediaType != nil && link.MediaType.Matches(&mediatype.SMIL) {
 				addFeature(manifest.A11yFeatureSynchronizedAudioText)
 				break
 			}
