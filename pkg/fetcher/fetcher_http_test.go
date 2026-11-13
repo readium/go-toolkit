@@ -42,11 +42,10 @@ func TestHTTPFetcherContainsPath(t *testing.T) {
 }
 
 // The bare-file remote resources advertise efficient streaming; archive
-// entries advertise it based on their compression method.
+// entries advertise it based on their compression method. (S3 and GCS: in
+// fetcher_cloud_test.go.)
 var (
 	_ EfficientStreamer = (*httpResource)(nil)
-	_ EfficientStreamer = (*s3Resource)(nil)
-	_ EfficientStreamer = (*gcsResource)(nil)
 	_ EfficientStreamer = (*entryResource)(nil)
 )
 
