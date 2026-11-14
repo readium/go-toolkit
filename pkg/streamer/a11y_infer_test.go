@@ -46,6 +46,34 @@ func newLink(mt mediatype.MediaType, extension string) manifest.Link {
 	}
 }
 
+// A resource with an unparseable media type is treated as unclassified.
+func TestInferA11yMetadataTreatsNilMediaTypeAsUnclassified(t *testing.T) {
+	nilMediaTypeLink := manifest.Link{
+		Href: manifest.MustNewHREFFromString("file.ttf", false),
+	}
+	require.Nil(t, nilMediaTypeLink.MediaType)
+
+	m := manifest.Manifest{
+		Metadata: manifest.Metadata{
+			ConformsTo: manifest.Profiles{manifest.ProfileEPUB},
+			Layout:     manifest.LayoutReflowable,
+		},
+		ReadingOrder: []manifest.Link{
+			newLink(mediatype.HTML, "html"),
+		},
+		Resources: []manifest.Link{
+			nilMediaTypeLink,
+		},
+	}
+
+	require.NotPanics(t, func() {
+		res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, nil, nil), nil)
+		require.NoError(t, err)
+		assert.NotNil(t, res)
+		assert.Contains(t, res.AccessModes, manifest.A11yAccessModeTextual)
+	})
+}
+
 // If the publication contains a reference to an audio or video resource
 // (inspect "resources" and "readingOrder" in RWPM).
 func TestInferAuditoryAccessMode(t *testing.T) {

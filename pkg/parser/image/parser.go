@@ -39,7 +39,7 @@ func (p ImageParser) Parse(ctx context.Context, asset asset.PublicationAsset, fe
 		path := link.URL(nil, nil).Path()
 
 		// Filter out all irrelevant files
-		if extensions.IsHiddenOrThumbs(path) || !link.MediaType.IsBitmap() {
+		if extensions.IsHiddenOrThumbs(path) || link.MediaType == nil || !link.MediaType.IsBitmap() {
 			continue
 		}
 		readingOrder = append(readingOrder, link)
@@ -94,7 +94,7 @@ func (p ImageParser) accepts(ctx context.Context, asset asset.PublicationAsset, 
 		if extensions.IsHiddenOrThumbs(path) {
 			continue
 		}
-		if link.MediaType.IsBitmap() {
+		if link.MediaType != nil && link.MediaType.IsBitmap() {
 			continue
 		}
 		fext := filepath.Ext(strings.ToLower(path))

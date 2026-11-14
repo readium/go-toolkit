@@ -37,7 +37,7 @@ func NewHTML(resource fetcher.Resource, locator manifest.Locator) *HTMLContentIt
 
 func HTMLFactory() ResourceContentIteratorFactory {
 	return func(resource fetcher.Resource, locator manifest.Locator) Iterator {
-		if resource.Link().MediaType.Matches(&mediatype.HTML, &mediatype.XHTML) {
+		if mt := resource.Link().MediaType; mt != nil && mt.Matches(&mediatype.HTML, &mediatype.XHTML) {
 			return NewHTML(resource, locator)
 		}
 		return nil
