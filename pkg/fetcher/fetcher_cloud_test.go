@@ -1,3 +1,5 @@
+//go:build !readium_nocloud
+
 package fetcher
 
 import (
@@ -88,3 +90,10 @@ func TestGCSFetcherGetObjectName(t *testing.T) {
 		assert.Equalf(t, tt.name, gcsres.handle.ObjectName(), "object name mismatch for href %q", tt.href)
 	}
 }
+
+// The S3 and GCS bare-file resources advertise efficient streaming, as the
+// HTTP one does (fetcher_http_test.go).
+var (
+	_ EfficientStreamer = (*s3Resource)(nil)
+	_ EfficientStreamer = (*gcsResource)(nil)
+)

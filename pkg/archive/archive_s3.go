@@ -1,3 +1,5 @@
+//go:build !readium_nocloud
+
 package archive
 
 import (
