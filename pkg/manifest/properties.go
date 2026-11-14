@@ -84,6 +84,11 @@ func (p Properties) Page() Page {
 	return Page(v)
 }
 
+// Hints how the layout of the resource should be presented.
+func (p Properties) Layout() Layout {
+	return Layout(p.GetString("layout"))
+}
+
 // Indicates that a resource is encrypted/obfuscated and provides relevant information for decryption.
 func (p Properties) Encryption() *Encryption {
 	v := p.Get("encrypted")

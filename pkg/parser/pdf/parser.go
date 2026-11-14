@@ -48,17 +48,17 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationRelaxed
-	c, err := pdfcpu.Read(fetcher.NewResourceReadSeeker(f.Get(ctx, *link)), conf)
+	c, err := pdfcpu.Read(ctx, fetcher.NewResourceReadSeeker(f.Get(ctx, *link)), conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed opening PDF")
 	}
 
 	// Clean up and prepare document
-	validate.XRefTable(c)
-	pdfcpu.OptimizeXRefTable(c)
+	validate.XRefTable(ctx, c)
+	pdfcpu.OptimizeXRefTable(ctx, c)
 	c.EnsurePageCount()
 
-	m, err := ParseMetadata(c, link)
+	m, err := ParseMetadata(ctx, c, link)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing PDF metadata")
 	}

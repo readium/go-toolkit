@@ -1,6 +1,7 @@
 package pdf
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -30,7 +31,7 @@ func loadDecoder(meta pdfcpu.Metadata) (*xmp.Document, []byte, error) {
 	return doc, metabin, nil
 }
 
-func ParseMetadata(ctx *model.Context, link *manifest.Link) (m manifest.Manifest, err error) {
+func ParseMetadata(cctx context.Context, ctx *model.Context, link *manifest.Link) (m manifest.Manifest, err error) {
 	if link != nil {
 		m.ReadingOrder = manifest.LinkList{{
 			Href:       link.Href,
@@ -46,7 +47,7 @@ func ParseMetadata(ctx *model.Context, link *manifest.Link) (m manifest.Manifest
 	m.Metadata.ConformsTo = manifest.Profiles{manifest.ProfilePDF}
 
 	// hashmaterial := make([]string, 0, 64)
-	metas, _ := pdfcpu.ExtractMetadata(ctx)
+	metas, _ := pdfcpu.ExtractMetadata(cctx, ctx)
 	for _, meta := range metas {
 		doc, _, derr := loadDecoder(meta)
 		if derr != nil {
@@ -65,7 +66,7 @@ func ParseMetadata(ctx *model.Context, link *manifest.Link) (m manifest.Manifest
 		}
 	}
 
-	err = ParsePDFMetadata(ctx, &m)
+	err = ParsePDFMetadata(cctx, ctx, &m)
 	if err != nil {
 		return
 	}
@@ -130,7 +131,7 @@ func ParseXMPMetadata(doc *xmp.Document, metadata *manifest.Metadata) error {
 	return nil
 }
 
-func ParsePDFMetadata(ctx *model.Context, m *manifest.Manifest) error {
+func ParsePDFMetadata(cctx context.Context, ctx *model.Context, m *manifest.Manifest) error {
 	// Page count
 	if ctx.PageCount > 0 && m.Metadata.NumberOfPages == nil {
 		pc := uint(ctx.PageCount)
@@ -183,7 +184,7 @@ func ParsePDFMetadata(ctx *model.Context, m *manifest.Manifest) error {
 	}
 
 	// Bookmarks (TOC)
-	if bookmarks, err := pdfcpu.Bookmarks(ctx); err == nil {
+	if bookmarks, err := pdfcpu.Bookmarks(cctx, ctx); err == nil {
 		rootLink := m.ReadingOrder.FirstWithMediaType(&mediatype.PDF)
 		var bf func(toc manifest.LinkList, bookmarks []pdfcpu.Bookmark)
 		bf = func(toc manifest.LinkList, bookmarks []pdfcpu.Bookmark) {
