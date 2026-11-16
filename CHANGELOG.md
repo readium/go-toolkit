@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.16.2] - 2026-11-15
+
+### Added
+
+- New `readium_nocloud` build tag that leaves out S3 and Google Cloud Storage support: the `S3*` and `GCS*` types and functions in the `archive`, `asset` and `fetcher` packages, and `AbsoluteURL.ToS3Object`/`ToGSObject`. The AWS and Google Cloud SDKs and gRPC are left out with them, so programs that only read local files or HTTP get a much smaller binary (e.g. `go build -tags readium_nocloud`). Thanks to @ardeshirj for the contribution
+- `Properties.Layout()` is back as a helper on link properties. It returns the resource's `layout` hint as a `manifest.Layout`. The helper was removed in 0.11.0, when it returned an `EPUBLayout`
+
+### Changed
+
+- Accessibility metadata now serializes to JSON in its compact form when it holds a single value: a single `conformsTo` profile is written as a string instead of a one-item array, and an `accessModeSufficient` holding one access mode is written as a string instead of a nested array. To support this, `A11y.AccessModesSufficient` now has the named type `manifest.A11yPrimaryAccessModeLists`, which has the same underlying `[][]A11yPrimaryAccessMode` type
+- Updated dependencies, including `pdfcpu` 0.16 (the PDF parser was adapted to its new context-aware API), the AWS SDK, the Google Cloud Storage client, `golang.org/x/*` etc.
+
 ## [0.16.1] - 2026-09-26
 
 ### Changed
