@@ -172,7 +172,7 @@ func (l OriginalLength) PositionCount(ctx context.Context, resource fetcher.Reso
 		length, _ = resource.Length(ctx)
 	}
 
-	return uint(math.Min(math.Ceil(float64(length)/float64(l.PageLength)), 1))
+	return uint(math.Max(math.Ceil(float64(length)/float64(l.PageLength)), 1))
 }
 
 // Use the archive entry length (whether it is compressed or stored) and split it by the given [PageLength].
