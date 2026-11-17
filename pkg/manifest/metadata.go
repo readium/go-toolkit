@@ -97,22 +97,21 @@ func (m Metadata) EffectiveReadingProgression() ReadingProgression {
 
 	// The following is based off of:
 	// https://github.com/readium/readium-css/blob/develop/docs/CSS16-internationalization.md#missing-page-progression-direction
-
 	if len(m.Languages) != 1 {
 		return LTR
 	}
 
-	language := ""
-	if len(m.Languages) > 0 {
-		language = strings.ToLower(m.Languages[0])
+	language, rest, _ := strings.Cut(m.Languages[0], "-")
+	if strings.EqualFold(language, "zh") {
+		// Only the subtag right after "zh" matters, so that e.g. "zh-Hant-TW" matches "hant"
+		subtag, _, _ := strings.Cut(rest, "-")
+		if strings.EqualFold(subtag, "hant") || strings.EqualFold(subtag, "tw") {
+			return RTL
+		}
+		return LTR
 	}
 
-	if language == "zh-hant" || language == "zh-tw" {
-		return RTL
-	}
-
-	language = strings.SplitN(language, "-", 2)[0]
-	if language == "ar" || language == "fa" || language == "he" {
+	if isRTLLanguage(language) {
 		return RTL
 	}
 
