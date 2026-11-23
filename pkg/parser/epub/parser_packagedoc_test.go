@@ -164,3 +164,32 @@ func TestPackageDocLinkFallbacksCircularDependencies(t *testing.T) {
 	assert.NoError(t, err)
 	// t.Logf("%+v\n", p)
 }
+
+func TestPackageDocNonUTF8Encoding(t *testing.T) {
+	opf := []byte(`<?xml version="1.0" encoding="iso-8859-1"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="pub-id" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>Caf` + "\xe9" + `</dc:title>
+  </metadata>
+  <manifest>
+    <item id="titlepage" href="titlepage.xhtml" media-type="application/xhtml+xml" />
+  </manifest>
+  <spine>
+    <itemref idref="titlepage"/>
+  </spine>
+</package>`)
+
+	n, rerr := fetcher.ReadResourceAsXML(t.Context(), fetcher.NewBytesResource(manifest.Link{}, func() []byte { return opf }))
+	if rerr != nil {
+		require.NoError(t, rerr.Cause)
+	}
+
+	d, err := ParsePackageDocument(n, url.MustURLFromString("OEBPS/content.opf"))
+	require.NoError(t, err)
+
+	p := PublicationFactory{
+		FallbackTitle:   "fallback title",
+		PackageDocument: *d,
+	}.Create()
+	assert.Equal(t, "Café", p.Metadata.Title())
+}
