@@ -356,6 +356,16 @@ func TestMetadataERPWithRTLLanguages(t *testing.T) {
 	assert.Equal(t, RTL, Metadata{Languages: []string{"fa"}, ReadingProgression: None}.EffectiveReadingProgression())
 	assert.Equal(t, RTL, Metadata{Languages: []string{"he"}, ReadingProgression: None}.EffectiveReadingProgression())
 	assert.Equal(t, LTR, Metadata{Languages: []string{"he"}, ReadingProgression: LTR}.EffectiveReadingProgression())
+
+	// Full tags with a script and/or region after the primary language.
+	assert.Equal(t, RTL, Metadata{Languages: []string{"zh-Hant-TW"}}.EffectiveReadingProgression())
+	assert.Equal(t, RTL, Metadata{Languages: []string{"ZH-HANT-HK"}}.EffectiveReadingProgression())
+	assert.Equal(t, LTR, Metadata{Languages: []string{"zh-Hans-TW"}}.EffectiveReadingProgression())
+	assert.Equal(t, LTR, Metadata{Languages: []string{"zh-CN"}}.EffectiveReadingProgression())
+	assert.Equal(t, LTR, Metadata{Languages: []string{"zh"}}.EffectiveReadingProgression())
+	assert.Equal(t, RTL, Metadata{Languages: []string{"AR-EG"}}.EffectiveReadingProgression())
+	assert.Equal(t, RTL, Metadata{Languages: []string{"ckb"}}.EffectiveReadingProgression())
+	assert.Equal(t, LTR, Metadata{Languages: []string{""}}.EffectiveReadingProgression())
 }
 
 func TestMetadataERPIgnoresMultipleLanguages(t *testing.T) {
