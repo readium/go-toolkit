@@ -4,6 +4,67 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.17.0] - 2026-11-25
+
+This is a significant release, centered around two things: adding LCP support, and hardening the toolkit
+
+### Added
+
+- New `protection/lcp` package implementing Readium LCP, derived from readium-lcp-server and rewritten to stream resources. It is interoperable with `lcpencrypt` and LCP reading systems, and handles publications and licenses as untrusted input (see the package documentation)
+    - `ContentProtection` opens LCP-protected publications in the streamer, given a user passphrase or user key. It requires a `Verify` function to validate licenses, unless `InsecureSkipVerify` is set. Reading a deflated resource whole into memory is limited to 256 MiB by default (`MaxInflatedLength`), streaming it isn't
+    - `EncryptEPUB`/`DecryptEPUB` and `EncryptRWP`/`DecryptRWP` protect or unprotect an EPUB or Readium Web Publication package, copying everything else byte for byte. Anything they can't handle safely, such as inconsistent declarations or encrypted remote resources, is an error
+    - `EncryptPublication`/`DecryptPublication`, and `DecryptBuilder` for `streamer.Config.OnCreatePublication`, do the same for a parsed publication, to be written by a packager
+    - `InjectLicense` embeds a license into a protected EPUB or Readium Web Publication package
+    - `License` models an LCP License Document of the basic profile or a production one (1.0, and 2.0 to 2.9), read with `ParseLicense` or `ReadLicense`. It is unlocked with a user key or, for the basic profile, a passphrase
+    - `Verifier` validates licenses as reading systems do: signature, provider certificate, revocation (e.g. with `RevokedBy`) and rights
+    - `Decryptor` is a resource transformer with efficient random access to resources that weren't compressed before encryption. `EncryptContent`/`DecryptContent` and lower-level streaming primitives are available too
+- `streamer.Config.ContentProtections` unlocks protected publications with the credentials given to `Streamer.Open`, through the new `protection.ContentProtection` interface
+- `protection.MarshalEPUBEncryption` serializes an EPUB `META-INF/encryption.xml`. The `protection` package also exports constants for the LCP license paths and content key retrieval method, and identifies font obfuscation with `IsFontObfuscation`, `AlgorithmIDPFObfuscation` and `AlgorithmAdobeObfuscation`
+- `fetcher.ReadResourceUpTo`, `ReadResourceAsXMLUpTo` and `ReadResourceAsJSONUpTo` read a resource into memory up to a given size, failing with `fetcher.ErrResourceTooLarge` beyond that
+- `protection.MaxMetadataSize`, `manifest.MaxManifestSize`, `epub.MaxDocumentSize` and `mediatype.MaxDocumentSize` (32 MiB each) limit the metadata files, manifests and documents read into memory
+- New optional interfaces for resources, implemented by the toolkit's own where applicable: `fetcher.FileBacked` and `FilePinner` (identify the local file a resource is read from, and only read from that file), `Located` and `LocationPinner` (the same for the URL of a remote resource, see `fetcher.PinLocation`), and `Stable` (the source can't change while it is read). The entries of archives have the counterparts `archive.FileEntry`, `PinnableEntry` and `StableEntry`
+- `fetcher.Exhaustive` is implemented by fetchers whose `Links` list every resource they serve: archives, directories, and S3 and GCS prefixes
+- `fetcher.ResourceError` implements `Unwrap`, so that `errors.Is` and `errors.As` inspect its cause
+- `epub.GetPackageDocumentPaths` returns the package documents of every rendition of an EPUB, and `epub.ResourceID` the identifier of a resource in the EPUB parser's encryption data
+- `url.URLFromPath` creates a relative URL whose decoded path is exactly the given one, such as a file name holding `%`, `?` or `#`
+- `manifest.ParseLinkHREF` parses the href of a link as `LinkFromJSON` does
+- `manifest.Strings` can be unmarshalled from either a single string or an array of strings, mirroring how it is marshalled
+- `MediaType.IsFont()` and `MediaType.IsPrecompressed()` report whether a media type is a font's, and whether it is conventionally stored compressed (bitmap images, audio, video, ZIP-based formats)
+- `pub.ServiceHrefPrefix` is the prefix of the HREFs served by publication services (`~readium/`)
+
+### Changed
+
+- The EPUB parser merges the declarations of a resource listed several times in `encryption.xml` (`protection.MergeEncryption`), rather than taking the last one, which could drop the original length an earlier one declares: declarations which can't hold together are an error. `epub.ParseEncryptionEntries` returns all of them. Resources are identified by their decoded path in the container, as archives resolve them, so that hrefs spelled differently, such as `chapter.xhtml` and `%63hapter.xhtml`, are the same resource: `epub.PublicationFactory.EncryptionData` is keyed by decoded path
+- `manifest.ManifestFromJSON` returns an error for a nil object, such as the JSON document `null`, rather than a nil manifest without error
+- The EPUB parser now assigns the DRM scheme of `encryption.xml` entries individually, like the Kotlin and Swift toolkits: in an LCP-protected EPUB, only the entries whose key is retrieved from the license get the LCP scheme, and obfuscated fonts never carry a DRM scheme. Previously, every entry got the scheme detected for the whole container
+- The EPUB parser no longer declares the compression of resources stored without it (`Method="0"`) as `none`, so it is left out of manifests, and keeps compression methods EPUB doesn't define (such as `93`) instead of taking them for no compression. It also honors the compression method when the original length is missing or invalid, instead of ignoring both
+
+### Fixed
+
+- LCP publication reads retain the checked source link and bind HTTP requests to its URL through resource transformations. These reads reject redirects and keep a private copy of the checked URL. HTTP resources and remote ZIPs validate byte ranges before consuming the response.
+
+- LCP, S3 and GCS resources normalize negative range starts. File and archive streams handle ranges ending at the largest 64-bit offset.
+- Ranges with a negative end no longer make ZIP entries, exploded-archive files, `FileResource`s, `BytesResource`s and `TransformingResource`s panic, and negative starts no longer misalign font deobfuscation: a negative start is the start of the resource, and an end before the start is "range not satisfiable". `BytesResource.Stream` clamps ranges ending beyond the resource, which panicked too
+- `TransformingResource.Stream` no longer returns an error (with no cause) when it succeeds
+- `ArchiveFetcher` and `FileFetcher` list file names as paths rather than encoded hrefs: `page%20one.txt` was listed as `page one.txt`, serving that file instead, `a#b.txt` as `a`, and a name such as `100%.png` made the whole listing fail. Names which were listed correctly keep their href. `ArchiveFetcher` resolves the dot segments of hrefs, so that `./c:file.txt`, the spelling of `c:file.txt` as a relative URL, is found
+- `FileFetcher.Get` no longer races with concurrent calls, and with `Close`
+- `S3Fetcher.Links` lists every object of the prefix rather than its first 1000, without empty links for folder placeholders, and `GCSFetcher.Links` lists the objects of subfolders too. Both list empty files, the objects of the root of a bucket, fail on object names which can't be paths of the package (such as `images//cover.jpg`) and beyond 100,000 objects rather than list some, list object names as paths rather than encoded hrefs, and no longer race or share their cached listing with callers
+- `FileFetcher`, `ArchiveFetcher`, `S3Fetcher` and `GCSFetcher` no longer serve the local resource at the path of a URL with a scheme or an authority, e.g. `https://example.com/secret.txt`
+- `ArchiveFetcher.Links` reports the failure of the walk of an exploded archive, e.g. an unreadable directory, rather than list the files found until then (`archive.EntriesLister`)
+- `epub.GetRootFilePath` reports why an invalid rootfile path can't be parsed, rather than "no error"
+- The EPUB parser no longer overflows the stack, which terminates the process, on media overlays referring back to their item, and bounds the alternates of a link, in nesting, and of the publication, in total: fallbacks and media overlays follow the same chain, a cycle stops it, and links sharing references no longer multiply them without bound
+- Exploded archives opened at `.` no longer misname their entries, or panic on one-character names
+- `S3Asset` and `GCSAsset` can be the root of a bucket, with or without a trailing slash (`s3://bucket` was the object `.`)
+- The Web Publication parser no longer panics on a manifest which is JSON `null`, and neither does `Manifest.UnmarshalJSON`, which leaves the manifest unchanged for `null`, as `encoding/json` does
+- The entries of a local ZIP archive are no longer streamed from another file than the one opened, e.g. once the archive was replaced, and entries shorter than they declare, e.g. in a truncated archive, are an error rather than reported complete. Whole entries are read to their end, so that an entry longer than it declares, or with a bad checksum, is an error too
+- Range reads of ZIP entries, exploded-archive files and `FileResource`s no longer allocate the requested range before clamping it to the resource: a range ending far beyond a small resource could exhaust the memory, or panic
+- The detection of EPUB protections (`protection.IdentifyEPUBProtection`) and the EPUB parser no longer read DRM metadata files such as `encryption.xml` whole whatever their size: a package of a few hundred kilobytes made them allocate gigabytes. They fail beyond `protection.MaxMetadataSize`
+- The parsers and the media type sniffer no longer read the documents of a package whole whatever their size, which a small package could inflate a thousandfold: the Web Publication parser's manifest, the EPUB parser's container, package, navigation, display options and media overlay documents, the audio parser's playlists, and the archive entries and JSON content the sniffer decodes. Declared documents larger than their limit are an error, including the EPUB navigation document and display options, whose read errors are otherwise ignored, while oversized playlists, which the audio parser looks for among the files of the package, are skipped, and the sniffer doesn't recognize oversized content
+- LCP decryption refuses resources declaring a compression other than `deflate` (or `none`), which it used to serve still compressed, as if they were not
+- ZIP archives no longer allocate memory from the entry sizes they declare without checking them first: a few hundred bytes of crafted EPUB could require gigabytes of memory to be parsed. Declared sizes must fit in the archive (stored entries as large as their content, deflated entries within deflate's maximum ratio), whole entries are only allocated at once up to 64 MiB, and remote archives stream large entries instead of reading them whole first
+- `FileFetcher` and exploded archives no longer serve files outside of their directory through symbolic links: a symbolic link is only followed when it leads to a file of the same directory. They also skip named pipes and devices, which could block reads, and `FileResource.File()` is empty for files they don't serve
+- `TransformingResource.File()` and the EPUB font `DeobfuscatingResource.File()` no longer return the path of the untransformed file, which consumers serving the file directly would have sent instead of the transformed bytes
+
 ## [0.16.2] - 2026-11-15
 
 ### Added
@@ -20,7 +81,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- Takes AI with drilling down and finding ways to increase the performance of the code, in particular the EPUB parsing
+- Tasked AI with drilling down and finding ways to increase the performance of the code, in particular the EPUB parsing
     - Various XML parsing (OPF, container.xml, navdoc, SMIL) have been optimized, such as by skipping XML queries and crawling the DOM tree directly. Allocations have been reduced, and speed increased
     - HTML parsing for guided navigation documents was improved, decreasing allocations
     - The OPF is parsed in a "streaming" manner, which takes advantage of the layout almost always being the same in EPUBs - metadata -> manifest -> spine. Across ~73 various EPUBs, the OPF optimizations together reduced decoding time by ~20%, allocate ~29% fewer bytes, and decrease total opening time by ~10%
