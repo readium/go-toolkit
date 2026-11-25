@@ -155,3 +155,54 @@ func TestPublicationFactoryRepeatedMetadata(t *testing.T) {
 		})
 	}
 }
+
+func TestPublicationFactoryBoundsAlternates(t *testing.T) {
+	// Media overlays restarted the chain of the alternates being computed:
+	// a cycle recursed until the stack overflowed, killing the process.
+	chapter := Item{ID: "chapter", Href: url.MustURLFromString("OPS/chapter.xhtml"), MediaType: &mediatype.XHTML, mediaOverlay: "smil"}
+	smil := Item{ID: "smil", Href: url.MustURLFromString("OPS/chapter.smil"), MediaType: &mediatype.SMIL, mediaOverlay: "chapter", fallback: "chapter"}
+	factory := PublicationFactory{PackageDocument: PackageDocument{
+		EPUBVersion: 3, EPUBVersionString: "3.0",
+		Manifest: []Item{chapter, smil},
+		Spine:    Spine{itemrefs: []ItemRef{{idref: "chapter", linear: true}}},
+	}}
+	publication := factory.Create()
+	require.Len(t, publication.ReadingOrder, 1)
+
+	// Items each with a fallback and a media overlay to the next one made
+	// alternates exponentially many.
+	items := make([]Item, 40)
+	for i := range items {
+		items[i] = Item{ID: fmt.Sprintf("item-%02d", i), Href: url.MustURLFromString(fmt.Sprintf("OPS/item-%02d.xhtml", i)), MediaType: &mediatype.XHTML}
+		if i+1 < len(items) {
+			items[i].fallback = fmt.Sprintf("item-%02d", i+1)
+			items[i].mediaOverlay = fmt.Sprintf("item-%02d", i+1)
+		}
+	}
+	factory.PackageDocument.Manifest = items
+	factory.PackageDocument.Spine = Spine{itemrefs: []ItemRef{{idref: "item-00", linear: true}}}
+	publication = factory.Create()
+	require.Len(t, publication.ReadingOrder, 1)
+	var depth func(manifest.LinkList) int
+	depth = func(ll manifest.LinkList) int {
+		d := 0
+		for _, l := range ll {
+			d = max(d, 1+depth(l.Alternates))
+		}
+		return d
+	}
+	assert.LessOrEqual(t, depth(publication.ReadingOrder[0].Alternates), maxAlternateDepth)
+
+	// Each link expanded its own tree of alternates, bounded in depth but
+	// not in total: the items sharing references multiplied them.
+	var count func(manifest.LinkList) int
+	count = func(ll manifest.LinkList) int {
+		n := 0
+		for _, l := range ll {
+			n += len(l.Alternates) + count(l.Alternates)
+		}
+		return n
+	}
+	total := count(publication.ReadingOrder) + count(publication.Resources)
+	assert.LessOrEqual(t, total, maxAlternates(len(items)))
+}

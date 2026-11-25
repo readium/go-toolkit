@@ -5,8 +5,10 @@ package fetcher
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
+	"github.com/readium/go-toolkit/pkg/internal/byterange"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
@@ -26,6 +29,7 @@ type S3Fetcher struct {
 	bucket string
 	key    string
 
+	linksMu     sync.Mutex // guards cachedLinks
 	cachedLinks manifest.LinkList
 
 	// heads shares object metadata (key -> *s3.HeadObjectOutput) across the
@@ -47,83 +51,97 @@ func NewS3Fetcher(href string, client *s3.Client, bucket, key string) *S3Fetcher
 	}
 }
 
+// Exhaustive implements [Exhaustive]: the links are every object under the
+// key prefix.
+func (f *S3Fetcher) Exhaustive() bool { return true }
+
 // Links implements Fetcher
+//
+// Every object under the key prefix is listed, through every page of the
+// listing, up to maxListedObjects. Callers get their own copy of the cached
+// listing.
 func (f *S3Fetcher) Links(ctx context.Context) (manifest.LinkList, error) {
+	f.linksMu.Lock()
+	defer f.linksMu.Unlock()
 	if len(f.cachedLinks) > 0 {
-		return f.cachedLinks, nil
+		return slices.Clone(f.cachedLinks), nil
 	}
 
-	prefix := f.key
-	if !strings.HasSuffix(prefix, "/") {
-		prefix += "/"
-	}
+	prefix := listingPrefix(f.key)
 
-	// List all items in the "folder"
-	out, err := f.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+	// List all items in the "folder", which may take several pages.
+	var links manifest.LinkList
+	listed := 0
+	pages := s3.NewListObjectsV2Paginator(f.client, &s3.ListObjectsV2Input{
 		Bucket: &f.bucket,
 		Prefix: &prefix,
-		// MaxKeys is omitted, can list up to 1000 files by default. Should be enough
-		// and serve as a sanity check. We can see about increasing this based on implementer feedback.
 	})
-	if err != nil {
-		return nil, err
-	}
-	if len(out.Contents) > 0 {
-		f.cachedLinks = make(manifest.LinkList, len(out.Contents))
-		for i, v := range out.Contents {
-			if v.Size != nil && *v.Size == 0 {
+	for pages.HasMorePages() {
+		out, err := pages.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range out.Contents {
+			if listed++; listed > maxListedObjects {
+				return nil, fmt.Errorf("more than %d objects under %s", maxListedObjects, prefix)
+			}
+			if v.Key == nil {
 				continue
 			}
-
-			href, err := manifest.NewHREFFromString(path.Join(f.href, strings.TrimPrefix(*v.Key, prefix)), false)
+			rel, ok, err := objectPath(*v.Key, prefix)
+			if err != nil {
+				return nil, err
+			} else if !ok {
+				continue
+			}
+			href, err := fileHREF(path.Join(f.href, rel))
 			if err != nil {
 				return nil, err
 			}
-			f.cachedLinks[i].Href = href
-
-			ext := path.Ext(*v.Key)
-			f.cachedLinks[i].MediaType = &mediatype.Binary
-			if ext != "" {
-				mt := mediatype.OfExtension(ext[1:])
-				if mt != nil {
-					f.cachedLinks[i].MediaType = mt
+			link := manifest.Link{Href: href, MediaType: &mediatype.Binary}
+			if ext := path.Ext(*v.Key); ext != "" {
+				if mt := mediatype.OfExtension(ext[1:]); mt != nil {
+					link.MediaType = mt
 				}
 			}
+			links = append(links, link)
 		}
-	} else {
-		// Empty directory
-		if strings.HasSuffix(f.key, "/") {
-			return f.cachedLinks, nil
-		}
-
-		ext := path.Ext(f.key)
-		if ext != "" {
-			ext = ext[1:]
-		}
-		mt := mediatype.OfExtension(ext)
-		if mt == nil {
-			mt = &mediatype.Binary
-		}
-
-		// Not a directory, just a single file
-		f.cachedLinks = manifest.LinkList{{
-			Href:      manifest.NewHREF(url.MustURLFromString(f.href)),
-			MediaType: mt,
-		}}
 	}
 
-	return f.cachedLinks, nil
+	if listed > 0 {
+		f.cachedLinks = links
+		return slices.Clone(f.cachedLinks), nil
+	}
+
+	// Empty directory
+	if f.key == "" || strings.HasSuffix(f.key, "/") {
+		return nil, nil
+	}
+
+	ext := path.Ext(f.key)
+	if ext != "" {
+		ext = ext[1:]
+	}
+	mt := mediatype.OfExtension(ext)
+	if mt == nil {
+		mt = &mediatype.Binary
+	}
+
+	// Not a directory, just a single file
+	f.cachedLinks = manifest.LinkList{{
+		Href:      manifest.NewHREF(url.MustURLFromString(f.href)),
+		MediaType: mt,
+	}}
+	return slices.Clone(f.cachedLinks), nil
 }
 
 // Get implements Fetcher
 func (f *S3Fetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	// Use the decoded path for the object lookup: S3 keys are raw strings, so a
 	// percent-encoded HREF would never match, and queries/fragments don't belong in keys.
-	var linkHref string
-	if hrefURL := link.Href.Resolve(nil, nil); hrefURL != nil {
-		linkHref = hrefURL.Path()
-	} else {
-		linkHref = link.Href.String()
+	linkHref, ok := localPath(link)
+	if !ok {
+		return NewFailureResource(link, NotFound(errNotLocal))
 	}
 	if after, ok := strings.CutPrefix(linkHref, f.href); ok {
 		resourceFile := path.Join(f.key, after)
@@ -209,7 +227,8 @@ func (r *s3Resource) head(ctx context.Context) (*s3.HeadObjectOutput, *ResourceE
 
 // Read implements Resource
 func (r *s3Resource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
-	if end < start {
+	start, valid := byterange.Normalize(start, end)
+	if !valid {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
 
@@ -246,7 +265,8 @@ func (r *s3Resource) Read(ctx context.Context, start int64, end int64) ([]byte, 
 
 // Stream implements Resource
 func (r *s3Resource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
-	if end < start {
+	start, valid := byterange.Normalize(start, end)
+	if !valid {
 		return -1, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
 

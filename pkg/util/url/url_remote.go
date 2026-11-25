@@ -22,7 +22,7 @@ func (u AbsoluteURL) ToS3Object() (*s3.GetObjectInput, error) {
 		return nil, errors.New("not an s3 url")
 	}
 
-	path := strings.TrimPrefix(path.Clean(u.Path()), "/")
+	path := objectKey(u.Path())
 	return &s3.GetObjectInput{
 		Bucket: &u.url.Host,
 		Key:    &path,
@@ -34,6 +34,16 @@ func (u AbsoluteURL) ToGSObject(client *storage.Client) (*storage.ObjectHandle, 
 		return nil, errors.New("not a gs url")
 	}
 
-	path := strings.TrimPrefix(path.Clean(u.Path()), "/")
+	path := objectKey(u.Path())
 	return client.Bucket(u.url.Host).Object(path), nil
+}
+
+// objectKey returns the key of the object a cloud storage URL path names, or
+// "" for the root of the bucket, whether its URL ends with a slash or not:
+// cleaned, an empty path would be ".".
+func objectKey(p string) string {
+	if p == "" {
+		return ""
+	}
+	return strings.TrimPrefix(path.Clean(p), "/")
 }

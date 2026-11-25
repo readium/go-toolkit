@@ -180,12 +180,19 @@ func playlistTOC(ctx context.Context, fetch fetcher.Fetcher, readingOrder manife
 	return nil
 }
 
-// readResource reads the full content of a link's resource, always releasing the
-// resource handle (even on a read error or panic).
+// maxPlaylistSize is the size limit of the playlists read to build a table of
+// contents, which take a few bytes per track.
+const maxPlaylistSize = 4 << 20 // 4 MiB
+
+// readResource reads the full content of a link's playlist, always releasing
+// the resource handle (even on a read error or panic). It returns nil for
+// playlists which can't be read, or are larger than maxPlaylistSize: they
+// are found among the files of the package, rather than declared, so they
+// are skipped.
 func readResource(ctx context.Context, fetch fetcher.Fetcher, link manifest.Link) []byte {
 	res := fetch.Get(ctx, link)
 	defer res.Close()
-	content, err := res.Read(ctx, 0, 0)
+	content, err := fetcher.ReadResourceUpTo(ctx, res, maxPlaylistSize)
 	if err != nil {
 		return nil
 	}

@@ -2,6 +2,7 @@ package url
 
 import (
 	"errors"
+	"fmt"
 	gurl "net/url"
 	"os"
 	"path"
@@ -30,9 +31,36 @@ type URL interface {
 	Equivalent(url URL) bool // Returns whether the receiver is equivalent to the given `url` after normalization.
 }
 
+// IsRemoteReference reports whether a URL has a scheme or names an
+// authority. Both kinds of reference point outside a publication container.
+func IsRemoteReference(u URL) bool {
+	if u == nil {
+		return false
+	}
+	raw := u.Raw()
+	return raw.IsAbs() || raw.Host != "" || raw.User != nil || strings.HasPrefix(u.String(), "//")
+}
+
 // Creates a [RelativeURL] from a percent-decoded path.
+//
+// It is meant for hrefs written without percent-encoding: "?" and "#" still
+// start a query and a fragment. Use [URLFromPath] for the names of files,
+// which may hold them.
 func URLFromDecodedPath(path string) (RelativeURL, error) {
 	return RelativeURLFromString(extensions.AddPercentEncodingPath(path))
+}
+
+// URLFromPath creates a [RelativeURL] whose decoded path is exactly the given
+// one, such as the name of a file or archive entry. Every character which
+// can't appear as is in a URL path is percent-encoded, "%", "?" and "#"
+// included, rather than taken for the start of an escape, a query or a
+// fragment, and a colon in the first segment doesn't make it a scheme. A path
+// starting with "//" is an error: it would be taken for a host.
+func URLFromPath(path string) (RelativeURL, error) {
+	if strings.HasPrefix(path, "//") {
+		return RelativeURL{}, fmt.Errorf("path %q starts with //, which would be taken for a host", path)
+	}
+	return RelativeURLFromGo(&gurl.URL{Path: path})
 }
 
 // A proxy for [URLFromString] that panics on error.
@@ -165,6 +193,32 @@ func (u RelativeURL) Relativize(url URL) URL {
 	return url
 }
 
+// normalizePathEscapes decodes unreserved characters and uppercases other
+// escapes. Reserved characters keep their meaning as encoded path data.
+func normalizePathEscapes(raw string) string {
+	if !strings.Contains(raw, "%") {
+		return raw
+	}
+	var out strings.Builder
+	for i := 0; i < len(raw); i++ {
+		if raw[i] != '%' || i+2 >= len(raw) {
+			out.WriteByte(raw[i])
+			continue
+		}
+		escaped := raw[i : i+3]
+		d, err := gurl.PathUnescape(escaped)
+		if err != nil {
+			out.WriteString(escaped)
+		} else if c := d[0]; c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || strings.ContainsRune("-._~", rune(c)) {
+			out.WriteByte(c)
+		} else {
+			out.WriteString(strings.ToUpper(escaped))
+		}
+		i += 2
+	}
+	return out.String()
+}
+
 // Normalize implements URL
 func (u RelativeURL) Normalize() URL {
 	if u.normalized {
@@ -178,7 +232,8 @@ func (u RelativeURL) Normalize() URL {
 		hadSlash = true
 	}
 	res.Path = path.Clean(res.Path)
-	if hadSlash {
+	res.RawPath = normalizePathEscapes(res.RawPath)
+	if hadSlash && res.Path != "/" {
 		res.Path += "/"
 	}
 
@@ -221,6 +276,15 @@ type AbsoluteURL struct {
 	url        *gurl.URL
 	scheme     Scheme
 	normalized bool
+}
+
+// Clone returns a copy whose underlying net/url.URL can be modified independently.
+func (u AbsoluteURL) Clone() AbsoluteURL {
+	if u.url != nil {
+		raw := *u.url
+		u.url = &raw
+	}
+	return u
 }
 
 // Path implements URL
@@ -322,7 +386,8 @@ func (u AbsoluteURL) Normalize() URL {
 		hadSlash = true
 	}
 	res.Path = path.Clean(res.Path)
-	if hadSlash {
+	res.RawPath = normalizePathEscapes(res.RawPath)
+	if hadSlash && res.Path != "/" {
 		res.Path += "/"
 	}
 

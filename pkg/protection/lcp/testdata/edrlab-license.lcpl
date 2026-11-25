@@ -1,0 +1,51 @@
+{
+  "provider": "https://www.edrlab.org",
+  "id": "653673ed-ef9d-4987-a0cb-d9b017de4bbc",
+  "issued": "2023-01-14T14:02:43Z",
+  "encryption": {
+    "profile": "http://readium.org/lcp/basic-profile",
+    "content_key": {
+      "algorithm": "http://www.w3.org/2001/04/xmlenc#aes256-cbc",
+      "encrypted_value": "7awYKPQFRdhIgK1wwpim5zySv6MkP/8X87WcFSX8dxOugAMQFF0YV4NFewuWeFe/p7PPU9osxsnf9KDSuwb7NQ=="
+    },
+    "user_key": {
+      "algorithm": "http://www.w3.org/2001/04/xmlenc#sha256",
+      "text_hint": "Ton livre préféré",
+      "key_check": "+IdXoKxpYRsiOw5Hkbs9qROI04T/T+57ULIIh4LzBTHuIyLdi24UDm6CC8VL6dxxx0hNWwC/vy9zZAxUOFrMRw=="
+    }
+  },
+  "links": [
+    {
+      "rel": "status",
+      "href": "http://192.168.0.42:8990/licenses/653673ed-ef9d-4987-a0cb-d9b017de4bbc/status",
+      "type": "application/vnd.readium.license.status.v1.0+json"
+    },
+    {
+      "rel": "hint",
+      "href": "https://www.edrlab.org/lcp-help/653673ed-ef9d-4987-a0cb-d9b017de4bbc",
+      "type": "text/html"
+    },
+    {
+      "rel": "publication",
+      "href": "http://192.168.0.42:8989/contents/a1ff63c5-ecb2-4189-863d-11d7c1a4a31a",
+      "type": "application/epub+zip",
+      "title": "moby-dick.epub",
+      "length": 1650373,
+      "hash": "c7bbb503d937778042b001ee7699d36b5df4f0df5eb48f2f324e0caf8c062891"
+    }
+  ],
+  "user": {
+    "id": "da88987e-d012-4173-8c74-64af5f33f838",
+    "email": "laurent@edrlab.org",
+    "name": "laurent"
+  },
+  "rights": {
+    "start": "2022-12-10T08:10:18Z",
+    "end": "2023-01-20T00:08:15Z"
+  },
+  "signature": {
+    "certificate": "MIIFpTCCA42gAwIBAgIBATANBgkqhkiG9w0BAQsFADBnMQswCQYDVQQGEwJGUjEOMAwGA1UEBxMFUGFyaXMxDzANBgNVBAoTBkVEUkxhYjESMBAGA1UECxMJTENQIFRlc3RzMSMwIQYDVQQDExpFRFJMYWIgUmVhZGl1bSBMQ1AgdGVzdCBDQTAeFw0xNjAzMjUwMzM3MDBaFw0yNjAzMjMwNzM3MDBaMIGQMQswCQYDVQQGEwJGUjEOMAwGA1UEBxMFUGFyaXMxDzANBgNVBAoTBkVEUkxhYjESMBAGA1UECxMJTENQIFRlc3RzMSIwIAYDVQQDExlUZXN0IHByb3ZpZGVyIGNlcnRpZmljYXRlMSgwJgYJKoZIhvcNAQkBFhlsYXVyZW50LmxlbWV1ckBlZHJsYWIub3JnMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAq/gFXdvKb+EOzsEkHcoSOcPQmNzivzf+9NOJcxWi1/BwuxqAAPv+4LKoLz89U1xx5TE1swL11BsEkIdVYrjl1RiYRa8YV4bb4xyMTm8lm39P16H1fG7Ep8yyoVuN6LT3WT2xHGp2jYU8I2nW78cyYApAWAuiMc3epeIOxC2mKgf1pGnaX9j5l/Rx8hhxULqoHIHpR8e1eVRC7tgAz4Oy5qeLxGoL4S+GK/11eRlDO37whAWaMRbPnJDqqi8Z0Beovf6jmdoUTJdcPZZ9kFdtPsWjPNNHDldPuJBtCd7lupc0K4pClJSqtJKyxs05Yeb1j7kbs/i3grdlUcxz0zOaPN1YzrzOO7GLEWUnIe+LwVXAeUseHedOexITyDQXXCqMoQw/BC6ApGzR0FynC6ojq98tStYGJAGbKBN/9p20CvYf4/hmPU3fFkImWguPIoeJT//0rz+nSynykeEVtORRIcdyOnX2rL03xxBW7qlTlUXOfQk5oLIWXBW9Z2Q63MPWi8jQhSI0jC12iEqCT54xKRHNWKr04at9pJL85M0bDCbBH/jJ+AIbVx02ewtXcWgWTgK9vgSPN5kRCwIGaV9PMS193KHfNpGqV45EKrfP8U2nvNDeyqLqAN5847ABSW7UmA5Kj/x5uGxIWu9MUKjZlT0FpepswFvMMo1InLHANMcCAwEAAaMyMDAwDAYDVR0TAQH/BAIwADALBgNVHQ8EBAMCBaAwEwYDVR0lBAwwCgYIKwYBBQUHAwEwDQYJKoZIhvcNAQELBQADggIBAEGAqzHsCbrfQwlWas3q66FG/xbiOYQxpngA4CZWKQzJJDyOFgWEihW+H6NlSIH8076srpIZByjEGXZfOku4NH4DGNOj6jQ9mEfEwbrvCoEVHQf5YXladXpKqZgEB2FKeJVjC7yplelBtjBpSo23zhG/o3/Bj7zRySL6gUCewn7z/DkxM6AshDE4HKQxjxp7stpESev+0VTL813WXvwzmucr94H1VPrasFyVzQHj4Ib+Id1OAmgfzst0vSZyX6bjAuiN9yrs7wze5cAYTaswWr7GAnAZ/r1Z3PiDp50qaGRhHqJ+lRAhihpFP+ZjsYWRqnxZnDzJkJ6RZAHi2a3VN8x5WhOUMTf3JZcFVheDmA4SaEjAZAHU8zUxx1Fstjc8GJcjTwWxCsVM2aREBKXAYDhPTVLRKt6PyQxB0GxjDZZSvGI9uXn6S5wvjuE4T2TUwbJeGHqJr4FNpXVQ2XNww+sV2QSiAwrlORm8HNXqavj4rqz1PkUySXJ6b7zbjZoiACq4C7zb70tRYDyCfLTYtaTL3UK2Sa9ePSl0Fe6QfcqlGjalrqOo4GI6oqbAIkIXocHHksbLx0mIMSEWQOax+DqXhsl8tNGVwa5EiUSy83Sc0LyYXoWA35q8dugbkeNnY94rNG/hYKeci1VHhyg4rqxEeVwfBx121JqQSs+hHGKt",
+    "value": "Nz3SK4u94B4MnsVbCM70jI/HeLpODGUeDlQywDzslxiUsMb4ZbWP2XPOWvjIylEUY/q/wrIKMFUGShzMvv54/UPHZlSrpfUtDPMPihTvkw8yE8ttCdfLWkHd9t8xKXjRntGx3trcyefFviL69dU/aNAuhUO/aaqruC4bzWn7+js78jaLOryNyuS9emQQW2SZFddF+1n8yfeTDPXx9bACfDTchITUUUyu4hCj+6DdLIS+FjoOBx8H3/jI//zOXGBkNKv5MWlNyH737RFPWtjZx36Px6wW1jWcDzS57P1xZDVdouBUG+u5YoVp3aEQkRi1zEMUwK8YtgzEHUCJtg5stPoE735pGWc94lcC0C6sw/DrD6UjAYXWLAhqW7L05ZZGbtzKEQSnzLI8Sl1ICBMWuCLHd5F3H0ZOQ05lMg3Jixjg01MkoYp33q0BfbLWat1moiHbj8cQ53oZsyd75U+cNjR9HScEkcNB4KF8xGurv8WezJ89ESopfyGGNJQIzrr4FKIFzfZHLY7yAyuMgw/OmoaUSUOv6jEiq9LngL/0LfzFbs9w8HK+ng9D4EiCd57stex5AmEReo49H/lhKrgqWGpYEtVD3LH4Kmpz1qOr/2xgygg9eiZJVKLvovUbwbqmR0u6f03pNtkNYQ+EA/P7GgSY9pqyvL0XN/LBa7TlNnw=",
+    "algorithm": "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
+  }
+}

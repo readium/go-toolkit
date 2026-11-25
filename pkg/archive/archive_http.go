@@ -2,14 +2,15 @@ package archive
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"io"
 	"net/http"
 	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/internal/httprange"
 	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
@@ -68,6 +69,7 @@ func (e HTTPArchiveFactory) Open(ctx context.Context, location url.URL, password
 		zip:           r,
 		minimizeReads: true,
 		closer:        rdr.Close,
+		size:          resp.ContentLength,
 	}, nil
 }
 
@@ -101,7 +103,10 @@ type remoteHTTPReader struct {
 }
 
 func (r remoteHTTPReader) ReadRange(ctx context.Context, offset, length int64) (io.ReadCloser, error) {
-	if offset < 0 {
+	if length == 0 {
+		return io.NopCloser(bytes.NewReader(nil)), nil
+	}
+	if offset < 0 || offset >= r.size {
 		return nil, io.EOF
 	}
 
@@ -109,25 +114,31 @@ func (r remoteHTTPReader) ReadRange(ctx context.Context, offset, length int64) (
 	if err != nil {
 		return nil, err
 	}
-	var sb strings.Builder
-	sb.WriteString("bytes=")
-	sb.WriteString(strconv.FormatInt(offset, 10))
-	sb.WriteString("-")
-	if length > 0 {
-		sb.WriteString(strconv.FormatInt(offset+length-1, 10))
+	remaining := r.size - offset
+	if length < 0 || length > remaining {
+		length = remaining
 	}
-	req.Header.Set("Range", sb.String())
+	end := offset + (length - 1)
+	req.Header.Set("Range", "bytes="+strconv.FormatInt(offset, 10)+"-"+strconv.FormatInt(end, 10))
 
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusPartialContent {
+		_ = resp.Body.Close()
 		return nil, errors.New("unexpected HTTP status code: " + strconv.Itoa(resp.StatusCode))
 	}
 
-	// User is responsible for closing the body
-	return resp.Body, nil
+	n, err := httprange.Length(resp, offset, end, r.size)
+	if err != nil {
+		_ = resp.Body.Close()
+		return nil, err
+	}
+	return struct {
+		io.Reader
+		io.Closer
+	}{io.LimitReader(resp.Body, n), resp.Body}, nil
 }
 
 func (r remoteHTTPReader) Size() int64 {

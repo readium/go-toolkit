@@ -5,9 +5,12 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -310,4 +313,54 @@ func TestRemoteShortNetworkReads(t *testing.T) {
 	data, err = entry.Read(1000, 1999)
 	require.NoError(t, err)
 	assert.Equal(t, big[1000:2000], data)
+}
+
+func TestRemoteArchiveCacheOwnsItsBytes(t *testing.T) {
+	source := &countingRemoteReader{data: []byte("0123456789")}
+	for _, count := range []int64{0, 2} {
+		r := newRemoteZIPAdapter(source, RemoteArchiveConfig{Timeout: time.Second, CacheCountThreshold: count, CacheSizeThreshold: 16})
+		r.makeReady()
+		buf := make([]byte, 4)
+		_, err := r.ReadAt(buf, 2)
+		require.NoError(t, err)
+		clear(buf)
+		_, err = r.ReadAt(buf, 2)
+		require.NoError(t, err)
+		assert.Equal(t, "2345", string(buf))
+	}
+}
+
+func TestRemoteArchiveTailReads(t *testing.T) {
+	source := &countingRemoteReader{data: bytes.Repeat([]byte("x"), 100_000)}
+	r := newRemoteZIPAdapter(source, RemoteArchiveConfig{Timeout: time.Second})
+	buf := make([]byte, 4)
+	n, err := r.ReadAt(buf, 0)
+	require.NoError(t, err)
+	assert.Equal(t, len(buf), n)
+	assert.Equal(t, int64(4), source.reads[0].length)
+	n, err = r.ReadAt(buf, source.Size()-2)
+	assert.ErrorIs(t, err, io.EOF)
+	assert.Equal(t, 2, n)
+}
+
+func TestHTTPArchiveRangeMatchesObject(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Range", "bytes 2-3/8")
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write([]byte("cd"))
+	}))
+	defer srv.Close()
+	u, err := url.AbsoluteURLFromString(srv.URL)
+	require.NoError(t, err)
+	r := RemoteArchiveReaderFromHTTP(srv.Client(), u, 8)
+	body, err := r.ReadRange(t.Context(), 2, 2)
+	require.NoError(t, err)
+	data, err := io.ReadAll(body)
+	require.NoError(t, body.Close())
+	require.NoError(t, err)
+	assert.Equal(t, "cd", string(data))
+	_, err = r.ReadRange(t.Context(), 1, 2)
+	require.Error(t, err)
+	_, err = RemoteArchiveReaderFromHTTP(srv.Client(), u, 12).ReadRange(t.Context(), 2, 2)
+	require.Error(t, err)
 }

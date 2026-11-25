@@ -8,25 +8,32 @@ import (
 	"github.com/antchfx/xpath"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 )
 
 // Well-known XML namespaces used by EPUB DRM containers.
 const (
-	namespaceENC = "http://www.w3.org/2001/04/xmlenc#"
-	namespaceSIG = "http://www.w3.org/2000/09/xmldsig#"
+	namespaceOPC  = "urn:oasis:names:tc:opendocument:xmlns:container"
+	namespaceENC  = "http://www.w3.org/2001/04/xmlenc#"
+	namespaceSIG  = "http://www.w3.org/2000/09/xmldsig#"
+	namespaceCOMP = "http://www.idpf.org/2016/encryption#compression"
 )
 
 // Well-known file paths used by EPUB DRM containers.
 const (
-	pathLCPLicense    = "META-INF/license.lcpl"
-	pathEncryption    = "META-INF/encryption.xml"
 	pathAdeptRights   = "META-INF/rights.xml"
 	pathFairplaySinf  = "META-INF/sinf.xml"
 	pathKoboRights    = "rights.xml"
-	lcpRetrievalURI   = "license.lcpl#/encryption/content_key"
 	barnesAndNobleTag = "barnesandnoble"
 )
+
+// MaxMetadataSize is the size limit of the DRM metadata files read from EPUB
+// containers, such as encryption.xml. They are read whole and parsed into a
+// tree before any license can be verified, from packages which may inflate
+// them a thousandfold. encryption.xml, the largest, takes a few hundred bytes
+// per encrypted resource. Read them with [fetcher.ReadResourceAsXMLUpTo].
+const MaxMetadataSize = extensions.MaxDocumentSize
 
 var xmlNS = map[string]string{
 	"enc":      namespaceENC,
@@ -36,7 +43,7 @@ var xmlNS = map[string]string{
 }
 
 var (
-	xpLCPRetrieval  = mustCompileNS(`//enc:EncryptedData/ds:KeyInfo/ds:RetrievalMethod[@URI="` + lcpRetrievalURI + `"]`)
+	xpLCPRetrieval  = mustCompileNS(`//enc:EncryptedData/ds:KeyInfo/ds:RetrievalMethod[@URI="` + LCPContentKeyRetrievalURI + `"]`)
 	xpAdeptOperator = mustCompileNS("//adept:operatorURL")
 	xpFairplaySinf  = mustCompileNS("//fairplay:sinf")
 	xpKdrm          = xpath.MustCompile("//kdrm")
@@ -77,8 +84,12 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xm
 		return &link, nil
 	}
 
+	// readXML returns nil for documents which aren't valid XML. Documents
+	// larger than MaxMetadataSize are an error, with a code of its own.
 	readXML := func(link *manifest.Link) (*xmlquery.Node, error) {
-		doc, rerr := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, *link))
+		res := f.Get(ctx, *link)
+		defer res.Close()
+		doc, rerr := fetcher.ReadResourceAsXMLUpTo(ctx, res, MaxMetadataSize)
 		if rerr != nil {
 			if rerr.Code == fetcher.CodeInternalServerError {
 				return nil, nil
@@ -89,7 +100,7 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xm
 	}
 
 	// LCP: presence of the license file is the strongest signal.
-	if link, err := hasLink(pathLCPLicense); err != nil {
+	if link, err := hasLink(PathEPUBLCPLicense); err != nil {
 		return NoDRM, nil, err
 	} else if link != nil {
 		return LCP, nil, nil
@@ -142,7 +153,7 @@ func IdentifyEPUBProtection(ctx context.Context, f fetcher.Fetcher) (Scheme, *xm
 	// Fall back to META-INF/encryption.xml: it may reveal LCP via the
 	// retrieval method, or indicate generic/unknown encryption otherwise. The
 	// parsed document is handed back so the caller can avoid re-parsing it.
-	if link, err := hasLink(pathEncryption); err != nil {
+	if link, err := hasLink(PathEPUBEncryption); err != nil {
 		return NoDRM, nil, err
 	} else if link != nil {
 		doc, derr := readXML(link)

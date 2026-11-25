@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/fs"
 	"path"
 	"sync"
 
 	"github.com/readium/go-toolkit/pkg/archive"
+	"github.com/readium/go-toolkit/pkg/internal/rootfs"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
@@ -18,13 +20,48 @@ type ArchiveFetcher struct {
 	archive archive.Archive
 }
 
+// fileHREF returns the href of the file at the given path, relative to the
+// root of a fetcher. File names are paths, not encoded hrefs:
+// "page%20one.txt" isn't "page one.txt", and "a#b.txt" isn't "a". A path
+// which is a URL of that same path keeps the spelling it was always listed
+// with, e.g. "[x].jpg" rather than "%5Bx%5D.jpg", so that hrefs saved by
+// clients, such as locators, still match.
+func fileHREF(p string) (manifest.HREF, error) {
+	if u, err := url.URLFromString(p); err == nil {
+		if r, ok := u.(url.RelativeURL); ok {
+			if raw := r.Raw(); r.Path() == p && raw.Host == "" && raw.RawQuery == "" && raw.Fragment == "" && !raw.ForceQuery {
+				return manifest.NewHREF(u), nil
+			}
+		}
+	}
+	u, err := url.URLFromPath(p)
+	if err != nil {
+		return manifest.HREF{}, err
+	}
+	return manifest.NewHREF(u), nil
+}
+
+// Exhaustive implements [Exhaustive]: the links are the entries of the
+// archive.
+func (f *ArchiveFetcher) Exhaustive() bool { return true }
+
 // Links implements Fetcher
 func (f *ArchiveFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
-	entries := f.archive.Entries()
+	// Archives whose listing may fail report it: the links of an
+	// incomplete listing aren't exhaustive.
+	var entries []archive.Entry
+	if lister, ok := f.archive.(archive.EntriesLister); ok {
+		var err error
+		if entries, err = lister.ListEntries(); err != nil {
+			return nil, err
+		}
+	} else {
+		entries = f.archive.Entries()
+	}
 	links := make(manifest.LinkList, 0, len(entries))
 	for _, af := range entries {
 		fp := path.Clean(af.Path())
-		href, err := manifest.NewHREFFromString(fp, false)
+		href, err := fileHREF(fp)
 		if err != nil {
 			return nil, err
 		}
@@ -46,15 +83,19 @@ func (f *ArchiveFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 // Get implements Fetcher
 func (f *ArchiveFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	// use decoded path for archive entry lookup to support files with spaces and special characters
-	var entryPath string
-	if hrefURL := link.Href.Resolve(nil, nil); hrefURL != nil {
-		entryPath = hrefURL.Path()
-	} else {
-		entryPath = link.Href.String()
+	entryPath, ok := localPath(link)
+	if !ok {
+		return NewFailureResource(link, NotFound(errNotLocal))
 	}
-	entry, err := f.archive.Entry(entryPath)
+	// Dot segments are resolved, as for any URL: "./c:file.txt" is the
+	// spelling of "c:file.txt" as a relative URL. A path escaping the
+	// archive keeps its "..", which archives refuse.
+	entry, err := f.archive.Entry(path.Clean(entryPath))
 	if err != nil {
-		return NewFailureResource(link, NotFound(err))
+		if errors.Is(err, rootfs.ErrNotRegular) {
+			return NewFailureResource(link, NotFound(err))
+		}
+		return NewFailureResource(link, OsErrorToException(err))
 	}
 
 	// Compute archive properties
@@ -146,6 +187,30 @@ type entryResource struct {
 // File implements Resource
 func (r *entryResource) File() string {
 	return ""
+}
+
+// Stable implements Stable, for the entries of the archives reporting it.
+func (r *entryResource) Stable() bool {
+	se, ok := r.entry.(archive.StableEntry)
+	return ok && se.Stable()
+}
+
+// PinFile implements FilePinner, for the entries of exploded archives.
+func (r *entryResource) PinFile(info fs.FileInfo) error {
+	pe, ok := r.entry.(archive.PinnableEntry)
+	if !ok {
+		return ErrNotFileBacked
+	}
+	r.entry = pe.Pin(info)
+	return nil
+}
+
+// FileInfo implements FileBacked, for the entries of exploded archives.
+func (r *entryResource) FileInfo() (fs.FileInfo, error) {
+	if fe, ok := r.entry.(archive.FileEntry); ok {
+		return fe.FileInfo()
+	}
+	return nil, ErrNotFileBacked
 }
 
 // Close implements Resource

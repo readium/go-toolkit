@@ -11,7 +11,7 @@ import (
 )
 
 var PositionsLink = manifest.Link{
-	Href:      manifest.MustNewHREFFromString("~readium/positions.json", false),
+	Href:      manifest.MustNewHREFFromString(ServiceHrefPrefix+"positions.json", false),
 	MediaType: &mediatype.ReadiumPositionList,
 }
 

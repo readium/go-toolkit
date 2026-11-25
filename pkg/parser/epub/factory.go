@@ -2,6 +2,7 @@ package epub
 
 import (
 	"maps"
+	"slices"
 
 	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
@@ -11,17 +12,24 @@ type PublicationFactory struct {
 	FallbackTitle   string
 	PackageDocument PackageDocument
 	NavigationData  map[string]manifest.LinkList
-	EncryptionData  map[string]manifest.Encryption
-	DisplayOptions  map[string]string
+	// EncryptionData is the encryption of the resources, by their
+	// [ResourceID].
+	EncryptionData map[string]manifest.Encryption
+	DisplayOptions map[string]string
 
 	itemById       map[string]Item
 	pubMetadata    PubMetadataAdapter
 	itemrefByIdref map[string]ItemRef
 	itemMetadata   map[string]LinkMetadataAdapter
 	coverID        string
+	// alternatesLeft is what remains of the budget of alternates of the
+	// publication: see maxAlternates.
+	alternatesLeft *int
 }
 
 func (f PublicationFactory) Create() manifest.Manifest {
+	alternatesLeft := maxAlternates(len(f.PackageDocument.Manifest))
+	f.alternatesLeft = &alternatesLeft
 	// Initialize
 	epubVersion := f.PackageDocument.EPUBVersion
 	links := f.PackageDocument.metadata.links
@@ -209,7 +217,8 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 	}
 
 	if len(f.EncryptionData) > 0 {
-		if edat, ok := f.EncryptionData[item.Href.Normalize().String()]; ok {
+		key, _ := ResourceID(item.Href)
+		if edat, ok := f.EncryptionData[key]; ok {
 			if properties == nil {
 				properties = make(map[string]any, 1)
 			}
@@ -220,27 +229,45 @@ func (f PublicationFactory) computePropertiesAndRels(item Item, itemref *ItemRef
 	return rels, manifest.Properties(properties)
 }
 
-// Compute alternate links for [item], checking for an infinite recursion
-func (f PublicationFactory) computeAlternates(item Item, fallbackChain []string) (ret manifest.LinkList) {
-	if item.fallback != "" && !extensions.Contains(fallbackChain, item.fallback) {
-		if item, ok := f.itemById[item.fallback]; ok {
-			if item.ID != "" {
-				updatedChain := make([]string, len(fallbackChain)+1)
-				copy(updatedChain, fallbackChain)
-				updatedChain[len(updatedChain)-1] = item.ID
-				ret = append(ret, f.computeLink(item, updatedChain))
-			} else {
-				cloneChain := make([]string, len(fallbackChain))
-				copy(cloneChain, fallbackChain)
-				ret = append(ret, f.computeLink(item, cloneChain))
+// maxAlternateDepth bounds the nesting of the alternates of a link: each
+// item may have both a fallback and a media overlay, which a crafted package
+// could chain into exponentially many links.
+const maxAlternateDepth = 8
+
+// maxAlternates returns the budget of alternates of a publication with the
+// given number of items: each link expands its own alternates, which many
+// links may share, so the depth limit alone doesn't bound their total. Items
+// rarely have more than a fallback and a media overlay.
+func maxAlternates(items int) int {
+	return max(1000, 4*items)
+}
+
+// computeAlternates returns the alternates of an item: its fallback and its
+// media overlay, with their own alternates. chain is the active path of
+// items whose alternates are being computed, which both kinds of reference
+// follow: an item already on it would make a cycle.
+func (f PublicationFactory) computeAlternates(item Item, chain []string) (ret manifest.LinkList) {
+	if len(chain) >= maxAlternateDepth {
+		return nil
+	}
+	follow := func(id string) {
+		if id == "" || extensions.Contains(chain, id) {
+			return
+		}
+		alternate, ok := f.itemById[id]
+		if !ok {
+			return
+		}
+		if f.alternatesLeft != nil {
+			if *f.alternatesLeft <= 0 {
+				return
 			}
+			*f.alternatesLeft--
 		}
+		ret = append(ret, f.computeLink(alternate, append(slices.Clone(chain), id)))
 	}
-	if item.mediaOverlay != "" {
-		if item, ok := f.itemById[item.mediaOverlay]; ok {
-			ret = append(ret, f.computeLink(item, []string{}))
-		}
-	}
+	follow(item.fallback)
+	follow(item.mediaOverlay)
 	return
 }
 

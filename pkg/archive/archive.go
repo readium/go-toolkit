@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/fs"
 	"os"
 
 	"github.com/readium/go-toolkit/pkg/util/url"
@@ -68,6 +69,41 @@ func NewArchiveFactory() DefaultArchiveFactory {
 	return DefaultArchiveFactory{}
 }
 
+// FileEntry is implemented by the entries of archives exploded on the file
+// system, which are files.
+type FileEntry interface {
+	// FileInfo describes the file of the entry. It identifies the file,
+	// e.g. to tell with os.SameFile whether two entries are the same file
+	// through symbolic or hard links.
+	FileInfo() (fs.FileInfo, error)
+}
+
+// ErrFileChanged is returned by the reads of an entry pinned to a file (see
+// [PinnableEntry]) when its path names another file since.
+var ErrFileChanged = errors.New("the file changed since it was checked")
+
+// PinnableEntry is implemented by entries read from a file, which can be
+// pinned to it.
+type PinnableEntry interface {
+	FileEntry
+	// Pin returns the entry, reading only from the file described by info:
+	// each read checks the file it opens, and fails with [ErrFileChanged]
+	// when the path of the entry names another file, e.g. because it was
+	// renamed or replaced by a link since info was taken.
+	Pin(info fs.FileInfo) Entry
+}
+
+// StableEntry is implemented by entries which can report whether they are
+// read from a single version of their archive, which can't be replaced while
+// it is open: e.g. a local archive is read from the file opened, while a
+// remote one is read with requests which may each get another version. The
+// file of a local archive is assumed not to be rewritten in place while it
+// is open: replacing it by renaming another file over it doesn't change the
+// version read.
+type StableEntry interface {
+	Stable() bool
+}
+
 // Holds an archive entry's metadata.
 type Entry interface {
 	Path() string                                              // Absolute path to the entry in the archive.
@@ -85,7 +121,15 @@ type Entry interface {
 	CRC32Checksum() *uint32 // Returns the CRC32 checksum of the uncompressed data.
 }
 
-// Represents an immutable archive.
+// EntriesLister is implemented by archives whose listing may fail, such as
+// exploded ones, whose directories may be unreadable, or change while they
+// are walked. ListEntries returns the error, where Entries returns the
+// entries listed until then.
+type EntriesLister interface {
+	ListEntries() ([]Entry, error)
+}
+
+// Archive represents an immutable archive.
 type Archive interface {
 	Entries() []Entry                 // List of all the archived file entries.
 	Entry(path string) (Entry, error) // Gets the entry at the given `path`.

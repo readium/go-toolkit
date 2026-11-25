@@ -118,6 +118,20 @@ func TestManifestUnmarshalJSONRequiresMetadata(t *testing.T) {
 	}`), &m))
 }
 
+func TestManifestFromJSONRejectsNull(t *testing.T) {
+	// A null manifest was returned as nil without error, which callers
+	// dereferenced.
+	m, err := ManifestFromJSON(nil, true)
+	assert.Nil(t, m)
+	assert.Error(t, err)
+
+	// JSON null leaves the manifest as it is, as encoding/json does.
+	var manifest Manifest
+	require.NoError(t, json.Unmarshal([]byte("null"), &manifest))
+	var holder struct{ Manifest Manifest }
+	require.NoError(t, json.Unmarshal([]byte(`{"Manifest": null}`), &holder))
+}
+
 // {readingOrder} used to be {spine}, so we parse {spine} as a fallback.
 func TestManifestUnmarshalJSONSpinFallback(t *testing.T) {
 	var m Manifest

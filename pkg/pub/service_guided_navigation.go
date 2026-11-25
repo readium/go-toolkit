@@ -16,7 +16,7 @@ import (
 // which generates guided navigation documents from the publication's (X)HTML
 // documents. It is advertised in the manifest's links when the service is public.
 var GuidedNavigationLink = manifest.Link{
-	Href:      manifest.MustNewHREFFromString("~readium/guided-navigation.json{?ref}", true),
+	Href:      manifest.MustNewHREFFromString(ServiceHrefPrefix+"guided-navigation.json{?ref}", true),
 	MediaType: &mediatype.ReadiumGuidedNavigationDocument,
 }
 
@@ -25,7 +25,7 @@ var GuidedNavigationLink = manifest.Link{
 // It is never advertised in the manifest's links: the service replaces each SMIL
 // alternate with an expansion of this link instead.
 var MediaOverlayLink = manifest.Link{
-	Href:      manifest.MustNewHREFFromString("~readium/media-overlay.json{?ref}", true),
+	Href:      manifest.MustNewHREFFromString(ServiceHrefPrefix+"media-overlay.json{?ref}", true),
 	MediaType: &mediatype.ReadiumGuidedNavigationDocument,
 }
 

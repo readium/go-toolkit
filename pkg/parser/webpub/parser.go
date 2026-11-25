@@ -41,7 +41,7 @@ func (p WebPubParser) Parse(ctx context.Context, a asset.PublicationAsset, f fet
 	var manifestJSON map[string]any
 	if isPackage {
 		res := lFetcher.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("manifest.json", false)})
-		mjr, rerr := fetcher.ReadResourceAsJSON(ctx, res)
+		mjr, rerr := fetcher.ReadResourceAsJSONUpTo(ctx, res, manifest.MaxManifestSize)
 		res.Close()
 		if rerr != nil {
 			return nil, errors.Wrap(rerr, "failed reading manifest.json from package")
@@ -57,7 +57,7 @@ func (p WebPubParser) Parse(ctx context.Context, a asset.PublicationAsset, f fet
 			return nil, errors.New("links is empty")
 		}
 		res := lFetcher.Get(ctx, links[0])
-		mj, rerr := fetcher.ReadResourceAsJSON(ctx, res)
+		mj, rerr := fetcher.ReadResourceAsJSONUpTo(ctx, res, manifest.MaxManifestSize)
 		res.Close()
 		if rerr != nil {
 			return nil, errors.Wrap(rerr, "failed reading manifest")

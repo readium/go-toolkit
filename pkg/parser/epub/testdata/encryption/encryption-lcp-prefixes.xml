@@ -24,7 +24,7 @@
     </encrypt:CipherData>
     <encrypt:EncryptionProperties>
       <encrypt:EncryptionProperty>
-        <comp:Compression Method="4" OriginalLength="12914"></comp:Compression>
+        <comp:Compression Method="0" OriginalLength="12914"></comp:Compression>
       </encrypt:EncryptionProperty>
     </encrypt:EncryptionProperties>
   </encrypt:EncryptedData>

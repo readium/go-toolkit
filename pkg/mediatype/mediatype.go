@@ -313,6 +313,37 @@ func (mt MediaType) IsVideo() bool {
 	return mt.Type == "video"
 }
 
+// Returns whether this media type is of a font: font/*, or one of the
+// application/* types fonts were declared with before font/* existed:
+// application/vnd.ms-opentype, application/vnd.ms-fontobject, and the
+// application/font-* and application/x-font-* families, such as
+// application/font-woff and application/x-font-ttf.
+//
+// Other application/* types merely mentioning fonts are not fonts, such as
+// application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml
+// (the font table of a DOCX document) or application/vnd.font-fontforge-sfd
+// (a font editor's project).
+func (mt MediaType) IsFont() bool {
+	switch mt.Type {
+	case "font":
+		return true
+	case "application":
+		switch mt.SubType {
+		case "vnd.ms-opentype", "vnd.ms-fontobject":
+			return true
+		}
+		return strings.HasPrefix(mt.SubType, "font-") || strings.HasPrefix(mt.SubType, "x-font-")
+	}
+	return false
+}
+
+// Returns whether resources of this media type exit
+// in a stored form that does not benefit significantly
+// from further compression by a general-purpose algorithm.
+func (mt MediaType) IsPrecompressed() bool {
+	return mt.IsBitmap() || mt.IsAudio() || mt.IsVideo() || mt.IsZIP()
+}
+
 // Returns whether this media type is of a Readium Web Publication Manifest.
 func (mt MediaType) IsRwpm() bool {
 	return mt.Matches(&ReadiumAudiobookManifest, &ReadiumDivinaManifest, &ReadiumWebpubManifest)

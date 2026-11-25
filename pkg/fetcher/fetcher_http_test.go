@@ -130,3 +130,79 @@ func TestHTTPFetcherSharesResourceSize(t *testing.T) {
 	defer mu.Unlock()
 	assert.Equal(t, 1, heads, "size should be learned once and shared across resources")
 }
+
+func TestHTTPRangeValidation(t *testing.T) {
+	for _, tc := range []struct {
+		name, header, body string
+		ok                 bool
+	}{
+		{"exact", "bytes 2-5/8", "abcd", true},
+		{"clamped", "bytes 2-3/4", "ab", true},
+		{"wrong offset", "bytes 1-4/8", "abcd", false},
+		{"short range", "bytes 2-3/8", "ab", false},
+		{"short body", "bytes 2-5/8", "abc", false},
+		{"extra byte", "bytes 2-5/8", "abcde", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Range", tc.header)
+				w.WriteHeader(http.StatusPartialContent)
+				w.(http.Flusher).Flush()
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			t.Cleanup(srv.Close)
+			u, err := url.AbsoluteURLFromString(srv.URL)
+			require.NoError(t, err)
+			res := NewHTTPResource(manifest.Link{}, srv.Client(), u)
+			data, rerr := res.Read(t.Context(), 2, 5)
+			if tc.ok {
+				require.Nil(t, rerr)
+				assert.Equal(t, tc.body, string(data))
+			} else {
+				require.NotNil(t, rerr)
+				assert.Empty(t, data)
+				var out bytes.Buffer
+				_, rerr := res.Stream(t.Context(), &out, 2, 5)
+				require.NotNil(t, rerr)
+				assert.LessOrEqual(t, out.Len(), 4)
+			}
+		})
+	}
+}
+
+func TestHTTPPinThroughTransformation(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.Handle("/first", http.RedirectHandler("/second", http.StatusFound))
+	mux.HandleFunc("/second", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeContent(w, r, "chapter", time.Time{}, bytes.NewReader([]byte("chapter")))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	u, err := url.AbsoluteURLFromString(srv.URL + "/first")
+	require.NoError(t, err)
+	res := NewHTTPResource(manifest.Link{}, srv.Client(), u)
+	_, rerr := res.Length(t.Context())
+	require.Nil(t, rerr)
+	cached := NewTransformingResource(res, true, func(data []byte) []byte { return data })
+	data, rerr := cached.Read(t.Context(), 0, 0)
+	require.Nil(t, rerr)
+	require.Equal(t, "chapter", string(data))
+	pinned, err := PinLocation(cached)
+	require.NoError(t, err)
+	assert.Equal(t, u.String(), pinned.String())
+	_, rerr = cached.Read(t.Context(), 0, 0)
+	require.NotNil(t, rerr)
+	pinned, err = PinLocation(ProxyResource{Res: res})
+	require.NoError(t, err)
+	assert.Equal(t, u.String(), pinned.String())
+	// Each URL exposed to the caller has its own backing net/url.URL.
+	u.Raw().Path = "/second"
+	pinned.Raw().Path = "/second"
+	res.(Located).Location().Raw().Path = "/second"
+	_, rerr = res.Length(t.Context())
+	require.NotNil(t, rerr)
+	var out bytes.Buffer
+	_, rerr = res.Stream(t.Context(), &out, 0, 0)
+	require.NotNil(t, rerr)
+	assert.Empty(t, out.Bytes())
+}

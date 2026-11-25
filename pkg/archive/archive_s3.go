@@ -57,6 +57,7 @@ func (e S3ArchiveFactory) Open(ctx context.Context, location url.URL, password s
 		zip:           r,
 		minimizeReads: true,
 		closer:        rdr.Close,
+		size:          *output.ContentLength,
 	}, nil
 }
 

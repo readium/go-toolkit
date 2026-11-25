@@ -8,8 +8,8 @@ import (
 	"github.com/antchfx/xpath"
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/fetcher"
-	ftchr "github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
@@ -42,9 +42,7 @@ func mustCompileNS(expr string) *xpath.Expr {
 }
 
 func GetRootFilePath(ctx context.Context, fetcher fetcher.Fetcher) (url.URL, error) {
-	res := fetcher.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/container.xml", false)})
-
-	xml, err := ftchr.ReadResourceAsXML(ctx, res)
+	xml, err := readXML(ctx, fetcher, manifest.MustNewHREFFromString("META-INF/container.xml", false))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed loading container.xml")
 	}
@@ -58,10 +56,33 @@ func GetRootFilePath(ctx context.Context, fetcher fetcher.Fetcher) (url.URL, err
 	}
 	u, merr := url.FromEPUBHref(p)
 	if merr != nil {
-		return nil, errors.Wrap(err, "failed parsing rootfile full-path")
+		return nil, errors.Wrap(merr, "failed parsing rootfile full-path")
 	}
 
 	return u, nil
+}
+
+// GetPackageDocumentPaths returns the paths of the package documents of the
+// container, one per rendition: the rootfiles of META-INF/container.xml whose
+// media type is the one of package documents, in their order.
+// [GetRootFilePath] returns the first rootfile, the default rendition's.
+func GetPackageDocumentPaths(ctx context.Context, fetcher fetcher.Fetcher) ([]url.URL, error) {
+	xml, rerr := readXML(ctx, fetcher, manifest.MustNewHREFFromString("META-INF/container.xml", false))
+	if rerr != nil {
+		return nil, errors.Wrap(rerr, "failed loading container.xml")
+	}
+	var paths []url.URL
+	for _, n := range xmlquery.QuerySelectorAll(xml, xpRootfile) {
+		if mt := mediatype.MaybeNewOfString(n.SelectAttr("media-type")); mt == nil || !mt.Equal(&mediatype.OPF) {
+			continue
+		}
+		u, err := url.FromEPUBHref(n.SelectAttr("full-path"))
+		if err != nil {
+			return nil, errors.Wrap(err, "failed parsing rootfile full-path")
+		}
+		paths = append(paths, u)
+	}
+	return paths, nil
 }
 
 func SelectNodeAttrNs(n *xmlquery.Node, ns, name string) string {

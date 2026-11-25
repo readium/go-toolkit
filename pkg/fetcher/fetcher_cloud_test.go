@@ -97,3 +97,16 @@ var (
 	_ EfficientStreamer = (*s3Resource)(nil)
 	_ EfficientStreamer = (*gcsResource)(nil)
 )
+
+func TestCloudFetchersRefuseRemoteURLs(t *testing.T) {
+	// The path of any URL was taken for a key, whatever its scheme or authority.
+	s3f := NewS3Fetcher("", &s3.Client{}, "bucket", "pub")
+	gcsf := NewGCSFetcher("", &storage.Client{}, (&storage.Client{}).Bucket("bucket").Object("pub"))
+	for _, href := range []string{"https://cdn.example.org/a.txt", "//cdn.example.org/a.txt"} {
+		link := manifest.Link{Href: manifest.MustNewHREFFromString(href, false)}
+		_, ok := s3f.Get(t.Context(), link).(*s3Resource)
+		assert.False(t, ok, href)
+		_, ok = gcsf.Get(t.Context(), link).(*gcsResource)
+		assert.False(t, ok, href)
+	}
+}

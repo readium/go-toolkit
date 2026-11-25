@@ -1,21 +1,20 @@
 package epub
 
 import (
+	"bytes"
 	"context"
-	"crypto/sha1"
-	"encoding/hex"
 	"io"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/archive"
 	"github.com/readium/go-toolkit/pkg/fetcher"
 	"github.com/readium/go-toolkit/pkg/internal/obfuscation"
+	"github.com/readium/go-toolkit/pkg/protection"
 )
 
 var algorithm2length = map[string]int64{
-	"http://www.idpf.org/2008/embedding": 1040,
-	"http://ns.adobe.com/pdf/enc#RC":     1024,
+	protection.AlgorithmIDPFObfuscation:  1040,
+	protection.AlgorithmAdobeObfuscation: 1024,
 }
 
 type Deobfuscator struct {
@@ -50,112 +49,77 @@ func (d DeobfuscatingResource) obfuscation() (string, int64) {
 }
 
 func (d DeobfuscatingResource) Read(ctx context.Context, start, end int64) ([]byte, *fetcher.ResourceError) {
-	algorithm, v := d.obfuscation()
-	if v > 0 {
-		data, err := d.ProxyResource.Read(ctx, start, end)
-		if err != nil {
-			return nil, err
-		}
-		var obfuscationKey []byte
-		switch algorithm {
-		case "http://ns.adobe.com/pdf/enc#RC":
-			obfuscationKey = d.getHashKeyAdobe()
-		default:
-			shasum := sha1.Sum([]byte(d.identifier))
-			obfuscationKey = shasum[:]
-		}
-
-		// If getHashKeyAdobe() is blank, meaning the hex decoding of the UUID failed
-		if len(obfuscationKey) == 0 {
-			return nil, fetcher.Other(errors.New("error deriving font deobfuscation key"))
-		}
-
-		deobfuscateFont(data, start, obfuscationKey, v)
-		return data, nil
+	algorithm, prefix := d.obfuscation()
+	start = max(start, 0)
+	if start >= prefix {
+		return d.Res.Read(ctx, start, end)
 	}
-
-	// Algorithm not in known, so skip deobfuscation
-	return d.ProxyResource.Read(ctx, start, end)
+	key := obfuscation.Key(algorithm, d.identifier)
+	if len(key) == 0 {
+		return nil, fetcher.Other(errors.New("error deriving font deobfuscation key"))
+	}
+	data, err := d.Res.Read(ctx, start, end)
+	if err != nil {
+		return nil, err
+	}
+	data = bytes.Clone(data)
+	deobfuscateFont(data, start, key, prefix)
+	return data, nil
 }
 
-func (d DeobfuscatingResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *fetcher.ResourceError) {
-	algorithm, v := d.obfuscation()
-	if v > 0 {
-		if start >= v {
-			// We're past the obfuscated part, just proxy it
-			return d.ProxyResource.Stream(ctx, w, start, end)
-		}
-
-		// Create a pipe to proxy the stream for deobfuscation
-		pr, pw := io.Pipe()
-
-		// Start piping the resource's stream in a goroutine
-		go func() {
-			_, err := d.ProxyResource.Stream(ctx, pw, start, end)
-			if err != nil {
-				pw.CloseWithError(err)
-			} else {
-				pw.Close()
-			}
-		}()
-
-		// First, we just read the obfuscated portion (1040 or 1024 first bytes)
-		obfuscatedPortion := make([]byte, v)
-		on, err := io.ReadFull(pr, obfuscatedPortion)
-		if err != nil && err != io.ErrUnexpectedEOF {
-			if fre, ok := err.(*fetcher.ResourceError); ok {
-				return 0, fre
-			} else {
-				return 0, fetcher.Other(errors.Wrap(err, "error reading obfuscated portion of font"))
-			}
-		}
-
-		// Handle filesize <= the obfuscated portion's length or the requested length
-		atEnd := false
-		if on < len(obfuscatedPortion) || (end != 0 && end <= start+int64(on)) {
-			obfuscatedPortion = obfuscatedPortion[:on]
-			atEnd = true
-			pr.Close()
-		}
-
-		// Deobfuscate just the obfuscated portion
-		var obfuscationKey []byte
-		switch algorithm {
-		case "http://ns.adobe.com/pdf/enc#RC":
-			obfuscationKey = d.getHashKeyAdobe()
-		default:
-			shasum := sha1.Sum([]byte(d.identifier))
-			obfuscationKey = shasum[:]
-		}
-
-		// If getHashKeyAdobe() is blank, meaning the hex decoding of the UUID failed
-		if len(obfuscationKey) == 0 {
-			return 0, fetcher.Other(errors.New("error deriving font deobfuscation key"))
-		}
-
-		deobfuscateFont(obfuscatedPortion, start, obfuscationKey, v)
-
-		defer pr.Close()
-
-		// And write it to the stream
-		_, err = w.Write(obfuscatedPortion)
-		if err != nil {
-			return 0, fetcher.Other(errors.Wrap(err, "error writing obfuscated portion of font"))
-		}
-
-		// The rest of the font is not obfuscated, so it's "copied" directly using a 32KB buffer
-		var wn int64
-		if !atEnd {
-			wn, err = io.Copy(w, pr)
-			if err != nil {
-				return 0, fetcher.Other(errors.Wrap(err, "error writing unobfuscated portion of font"))
-			}
-		}
-		return int64(on) + wn, nil
+func (d DeobfuscatingResource) Stream(ctx context.Context, w io.Writer, start, end int64) (int64, *fetcher.ResourceError) {
+	algorithm, prefix := d.obfuscation()
+	start = max(start, 0)
+	if start >= prefix {
+		return d.Res.Stream(ctx, w, start, end)
 	}
+	key := obfuscation.Key(algorithm, d.identifier)
+	if len(key) == 0 {
+		return 0, fetcher.Other(errors.New("error deriving font deobfuscation key"))
+	}
+	return d.Res.Stream(ctx, &fontWriter{out: w, offset: start, prefix: prefix, key: key}, start, end)
+}
 
-	// Algorithm not in known, so skip deobfuscation
-	return d.ProxyResource.Stream(ctx, w, start, end)
+// fontWriter transforms only the prefix. A private buffer keeps the input
+// supplied by the streaming resource intact.
+type fontWriter struct {
+	out            io.Writer
+	offset, prefix int64
+	key            []byte
+}
+
+func (w *fontWriter) Write(p []byte) (int, error) {
+	var written int
+	if w.offset < w.prefix {
+		n := min(int64(len(p)), w.prefix-w.offset)
+		part := bytes.Clone(p[:n])
+		obfuscation.XOR(part, w.key, w.offset)
+		count, err := w.out.Write(part)
+		w.offset += int64(count)
+		if err != nil {
+			return count, err
+		}
+		if count != len(part) {
+			return count, io.ErrShortWrite
+		}
+		written = count
+		p = p[count:]
+	}
+	if len(p) == 0 {
+		return written, nil
+	}
+	n, err := w.out.Write(p)
+	return written + n, err
+}
+
+// File implements Resource. The file of an obfuscated font holds its
+// obfuscated bytes, so it is not exposed: a consumer serving it directly
+// would bypass the deobfuscation.
+func (d DeobfuscatingResource) File() string {
+	if _, v := d.obfuscation(); v > 0 {
+		return ""
+	}
+	return d.ProxyResource.File()
 }
 
 // CompressedAs implements CompressedResource
@@ -225,16 +189,6 @@ func (d DeobfuscatingResource) ReadCompressedGzip(ctx context.Context) ([]byte, 
 	}
 
 	return d.ProxyResource.ReadCompressedGzip(ctx)
-}
-
-func (d DeobfuscatingResource) getHashKeyAdobe() []byte {
-	hexbytes, _ := hex.DecodeString(
-		strings.Replace(
-			strings.Replace(d.identifier, "urn:uuid:", "", -1),
-			"-", "", -1,
-		),
-	)
-	return hexbytes
 }
 
 func deobfuscateFont(data []byte, start int64, obfuscationKey []byte, obfuscationLength int64) {

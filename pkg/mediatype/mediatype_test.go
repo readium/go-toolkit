@@ -489,6 +489,33 @@ func TestMediatypeIsVideo(t *testing.T) {
 	assert.True(t, mt.IsVideo())
 }
 
+func TestMediatypeIsFont(t *testing.T) {
+	for _, s := range []string{
+		"font/otf", "font/woff2", "font/ttf;param=value",
+		// Declared before font/* existed.
+		"application/vnd.ms-opentype", "application/vnd.ms-fontobject",
+		"application/font-woff", "application/font-sfnt", "application/font-tdpfr",
+		"application/x-font-ttf", "application/x-font-opentype", "application/x-font-type1",
+		"Application/X-Font-TTF",
+	} {
+		mt, err := NewOfString(s)
+		require.NoError(t, err)
+		assert.True(t, mt.IsFont(), s)
+	}
+	for _, s := range []string{
+		"text/html", "application/xhtml+xml", "image/svg+xml", "application/octet-stream",
+		// Registered types mentioning fonts, without being fonts a reading
+		// system could use.
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml",
+		"application/vnd.font-fontforge-sfd", "application/vnd.afpc.foca-codedfont",
+		"application/x-gz-font-linux-psf",
+	} {
+		mt, err := NewOfString(s)
+		require.NoError(t, err)
+		assert.False(t, mt.IsFont(), s)
+	}
+}
+
 func TestMediatypeIsRWPM(t *testing.T) {
 	mt, err := NewOfString("text/html")
 	require.NoError(t, err)
