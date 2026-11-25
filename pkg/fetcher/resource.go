@@ -8,13 +8,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/readium/go-toolkit/pkg/archive"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/util/url"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"
 )
@@ -27,6 +31,104 @@ import (
  * If the transformation doesn't apply, simply return resource unchanged.
  */
 type ResourceTransformer func(Resource) Resource
+
+// FileBacked is implemented by resources read from a file of the local file
+// system, including through transformations.
+type FileBacked interface {
+	// FileInfo describes the file the resource is read from, whose bytes
+	// may differ from the resource's when it is transformed. It identifies
+	// the file, e.g. to tell with os.SameFile whether two resources are read
+	// from the same file through symbolic or hard links.
+	FileInfo() (fs.FileInfo, error)
+}
+
+// ErrNotFileBacked is returned by FileInfo and PinFile for resources which
+// aren't read from a file.
+var ErrNotFileBacked = errors.New("resource is not read from a file")
+
+// ErrFileChanged is the cause of the errors returned by the reads of a
+// resource pinned to a file (see [FilePinner]) when its path names another
+// file since.
+var ErrFileChanged = archive.ErrFileChanged
+
+// FilePinner is implemented by resources which can be pinned to the file they
+// are read from, including through transformations.
+type FilePinner interface {
+	FileBacked
+	// PinFile makes the resource only read from the file described by info,
+	// e.g. the file it was checked to be: each read checks the file it opens,
+	// and fails with [ErrFileChanged] when the path of the resource names
+	// another file, e.g. because it was renamed or replaced by a link since
+	// info was taken. It fails with [ErrNotFileBacked] for resources which
+	// aren't read from a file.
+	PinFile(info fs.FileInfo) error
+}
+
+// Located is implemented by resources read from a URL, such as HTTP
+// resources. Location is the URL they are read from, once their link is
+// resolved: like a file identity (see [FileBacked]), it tells whether links
+// spelled differently, e.g. a relative and a root-absolute reference, read
+// the same resource.
+type Located interface {
+	Location() url.AbsoluteURL
+}
+
+// LocationPinner binds subsequent reads to the returned URL. A resource
+// wrapping a non-URL source returns (nil, nil).
+type LocationPinner interface {
+	PinLocation() (url.URL, error)
+}
+
+// PinLocation binds reads through resource transformations to their source
+// URL. It fails when a resource reports a location but cannot pin it.
+func PinLocation(r Resource) (url.URL, error) {
+	switch p := r.(type) {
+	case LocationPinner:
+		location, err := p.PinLocation()
+		if location != nil || err != nil {
+			return location, err
+		}
+	case interface{ PinLocation() url.URL }:
+		if location := p.PinLocation(); location != nil {
+			return location, nil
+		}
+	}
+	if _, located := r.(Located); located {
+		return nil, errors.New("resource cannot pin its source URL")
+	}
+	return nil, nil
+}
+
+// Stable is implemented by resources which can report whether their content
+// is read from a single version of their source, which can't be replaced
+// while they are open, such as the entries of a local archive (see
+// [archive.StableEntry]). Remote resources, and files, which may be renamed
+// or replaced unless pinned, aren't. Resources wrapping others, which may
+// transform them, don't implement it.
+//
+// For local files, the version is the file opened: it assumes that files
+// aren't rewritten in place while they are open, i.e. that their producers
+// finish writing them first, and replace them by renaming new files over
+// them.
+type Stable interface {
+	Stable() bool
+}
+
+// pinFile pins a resource to a file, if it can be.
+func pinFile(res Resource, info fs.FileInfo) error {
+	if p, ok := res.(FilePinner); ok {
+		return p.PinFile(info)
+	}
+	return ErrNotFileBacked
+}
+
+// fileInfo returns the file information of a FileBacked resource.
+func fileInfo(r Resource) (fs.FileInfo, error) {
+	if fb, ok := r.(FileBacked); ok {
+		return fb.FileInfo()
+	}
+	return nil, ErrNotFileBacked
+}
 
 // Acts as a proxy to an actual resource by handling read access.
 type Resource interface {
@@ -65,6 +167,12 @@ func ReadResourceAsString(ctx context.Context, r Resource) (string, *ResourceErr
 	if ex != nil {
 		return "", ex
 	}
+	return decodeString(r, bin)
+}
+
+// decodeString decodes the content of a resource into a string, from the
+// charset of its media type.
+func decodeString(r Resource, bin []byte) (string, *ResourceError) {
 	var cs encoding.Encoding
 	if mediaType := r.Link().MediaType; mediaType != nil {
 		cs = mediaType.Charset()
@@ -89,7 +197,24 @@ func ReadResourceAsJSON(ctx context.Context, r Resource) (map[string]any, *Resou
 	if ex != nil {
 		return nil, ex
 	}
+	return parseJSON(str)
+}
 
+// ReadResourceAsJSONUpTo is [ReadResourceAsJSON], reading at most limit bytes
+// of the resource like [ReadResourceUpTo].
+func ReadResourceAsJSONUpTo(ctx context.Context, r Resource, limit int64) (map[string]any, *ResourceError) {
+	bin, ex := ReadResourceUpTo(ctx, r, limit)
+	if ex != nil {
+		return nil, ex
+	}
+	str, ex := decodeString(r, bin)
+	if ex != nil {
+		return nil, ex
+	}
+	return parseJSON(str)
+}
+
+func parseJSON(str string) (map[string]any, *ResourceError) {
 	var object map[string]any
 	err := json.Unmarshal([]byte(str), &object)
 	if err != nil {
@@ -103,6 +228,40 @@ func ReadResourceAsXML(ctx context.Context, r Resource) (*xmlquery.Node, *Resour
 	if ex != nil {
 		return nil, ex
 	}
+	return parseXML(bin)
+}
+
+// ErrResourceTooLarge is the cause of the errors returned for resources
+// larger than the limit they are read into memory with, such as by
+// [ReadResourceUpTo].
+var ErrResourceTooLarge = extensions.ErrResourceTooLarge
+
+// ReadResourceUpTo reads a whole resource into memory, never holding more
+// than limit bytes of it, whatever length it declares. It fails with an
+// [OutOfMemory] error wrapping [ErrResourceTooLarge] beyond that.
+func ReadResourceUpTo(ctx context.Context, r Resource, limit int64) ([]byte, *ResourceError) {
+	w := &extensions.LimitedBuffer{Limit: limit}
+	_, rerr := r.Stream(ctx, w, 0, 0)
+	if w.Exceeded {
+		return nil, OutOfMemory(fmt.Errorf("%w: %s is larger than %s", ErrResourceTooLarge, r.Link().Href, extensions.FormatSize(limit)))
+	}
+	if rerr != nil {
+		return nil, rerr
+	}
+	return w.Bytes(), nil
+}
+
+// ReadResourceAsXMLUpTo is [ReadResourceAsXML], reading at most limit bytes
+// of the resource like [ReadResourceUpTo].
+func ReadResourceAsXMLUpTo(ctx context.Context, r Resource, limit int64) (*xmlquery.Node, *ResourceError) {
+	bin, ex := ReadResourceUpTo(ctx, r, limit)
+	if ex != nil {
+		return nil, ex
+	}
+	return parseXML(bin)
+}
+
+func parseXML(bin []byte) (*xmlquery.Node, *ResourceError) {
 	node, err := xmlquery.ParseWithOptions(bytes.NewReader(bin), xmlquery.ParserOptions{
 		Decoder: &xmlquery.DecoderOptions{
 			Strict: true,
@@ -157,6 +316,15 @@ func (ex *ResourceError) Error() string {
 		return fmt.Sprintf("resource: error %d", ex.Code)
 	}
 	return fmt.Sprintf("resource: error %d: %s", ex.Code, ex.Cause.Error())
+}
+
+// Unwrap returns the cause of the error, so that errors.Is and errors.As
+// inspect it.
+func (ex *ResourceError) Unwrap() error {
+	if ex == nil {
+		return nil
+	}
+	return ex.Cause
 }
 
 func NewResourceError(code ResourceErrorCode) *ResourceError {
@@ -259,6 +427,14 @@ type FailureResource struct {
 	ex   *ResourceError
 }
 
+// FileInfo preserves lookup failures for callers checking file identities.
+func (r FailureResource) FileInfo() (fs.FileInfo, error) {
+	if r.ex.Code == CodeNotFound {
+		return nil, ErrNotFileBacked
+	}
+	return nil, r.ex
+}
+
 // File implements Resource
 func (r FailureResource) File() string {
 	return ""
@@ -304,7 +480,19 @@ type ProxyResource struct {
 	Res Resource
 }
 
-// File implements Resource
+// FileInfo implements FileBacked
+func (r ProxyResource) FileInfo() (fs.FileInfo, error) {
+	return fileInfo(r.Res)
+}
+
+// PinLocation binds reads to the underlying URL, when present.
+func (r ProxyResource) PinLocation() (url.URL, error) { return PinLocation(r.Res) }
+
+// PinFile implements FilePinner
+func (r ProxyResource) PinFile(info fs.FileInfo) error {
+	return pinFile(r.Res, info)
+}
+
 func (r ProxyResource) File() string {
 	return r.Res.File()
 }
@@ -409,6 +597,7 @@ func (r ProxyResource) ReadCompressedGzip(ctx context.Context) ([]byte, *Resourc
  * the transformation. This may be useful if multiple ranges will be read.
  */
 type TransformingResource struct {
+	mu         sync.Mutex // serializes cached reads and source pinning
 	resource   Resource
 	transform  func([]byte) []byte
 	cacheBytes bool
@@ -424,6 +613,8 @@ func NewTransformingResource(resource Resource, cacheBytes bool, transform func(
 }
 
 func (r *TransformingResource) bytes(ctx context.Context) ([]byte, *ResourceError) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if len(r._bytes) > 0 {
 		return r._bytes, nil
 	}
@@ -442,9 +633,35 @@ func (r *TransformingResource) bytes(ctx context.Context) ([]byte, *ResourceErro
 	return bytes, nil
 }
 
-// File implements Resource
+// FileInfo implements FileBacked
+func (r *TransformingResource) FileInfo() (fs.FileInfo, error) {
+	return fileInfo(r.resource)
+}
+
+// PinLocation binds reads to the underlying URL, when present.
+func (r *TransformingResource) PinLocation() (url.URL, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	u, err := PinLocation(r.resource)
+	if u != nil || err != nil {
+		r._bytes = nil
+	}
+	return u, err
+}
+
+// PinFile implements FilePinner
+func (r *TransformingResource) PinFile(info fs.FileInfo) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r._bytes = nil
+	return pinFile(r.resource, info)
+}
+
+// File implements Resource. The transformed bytes differ from the file's, so
+// it is not exposed: a consumer serving it directly would bypass the
+// transformation.
 func (r *TransformingResource) File() string {
-	return r.resource.File()
+	return ""
 }
 
 // Close implements Resource
@@ -463,36 +680,21 @@ func (r *TransformingResource) Properties() manifest.Properties {
 
 // Length implements Resource
 func (r *TransformingResource) Length(ctx context.Context) (int64, *ResourceError) {
-	if r.cacheBytes {
-		return int64(len(r._bytes)), nil
-	}
-	l, ex := r.resource.Length(ctx)
-	if ex != nil {
-		return 0, ex
-	}
-	return l, nil
+	data, err := r.bytes(ctx)
+	return int64(len(data)), err
 }
 
 // Read implements Resource
 func (r *TransformingResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
-	bytes, err := r.bytes(ctx)
+	data, err := r.bytes(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if start == 0 && end == 0 {
-		return bytes, nil
+	part, err := sliceRange(data, start, end)
+	if err != nil {
+		return nil, err
 	}
-
-	// Bounds check
-	length := int64(len(bytes))
-	if start > length {
-		start = length
-	}
-	if end > (length - 1) {
-		end = length - 1
-	}
-
-	return bytes[start : end+1], nil
+	return bytes.Clone(part), nil
 }
 
 // Stream implements Resource
@@ -501,26 +703,21 @@ func (r *TransformingResource) Stream(ctx context.Context, w io.Writer, start in
 	if err != nil {
 		return 0, err
 	}
-	if start == 0 && end == 0 {
-		n, nerr := w.Write(bytes)
+	data, err := sliceRange(bytes, start, end)
+	if err != nil {
+		return 0, err
+	}
+	n, nerr := w.Write(data)
+	if nerr != nil {
+		// Other(nil) is not a nil error.
 		return int64(n), Other(nerr)
 	}
-
-	// Bounds check
-	length := int64(len(bytes))
-	if start > length {
-		start = length
-	}
-	if end > (length - 1) {
-		end = length - 1
-	}
-
-	n, nerr := w.Write(bytes[start : end+1])
-	return int64(n), Other(nerr)
+	return int64(n), nil
 }
 
 // Wraps a [Resource] which will be created only when first accessing one of its members.
 type LazyResource struct {
+	mu        sync.Mutex
 	_resource Resource
 	factory   func() Resource
 }
@@ -532,21 +729,38 @@ func NewLazyResource(factory func() Resource) *LazyResource {
 }
 
 func (r *LazyResource) resource() Resource {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r._resource == nil {
 		r._resource = r.factory()
 	}
 	return r._resource
 }
 
-// File implements Resource
+// FileInfo implements FileBacked
+func (r *LazyResource) FileInfo() (fs.FileInfo, error) {
+	return fileInfo(r.resource())
+}
+
+// PinLocation binds reads to the underlying URL, when present.
+func (r *LazyResource) PinLocation() (url.URL, error) { return PinLocation(r.resource()) }
+
+// PinFile implements FilePinner
+func (r *LazyResource) PinFile(info fs.FileInfo) error {
+	return pinFile(r.resource(), info)
+}
+
 func (r *LazyResource) File() string {
 	return r.resource().File()
 }
 
 // Close implements Resource
 func (r *LazyResource) Close() {
-	if r._resource != nil {
-		r.resource().Close()
+	r.mu.Lock()
+	res := r._resource
+	r.mu.Unlock()
+	if res != nil {
+		res.Close()
 	}
 }
 

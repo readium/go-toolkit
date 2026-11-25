@@ -117,8 +117,8 @@ func (a *GCSAsset) CreateFetcher(ctx context.Context, dependencies Dependencies,
 	if a.isDir != nil {
 		isDir = *a.isDir
 	} else {
-		if strings.HasSuffix(handle.ObjectName(), "/") {
-			// Path ends in a slash, so it's a folder
+		if handle.ObjectName() == "" || strings.HasSuffix(handle.ObjectName(), "/") {
+			// The root of the bucket, or a path ending in a slash: a folder
 			isDir = true
 		} else {
 			// Not sure if it's a folder or a file, need to check

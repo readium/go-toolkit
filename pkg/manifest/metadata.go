@@ -23,6 +23,22 @@ func (s Strings) MarshalJSON() ([]byte, error) {
 	return json.Marshal(alias(s))
 }
 
+// UnmarshalJSON accepts either a single string or an array of strings,
+// mirroring [Strings.MarshalJSON].
+func (s *Strings) UnmarshalJSON(data []byte) error {
+	var single string
+	if err := json.Unmarshal(data, &single); err == nil {
+		*s = Strings{single}
+		return nil
+	}
+	var list []string
+	if err := json.Unmarshal(data, &list); err != nil {
+		return err
+	}
+	*s = list
+	return nil
+}
+
 // Metadata for the default context in WebPub
 type Metadata struct {
 	Identifier         string                 `json:"identifier,omitempty"`

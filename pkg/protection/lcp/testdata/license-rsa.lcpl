@@ -1,0 +1,57 @@
+{
+  "provider": "https://www.example.com",
+  "id": "653673ed-ef9d-4987-a0cb-d9b017de4bbc",
+  "issued": "2025-01-01T10:00:00Z",
+  "encryption": {
+    "profile": "http://readium.org/lcp/basic-profile",
+    "content_key": {
+      "algorithm": "http://www.w3.org/2001/04/xmlenc#aes256-cbc",
+      "encrypted_value": "xDvDWWz9XflJAcgnScRt6ao8dpPFx2SB5Rfm7WhQxS4LOtM6MxrNxVRKAzVd/9dpWidxogFD0J+CYcG+7/arnQ=="
+    },
+    "user_key": {
+      "algorithm": "http://www.w3.org/2001/04/xmlenc#sha256",
+      "text_hint": "Ton mot de passe préféré",
+      "key_check": "nURulIwp6SLt03ImRLG/h5A4xLGq923ovuEosR+ufR+lvzAu5cg7kHvd3N+SD6AgCDDY6mdCYA4LfRxxBAWGtA=="
+    }
+  },
+  "links": [
+    {
+      "rel": "publication",
+      "href": "https://www.example.com/publications/compat-old-lcp.epub",
+      "type": "application/epub+zip",
+      "title": "compat-old-lcp.epub",
+      "length": 14958,
+      "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "rel": "status",
+      "href": "https://lcp.example.com/status/653673ed-ef9d-4987-a0cb-d9b017de4bbc",
+      "type": "application/vnd.readium.license.status.v1.0+json"
+    },
+    {
+      "rel": "hint",
+      "href": "https://www.example.com/lcp-hint/653673ed-ef9d-4987-a0cb-d9b017de4bbc",
+      "type": "text/html"
+    }
+  ],
+  "user": {
+    "id": "da88987e-d012-4173-8c74-64af5f33f838",
+    "email": "+I5Jyzv6ug4xtarL5QjypKa+p01OMXBtBmMQqgVlAesA0mT0vvxOjM8cHqRcifRY",
+    "name": "6DZ+QDmt2n5YzG8Xb7dVypY/XqfVounhy1BUXTtAtcM=",
+    "encrypted": [
+      "email",
+      "name"
+    ]
+  },
+  "rights": {
+    "start": "2025-01-01T00:00:00Z",
+    "end": "2045-01-01T00:00:00Z",
+    "print": 10,
+    "copy": 2000
+  },
+  "signature": {
+    "certificate": "MIICdjCCAhygAwIBAgIBAjAKBggqhkjOPQQDAjBGMRswGQYDVQQKExJSZWFkaXVtIEdvIFRvb2xraXQxJzAlBgNVBAMTHlJlYWRpdW0gR28gVG9vbGtpdCBMQ1AgdGVzdCBDQTAgFw0yMTAxMDEwMDAwMDBaGA8yMDUwMDEwMTAwMDAwMFowQTEbMBkGA1UEChMSUmVhZGl1bSBHbyBUb29sa2l0MSIwIAYDVQQDExlUZXN0IHByb3ZpZGVyIGNlcnRpZmljYXRlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzm27mF9BsLd2O5CUqMXHSsqQ0FAnml1ZQ877XfSS9c/3OwcP4iDaWb3U9gDWTX9PTNxPy2YMpklcJz/tZxNfbnUeJtGG/6pXMpHa7P5g9vvZvit3Rgp1Je204w6bR+VGbbbY7XCJUcACzDunt8tok0/HBcd0+CJZLszgl6ceLa/3Iwx30J7U7KMOLhFQxjMhpX5uhrUD6X6Fmo77CC7Gi8+zM1rR5qJ4mBcoFzY8SsxTZoH/ybNtJUT9QolHx0p6bJQuLXwn6witH9UKnYB3jHRzxQ+IrM3eDwnPthcxz+ceP/SfIrEH9mFr0+hFRBRmEDwMnxvvrPixRGmW2dIruQIDAQABozMwMTAOBgNVHQ8BAf8EBAMCB4AwHwYDVR0jBBgwFoAUi9nnpNwKftOK/u/UYGwUwUgsTCgwCgYIKoZIzj0EAwIDSAAwRQIhALFjxTt30rE+O63EwUExZhQQ8TaNsAqj796ovG2FwFRoAiBeFnNVXJ3lNXG1EidGPabRXhfcQ6ts9mMtVgxY8QZq8w==",
+    "value": "n+x8gZSYq1CCHw8sDr18okFLjOwpFseAA18SoqSSvMB22fUtN4BOeUCdf3RipLwwHq7jf6k3RsZTK8U3QVJMk0vnyjA7hWlzyghXaME29Yw/gYpswP3FaN8BlrrW2to95DI1iuVammH84sMqO5oiNvil7PGlIYXmwSHpavb9QuN0XDAMtsj6PQ7gjT8hfWKHNCKZbiKQaE9uZ30yTdwjcNwracSNRb7SjRHa0XTgL3MFztxZn2+Uo0d2h0KFppcL1XzXwvhCQLHOwis1ev4hdkb3+2ICx05/A6Jn8BKbkvBUvSIruajh7AL5osbWfeL8KrOdDi+VTVnXZoap9uwYPg==",
+    "algorithm": "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
+  }
+}

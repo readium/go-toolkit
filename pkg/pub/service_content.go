@@ -12,10 +12,10 @@ import (
 	"github.com/readium/go-toolkit/pkg/mediatype"
 )
 
-// TODO content iterator special ~readium link
+// TODO content iterator special service link
 
 var ContentLink = manifest.Link{
-	Href:      manifest.MustNewHREFFromString("~readium/content.json", false),
+	Href:      manifest.MustNewHREFFromString(ServiceHrefPrefix+"content.json", false),
 	MediaType: &mediatype.ReadiumContentDocument,
 }
 

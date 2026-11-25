@@ -1,0 +1,58 @@
+{
+  "provider": "https://www.example.com",
+  "id": "7c1a6f0e-2b3d-4e5f-8a9b-0c1d2e3f4a5b",
+  "issued": "2025-01-01T10:00:00Z",
+  "updated": "2025-06-15T12:30:00Z",
+  "encryption": {
+    "profile": "http://readium.org/lcp/basic-profile",
+    "content_key": {
+      "algorithm": "http://www.w3.org/2001/04/xmlenc#aes256-cbc",
+      "encrypted_value": "Buqh36fLhJM7+6kB0zO00wYlL7if1DduC1NrKVraWhlPnw/kUi6jAo78MV3aJ2mZEea3secESnBv6xOJBHByXQ=="
+    },
+    "user_key": {
+      "algorithm": "http://www.w3.org/2001/04/xmlenc#sha256",
+      "text_hint": "Ton mot de passe préféré",
+      "key_check": "ueUK10vxAimKw09VyFWQYAY3oGSS/I4Uioa7tNweg8rET57VmSAAf0s2ron25SM3YEOCMFMaBp0vq8HwDZjOFQ=="
+    }
+  },
+  "links": [
+    {
+      "rel": "publication",
+      "href": "https://www.example.com/publications/compat-old-lcp.epub",
+      "type": "application/epub+zip",
+      "title": "compat-old-lcp.epub",
+      "length": 14958,
+      "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "rel": "status",
+      "href": "https://lcp.example.com/status/7c1a6f0e-2b3d-4e5f-8a9b-0c1d2e3f4a5b",
+      "type": "application/vnd.readium.license.status.v1.0+json"
+    },
+    {
+      "rel": "hint",
+      "href": "https://www.example.com/lcp-hint/7c1a6f0e-2b3d-4e5f-8a9b-0c1d2e3f4a5b",
+      "type": "text/html"
+    }
+  ],
+  "user": {
+    "id": "da88987e-d012-4173-8c74-64af5f33f838",
+    "email": "YBEIYIIbzZAbpaoP+6uRwTw3UMyNDc9ClWL/XAnNXZTwAnAec1H3E2tOR5kqE1CV",
+    "name": "2QLMt53tDVCvnrmjGFEvWm80Jub5a1kI4s8jWa1vf1A=",
+    "encrypted": [
+      "email",
+      "name"
+    ]
+  },
+  "rights": {
+    "start": "2025-01-01T00:00:00Z",
+    "end": "2045-01-01T00:00:00Z",
+    "print": 10,
+    "copy": 2000
+  },
+  "signature": {
+    "certificate": "MIIBrDCCAVGgAwIBAgIBAzAKBggqhkjOPQQDAjBGMRswGQYDVQQKExJSZWFkaXVtIEdvIFRvb2xraXQxJzAlBgNVBAMTHlJlYWRpdW0gR28gVG9vbGtpdCBMQ1AgdGVzdCBDQTAgFw0yMTAxMDEwMDAwMDBaGA8yMDUwMDEwMTAwMDAwMFowQTEbMBkGA1UEChMSUmVhZGl1bSBHbyBUb29sa2l0MSIwIAYDVQQDExlUZXN0IHByb3ZpZGVyIGNlcnRpZmljYXRlMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf9XEDbqU2Q54lZpIc3Rk8WEUTx00dwVoZ8qn4ya81zC4/xbAIB9ApYcqm1TkETvVCHgjLjXmYMkMx8PamKk7F6MzMDEwDgYDVR0PAQH/BAQDAgeAMB8GA1UdIwQYMBaAFIvZ56TcCn7Tiv7v1GBsFMFILEwoMAoGCCqGSM49BAMCA0kAMEYCIQCA/bqH+wCydS3SqlXbHmnFsOk0Ad9/XOjVrLmOKR03XwIhAM0XpaJ+nrr1Dkv+pF1d6fxwStwvcD9lEZ8aOY2EyVEC",
+    "value": "yXHHTFlfrq138zy4RGsRyYKheLeAQeTFYjU+01S/WSXcKAiSPCBkSgytLSPhkIR+5Vh5xZi8bgFq/W+ahf1Eyg==",
+    "algorithm": "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"
+  }
+}

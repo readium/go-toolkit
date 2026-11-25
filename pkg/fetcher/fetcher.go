@@ -2,24 +2,40 @@ package fetcher
 
 import (
 	"context"
-	"path"
-	"strings"
+	"errors"
 
 	"github.com/readium/go-toolkit/pkg/manifest"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
 
-// Reports whether the slash-separated object key [key] stays within [root]: it is
-// [root] itself or sits below it. Used by the object-store fetchers to keep a `..`
-// in an HREF from addressing objects outside the fetcher's prefix, the way
-// [FileFetcher] contains resources within its directory. An empty [root] is the
-// bucket root, which only forbids upward (`..`) escapes.
-func keyWithinRoot(root, key string) bool {
-	root = path.Clean(root)
-	key = path.Clean(key)
-	if root == "." || root == "/" {
-		return key != ".." && !strings.HasPrefix(key, "../")
+// localPath returns the decoded path a link points to, relative to the root
+// of a fetcher of local resources, such as files, archive entries or cloud
+// storage objects, and false for a URL with a scheme or an authority. Such a
+// URL points elsewhere, whatever its path: "https://example.com/secret.txt"
+// isn't the local secret.txt. Templates are expanded without parameters.
+func localPath(link manifest.Link) (string, bool) {
+	u := link.Href.Resolve(nil, nil)
+	if u == nil {
+		return link.Href.String(), true
 	}
-	return key == root || strings.HasPrefix(key, root+"/")
+	if url.IsRemoteReference(u) {
+		return "", false
+	}
+	return u.Path(), true
+}
+
+// errNotLocal is the error of a link to a URL with a scheme or an authority,
+// given to a fetcher of local resources: see localPath.
+var errNotLocal = errors.New("not a local resource: the URL has a scheme or an authority")
+
+// Exhaustive is implemented by fetchers which can report whether their Links
+// list every resource they serve, recursively, such as the entries of an
+// archive, or the files of a directory or of a cloud storage prefix. Others,
+// such as fetchers of remote HTTP folders, which can't be listed, don't
+// implement it. Fetchers wrapping others, which may serve other resources,
+// don't implement it either.
+type Exhaustive interface {
+	Exhaustive() bool
 }
 
 // Fetcher provides access to a Resource from a Link.

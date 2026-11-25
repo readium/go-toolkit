@@ -87,7 +87,7 @@ func TestDeobfuscatorRanges(t *testing.T) {
 		{"IDPF", "deobfuscation/cut-cut.obf.woff", "http://www.idpf.org/2008/embedding"},
 		{"Adobe", "deobfuscation/cut-cut.adb.woff", "http://ns.adobe.com/pdf/enc#RC"},
 	} {
-		for _, span := range [][2]int64{{1, 2}, {13, 31}, {13, 2000}, {1023, 2000}, {1024, 2000}, {1039, 2000}, {1040, 2000}} {
+		for _, span := range [][2]int64{{1, 2}, {13, 31}, {13, 2000}, {0, 1024}, {0, 1040}, {1023, 2000}, {1024, 2000}, {1039, 2000}, {1040, 2000}} {
 			t.Run(fmt.Sprintf("%s/%d-%d", algorithm.name, span[0], span[1]), func(t *testing.T) {
 				withDeobfuscator(t, algorithm.href, algorithm.uri, span[0], span[1], func(clean, obfu []byte) {
 					assert.Equal(t, clean, obfu)
@@ -107,4 +107,34 @@ func TestDeobfuscatorUnknownAlgorithm(t *testing.T) {
 	withDeobfuscator(t, "deobfuscation/cut-cut.woff", "unknown algorithm", 0, 0, func(clean, obfu []byte) {
 		assert.Equal(t, clean, obfu)
 	})
+}
+
+func TestDeobfuscatorHidesObfuscatedFile(t *testing.T) {
+	ft := fetcher.NewFileFetcher("deobfuscation", "./testdata/deobfuscation")
+	link := manifest.Link{Href: manifest.MustNewHREFFromString("deobfuscation/cut-cut.obf.woff", false)}
+	plain := NewDeobfuscator(identifier).Transform(ft.Get(t.Context(), link))
+	assert.NotEmpty(t, plain.File(), "not obfuscated")
+
+	// The file holds the obfuscated bytes.
+	link.Properties = manifest.Properties{"encrypted": map[string]any{"algorithm": "http://www.idpf.org/2008/embedding"}}
+	obfuscated := NewDeobfuscator(identifier).Transform(ft.Get(t.Context(), link))
+	assert.Empty(t, obfuscated.File())
+}
+
+func TestDeobfuscatorNegativeStart(t *testing.T) {
+	// The key was applied from the negative start, misaligned with the
+	// bytes of the resource, which start at 0.
+	withDeobfuscator(t, "deobfuscation/cut-cut.obf.woff", "http://www.idpf.org/2008/embedding", -5, 50, func(clean, obfu []byte) {
+		assert.Equal(t, clean, obfu)
+	})
+}
+
+func TestInvalidAdobeIdentifierBeforeStreaming(t *testing.T) {
+	link := manifest.Link{Properties: manifest.Properties{"encrypted": map[string]any{"algorithm": "http://ns.adobe.com/pdf/enc#RC"}}}
+	src := fetcher.NewBytesResource(link, func() []byte { t.Fatal("source opened before validating its font key"); return nil })
+	r := NewDeobfuscator("unused").Transform(src)
+	var out bytes.Buffer
+	_, err := r.Stream(t.Context(), &out, 0, 0)
+	require.NotNil(t, err)
+	assert.Empty(t, out.Bytes())
 }

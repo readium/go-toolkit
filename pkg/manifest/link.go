@@ -34,6 +34,27 @@ func (l Link) URL(base url.URL, parameters map[string]string) url.URL {
 	return l.Href.Resolve(base, parameters)
 }
 
+// ParseLinkHREF parses the href of a link of a manifest, as [LinkFromJSON]
+// does: a URL template when it is templated, or a URL, which may also be
+// given as a decoded path, e.g. a filename holding a literal "%".
+func ParseLinkHREF(href string, templated bool) (HREF, error) {
+	if templated {
+		h, err := NewHREFFromString(href, true)
+		if err != nil {
+			return HREF{}, errors.Wrap(err, "failed unmarshalling 'href' as URL template")
+		}
+		return h, nil
+	}
+	u, err := url.URLFromString(href)
+	if err != nil {
+		u, err = url.URLFromDecodedPath(href)
+		if err != nil {
+			return HREF{}, errors.Wrap(err, "failed unmarshalling 'href' as URL")
+		}
+	}
+	return NewHREF(u), nil
+}
+
 // Creates an [Link] from its RWPM JSON representation.
 func LinkFromJSON(rawJson map[string]any) (*Link, error) {
 	if rawJson == nil {
@@ -46,23 +67,9 @@ func LinkFromJSON(rawJson map[string]any) (*Link, error) {
 		return nil, errors.New("'href' is required in link")
 	}
 
-	templated := parseOptBool(rawJson["templated"])
-	var href HREF
-	var err error
-	if templated {
-		href, err = NewHREFFromString(rawHref, templated)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed unmarshalling 'href' as URL template")
-		}
-	} else {
-		u, err := url.URLFromString(rawHref)
-		if err != nil {
-			u, err = url.URLFromDecodedPath(rawHref)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed unmarshalling 'href' as URL")
-			}
-		}
-		href = NewHREF(u)
+	href, err := ParseLinkHREF(rawHref, parseOptBool(rawJson["templated"]))
+	if err != nil {
+		return nil, err
 	}
 
 	link := &Link{

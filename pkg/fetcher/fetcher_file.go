@@ -12,13 +12,17 @@ import (
 	"sync"
 	"weak"
 
+	"github.com/readium/go-toolkit/pkg/internal/byterange"
+	"github.com/readium/go-toolkit/pkg/internal/rootfs"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 )
 
 // Provides access to resources on the local file system.
 type FileFetcher struct {
-	paths     map[string]string
+	paths map[string]string
+
+	mu        sync.Mutex // guards resources, which concurrent Gets append to
 	resources []weak.Pointer[FileResource]
 }
 
@@ -45,7 +49,20 @@ func (f *FileFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 			}
 
 			rel := strings.TrimPrefix(strings.TrimPrefix(apath, xpath), string(filepath.Separator))
-			href, err := manifest.NewHREFFromString(filepath.ToSlash(filepath.Join(href, rel)), false)
+			open := func() (*os.File, error) { return os.Open(apath) }
+			if rel != "" {
+				// Only regular files of the directory are listed. Symbolic
+				// links could lead to any file of the system, and named
+				// pipes would block reads.
+				switch {
+				case d.Type().IsRegular():
+				case d.Type()&fs.ModeSymlink != 0 && rootfs.IsRegular(xpath, rel):
+				default:
+					return nil
+				}
+				open = func() (*os.File, error) { return rootfs.Open(xpath, rel) }
+			}
+			href, err := fileHREF(filepath.ToSlash(filepath.Join(href, rel)))
 			if err != nil {
 				return err
 			}
@@ -53,7 +70,7 @@ func (f *FileFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 				Href: href,
 			}
 
-			f, err := os.Open(apath)
+			f, err := open()
 			if err == nil {
 				defer f.Close()
 				mt := mediatype.OfFileOnly(ctx, f)
@@ -79,14 +96,16 @@ func (f *FileFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
 	return links, nil
 }
 
+// Exhaustive implements [Exhaustive]: the links are the files of the
+// directories, walked recursively.
+func (f *FileFetcher) Exhaustive() bool { return true }
+
 // Get implements Fetcher
 func (f *FileFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	// use decoded path for local file lookup to support files with spaces and special characters
-	var linkHref string
-	if hrefURL := link.Href.Resolve(nil, nil); hrefURL != nil {
-		linkHref = hrefURL.Path()
-	} else {
-		linkHref = link.Href.String()
+	linkHref, ok := localPath(link)
+	if !ok {
+		return NewFailureResource(link, NotFound(errNotLocal))
 	}
 	for itemHref, itemFile := range f.paths {
 		if after, ok := strings.CutPrefix(linkHref, itemHref); ok {
@@ -103,11 +122,24 @@ func (f *FileFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 			// The path must be [itemFile] itself, or sit below it beyond a separator:
 			// a plain prefix check would let "dir-other" pass as a descendant of "dir".
 			sep := string(filepath.Separator)
-			if rapath == iapath || strings.HasPrefix(rapath, strings.TrimSuffix(iapath, sep)+sep) {
-				resource := NewFileResource(link, resourceFile)
-				f.resources = append(f.resources, weak.Make(resource))
-				return resource
+			var resource *FileResource
+			if rapath == iapath {
+				resource = NewFileResource(link, resourceFile)
+			} else if strings.HasPrefix(rapath, strings.TrimSuffix(iapath, sep)+sep) {
+				name, err := filepath.Rel(iapath, rapath)
+				if err != nil {
+					continue
+				}
+				// Opened within the directory, so that symbolic links can't
+				// lead outside of it.
+				resource = &FileResource{link: link, path: resourceFile, root: iapath, name: name}
+			} else {
+				continue
 			}
+			f.mu.Lock()
+			f.resources = append(f.resources, weak.Make(resource))
+			f.mu.Unlock()
+			return resource
 		}
 	}
 	return NewFailureResource(link, NotFound(errors.New("couldn't find "+linkHref+" in FileFetcher paths")))
@@ -115,13 +147,16 @@ func (f *FileFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 
 // Close implements Fetcher
 func (f *FileFetcher) Close() {
+	f.mu.Lock()
+	resources := f.resources
+	f.resources = nil
+	f.mu.Unlock()
 	// Safety mechanism to cleanup any os.File handles still open
-	for _, res := range f.resources {
+	for _, res := range resources {
 		if r := res.Value(); r != nil {
 			r.Close()
 		}
 	}
-	f.resources = nil
 }
 
 func NewFileFetcher(href string, fpath string) *FileFetcher {
@@ -133,9 +168,14 @@ func NewFileFetcher(href string, fpath string) *FileFetcher {
 type FileResource struct {
 	link manifest.Link
 	path string
+	// root is the directory of the fetcher the file is opened within, and
+	// name its path relative to it, when the file is below one.
+	root string
+	name string
 
-	mu   sync.Mutex // guards lazily opening and closing file
+	mu   sync.Mutex // guards lazily opening and closing file, and pin
 	file *os.File
+	pin  fs.FileInfo // the file the resource is pinned to, if any
 }
 
 // Link implements Resource
@@ -157,9 +197,80 @@ func (r *FileResource) Close() {
 	}
 }
 
-// File implements Resource
+// File implements Resource. It is empty when the file is a symbolic link
+// leading outside of the directory of the fetcher, or not a regular file. It
+// is empty for a resource pinned to a file as well: the file its path names
+// may be another one, which consumers opening it would serve instead.
 func (r *FileResource) File() string {
+	r.mu.Lock()
+	pinned := r.pin != nil
+	r.mu.Unlock()
+	if pinned || (r.root != "" && !rootfs.IsRegular(r.root, r.name)) {
+		return ""
+	}
 	return r.path
+}
+
+// FileInfo implements FileBacked
+func (r *FileResource) FileInfo() (fs.FileInfo, error) {
+	if r.root != "" {
+		return rootfs.Stat(r.root, r.name)
+	}
+	return os.Stat(r.path)
+}
+
+// PinFile implements FilePinner
+func (r *FileResource) PinFile(info fs.FileInfo) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.pin = info
+	// A file opened before may be another one.
+	if r.file != nil {
+		_ = r.file.Close()
+		r.file = nil
+	}
+	return nil
+}
+
+// openFile opens the file of the resource, which must be a regular file. A
+// file below a directory of the fetcher is opened within it: symbolic links
+// can't lead outside of it. When the resource is pinned to a file, given as
+// pin, the opened file must be that one.
+func (r *FileResource) openFile(pin fs.FileInfo) (*os.File, *ResourceError) {
+	var f *os.File
+	var err error
+	if r.root != "" {
+		f, err = rootfs.Open(r.root, r.name)
+	} else {
+		f, err = openRegular(r.path)
+	}
+	if err != nil {
+		if errors.Is(err, rootfs.ErrNotRegular) {
+			return nil, NotFound(err)
+		}
+		return nil, OsErrorToException(err)
+	}
+	if pin != nil {
+		fi, err := f.Stat()
+		if err != nil || !os.SameFile(pin, fi) {
+			_ = f.Close()
+			return nil, Forbidden(ErrFileChanged)
+		}
+	}
+	return f, nil
+}
+
+// openRegular opens a regular file, refusing others before opening them:
+// opening a named pipe blocks until something writes to it.
+func openRegular(path string) (*os.File, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !fi.Mode().IsRegular() {
+		return nil, &fs.PathError{Op: "open", Path: path, Err: rootfs.ErrNotRegular}
+	}
+	return os.Open(path)
 }
 
 // open returns the lazily-opened file handle. The returned *os.File is only
@@ -171,16 +282,9 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 	if r.file != nil {
 		return r.file, nil
 	}
-	f, err := os.Open(r.path)
-	if err != nil {
-		return nil, OsErrorToException(err)
-	}
-	stat, err := f.Stat()
-	if err != nil {
-		return nil, Other(err)
-	}
-	if stat.IsDir() {
-		return nil, NotFound(errors.New("is a directory"))
+	f, rerr := r.openFile(r.pin)
+	if rerr != nil {
+		return nil, rerr
 	}
 	r.file = f
 	runtime.AddCleanup(r, func(f *os.File) {
@@ -192,11 +296,9 @@ func (r *FileResource) open() (*os.File, *ResourceError) {
 // Read implements Resource. Ranged reads (end > 0) are safe for concurrent use.
 func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
 	defer runtime.KeepAlive(r)
-	if end < start {
+	start, valid := byterange.Normalize(start, end)
+	if !valid {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
-	}
-	if start < 0 {
-		start = 0
 	}
 	f, ex := r.open()
 	if ex != nil {
@@ -214,6 +316,16 @@ func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte
 		}
 		return data[:n], nil
 	}
+	// Ranges are allocated, so they are clamped to the file first: callers
+	// may ask for more than there is.
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, Other(err)
+	}
+	if start >= fi.Size() {
+		return []byte{}, nil
+	}
+	end = min(end, fi.Size()-1)
 	data := make([]byte, end-start+1)
 	n, err := f.ReadAt(data, start)
 	if err != nil && err != io.EOF {
@@ -224,12 +336,10 @@ func (r *FileResource) Read(ctx context.Context, start int64, end int64) ([]byte
 
 // Stream implements Resource
 func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
-	if end < start {
+	start, valid := byterange.Normalize(start, end)
+	if !valid {
 		err := RangeNotSatisfiable(errors.New("end of range smaller than start"))
 		return -1, err
-	}
-	if start < 0 {
-		start = 0
 	}
 	// Streaming uses a private handle per call: the offset-based access below
 	// never contends with concurrent streams of the same resource, and the
@@ -237,18 +347,14 @@ func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end
 	// *io.LimitedReader, which the runtime unwraps), preserving the kernel
 	// sendfile fast path when w is a network connection. An io.SectionReader
 	// here would force a userspace copy loop.
-	f, err := os.Open(r.path)
-	if err != nil {
-		return -1, OsErrorToException(err)
+	r.mu.Lock()
+	pin := r.pin
+	r.mu.Unlock()
+	f, rerr := r.openFile(pin)
+	if rerr != nil {
+		return -1, rerr
 	}
 	defer f.Close()
-	fi, err := f.Stat()
-	if err != nil {
-		return -1, Other(err)
-	}
-	if fi.IsDir() {
-		return -1, NotFound(errors.New("is a directory"))
-	}
 	if start == 0 && end == 0 {
 		n, err := io.Copy(w, f)
 		if err != nil {
@@ -259,7 +365,7 @@ func (r *FileResource) Stream(ctx context.Context, w io.Writer, start int64, end
 	if _, err := f.Seek(start, io.SeekStart); err != nil {
 		return -1, Other(err)
 	}
-	n, err := io.CopyN(w, f, end-start+1)
+	n, err := io.CopyN(w, f, byterange.Length(start, end))
 	if err != nil && err != io.EOF {
 		return n, Other(err)
 	}

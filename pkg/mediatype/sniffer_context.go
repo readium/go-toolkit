@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/readium/go-toolkit/pkg/archive"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/util/url"
 	"golang.org/x/text/encoding"
 )
@@ -198,7 +199,14 @@ func (s *SnifferContext) Close() {
 
 var errClosedSnifferContext = errors.New("the sniffing context is closed")
 
-// Content parsed as generic JSON interface.
+// MaxDocumentSize is the size limit of the documents decoded to sniff a media
+// type: JSON content, and archive entries such as manifest.json. It is the
+// size limit of the manifests the parsers read (manifest.MaxManifestSize),
+// so that legitimate ones are recognized.
+const MaxDocumentSize = extensions.MaxDocumentSize
+
+// Content parsed as generic JSON interface. Content larger than
+// MaxDocumentSize is not taken for JSON.
 func (s SnifferContext) ContentAsJSON() map[string]any {
 	if !s._loadedContentAsJSON {
 		s._loadedContentAsJSON = true
@@ -207,7 +215,7 @@ func (s SnifferContext) ContentAsJSON() map[string]any {
 			return nil // No stream
 		}
 		var jd map[string]any
-		err := json.NewDecoder(stream).Decode(&jd)
+		err := json.NewDecoder(io.LimitReader(stream, MaxDocumentSize)).Decode(&jd)
 		if err != nil {
 			return nil
 		}
@@ -291,7 +299,9 @@ func (s *SnifferContext) ContainsArchiveEntryAt(ctx context.Context, path string
 	return true
 }
 
-// Returns the Archive entry data at the given [path] in this file.
+// Returns the Archive entry data at the given [path] in this file, or nil
+// when it can't be read or is larger than MaxDocumentSize, whatever size the
+// entry declares.
 func (s *SnifferContext) ReadArchiveEntryAt(ctx context.Context, path string) []byte {
 	a, err := s.ContentAsArchive(ctx)
 	if err != nil {
@@ -301,11 +311,14 @@ func (s *SnifferContext) ReadArchiveEntryAt(ctx context.Context, path string) []
 	if err != nil {
 		return nil
 	}
-	data, err := f.Read(0, 0)
-	if err != nil {
+	w := &extensions.LimitedBuffer{Limit: MaxDocumentSize}
+	if _, err := f.Stream(w, 0, 0); err != nil || w.Exceeded {
 		return nil
 	}
-	return data
+	if w.Bytes() == nil {
+		return []byte{}
+	}
+	return w.Bytes()
 }
 
 func (s SnifferContext) ArchiveEntriesAllSatisfy() bool {

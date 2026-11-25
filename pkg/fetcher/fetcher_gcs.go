@@ -5,13 +5,16 @@ package fetcher
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"path"
+	"slices"
 	"strings"
 	"sync"
 
 	"cloud.google.com/go/storage"
+	"github.com/readium/go-toolkit/pkg/internal/byterange"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
@@ -24,6 +27,7 @@ type GCSFetcher struct {
 	client *storage.Client
 	handle *storage.ObjectHandle
 
+	linksMu     sync.Mutex // guards cachedLinks
 	cachedLinks manifest.LinkList
 
 	// attrsCache shares object metadata (object name -> *storage.ObjectAttrs)
@@ -44,100 +48,98 @@ func NewGCSFetcher(href string, client *storage.Client, handle *storage.ObjectHa
 	}
 }
 
+// Exhaustive implements [Exhaustive]: the links are every object under the
+// name prefix.
+func (f *GCSFetcher) Exhaustive() bool { return true }
+
 // Links implements Fetcher
+//
+// Every object under the name prefix is listed, recursively rather than
+// folder by folder, up to maxListedObjects. Callers get their own copy of the
+// cached listing.
 func (f *GCSFetcher) Links(ctx context.Context) (manifest.LinkList, error) {
+	f.linksMu.Lock()
+	defer f.linksMu.Unlock()
 	if len(f.cachedLinks) > 0 {
-		return f.cachedLinks, nil
+		return slices.Clone(f.cachedLinks), nil
 	}
 
-	prefix := f.handle.ObjectName()
-	if !strings.HasSuffix(prefix, "/") {
-		prefix += "/"
-	}
+	prefix := listingPrefix(f.handle.ObjectName())
 
-	// List all items in the "folder"
+	// List all items in the "folder", including those of its subfolders:
+	// without a delimiter, the listing isn't split into prefixes.
 	it := f.client.Bucket(f.handle.BucketName()).Objects(ctx, &storage.Query{
-		Prefix:    prefix,
-		Delimiter: "/",
+		Prefix: prefix,
 	})
-	it.PageInfo().MaxSize = 1000 // Should be enough. We can see about increasing this based on implementer feedback.
-	itemAttrs, err := it.Next()
-	if err == nil {
-		f.cachedLinks = make(manifest.LinkList, 0, it.PageInfo().Remaining()+1)
-		processItem := func(item *storage.ObjectAttrs) error {
-			if item.Size == 0 {
-				return nil
-			}
-
-			href, err := manifest.NewHREFFromString(path.Join(f.href, strings.TrimPrefix(item.Name, prefix)), false)
-			if err != nil {
-				return err
-			}
-			link := manifest.Link{
-				Href: href,
-			}
-
-			ext := path.Ext(item.Name)
-			if ext != "" {
-				mt := mediatype.OfExtension(ext[1:])
-				if mt != nil {
-					link.MediaType = mt
-				}
-			}
-			f.cachedLinks = append(f.cachedLinks, link)
-			return nil
-		}
-		if err := processItem(itemAttrs); err != nil {
+	it.PageInfo().MaxSize = 1000 // per page
+	var links manifest.LinkList
+	listed := 0
+	for {
+		item, err := it.Next()
+		if err == iterator.Done {
+			break
+		} else if err != nil {
 			return nil, err
 		}
-		for {
-			itemAttrs, err = it.Next()
-			if err == iterator.Done {
-				break
-			} else if err != nil {
-				return nil, err
+		if listed++; listed > maxListedObjects {
+			return nil, fmt.Errorf("more than %d objects under %s", maxListedObjects, prefix)
+		}
+		if item.Prefix != "" {
+			continue
+		}
+		rel, ok, err := objectPath(item.Name, prefix)
+		if err != nil {
+			return nil, err
+		} else if !ok {
+			continue
+		}
+		href, err := fileHREF(path.Join(f.href, rel))
+		if err != nil {
+			return nil, err
+		}
+		link := manifest.Link{Href: href}
+		if ext := path.Ext(item.Name); ext != "" {
+			if mt := mediatype.OfExtension(ext[1:]); mt != nil {
+				link.MediaType = mt
 			}
-			if err := processItem(itemAttrs); err != nil {
-				return nil, err
-			}
 		}
-	} else if err == iterator.Done {
-		// Empty directory
-		if strings.HasSuffix(f.handle.ObjectName(), "/") {
-			return f.cachedLinks, nil
-		}
-
-		ext := path.Ext(f.handle.ObjectName())
-		if ext != "" {
-			ext = ext[1:]
-		}
-		mt := mediatype.OfExtension(ext)
-		if mt == nil {
-			mt = &mediatype.Binary
-		}
-
-		// Not a directory, just a single file
-		f.cachedLinks = manifest.LinkList{{
-			Href:      manifest.NewHREF(url.MustURLFromString(f.href)),
-			MediaType: mt,
-		}}
-	} else {
-		// Something else than EOF
-		return nil, err
+		links = append(links, link)
 	}
 
-	return f.cachedLinks, nil
+	if listed > 0 {
+		f.cachedLinks = links
+		return slices.Clone(f.cachedLinks), nil
+	}
+
+	// Empty directory
+	if f.handle.ObjectName() == "" || strings.HasSuffix(f.handle.ObjectName(), "/") {
+		return nil, nil
+	}
+
+	ext := path.Ext(f.handle.ObjectName())
+	if ext != "" {
+		ext = ext[1:]
+	}
+	mt := mediatype.OfExtension(ext)
+	if mt == nil {
+		mt = &mediatype.Binary
+	}
+
+	// Not a directory, just a single file
+	f.cachedLinks = manifest.LinkList{{
+		Href:      manifest.NewHREF(url.MustURLFromString(f.href)),
+		MediaType: mt,
+	}}
+	return slices.Clone(f.cachedLinks), nil
 }
 
 // Get implements Fetcher
 func (f *GCSFetcher) Get(ctx context.Context, link manifest.Link) Resource {
 	// Use the decoded path for the object lookup: GCS object names are raw strings, so a
 	// percent-encoded HREF would never match, and queries/fragments don't belong in names.
-	var linkHref string
-	if hrefURL := link.Href.Resolve(nil, nil); hrefURL != nil {
-		linkHref = hrefURL.Path()
-	} else {
-		linkHref = link.Href.String()
+	linkHref, ok := localPath(link)
+	if !ok {
+		return NewFailureResource(link, NotFound(errNotLocal))
 	}
 	if after, ok := strings.CutPrefix(linkHref, f.href); ok {
 		resourceFile := path.Join(f.handle.ObjectName(), after)
@@ -208,7 +210,8 @@ func (r *gcsResource) attrs(ctx context.Context) (*storage.ObjectAttrs, *Resourc
 
 // Read implements Resource
 func (r *gcsResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
-	if end < start {
+	start, valid := byterange.Normalize(start, end)
+	if !valid {
 		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
 
@@ -217,7 +220,7 @@ func (r *gcsResource) Read(ctx context.Context, start int64, end int64) ([]byte,
 	if start == 0 && end == 0 {
 		rdr, err = r.handle.NewReader(ctx)
 	} else {
-		rdr, err = r.handle.NewRangeReader(ctx, start, end-start+1)
+		rdr, err = r.handle.NewRangeReader(ctx, start, byterange.Length(start, end))
 	}
 	if err != nil {
 		return nil, gcsErrorToException(err)
@@ -239,7 +242,8 @@ func (r *gcsResource) Read(ctx context.Context, start int64, end int64) ([]byte,
 
 // Stream implements Resource
 func (r *gcsResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
-	if end < start {
+	start, valid := byterange.Normalize(start, end)
+	if !valid {
 		return -1, RangeNotSatisfiable(errors.New("end of range smaller than start"))
 	}
 
@@ -248,7 +252,7 @@ func (r *gcsResource) Stream(ctx context.Context, w io.Writer, start int64, end 
 	if start == 0 && end == 0 {
 		rdr, err = r.handle.NewReader(ctx)
 	} else {
-		rdr, err = r.handle.NewRangeReader(ctx, start, end-start+1)
+		rdr, err = r.handle.NewRangeReader(ctx, start, byterange.Length(start, end))
 	}
 	if err != nil {
 		return -1, gcsErrorToException(err)

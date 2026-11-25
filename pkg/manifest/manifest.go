@@ -228,14 +228,24 @@ func (m Manifest) LocatorFromLink(link Link) *Locator {
 	return l
 }
 
+// MaxManifestSize is the size limit of the Readium Web Publication Manifests
+// read into memory, far above the size of legitimate ones (manifests listing
+// thousands of resources weigh a few megabytes), so that a crafted
+// publication can't exhaust the memory.
+const MaxManifestSize = extensions.MaxDocumentSize
+
 // Parses a [Manifest] from its RWPM JSON representation.
+//
+// Unlike the parsers of the objects it holds, which return nil for a nil
+// object, it returns an error: a manifest is never optional, and a nil one is
+// e.g. the JSON document "null".
 //
 // TODO log [warnings] ?
 // https://readium.org/webpub-manifest/
 // https://readium.org/webpub-manifest/schema/publication.schema.json
 func ManifestFromJSON(rawJson map[string]any, packaged bool) (*Manifest, error) {
 	if rawJson == nil {
-		return nil, nil
+		return nil, errors.New("manifest is not a JSON object")
 	}
 
 	// Parse links
@@ -361,6 +371,11 @@ func ManifestFromJSON(rawJson map[string]any, packaged bool) (*Manifest, error) 
 }
 
 func (m *Manifest) UnmarshalJSON(b []byte) error {
+	// JSON null leaves the manifest as it is, as encoding/json does for the
+	// types it decodes itself.
+	if string(b) == "null" {
+		return nil
+	}
 	var object map[string]any
 	err := json.Unmarshal(b, &object)
 	if err != nil {

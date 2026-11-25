@@ -17,7 +17,7 @@ import (
 )
 
 // coverHref is the synthetic HREF under which an extracted cover image is served.
-const coverHref = "~readium/cover"
+const coverHref = pub.ServiceHrefPrefix + "cover"
 
 // coverServiceFactory builds a [pub.ServiceFactory] serving the cover image
 // embedded in an audio file's tags. It returns nil when there is no usable

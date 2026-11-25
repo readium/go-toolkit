@@ -63,10 +63,18 @@ func BenchmarkEPUBStages(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
+			navigation, err := parseNavigationData(ctx, *pkg, f)
+			if err != nil {
+				b.Fatal(err)
+			}
+			displayOptions, err := parseDisplayOptions(ctx, f)
+			if err != nil {
+				b.Fatal(err)
+			}
 			factory := PublicationFactory{
 				FallbackTitle: filepath.Base(path), PackageDocument: *pkg,
-				NavigationData: parseNavigationData(ctx, *pkg, f),
-				EncryptionData: encryption, DisplayOptions: parseDisplayOptions(ctx, f),
+				NavigationData: navigation,
+				EncryptionData: encryption, DisplayOptions: displayOptions,
 			}
 			b.Run("ArchiveOpen", func(b *testing.B) {
 				b.ReportAllocs()

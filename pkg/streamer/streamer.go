@@ -14,6 +14,7 @@ import (
 	"github.com/readium/go-toolkit/pkg/parser/image"
 	"github.com/readium/go-toolkit/pkg/parser/pdf"
 	"github.com/readium/go-toolkit/pkg/parser/webpub"
+	"github.com/readium/go-toolkit/pkg/protection"
 	"github.com/readium/go-toolkit/pkg/pub"
 )
 
@@ -34,20 +35,22 @@ type Streamer struct {
 	httpClient          *http.Client
 	onCreatePublication OnCreatePublicationFunc
 	addServicelinks     bool
+	contentProtections  []protection.ContentProtection
 }
 
 type OnCreatePublicationFunc func(builder *pub.Builder) error
 
 type Config struct {
-	Parsers              []parser.PublicationParser // Parsers used to open a publication, in addition to the default parsers.
-	IgnoreDefaultParsers bool                       // When true, only parsers provided in parsers will be used.
-	InferA11yMetadata    InferA11yMetadata          // When not empty, additional accessibility metadata will be infered from the manifest.
-	InferPageCount       bool                       // When true, will infer `metadata.numberOfPages` from the generated position list.
-	InferIgnoredImages   manifest.HashList          // An optional list of hashes of images, to use in finding images that can be ignored when inferring accessibility metadata.
-	ArchiveFactory       archive.ArchiveFactory     // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
-	HttpClient           *http.Client               // Service performing HTTP requests.
-	OnCreatePublication  OnCreatePublicationFunc    // Called on every parsed [pub.Builder]. It can be used to modify the manifest, the root container or the list of service factories of a [pub.Publication]
-	AddServiceLinks      bool                       // When true, services will add their links to the publication manifest. This can also be adjusted for individual services in `OnCreatePublication`
+	Parsers              []parser.PublicationParser     // Parsers used to open a publication, in addition to the default parsers.
+	IgnoreDefaultParsers bool                           // When true, only parsers provided in parsers will be used.
+	InferA11yMetadata    InferA11yMetadata              // When not empty, additional accessibility metadata will be infered from the manifest.
+	InferPageCount       bool                           // When true, will infer `metadata.numberOfPages` from the generated position list.
+	InferIgnoredImages   manifest.HashList              // An optional list of hashes of images, to use in finding images that can be ignored when inferring accessibility metadata.
+	ArchiveFactory       archive.ArchiveFactory         // Opens an archive (e.g. ZIP, RAR), optionally protected by credentials.
+	HttpClient           *http.Client                   // Service performing HTTP requests.
+	OnCreatePublication  OnCreatePublicationFunc        // Called on every parsed [pub.Builder]. It can be used to modify the manifest, the root container or the list of service factories of a [pub.Publication]
+	AddServiceLinks      bool                           // When true, services will add their links to the publication manifest. This can also be adjusted for individual services in `OnCreatePublication`
+	ContentProtections   []protection.ContentProtection // Unlock protected publications, e.g. with LCP, using the credentials given to [Streamer.Open]. The first one recognizing a publication's protection unlocks it.
 }
 
 type InferA11yMetadata uint8
@@ -63,7 +66,7 @@ const (
 	InferA11yMetadataSplit
 )
 
-func New(config Config) Streamer { // TODO contentProtections
+func New(config Config) Streamer {
 	if config.HttpClient == nil {
 		config.HttpClient = http.DefaultClient // TODO: better default HTTP client
 	}
@@ -92,6 +95,7 @@ func New(config Config) Streamer { // TODO contentProtections
 		httpClient:          config.HttpClient,
 		onCreatePublication: config.OnCreatePublication,
 		addServicelinks:     config.AddServiceLinks,
+		contentProtections:  config.ContentProtections,
 	}
 }
 
@@ -104,7 +108,21 @@ func (s Streamer) Open(ctx context.Context, a asset.PublicationAsset, credential
 		return nil, err
 	}
 
-	// TODO contentProtections/protectedAsset
+	var protected *protection.ProtectedAsset
+	for _, cp := range s.contentProtections {
+		pa, err := cp.Open(ctx, a, fetcher, credentials)
+		if err != nil {
+			fetcher.Close()
+			return nil, errors.Wrap(err, "failed unlocking protected asset")
+		}
+		if pa != nil {
+			protected = pa
+			if pa.Fetcher != nil {
+				fetcher = pa.Fetcher
+			}
+			break
+		}
+	}
 
 	var builder *pub.Builder
 	for _, parser := range s.parsers {
@@ -126,6 +144,13 @@ func (s Streamer) Open(ctx context.Context, a asset.PublicationAsset, credential
 	if s.addServicelinks {
 		for _, name := range builder.ServicesBuilder.Services() {
 			builder.ServicesBuilder.ExposeLinks(name)
+		}
+	}
+
+	if protected != nil && protected.OnCreatePublication != nil {
+		if err := protected.OnCreatePublication(builder); err != nil {
+			fetcher.Close()
+			return nil, errors.Wrap(err, "failed unlocking publication")
 		}
 	}
 

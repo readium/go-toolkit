@@ -24,7 +24,7 @@
     </CipherData>
     <EncryptionProperties xmlns="http://www.w3.org/2001/04/xmlenc#">
       <EncryptionProperty xmlns="http://www.w3.org/2001/04/xmlenc#">
-        <Compression xmlns="http://www.idpf.org/2016/encryption#compression" Method="4" OriginalLength="12914"></Compression>
+        <Compression xmlns="http://www.idpf.org/2016/encryption#compression" Method="0" OriginalLength="12914"></Compression>
       </EncryptionProperty>
     </EncryptionProperties>
   </EncryptedData>

@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net/http"
@@ -9,8 +10,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
+	"github.com/readium/go-toolkit/pkg/internal/byterange"
+	"github.com/readium/go-toolkit/pkg/internal/httprange"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/util/url"
@@ -35,7 +39,7 @@ func NewHTTPFetcher(href string, client *http.Client, url url.AbsoluteURL) *HTTP
 	return &HTTPFetcher{
 		href:   href,
 		client: client,
-		url:    url,
+		url:    url.Clone(),
 	}
 }
 
@@ -95,6 +99,11 @@ func (f *HTTPFetcher) Close() {
 	// No-op for HTTP
 }
 
+// Location implements [Located].
+func (r *httpResource) Location() url.AbsoluteURL {
+	return r.url.Clone()
+}
+
 // Creates a [Resource] serving the contents of the given HTTP(S) URL.
 func NewHTTPResource(link manifest.Link, client *http.Client, url url.AbsoluteURL) Resource {
 	if client == nil {
@@ -103,7 +112,8 @@ func NewHTTPResource(link manifest.Link, client *http.Client, url url.AbsoluteUR
 	return &httpResource{
 		link:   link,
 		client: client,
-		url:    url,
+		url:    url.Clone(),
+		sizes:  new(sync.Map),
 	}
 }
 
@@ -113,8 +123,8 @@ type httpResource struct {
 	client *http.Client
 	url    url.AbsoluteURL
 
-	cachedSize *int64
-	sizes      *sync.Map // Optional fetcher-shared size cache, see HTTPFetcher
+	pinned atomic.Bool
+	sizes  *sync.Map
 }
 
 // Link implements Resource
@@ -137,138 +147,119 @@ func (r *httpResource) File() string {
 	return ""
 }
 
+// PinLocation binds HEAD and GET to the checked URL, before any redirect is
+// followed. The caller's HTTP client is shared with unpinned resources.
+func (r *httpResource) PinLocation() (url.URL, error) {
+	r.pinned.Store(true)
+	return r.Location(), nil
+}
+
+func (r *httpResource) do(req *http.Request, pinned bool) (*http.Response, error) {
+	if !pinned {
+		return r.client.Do(req)
+	}
+	client := http.Client{
+		Transport:     r.client.Transport,
+		Jar:           r.client.Jar,
+		Timeout:       r.client.Timeout,
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+	return client.Do(req)
+}
+
 func (r *httpResource) size(ctx context.Context) (int64, *ResourceError) {
-	if r.cachedSize == nil && r.sizes != nil {
-		if v, ok := r.sizes.Load(r.url.String()); ok {
-			length := v.(int64)
-			r.cachedSize = &length
-		}
+	key := struct {
+		url    string
+		pinned bool
+	}{r.url.String(), r.pinned.Load()}
+	if v, ok := r.sizes.Load(key); ok {
+		return v.(int64), nil
 	}
-	if r.cachedSize == nil {
-		req, err := http.NewRequestWithContext(ctx, http.MethodHead, r.url.String(), nil)
-		if err != nil {
-			return 0, Other(err)
-		}
-		resp, err := r.client.Do(req)
-		if err != nil {
-			return 0, Other(err)
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return 0, httpStatusToException(resp.StatusCode)
-		}
-
-		// HTTP server *must* support byte range requests
-		arvs := resp.Header.Values("Accept-Ranges")
-		if !slices.Contains(arvs, "bytes") {
-			return 0, Other(errors.New("HTTP server does not support byte range requests"))
-		}
-
-		// HTTP server *must* return Content-Length header
-		lengthStr := resp.Header.Get("Content-Length")
-		if lengthStr == "" {
-			return 0, Other(errors.New("HTTP server did not return Content-Length header"))
-		}
-		length, err := strconv.ParseInt(lengthStr, 10, 64)
-		if err != nil {
-			return 0, Other(errors.Wrap(err, "failed to parse Content-Length header"))
-		}
-		r.cachedSize = &length
-		if r.sizes != nil {
-			r.sizes.Store(r.url.String(), length)
-		}
-	}
-	return *r.cachedSize, nil
-}
-
-// Read implements Resource
-func (r *httpResource) Read(ctx context.Context, start int64, end int64) ([]byte, *ResourceError) {
-	if end < start {
-		return nil, RangeNotSatisfiable(errors.New("end of range smaller than start"))
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.url.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, r.url.String(), nil)
 	if err != nil {
-		return nil, Other(err)
+		return 0, Other(err)
 	}
-
-	if start != 0 || end != 0 {
-		var sb strings.Builder
-		sb.WriteString("bytes=")
-		sb.WriteString(strconv.FormatInt(start, 10))
-		sb.WriteString("-")
-		if end > 0 {
-			sb.WriteString(strconv.FormatInt(end, 10))
-		}
-		req.Header.Set("Range", sb.String())
-	}
-	resp, err := r.client.Do(req)
+	resp, err := r.do(req, key.pinned)
 	if err != nil {
-		return nil, Other(err)
+		return 0, Other(err)
 	}
 	defer resp.Body.Close()
-
-	if (start == 0 && end == 0 && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent) || ((start != 0 || end != 0) && resp.StatusCode != http.StatusPartialContent) {
-		ex := httpStatusToException(resp.StatusCode)
-		if ex == nil {
-			return nil, Other(errors.New("unexpected HTTP status code: " + strconv.Itoa(resp.StatusCode)))
-		}
-		return nil, ex
+	if resp.StatusCode != http.StatusOK {
+		return 0, unexpectedHTTPStatus(resp.StatusCode)
 	}
-
-	var data []byte
-	if resp.ContentLength >= 0 {
-		data = make([]byte, resp.ContentLength)
-		_, err = io.ReadFull(resp.Body, data)
-	} else {
-		data, err = io.ReadAll(resp.Body)
+	if !slices.Contains(resp.Header.Values("Accept-Ranges"), "bytes") {
+		return 0, Other(errors.New("HTTP server does not support byte range requests"))
 	}
-	if err != nil {
-		return nil, Other(err)
+	if resp.ContentLength < 0 {
+		return 0, Other(errors.New("HTTP server did not return Content-Length"))
 	}
-	return data, nil
+	r.sizes.Store(key, resp.ContentLength)
+	return resp.ContentLength, nil
 }
 
-// Stream implements Resource
-func (r *httpResource) Stream(ctx context.Context, w io.Writer, start int64, end int64) (int64, *ResourceError) {
-	if end < start {
-		return -1, RangeNotSatisfiable(errors.New("end of range smaller than start"))
+func unexpectedHTTPStatus(status int) *ResourceError {
+	if ex := httpStatusToException(status); ex != nil {
+		return ex
 	}
+	return Other(errors.Errorf("unexpected HTTP status code: %d", status))
+}
 
+// Read implements Resource.
+func (r *httpResource) Read(ctx context.Context, start, end int64) ([]byte, *ResourceError) {
+	var data bytes.Buffer
+	if _, err := r.Stream(ctx, &data, start, end); err != nil {
+		return nil, err
+	}
+	return data.Bytes(), nil
+}
+
+// Stream implements Resource.
+func (r *httpResource) Stream(ctx context.Context, w io.Writer, start, end int64) (int64, *ResourceError) {
+	start, valid := byterange.Normalize(start, end)
+	if !valid {
+		return 0, RangeNotSatisfiable(errors.New("end of range smaller than start"))
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.url.String(), nil)
 	if err != nil {
-		return -1, Other(err)
+		return 0, Other(err)
 	}
-
-	if start != 0 || end != 0 {
-		var sb strings.Builder
-		sb.WriteString("bytes=")
-		sb.WriteString(strconv.FormatInt(start, 10))
-		sb.WriteString("-")
-		if end > 0 {
-			sb.WriteString(strconv.FormatInt(end, 10))
-		}
-		req.Header.Set("Range", sb.String())
+	ranged := start != 0 || end != 0
+	if ranged {
+		header := "bytes=" + strconv.FormatInt(start, 10) + "-" + strconv.FormatInt(end, 10)
+		req.Header.Set("Range", header)
 	}
-	resp, err := r.client.Do(req)
+	resp, err := r.do(req, r.pinned.Load())
 	if err != nil {
-		return -1, Other(err)
+		return 0, Other(err)
 	}
 	defer resp.Body.Close()
-
-	// A request without a Range header (whole resource) is answered with 200,
-	// a ranged request must be answered with 206.
-	if (start == 0 && end == 0 && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent) || ((start != 0 || end != 0) && resp.StatusCode != http.StatusPartialContent) {
-		ex := httpStatusToException(resp.StatusCode)
-		if ex == nil {
-			return -1, Other(errors.New("unexpected HTTP status code: " + strconv.Itoa(resp.StatusCode)))
+	var n int64
+	switch {
+	case resp.StatusCode == http.StatusPartialContent:
+		if !ranged {
+			end = -1
 		}
-		return -1, ex
+		length, errRange := httprange.Length(resp, start, end, -1)
+		if errRange != nil {
+			return 0, Other(errRange)
+		}
+		n, err = io.CopyN(w, resp.Body, length)
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+		if err == nil && resp.ContentLength < 0 {
+			var extra [1]byte
+			if _, eof := io.ReadFull(resp.Body, extra[:]); eof != io.EOF {
+				return n, Other(errors.New("HTTP response exceeds its range or has an invalid ending"))
+			}
+		}
+	case !ranged && resp.StatusCode == http.StatusOK:
+		n, err = io.Copy(w, resp.Body)
+	default:
+		return 0, unexpectedHTTPStatus(resp.StatusCode)
 	}
-
-	n, err := io.Copy(w, resp.Body)
 	if err != nil {
-		return -1, Other(err)
+		return n, Other(err)
 	}
 	return n, nil
 }

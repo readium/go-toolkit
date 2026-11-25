@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
+	"math"
 	"sync"
 	"time"
 
@@ -64,7 +65,7 @@ type remoteZIPAdapter struct {
 }
 
 func (r *remoteZIPAdapter) cacheAll() bool {
-	return r.rdr.Size() <= r.cacheAllThreshold
+	return r.rdr.Size() >= 0 && r.rdr.Size() <= min(r.cacheAllThreshold, int64(math.MaxInt))
 }
 
 // ReadAt implements io.ReaderAt
@@ -74,7 +75,19 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 	}
 
 	if len(p) == 0 {
-		return 0, errors.New("read into empty byte slice")
+		return 0, nil
+	}
+
+	length := r.rdr.Size()
+	if off >= length {
+		return 0, io.EOF
+	}
+	if int64(len(p)) > length-off {
+		n, err := r.ReadAt(p[:length-off], off)
+		if err == nil {
+			err = io.EOF
+		}
+		return n, err
 	}
 
 	// Limited amount of time to perform the read
@@ -88,11 +101,12 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 				return 0, err
 			}
 			defer rdr.Close()
-			r.completeBytes = make([]byte, r.rdr.Size())
-			n, err := io.ReadFull(rdr, r.completeBytes) // Read the entire object into memory
+			data := make([]byte, r.rdr.Size())
+			_, err = io.ReadFull(rdr, data) // Read the entire object into memory
 			if err != nil {
-				return n, err
+				return 0, err
 			}
+			r.completeBytes = data
 		}
 		// Perform ReadAt on the in-memory copy of the publication
 		return bytes.NewReader(r.completeBytes).ReadAt(p, off)
@@ -104,12 +118,18 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 		newOff := off - tailOffset
 
 		if newOff < 0 {
-			// The central directory is really long, we can't use the cached version
-			// Instead, we increase its size to include the requested offset
-			r.zipTail = nil
-			r.zipTailSize -= newOff
-			tailOffset = r.rdr.Size() - r.zipTailSize
-			newOff = off - tailOffset
+			// Earlier central-directory blocks can be arbitrarily far from the
+			// tail. Fetch just the bytes the ZIP reader requested.
+			rdr, err := r.rdr.ReadRange(ctx, off, int64(len(p)))
+			if err != nil {
+				return 0, err
+			}
+			n, readErr := io.ReadFull(rdr, p)
+			closeErr := rdr.Close()
+			if readErr != nil {
+				return n, readErr
+			}
+			return n, closeErr
 		}
 		if len(r.zipTail) > 0 {
 			n := copy(p, r.zipTail[newOff:newOff+int64(len(p))])
@@ -117,7 +137,7 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 		}
 		newZipTail := make([]byte, r.zipTailSize)
 
-		rdr, err := r.rdr.ReadRange(ctx, tailOffset, r.rdr.Size())
+		rdr, err := r.rdr.ReadRange(ctx, tailOffset, r.zipTailSize)
 		if err != nil {
 			return 0, err
 		}
@@ -213,6 +233,10 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 					filenameLength := binary.LittleEndian.Uint16(b[8:])
 					extraFieldLength := binary.LittleEndian.Uint16(b[10:])
 					useless := int64(extraFieldLength) + int64(filenameLength)
+					if useless > length-off-30 || int64(bodySize) > length-off-30-useless || int64(bodySize)+useless > int64(math.MaxInt) {
+						_ = rdr.Close()
+						return 0, io.ErrUnexpectedEOF
+					}
 					bodyOffset := off + 30 + useless
 
 					r.cacheMutex.RLock()
@@ -235,7 +259,7 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 
 						// Write to cache
 						r.cacheMutex.Lock()
-						if len(r.cachedRanges) >= int(r.cacheCountThreshold) {
+						if int64(len(r.cachedRanges)) >= r.cacheCountThreshold {
 							// Remove the oldest range
 							r.cachedRanges = r.cachedRanges[1:]
 						}
@@ -287,7 +311,7 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 			return n, err
 		}
 
-		if size > r.cacheSizeThreshold {
+		if size > r.cacheSizeThreshold || r.cacheCountThreshold <= 0 {
 			return n, nil // Too big to cache, just return
 		}
 	}
@@ -302,7 +326,7 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 		}
 	}
 	if !hasSameRange {
-		if len(r.cachedRanges) >= int(r.cacheCountThreshold) {
+		if int64(len(r.cachedRanges)) >= r.cacheCountThreshold {
 			// Remove the oldest range
 			r.cachedRanges = r.cachedRanges[1:]
 		}
@@ -311,7 +335,7 @@ func (r *remoteZIPAdapter) ReadAt(p []byte, off int64) (int, error) {
 			HeaderOffset: -1,
 			Offset:       off,
 			Size:         size,
-			Data:         p,
+			Data:         bytes.Clone(p),
 		})
 	}
 	r.cacheMutex.Unlock()
@@ -327,7 +351,7 @@ const maxDrainBytes = 4 << 10 // 4 KiB
 // entry serve it from memory instead of performing a new remote read.
 func (r *remoteZIPAdapter) cacheHeader(off int64, header [30]byte) {
 	r.cacheMutex.Lock()
-	if len(r.cachedRanges) >= int(r.cacheCountThreshold) {
+	if int64(len(r.cachedRanges)) >= r.cacheCountThreshold {
 		// Remove the oldest range
 		r.cachedRanges = r.cachedRanges[1:]
 	}
@@ -344,7 +368,9 @@ func (r *remoteZIPAdapter) makeReady() {
 }
 
 func (r *remoteZIPAdapter) Close() error {
-	clear(r.cachedRanges)
+	r.cacheMutex.Lock()
+	defer r.cacheMutex.Unlock()
+	r.cachedRanges = nil
 	return nil
 }
 
@@ -358,10 +384,8 @@ func newRemoteZIPAdapter(rdr RemoteArchiveReader, config RemoteArchiveConfig) *r
 		cacheSizeThreshold:  config.CacheSizeThreshold,
 		cacheCountThreshold: config.CacheCountThreshold,
 		cacheAllThreshold:   config.CacheAllThreshold,
-		zipTailSize:         65 * 1024, // 65KB
+		zipTailSize:         min(65*1024, rdr.Size()), // 65KB
 	}
-	if !r.cacheAll() {
-		r.cachedRanges = make([]readRange, 0, r.cacheCountThreshold)
-	}
+
 	return r
 }

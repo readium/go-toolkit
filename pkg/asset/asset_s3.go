@@ -123,8 +123,8 @@ func (a *S3Asset) CreateFetcher(ctx context.Context, dependencies Dependencies, 
 	if a.isDir != nil {
 		isDir = *a.isDir
 	} else {
-		if strings.HasSuffix(*obj.Key, "/") {
-			// Path ends in a slash, so it's a folder
+		if *obj.Key == "" || strings.HasSuffix(*obj.Key, "/") {
+			// The root of the bucket, or a path ending in a slash: a folder
 			isDir = true
 		} else {
 			// Not sure if it's a folder or a file, need to check

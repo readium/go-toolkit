@@ -8,11 +8,20 @@ import (
 	"github.com/pkg/errors"
 	"github.com/readium/go-toolkit/pkg/asset"
 	"github.com/readium/go-toolkit/pkg/fetcher"
+	"github.com/readium/go-toolkit/pkg/internal/extensions"
 	"github.com/readium/go-toolkit/pkg/manifest"
 	"github.com/readium/go-toolkit/pkg/mediatype"
 	"github.com/readium/go-toolkit/pkg/protection"
 	"github.com/readium/go-toolkit/pkg/pub"
+	"github.com/readium/go-toolkit/pkg/util/url"
 )
+
+// MaxDocumentSize is the size limit of the XML documents the parser reads
+// into memory: the container and package documents, navigation documents,
+// display options and media overlays. They are parsed into trees, from
+// packages which may inflate them a thousandfold, so the limit is far above
+// the size of legitimate ones.
+const MaxDocumentSize = extensions.MaxDocumentSize
 
 type Parser struct {
 	reflowablePositionsStrategy ReflowableStrategy
@@ -42,7 +51,9 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 
 	// Detect DRM
 
-	opfData, errx := f.Get(ctx, manifest.Link{Href: manifest.NewHREF(opfPath)}).Read(ctx, 0, 0)
+	opfRes := f.Get(ctx, manifest.Link{Href: manifest.NewHREF(opfPath)})
+	opfData, errx := fetcher.ReadResourceUpTo(ctx, opfRes, MaxDocumentSize)
+	opfRes.Close()
 	if errx != nil {
 		return nil, errx
 	}
@@ -68,12 +79,21 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 		return nil, errors.Wrap(err, "failed parsing encryption data")
 	}
 
+	navigationData, err := parseNavigationData(ctx, *packageDocument, f)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed reading the navigation document")
+	}
+	displayOptions, err := parseDisplayOptions(ctx, f)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed reading the display options")
+	}
+
 	manifest := PublicationFactory{
 		FallbackTitle:   fallbackTitle,
 		PackageDocument: *packageDocument,
-		NavigationData:  parseNavigationData(ctx, *packageDocument, f),
+		NavigationData:  navigationData,
 		EncryptionData:  encryptionData,
-		DisplayOptions:  parseDisplayOptions(ctx, f),
+		DisplayOptions:  displayOptions,
 	}.Create()
 
 	ffetcher := f
@@ -103,16 +123,64 @@ func (p Parser) Parse(ctx context.Context, asset asset.PublicationAsset, f fetch
 // already parsed for exactly this purpose.
 func parseEncryptionData(ctx context.Context, f fetcher.Fetcher, scheme string, doc *xmlquery.Node) (map[string]manifest.Encryption, error) {
 	if doc == nil {
-		var rerr *fetcher.ResourceError
-		doc, rerr = fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/encryption.xml", false)}))
-		if rerr != nil {
-			return nil, nil
+		// The detection of the protection doesn't read encryption.xml when
+		// there is an LCP license.
+		var err error
+		doc, err = readOptionalXML(ctx, f, manifest.MustNewHREFFromString(protection.PathEPUBEncryption, false))
+		if err != nil || doc == nil {
+			return nil, err
 		}
 	}
-	return ParseEncryption(doc, scheme), nil
+	// A resource declared several times takes all its declarations, as the
+	// LCP remux does, rather than its last one: an earlier one may bound its
+	// length. Its declarations are found by its ResourceID, whatever the
+	// spelling of their hrefs.
+	var data map[string]manifest.Encryption
+	for _, entry := range ParseEncryptionEntries(doc, scheme) {
+		if data == nil {
+			data = make(map[string]manifest.Encryption)
+		}
+		key := entry.Href
+		if u, err := url.URLFromString(entry.Href); err == nil {
+			key, _ = ResourceID(u)
+		}
+		prev, ok := data[key]
+		if !ok {
+			data[key] = entry.Encryption
+			continue
+		}
+		merged, err := protection.MergeEncryption(prev, entry.Encryption)
+		if err != nil {
+			return nil, errors.Errorf("%s is %v", entry.Href, err)
+		}
+		data[key] = merged
+	}
+	return data, nil
 }
 
-func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f fetcher.Fetcher) (ret map[string]manifest.LinkList) {
+// readXML reads an XML document of the container, up to MaxDocumentSize.
+func readXML(ctx context.Context, f fetcher.Fetcher, href manifest.HREF) (*xmlquery.Node, *fetcher.ResourceError) {
+	res := f.Get(ctx, manifest.Link{Href: href})
+	defer res.Close()
+	return fetcher.ReadResourceAsXMLUpTo(ctx, res, MaxDocumentSize)
+}
+
+// readOptionalXML reads an optional XML document of the container: it
+// returns nil, without error, when the document is missing or isn't valid
+// XML, but a document larger than MaxDocumentSize is an error rather than
+// silently ignored.
+func readOptionalXML(ctx context.Context, f fetcher.Fetcher, href manifest.HREF) (*xmlquery.Node, error) {
+	n, rerr := readXML(ctx, f, href)
+	if rerr != nil {
+		if errors.Is(rerr, fetcher.ErrResourceTooLarge) {
+			return nil, rerr
+		}
+		return nil, nil
+	}
+	return n, nil
+}
+
+func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f fetcher.Fetcher) (ret map[string]manifest.LinkList, err error) {
 	ret = make(map[string]manifest.LinkList)
 	if packageDocument.EPUBVersion < 3.0 {
 		var ncxItem *Item
@@ -134,9 +202,9 @@ func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f
 		if ncxItem == nil {
 			return
 		}
-		n, nerr := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(ncxItem.Href)}))
-		if nerr != nil {
-			return
+		n, nerr := readOptionalXML(ctx, f, manifest.NewHREF(ncxItem.Href))
+		if nerr != nil || n == nil {
+			return ret, nerr
 		}
 		ret = ParseNCX(n, ncxItem.Href)
 	} else {
@@ -152,23 +220,23 @@ func parseNavigationData(ctx context.Context, packageDocument PackageDocument, f
 		if navItem == nil {
 			return
 		}
-		n, errx := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.NewHREF(navItem.Href)}))
-		if errx != nil {
-			return
+		n, errx := readOptionalXML(ctx, f, manifest.NewHREF(navItem.Href))
+		if errx != nil || n == nil {
+			return ret, errx
 		}
 		ret = ParseNavDoc(n, navItem.Href)
 	}
 	return
 }
 
-func parseDisplayOptions(ctx context.Context, f fetcher.Fetcher) (ret map[string]string) {
+func parseDisplayOptions(ctx context.Context, f fetcher.Fetcher) (ret map[string]string, err error) {
 	ret = make(map[string]string)
-	displayOptionsXml, err := fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/com.apple.ibooks.display-options.xml", false)}))
-	if err != nil {
-		displayOptionsXml, err = fetcher.ReadResourceAsXML(ctx, f.Get(ctx, manifest.Link{Href: manifest.MustNewHREFFromString("META-INF/com.kobobooks.display-options.xml", false)}))
-		if err != nil {
-			return
-		}
+	displayOptionsXml, err := readOptionalXML(ctx, f, manifest.MustNewHREFFromString("META-INF/com.apple.ibooks.display-options.xml", false))
+	if err == nil && displayOptionsXml == nil {
+		displayOptionsXml, err = readOptionalXML(ctx, f, manifest.MustNewHREFFromString("META-INF/com.kobobooks.display-options.xml", false))
+	}
+	if err != nil || displayOptionsXml == nil {
+		return ret, err
 	}
 
 	if platform := displayOptionsXml.SelectElement("//platform"); platform != nil {

@@ -106,7 +106,7 @@ func (s *MediaOverlayService) GuideForResource(ctx context.Context, href string)
 	res := s.fetcher.Get(ctx, link)
 	defer res.Close()
 
-	n, rerr := fetcher.ReadResourceAsXML(ctx, res)
+	n, rerr := fetcher.ReadResourceAsXMLUpTo(ctx, res, MaxDocumentSize)
 	if rerr != nil {
 		return nil, rerr.Cause
 	}

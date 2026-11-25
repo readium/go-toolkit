@@ -51,6 +51,7 @@ func (e GCSArchiveFactory) Open(ctx context.Context, location url.URL, password 
 		zip:           r,
 		minimizeReads: true,
 		closer:        rdr.Close,
+		size:          attrs.Size,
 	}, nil
 }
 
