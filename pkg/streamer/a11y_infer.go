@@ -115,10 +115,12 @@ func inferA11yMetadataInPublicationManifest(ctx context.Context, pub *pub.Public
 			}
 		}
 
-		// Inferred visual if the publications contain a reference to an image
-		// or a video resource (inspect "resources" and "readingOrder" in
-		// RWPM).
-		for _, link := range allResources {
+		// Inferred visual if the reading order contains an image or a video
+		// resource (inspect "readingOrder" in RWPM). The ones which are only
+		// listed in the resources don't count: the manifest doesn't tell
+		// whether they're used at all, nor if they're a cover or decorative.
+		// Finding that out takes inspecting the documents which reference them.
+		for _, link := range mf.ReadingOrder {
 			if link.MediaType.IsBitmap() || link.MediaType.IsVideo() {
 				inferredA11y.AccessModes = append(inferredA11y.AccessModes, manifest.A11yAccessModeVisual)
 				break

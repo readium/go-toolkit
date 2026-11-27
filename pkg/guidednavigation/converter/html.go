@@ -57,15 +57,48 @@ func srcRelativeToHref(n *html.Node, base url.URL) url.URL {
 		return nil
 	}
 
-	if v := getAttr(n, "src"); v != "" {
-		if u, _ := url.URLFromString(v); u != nil {
-			if base == nil {
-				return u
-			}
-			return base.Resolve(u)
+	return refRelativeToHref(getAttr(n, "src"), base)
+}
+
+// Resolves a reference found in a document against the document's own href.
+func refRelativeToHref(ref string, base url.URL) url.URL {
+	if ref == "" {
+		return nil
+	}
+	u, _ := url.URLFromString(ref)
+	if u == nil {
+		return nil
+	}
+	if base == nil {
+		return u
+	}
+	return base.Resolve(u)
+}
+
+// The image an <svg> element embeds with an <image> child, if any. When there
+// are several, the first one in document order is returned.
+func svgImageRelativeToHref(svg *html.Node, base url.URL) url.URL {
+	image := childOfType(svg, atom.Image, true)
+	if image == nil {
+		return nil
+	}
+
+	// SVG 2 has a plain href attribute, which takes precedence over the older
+	// xlink:href. The XML parser keeps the prefix of the latter in the key, the
+	// HTML parser moves it to the namespace.
+	var href, xlinkHref string
+	for _, attr := range image.Attr {
+		switch {
+		case attr.Key == "href" && attr.Namespace == "":
+			href = attr.Val
+		case attr.Key == "xlink:href", attr.Key == "href" && attr.Namespace == "xlink":
+			xlinkHref = attr.Val
 		}
 	}
-	return nil
+	if href == "" {
+		href = xlinkHref
+	}
+	return refRelativeToHref(strings.TrimSpace(href), base)
 }
 
 // Get child elements of a certain type, with a maximum depth.
@@ -363,10 +396,27 @@ func WithTextRefLocators() Option {
 	}
 }
 
+// WithDecorativeImages keeps the images that are otherwise left out of the
+// output because they have nothing to say to someone listening to the document:
+//   - images marked as decorative with role="presentation" or role="none", which
+//     are emitted with the presentation role alone
+//   - images with an empty alt attribute and no other accessible name, which are
+//     emitted as any other image, without a description
+//
+// Only the former are explicitly decorative: an empty alt is common enough on
+// meaningful images that it can't be relied upon. This option is meant for
+// inspecting the images of a document rather than for reading it aloud.
+func WithDecorativeImages() Option {
+	return func(c *HTMLConverter) {
+		c.decorativeImages = true
+	}
+}
+
 type HTMLConverter struct {
-	baseLocator     manifest.Locator
-	xmlParsed       bool // Whether the tree comes from an XML parser (self-closing tags handled correctly).
-	textRefLocators bool // Whether every object with roles gets a textref locating its source element.
+	baseLocator      manifest.Locator
+	xmlParsed        bool // Whether the tree comes from an XML parser (self-closing tags handled correctly).
+	textRefLocators  bool // Whether every object with roles gets a textref locating its source element.
+	decorativeImages bool // Whether decorative images are emitted instead of skipped.
 
 	segments          []textSegment       // Closed segments of the text flow accumulated for the current block.
 	textAcc           strings.Builder     // Text of the currently open segment, with coalesced whitespace.
@@ -633,10 +683,13 @@ func (c *HTMLConverter) head(n *html.Node) {
 	roles := ExtractNodeRoles(n)
 
 	// Decorative images (role="presentation"/"none", or an explicitly empty alt
-	// with no other accessible name) are skipped entirely.
+	// with no other accessible name) are skipped entirely, unless they were
+	// asked for.
+	presentationalImage := false
 	if n.DataAtom == atom.Img || n.DataAtom == atom.Svg {
-		if slices.Contains(roles, guidednavigation.RolePresentation) ||
-			(aria == nil && hasAttr(n, "alt") && strings.TrimSpace(getAttr(n, "alt")) == "") {
+		presentationalImage = slices.Contains(roles, guidednavigation.RolePresentation)
+		if !c.decorativeImages && (presentationalImage ||
+			(aria == nil && hasAttr(n, "alt") && strings.TrimSpace(getAttr(n, "alt")) == "")) {
 			c.skipNode = true
 			return
 		}
@@ -706,10 +759,15 @@ func (c *HTMLConverter) head(n *html.Node) {
 		c.placeholder(n, tag, obj)
 		c.skipNode = true
 		return
-	case slices.Contains(roles, guidednavigation.RoleImage):
+	case slices.Contains(roles, guidednavigation.RoleImage), presentationalImage:
 		// Elements acting as images without being one, e.g. <span role="img"> or <svg>:
-		// their content is replaced by their accessible name.
+		// their content is replaced by their accessible name. A presentational
+		// <svg> lost its image role, and only gets here when decorative images are kept.
 		obj := guidednavigation.GuidedNavigationObject{Role: roles}
+		if n.DataAtom == atom.Svg {
+			// The image the SVG wraps, e.g. <svg><image href="..."/></svg>
+			obj.ImgRef = svgImageRelativeToHref(n, c.baseLocator.Href)
+		}
 		if aria != nil {
 			obj.Description = guidednavigation.GuidedNavigationDescription{Text: *aria}
 		}

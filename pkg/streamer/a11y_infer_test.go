@@ -53,11 +53,30 @@ func TestInferAuditoryAccessMode(t *testing.T) {
 	assertAccessMode(t, manifest.A11yAccessModeAuditory, "mpeg", mediatype.MPEGVideo)
 }
 
-// If the publications contains a reference to an image or a video resource
-// (inspect "resources" and "readingOrder" in RWPM)
+// If the reading order contains an image or a video resource (inspect
+// "readingOrder" in RWPM). The ones which are only listed in the resources are
+// not enough: the manifest doesn't tell how they're used.
 func TestInferVisualAccessMode(t *testing.T) {
-	assertAccessMode(t, manifest.A11yAccessModeVisual, "jpg", mediatype.JPEG)
-	assertAccessMode(t, manifest.A11yAccessModeVisual, "mpeg", mediatype.MPEGVideo)
+	for _, link := range []manifest.Link{
+		newLink(mediatype.JPEG, "jpg"),
+		newLink(mediatype.MPEGVideo, "mpeg"),
+	} {
+		res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(manifest.Manifest{
+			ReadingOrder: []manifest.Link{link},
+		}, nil, nil), nil)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		assert.Contains(t, res.AccessModes, manifest.A11yAccessModeVisual)
+
+		res, err = inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(manifest.Manifest{
+			ReadingOrder: []manifest.Link{newLink(mediatype.HTML, "html")},
+			Resources:    []manifest.Link{link},
+		}, nil, nil), nil)
+		require.NoError(t, err)
+		if res != nil {
+			assert.NotContains(t, res.AccessModes, manifest.A11yAccessModeVisual)
+		}
+	}
 }
 
 func assertAccessMode(t *testing.T, accessMode manifest.A11yAccessMode, extension string, mt mediatype.MediaType) {
@@ -212,16 +231,17 @@ func TestInferTextualAccessModeWithIgnoredImages(t *testing.T) {
 	}
 	f := fetcher.NewFileFetcher("file.png", "testdata/file.png")
 
+	// The image stands in the way of textual, and being only listed in the
+	// resources, isn't enough for visual either: nothing is inferred
 	res, err := inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, f, nil), nil)
 	require.NoError(t, err)
-	assert.NotContains(t, res.AccessModes, manifest.A11yAccessModeTextual)
-	assert.Contains(t, res.AccessModes, manifest.A11yAccessModeVisual)
-	assert.NotContains(t, res.AccessModesSufficient, []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual})
+	assert.Nil(t, res)
 
 	res, err = inferA11yMetadataInPublicationManifest(context.TODO(), pub.New(m, f, nil), testHash)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 	assert.Contains(t, res.AccessModes, manifest.A11yAccessModeTextual)
-	assert.Contains(t, res.AccessModes, manifest.A11yAccessModeVisual)
+	assert.NotContains(t, res.AccessModes, manifest.A11yAccessModeVisual)
 	assert.Contains(t, res.AccessModesSufficient, []manifest.A11yPrimaryAccessMode{manifest.A11yPrimaryAccessModeTextual})
 }
 
