@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *alpha* may change or be removed in a future release without notice. Use with caution.
 
+## [0.17.1] - 2026-11-26
+
+### Added
+
+- `converter.WithDecorativeImages` keeps the images that the guided navigation HTML converter leaves out because they have nothing to say when a document is read aloud. Images with `role="presentation"` or `role="none"` are emitted with the `presentation` role alone, and images with an empty `alt` and no other accessible name as any other image, without a description. It's meant for inspecting the images of a document: without it, the output is the same as before
+
+### Changed
+
+- The `visual` access mode is only inferred from the manifest (`streamer.Config.InferA11yMetadata`) when the reading order contains an image or a video. Previously, one listed anywhere in the resources was enough, which made nearly every EPUB with a cover `visual`: the manifest doesn't tell whether such an image is used, nor if it's a cover or decorative. Finding that out takes inspecting the documents referencing it, which is left to the caller
+- The guided navigation HTML converter references the image an `<svg>` embeds through an `<image>` element (`href` or `xlink:href`) with `imgref`, like it does for `<img>`. As a result, such an SVG is now part of the output even when it has no accessible name. When there are several images, the first one is referenced
+
 ## [0.17.0] - 2026-11-25
 
 This is a significant release, centered around two things: adding LCP support, and hardening the toolkit

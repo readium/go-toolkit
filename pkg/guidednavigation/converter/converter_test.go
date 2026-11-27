@@ -248,6 +248,40 @@ func TestConvertDecorativeImages(t *testing.T) {
 	}`), res)
 }
 
+// With WithDecorativeImages they do: explicitly presentational images with the
+// presentation role alone, images with an empty alt as any other image.
+func TestConvertDecorativeImagesKept(t *testing.T) {
+	res := convertDoc(t, wrapXHTML("", `
+		<p>Before <img src="deco.png" alt=""/> after</p>
+		<img src="deco2.png" role="presentation" alt="ignored"/>
+		<img src="deco3.png" role="none"/>
+		<svg xmlns="http://www.w3.org/2000/svg" role="presentation"><image href="deco4.png"/></svg>
+		<svg xmlns="http://www.w3.org/2000/svg" role="presentation"><rect width="10" height="10"/></svg>`),
+		&mediatype.XHTML, WithDecorativeImages())
+	assert.JSONEq(t, guidedJSON(`{
+		"role": ["paragraph"],
+		"text": {
+			"plain": "Before after",
+			"ssml": "Before <readium:image id=\"image1\"/> after"
+		},
+		"children": [
+			{"role": ["image"], "id": "image1", "imgref": "deco.png"}
+		]
+	},
+	{"role": ["presentation"], "imgref": "deco2.png", "description": "ignored"},
+	{"role": ["presentation"], "imgref": "deco3.png"},
+	{"role": ["presentation"], "imgref": "deco4.png"}`), res)
+}
+
+// The option doesn't bring back images which are hidden rather than decorative.
+func TestConvertDecorativeImagesKeptStayHidden(t *testing.T) {
+	res := convertDoc(t, wrapXHTML("", `
+		<p>Text</p>
+		<img src="hidden.png" alt="" aria-hidden="true"/>`),
+		&mediatype.XHTML, WithDecorativeImages())
+	assert.JSONEq(t, guidedJSON(`{"role": ["paragraph"], "text": "Text"}`), res)
+}
+
 // A figure without an accessible name keeps its content, including the caption.
 func TestConvertUnlabelledFigure(t *testing.T) {
 	res := convertBody(t, `
@@ -580,6 +614,33 @@ func TestConvertSVG(t *testing.T) {
 			{"role": ["image"], "id": "image1", "description": "A blue square"}
 		]
 	}`), res)
+}
+
+// An SVG wrapping an image references it, like an <img> would, even without an
+// accessible name.
+func TestConvertSVGImage(t *testing.T) {
+	// XML parser, with the xlink:href of SVG 1.1
+	res := convertBody(t, `
+		<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10">
+			<image width="10" height="10" xlink:href="images/page.jpg"/>
+		</svg>
+		<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+			<title>A map</title>
+			<image href="images/map.jpg" xlink:href="images/fallback.jpg"/>
+			<image href="images/overlay.png"/>
+		</svg>`)
+	assert.JSONEq(t, guidedJSON(`
+		{"role": ["image"], "imgref": "images/page.jpg"},
+		{"role": ["image"], "imgref": "images/map.jpg", "description": "A map"}`), res)
+
+	// HTML parser, which handles the attributes of foreign elements differently
+	res = convertDoc(t, `<!DOCTYPE html><html><body>
+		<svg viewBox="0 0 10 10"><image width="10" height="10" xlink:href="images/page.jpg"/></svg>
+		<svg><image href="images/map.jpg"/></svg>
+	</body></html>`, &mediatype.HTML)
+	assert.JSONEq(t, guidedJSON(`
+		{"role": ["image"], "imgref": "images/page.jpg"},
+		{"role": ["image"], "imgref": "images/map.jpg"}`), res)
 }
 
 // Definition lists and blockquotes.
